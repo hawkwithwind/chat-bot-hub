@@ -1,0 +1,22 @@
+version: '2'
+services:
+  base:
+    build: docker/runtime
+    
+  redis:
+    restart: unless-stopped
+    image: redis:3.2-alpine
+
+  web:
+    restart: unless-stopped
+    extends: base
+    command: ./app/chat-bot-hub
+    volumes:
+      - ./build:/app
+      - ./config:/config
+    links:
+      - redis
+    ports:
+      - '9000:9000'
+    
+
