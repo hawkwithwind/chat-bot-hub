@@ -11,7 +11,7 @@ chat bot hub build upon gRPC
 
 it will starts a web server and a grpc server, grpc server will receive chat-bot register message
 
-web server can control and get info from grpc server by rpc call. in this way, we can provide a user interface to controll the bots.
+web server can control and get info from grpc server by rpc call. in this way, we can provide a user interface to control the bots.
 
 ```
   +-------------+
