@@ -20,22 +20,41 @@ option java_outer_classname = "ChatBotHubProto";
 
 package chatbothub;
 
-// The greeting service definition.
 service ChatBotHub {
-  // Sends a greeting
   rpc EventTunnel (stream EventRequest) returns (stream EventReply) {}
+  rpc GetBots (BotsRequest) returns (BotsReply) {}
 }
 
 // The request message containing the user's name.
 message EventRequest {
   string eventType = 1;
   string body = 2;
-  string txid = 3;
+  string clientid = 3;
+  string clientType = 4;
 }
 
 // The response message containing the greetings
 message EventReply {
   string eventType = 1;
   string body = 2;
-  string txid = 3;
+  string clientid = 3;
+  string clientType = 4;
+}
+
+message BotsRequest {
+  string secret = 1;
+}
+
+message BotsReply {
+  repeated BotsInfo botsInfo = 1;
+}
+
+message BotsInfo {
+  string clientId = 1;
+  string clientType = 2;
+  string name = 3;
+  int64 startAt = 4;
+  int64 lastPing = 5;
+  int64 login = 6;
+  int32 status = 7;
 }

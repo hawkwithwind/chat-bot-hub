@@ -10,27 +10,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type RedisConfig struct {
-	Host string
-	Port string
-	Db string
-}
-
-type WebConfig struct {
-	Host string
-	Port string
-	User string
-	Pass string
-	SecretPhrase string
-	Redis RedisConfig
+type MainConfig struct {
+	Hub ChatHubConfig
+	Web WebConfig
 }
 
 var (
-	webConfigPath = flag.String("c", "config/config.yml", "config file path")
+	configPath = flag.String("c", "config/config.yml", "config file path")
+	config MainConfig
 )
 
-func loadWebConfig(configPath string) (WebConfig, error) {
-	c := WebConfig{}
+func loadConfig(configPath string) (MainConfig, error) {
+	c := MainConfig{}
 	
 	config, err := os.Open(configPath)
 	defer config.Close()
@@ -52,30 +43,31 @@ func loadWebConfig(configPath string) (WebConfig, error) {
 func main() {
 	flag.Parse()
 	log.SetPrefix("[MAIN]")
-	log.Printf("config path %s", *webConfigPath)
+	log.Printf("config path %s", *configPath)
 	
 	var wg sync.WaitGroup
 	log.Printf("server starts.")
+
+	var err error
+	if config, err = loadConfig(*configPath); err != nil {
+		log.Fatalf("failed to open config file %s, exit.", err)
+		return
+	}
 		
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
 
-		if webconfig, err := loadWebConfig(*webConfigPath); err != nil {
-			log.Fatalf("failed to open config file %s, exit.", err)
-			return
-		} else {
-			webserver := WebServer{config: webconfig}
-			webserver.serve()
-		}
+		webserver := WebServer{config: config.Web, hubport: config.Hub.Port}
+		webserver.serve()
 	}()
 	
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
 
-		qqhub := QQHub{}
-		qqhub.serve()		
+		qqhub := ChatHub{config: config.Hub}
+		qqhub.serve()
 	}()
 
 	time.Sleep(5 * time.Second)

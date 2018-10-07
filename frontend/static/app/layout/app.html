@@ -1,0 +1,22 @@
+<!-- top navbar -->
+<div id="header" class="page-header navbar navbar-fixed-top fade-in-down" data-ng-include="viewPath.header"></div>
+<!-- / top navbar -->
+<div class="clearfix"> </div>
+
+<div class="page-container">
+	<!-- sidebar -->
+	<div class="page-sidebar-wrapper">
+		<div class="page-sidebar navbar-collapse collapse">
+			<div perfect-scrollbar  suppress-scroll-x="true" id="pageSidebar" >
+				<div data-ng-include="viewPath.sildebar"></div>
+			</div>
+		</div>
+	</div>
+	<!-- / sidebar -->
+
+	<!-- main content -->
+	<div class="page-content-wrapper" data-ng-include="viewPath.content">
+	</div>
+	<!-- / main content -->
+</div>
+

@@ -1,0 +1,22 @@
+<div ng-style="boxHeight">
+	<div class="row table-box" ng-style="tableHeight" style="overflow:auto">
+		<div class="col-md-12">
+			<div class="height-100p" style="overflow:auto">
+				<div class="table-responsive">
+					<table class="custom-table table table-bordered table-hover table-striped">
+						
+					</table>
+					<div class="alert alert-info">
+						<strong>提示!</strong> 数据为空或没有找到您需要的数据！
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row ta-center grid-pager">
+		<div class="col-md-12">
+			<table-pager ng-model="cur_page" total="total" show="5" toggle="toggle(status)" page-change="pageChange(page)"></table-pager>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,40 @@
+<div ncy-breadcrumb></div>
+<h3 class="page-title">登录</h3>
+
+<div class="row">
+  <div class="modal-body form-group-padding" id="order_monitor_modal_body">
+    <div class="row form-group-padding">
+      <div class="col-xs-3 col-md-6">
+	<label for="text_name" class="col-xs-1 col-md-2 control-label">用户名</label>
+	<input id="text_name" name="text_name" type="text" class="col-xs-2 col-md-4" ng-model="data.username" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-xs-3 col-md-6">
+	<label for="pswd" class="col-xs-1 col-md-2 control-label">密码</label>
+	<input id="pswd" name="pswd" type="password" class="col-xs-2 col-md-4" ng-model="data.password" />
+      </div>
+    </div>    
+
+    <div class="row form-group-padding">
+      <div class="col-xs-3 col-md-6">
+	<button class="col-xs-3 col-md-6 btn green" ng-click="login(data)">登录</button>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<div class="row">
+  <div class="col-xs-3 col-md-6">
+    <pre style="width:800px" ng-bind-html="bodypretty">
+    </pre>
+  </div>
+</div>
+
+
+
+
+
+

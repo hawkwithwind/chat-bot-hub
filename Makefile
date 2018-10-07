@@ -8,11 +8,17 @@ PACKAGE=github.com/hawkwithwind/$(EXECUTABLE)
 
 GOIMAGE=golang:1.11-alpine3.8
 
-SOURCES=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
+SOURCES=$(shell find server -type f -name '*.go' -not -path "./vendor/*")
 BASE=$(GOPATH)/src/$(PACKAGE)
 
-#build-runtime: $(RUNTIME_PATH)/$(EXECUTABLE) $(RUNTIME_PATH)/dockerfile
-#	docker build -t $(EXECUTABLE) $(RUNTIME_PATH)
+build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) 
+	cd frontend && \
+	gulp p && \
+	cd .. && \
+	cp -R frontend/static/img $(RUNTIME_PATH)/static/ && \
+	cp -R frontend/static/lib $(RUNTIME_PATH)/static/ && \
+	cp frontend/index.html $(RUNTIME_PATH)/static/ && \
+	chmod -R -w $(RUNTIME_PATH)/static/
 
 $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH)
 	docker run --rm \
@@ -20,7 +26,7 @@ $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH)
 	-v $(GOPATH)/pkg:/go/pkg \
 	-v $(shell pwd)/$(RUNTIME_PATH):/go/bin/${GOOS}_${GOARCH} \
 	-e GOOS=$(GOOS) -e GOARCH=$(GOARCH) -e GOBIN=/go/bin/$(GOOS)_$(GOARCH) -e CGO_ENABLED=0 \
-	$(GOIMAGE) go get -a -installsuffix cgo $(PACKAGE)/...
+	$(GOIMAGE) go get -a -installsuffix cgo $(PACKAGE)/server/...
 
 #$(RUNTIME_PATH)/dockerfile: runtime-image
 #	sh make_docker_file.sh $(RUNTIME_PATH)/Dockerfile $(RUNTIME_IMAGE) $(EXECUTABLE)
@@ -32,6 +38,7 @@ $(RUNTIME_PATH):
 	[ -d $(RUNTIME_PATH) ] || mkdir $(RUNTIME_PATH)
 
 clean:
+	if [ -d $(RUNTIME_PATH)/static/ ]; then chmod -R +w $(RUNTIME_PATH)/static/ ; fi && \
 	rm -rf $(RUNTIME_PATH)
 
 fmt:
@@ -39,4 +46,10 @@ fmt:
 	-v $(shell pwd):/go/src/$(PACKAGE) \
 	$(GOIMAGE) sh -c "cd /go/src/$(PACKAGE)" && gofmt -l -w $(SOURCES)
 
+
+.PHONY: gen
+
+gen:
+	cd proto && \
+	protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub
 

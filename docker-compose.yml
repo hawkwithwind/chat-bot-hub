@@ -10,7 +10,7 @@ services:
   web:
     restart: unless-stopped
     extends: base
-    command: ./app/chat-bot-hub
+    command: ./app/server
     volumes:
       - ./build:/app
       - ./config:/config
@@ -18,5 +18,5 @@ services:
       - redis
     ports:
       - '9000:9000'
-    
+      - '13142:13142'
 

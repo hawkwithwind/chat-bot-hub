@@ -1,5 +1,8 @@
 build/
 config/config.yml
+frontend/node
+frontend/node_modules
+*.DS_Store
 
 # Binaries for programs and plugins
 *.exe

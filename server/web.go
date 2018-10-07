@@ -15,10 +15,32 @@ import (
     "github.com/gorilla/context"
     "github.com/mitchellh/mapstructure"
 	"github.com/garyburd/redigo/redis"
+
+	"google.golang.org/grpc"
+	grpcctx "golang.org/x/net/context"
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	//"google.golang.org/grpc/reflection"
+
 )
 
+
+type RedisConfig struct {
+	Host string
+	Port string
+	Db string
+}
+
+type WebConfig struct {
+	Host string
+	Port string
+	User string
+	Pass string
+	SecretPhrase string
+	Redis RedisConfig
+}
+
 type CommonResponse struct {
-	Success bool `json:"success"`
+	Code int `json:"code"`
 	Message string `json:"message,omitempty"`
 	Ts int64 `json:"ts"`
 	Error ErrorMessage `json:"error,omitempty""`
@@ -42,6 +64,7 @@ type WebServer struct {
 	logger *log.Logger
 	redispool *redis.Pool
 	config WebConfig
+	hubport string
 }
 
 func (ctx *WebServer) init() {
@@ -56,7 +79,7 @@ func (ctx *WebServer) Info(msg string) {
 }
 
 func (ctx *WebServer) Infof(msg string, v ... interface{}) {
-	ctx.logger.Printf(msg, v)
+	ctx.logger.Printf(msg, v...)
 }
 
 func (ctx *WebServer) Error(msg string) {
@@ -64,25 +87,32 @@ func (ctx *WebServer) Error(msg string) {
 }
 
 func (ctx *WebServer) Errorf(msg string, v ... interface{}) {
-	ctx.logger.Fatalf(msg, v)
+	ctx.logger.Fatalf(msg, v...)
 }
 
-func (ctx *WebServer) complain(w http.ResponseWriter, msg string, err error) {
-	errmsg := msg
-	if err != nil {
-		errmsg = msg + " " + err.Error()
-	}
-	
+func (ctx *WebServer) deny(w http.ResponseWriter, msg string) {
+	// HTTP CODE 403
+	w.WriteHeader(http.StatusForbidden)	
 	json.NewEncoder(w).Encode(CommonResponse{
-		Success: false,
+		Code: -1,
+		Message: msg,
 		Ts: time.Now().Unix(),
-		Error: ErrorMessage{Message: errmsg},
+	})
+}
+
+func (ctx *WebServer) complain(w http.ResponseWriter, code int, msg string) {
+	// HTTP CODE 400
+	w.WriteHeader(http.StatusBadRequest)
+	json.NewEncoder(w).Encode(CommonResponse{
+		Code: code,
+		Ts: time.Now().Unix(),
+		Error: ErrorMessage{Message: msg},
 	})
 }
 
 func (ctx *WebServer) ok(w http.ResponseWriter, msg string, body interface{}) {
 	json.NewEncoder(w).Encode(CommonResponse{
-		Success: true,
+		Code: 0,
 		Ts: time.Now().Unix(),
 		Message: msg,
 		Body: body,
@@ -90,16 +120,47 @@ func (ctx *WebServer) ok(w http.ResponseWriter, msg string, body interface{}) {
 }
 
 
-func (ctx *WebServer) handleHello(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(CommonResponse{Success: true, Message: "Hello", Ts: time.Now().Unix()})
+func (ctx *WebServer) fail(w http.ResponseWriter, msg string) {
+	// HTTP CODE 500
+	w.WriteHeader(http.StatusInternalServerError);
+	json.NewEncoder(w).Encode(CommonResponse{
+		Code: -1,
+		Ts: time.Now().Unix(),
+		Error: ErrorMessage{Message: msg},
+	})
 }
 
-func (ctx *WebServer) CreateTokenEndpoint(w http.ResponseWriter, req *http.Request) {
+func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
+	ctx.ok(w, "hello", nil)
+}
+
+func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
+	ctx.Infof("Dial %s", fmt.Sprintf("127.0.0.1:%s", ctx.hubport))
+	conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%s", ctx.hubport), grpc.WithInsecure())
+	if err != nil {
+		ctx.fail(w, fmt.Sprintf("无法连接本地RPC %s", err.Error()))
+		return
+	}
+	defer conn.Close();
+	client := pb.NewChatBotHubClient(conn)
+
+	gctx, cancel := grpcctx.WithTimeout(grpcctx.Background(), 10*time.Second)
+	defer cancel()	
+	botsreply, err := client.GetBots(gctx, &pb.BotsRequest{Secret: "secret"})
+	if err != nil {
+		ctx.fail(w, err.Error())
+		return
+	}
+	
+	ctx.ok(w, "", botsreply)
+}
+
+func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	var user User
     _ = json.NewDecoder(req.Body).Decode(&user)
 
 	if user.Username != ctx.config.User || user.Password != ctx.config.Pass {
-		ctx.complain(w, "用户名密码不匹配", nil)
+		ctx.deny(w, "用户名密码不匹配")
 		return
 	}
 	
@@ -109,14 +170,14 @@ func (ctx *WebServer) CreateTokenEndpoint(w http.ResponseWriter, req *http.Reque
     })
     tokenString, error := token.SignedString([]byte(ctx.config.SecretPhrase))
     if error != nil {
-		ctx.complain(w, "签名失败", error)
+		ctx.fail(w, error.Error())
 		return
     }
-	
-    ctx.ok(w, "签名成功", JwtToken{Token: tokenString})
+
+    ctx.ok(w, "登录成功", JwtToken{Token: tokenString})
 }
 
-func (ctx *WebServer) ValidateMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
         authorizationHeader := req.Header.Get("authorization")
         if authorizationHeader != "" {
@@ -129,25 +190,25 @@ func (ctx *WebServer) ValidateMiddleware(next http.HandlerFunc) http.HandlerFunc
                     return []byte(ctx.config.SecretPhrase), nil
                 })
                 if error != nil {
-					ctx.complain(w, "", error)
+					ctx.fail(w, error.Error())
                     return
                 }
                 if token.Valid {
 					var user User
 					mapstructure.Decode(token.Claims, &user)
 					if user.Username != ctx.config.User || user.Password != ctx.config.Pass {
-						ctx.complain(w, "用户名密码不匹配", nil)
+						ctx.deny(w, "用户名密码不匹配")
 						return
 					}
 					
                     context.Set(req, "decoded", token.Claims)
                     next(w, req)
                 } else {
-					ctx.complain(w, "身份令牌无效", nil)
+					ctx.deny(w, "身份令牌无效")
                 }
             }
         } else {
-			ctx.complain(w, "未登录用户无权限访问", nil)
+			ctx.deny(w, "未登录用户无权限访问")
 		}
     })
 }
@@ -179,8 +240,10 @@ func (ctx *WebServer) serve() {
 	ctx.init()
 	
 	r := mux.NewRouter()
-	r.HandleFunc("/hello", ctx.ValidateMiddleware(ctx.handleHello)).Methods("GET")
-	r.HandleFunc("/auth", ctx.CreateTokenEndpoint).Methods("POST")
+	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
+	r.HandleFunc("/bots", ctx.getBots).Methods("GET")
+	r.HandleFunc("/login", ctx.login).Methods("POST")	
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 	
 	ctx.Info("restful server starts.")
 	addr := fmt.Sprintf("%s:%s" , ctx.config.Host, ctx.config.Port)
