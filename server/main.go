@@ -1,12 +1,12 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"os"
 	"sync"
 	"time"
-	"flag"
-	"os"
-	
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -17,12 +17,12 @@ type MainConfig struct {
 
 var (
 	configPath = flag.String("c", "config/config.yml", "config file path")
-	config MainConfig
+	config     MainConfig
 )
 
 func loadConfig(configPath string) (MainConfig, error) {
 	c := MainConfig{}
-	
+
 	config, err := os.Open(configPath)
 	defer config.Close()
 	if err != nil {
@@ -33,7 +33,9 @@ func loadConfig(configPath string) (MainConfig, error) {
 	len := 0
 	for {
 		n, _ := config.Read(data)
-		if 0 == n { break }
+		if 0 == n {
+			break
+		}
 		len += n
 	}
 	yaml.Unmarshal(data[:len], &c)
@@ -44,7 +46,7 @@ func main() {
 	flag.Parse()
 	log.SetPrefix("[MAIN]")
 	log.Printf("config path %s", *configPath)
-	
+
 	var wg sync.WaitGroup
 	log.Printf("server starts.")
 
@@ -53,7 +55,7 @@ func main() {
 		log.Fatalf("failed to open config file %s, exit.", err)
 		return
 	}
-		
+
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
@@ -61,7 +63,7 @@ func main() {
 		webserver := WebServer{config: config.Web, hubport: config.Hub.Port}
 		webserver.serve()
 	}()
-	
+
 	go func() {
 		wg.Add(1)
 		defer wg.Done()

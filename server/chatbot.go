@@ -8,13 +8,12 @@ status [200] -> logged in
 status [500] -> GPRC connection closed, wait for client start again
 */
 
-type ChatBot struct{
-	ClientId string
+type ChatBot struct {
+	ClientId   string
 	ClientType string
-	Name string
-	StartAt int64
-	LastPing int64
-	Login int64
-	Status int32
+	Name       string
+	StartAt    int64
+	LastPing   int64
+	Login      int64
+	Status     int32
 }
-

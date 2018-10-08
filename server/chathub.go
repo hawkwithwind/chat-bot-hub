@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"io"
 	"os"
 	"time"
 
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"google.golang.org/grpc/reflection"
 )
-
 
 type ChatHubConfig struct {
 	Host string
@@ -21,25 +20,25 @@ type ChatHubConfig struct {
 }
 
 func (hub *ChatHub) init() {
-	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate | log.Ltime | log.Lshortfile)
+	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime|log.Lshortfile)
 	hub.bots = make(map[string]ChatBot)
 }
 
-type ChatHub struct{
+type ChatHub struct {
 	logger *log.Logger
 	config ChatHubConfig
-	bots map[string]ChatBot
+	bots   map[string]ChatBot
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	return &pb.BotsInfo{
-		ClientId: bot.ClientId,
+		ClientId:   bot.ClientId,
 		ClientType: bot.ClientType,
-		Name: bot.Name,
-		StartAt: bot.StartAt,
-		LastPing: bot.LastPing,
-		Login: bot.Login,
-		Status: bot.Status,
+		Name:       bot.Name,
+		StartAt:    bot.StartAt,
+		LastPing:   bot.LastPing,
+		Login:      bot.Login,
+		Status:     bot.Status,
 	}
 }
 
@@ -47,7 +46,7 @@ func (ctx *ChatHub) Info(msg string) {
 	ctx.logger.Printf(msg)
 }
 
-func (ctx *ChatHub) Infof(msg string, v ... interface{}) {
+func (ctx *ChatHub) Infof(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
@@ -55,7 +54,7 @@ func (ctx *ChatHub) Error(msg string) {
 	ctx.logger.Fatalf(msg)
 }
 
-func (ctx *ChatHub) Errorf(msg string, v ... interface{}) {
+func (ctx *ChatHub) Errorf(msg string, v ...interface{}) {
 	ctx.logger.Fatalf(msg, v...)
 }
 
@@ -67,34 +66,34 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		}
 		if err != nil {
 			return err
-		}		
+		}
 
 		if in.EventType == "PING" {
 			if _, found := hub.bots[in.Clientid]; found {
-				pong := pb.EventReply {EventType: "PONG", Body: "", ClientType: in.ClientType, Clientid: in.Clientid}
+				pong := pb.EventReply{EventType: "PONG", Body: "", ClientType: in.ClientType, Clientid: in.Clientid}
 				if err := tunnel.Send(&pong); err != nil {
 					hub.Errorf("send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.Clientid)
 				}
 			} else {
 				hub.Errorf("recv unknown ping from c[%s] %s", in.ClientType, in.Clientid)
-			}			
+			}
 		} else if in.EventType == "REGISTER" {
 			if bot, found := hub.bots[in.Clientid]; found {
 				hub.Infof("c[%s] reconnected [%s]", in.ClientType, in.Clientid)
-				
+
 				bot.Status = 0
 				bot.StartAt = time.Now().Unix()
 				hub.bots[in.Clientid] = bot
 			} else {
 				hub.Infof("c[%s] registered [%s]", in.ClientType, in.Clientid)
-				
+
 				hub.bots[in.Clientid] = ChatBot{
-					ClientId: in.Clientid,
+					ClientId:   in.Clientid,
 					ClientType: in.ClientType,
-					StartAt: time.Now().Unix(),
-					LastPing:0,
-					Login:0,
-					Status:0,
+					StartAt:    time.Now().Unix(),
+					LastPing:   0,
+					Login:      0,
+					Status:     0,
 				}
 			}
 		} else {
@@ -103,7 +102,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	}
 }
 
-func (hub *ChatHub) GetBots (ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
+func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
 		bots = append(bots, NewBotsInfo(&v))
@@ -113,14 +112,14 @@ func (hub *ChatHub) GetBots (ctx context.Context, req *pb.BotsRequest) (*pb.Bots
 
 func (hub *ChatHub) serve() {
 	hub.init()
-	
+
 	hub.Info("chat hub starts.")
 	hub.Infof("lisening to %s:%s", hub.config.Host, hub.config.Port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", hub.config.Host, hub.config.Port))
 	if err != nil {
 		hub.Errorf("failed to listen: %v", err)
 	}
-	
+
 	s := grpc.NewServer()
 	pb.RegisterChatBotHubServer(s, hub)
 	reflection.Register(s)

@@ -44,7 +44,7 @@ clean:
 fmt:
 	docker run --rm \
 	-v $(shell pwd):/go/src/$(PACKAGE) \
-	$(GOIMAGE) sh -c "cd /go/src/$(PACKAGE)" && gofmt -l -w $(SOURCES)
+	$(GOIMAGE) sh -c "cd /go/src/$(PACKAGE)/server/" && gofmt -l -w $(SOURCES)
 
 
 .PHONY: gen
