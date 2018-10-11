@@ -62,7 +62,7 @@ func (ctx *WebServer) Info(msg string, v ...interface{}) {
 }
 
 func (ctx *WebServer) Error(msg string, v ...interface{}) {
-	ctx.logger.Fatalf(msg, v...)
+	ctx.logger.Printf(msg, v...)
 }
 
 func (ctx *WebServer) deny(w http.ResponseWriter, msg string) {
@@ -127,22 +127,15 @@ type ErrorHandler struct {
 }
 
 func (ctx *ErrorHandler) weberror(s *WebServer, w http.ResponseWriter) {
-	s.Info("1")
 	if ctx.err != nil {
-		s.Info("2")
 		v := reflect.ValueOf(ctx.err)
-		s.Info("3")
 		if v.Type() == reflect.TypeOf((*ClientError)(nil)) {
-			s.Info("4")
 			c := v.Interface().(*ClientError)
-			s.Info("5")
 			s.complain(w, c.ErrorCode(), c.Error())
 		} else {
-			s.Info("6")
 			s.fail(w, ctx.err.Error())
 		}
 	}
-	s.Info("7")
 }
 
 func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
@@ -244,6 +237,7 @@ func (ctx *WebServer) serve() {
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/loginqq", ctx.validate(ctx.loginQQ)).Methods("POST")
+	r.HandleFunc("/loginwechat", ctx.validate(ctx.loginWechat)).Methods("POST")
 	r.HandleFunc("/login", ctx.login).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 

@@ -69,6 +69,19 @@ func (ctx *ErrorHandler) LoginQQ(w *GRPCWrapper, req *pb.LoginQQRequest) *pb.Log
 	}
 }
 
+func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest) *pb.LoginWechatReply {
+	if ctx.err != nil {
+		return nil
+	}
+
+	if loginreply, err := w.client.LoginWechat(w.context, req); err != nil {
+		ctx.err = err
+		return nil
+	} else {
+		return loginreply
+	}
+}
+
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.weberror(ctx, w)
@@ -98,6 +111,23 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 		ClientId: clientId,
 		QQNum: qqnum,
 		Password: pass,
+	}); o.err == nil {
+		ctx.ok(w, "", loginreply)
+	}
+}
+
+func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.weberror(ctx, w)
+
+	r.ParseForm()
+	clientId := o.getStringValue(r.Form, "clientId")
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.hubport))
+	defer wrapper.Cancel()
+
+	if loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
+		ClientId: clientId,
 	}); o.err == nil {
 		ctx.ok(w, "", loginreply)
 	}
