@@ -159,7 +159,7 @@
 	  } else if(rejection.status === 403){
 	    showError('未登录');
 	    $window.sessionStorage.removeItem('user_token');
-	    responseErrorLocation("#/app/login/login");
+	    responseErrorLocation("#/app/user/login");
 	  } else if(rejection.status === -1){
 	    showError('请联系管理员,或没有网络')
 	  }

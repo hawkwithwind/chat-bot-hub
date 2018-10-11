@@ -4,12 +4,12 @@
   function URL($window) {
     var result = {
       'login': buildUrl('login'),
+      'bots': buildUrl('bots'),
+      'consts': buildUrl('consts')
     };
     return result;
     
     function buildUrl(url) {
-      console.log(url);
-      
       var host = '';
       var pathprefix = $window.location.pathname;
 

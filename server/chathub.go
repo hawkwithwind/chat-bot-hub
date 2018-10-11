@@ -20,14 +20,14 @@ type ChatHubConfig struct {
 }
 
 func (hub *ChatHub) init() {
-	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime|log.Lshortfile)
-	hub.bots = make(map[string]ChatBot)
+	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
+	hub.bots = make(map[string]*ChatBot)
 }
 
 type ChatHub struct {
 	logger *log.Logger
 	config ChatHubConfig
-	bots   map[string]ChatBot
+	bots   map[string]*ChatBot
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -38,23 +38,20 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 		StartAt:    bot.StartAt,
 		LastPing:   bot.LastPing,
 		Login:      bot.Login,
-		Status:     bot.Status,
+		Status:     int32(bot.Status),
 	}
 }
 
-func (ctx *ChatHub) Info(msg string) {
-	ctx.logger.Printf(msg)
+type LoginQQBody struct {
+	QQNum uint64 `json:"qqNumber"`
+	Password string `json:"password"`
 }
 
-func (ctx *ChatHub) Infof(msg string, v ...interface{}) {
+func (ctx *ChatHub) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
-func (ctx *ChatHub) Error(msg string) {
-	ctx.logger.Fatalf(msg)
-}
-
-func (ctx *ChatHub) Errorf(msg string, v ...interface{}) {
+func (ctx *ChatHub) Error(msg string, v ...interface{}) {
 	ctx.logger.Fatalf(msg, v...)
 }
 
@@ -69,35 +66,32 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		}
 
 		if in.EventType == "PING" {
-			if _, found := hub.bots[in.Clientid]; found {
-				pong := pb.EventReply{EventType: "PONG", Body: "", ClientType: in.ClientType, Clientid: in.Clientid}
+			if thebot, found := hub.bots[in.ClientId]; found {
+				ts := time.Now().UnixNano() / 1e6				
+				pong := pb.EventReply{EventType: "PONG", Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
 				if err := tunnel.Send(&pong); err != nil {
-					hub.Errorf("send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.Clientid)
+					hub.Error("send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
+				thebot.LastPing = ts
+				hub.bots[in.ClientId] = thebot
 			} else {
-				hub.Errorf("recv unknown ping from c[%s] %s", in.ClientType, in.Clientid)
+				hub.Error("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
 		} else if in.EventType == "REGISTER" {
-			if bot, found := hub.bots[in.Clientid]; found {
-				hub.Infof("c[%s] reconnected [%s]", in.ClientType, in.Clientid)
-
-				bot.Status = 0
-				bot.StartAt = time.Now().Unix()
-				hub.bots[in.Clientid] = bot
+			var bot *ChatBot
+			var found bool
+			if bot, found = hub.bots[in.ClientId]; !found {
+				bot = NewChatBot()
+			}
+			
+			if newbot, err := bot.register(in.ClientId, in.ClientType, tunnel); err != nil {
+				hub.Error("register failed", err)
 			} else {
-				hub.Infof("c[%s] registered [%s]", in.ClientType, in.Clientid)
-
-				hub.bots[in.Clientid] = ChatBot{
-					ClientId:   in.Clientid,
-					ClientType: in.ClientType,
-					StartAt:    time.Now().Unix(),
-					LastPing:   0,
-					Login:      0,
-					Status:     0,
-				}
+				hub.bots[in.ClientId] = newbot
+				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
 			}
 		} else {
-			hub.Infof("recv unknown event %v", in)
+			hub.Info("recv unknown event %v", in)
 		}
 	}
 }
@@ -105,26 +99,68 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
-		bots = append(bots, NewBotsInfo(&v))
+		bots = append(bots, NewBotsInfo(v))
 	}
 	return &pb.BotsReply{BotsInfo: bots}, nil
+}
+
+func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event *pb.EventReply) {
+	if ctx.err != nil {
+		return
+	}
+
+	if tunnel == nil {
+		ctx.err = fmt.Errorf("tunnel is null")
+		return
+	}
+
+	if err := tunnel.Send(event); err != nil {
+		ctx.err = err
+	}
+}
+
+func (hub *ChatHub) LoginQQ (ctx context.Context, req *pb.LoginQQRequest) (*pb.LoginQQReply, error) {
+	hub.Info("recieve login cmd from web %s: %d", req.ClientId, req.QQNum)
+	o := ErrorHandler{}
+	
+	if bot, found := hub.bots[req.ClientId]; found {
+		if bot.ClientType != "QQBOT" {
+			o.err = fmt.Errorf("cannot send loginQQ to c[%s] %s", bot.ClientType, bot.ClientId)
+		}
+
+		body := o.toJson(LoginQQBody{QQNum: req.QQNum, Password: req.Password})
+		o.sendEvent(bot.tunnel, &pb.EventReply{
+			EventType: "LOGIN",
+			ClientType: "QQBOT",
+			ClientId: req.ClientId,
+			Body: body,
+		})
+	} else {
+		if o.err == nil {o.err = fmt.Errorf("cannot find bot %s", req.ClientId)}
+	}
+		
+	if o.err != nil {
+		return &pb.LoginQQReply{Msg: fmt.Sprintf("QQLOGIN FAILED %s", o.err.Error())}, nil
+	} else {
+		return &pb.LoginQQReply{Msg: "QQLOGIN DONE"}, nil
+	}
 }
 
 func (hub *ChatHub) serve() {
 	hub.init()
 
-	hub.Info("chat hub starts.")
-	hub.Infof("lisening to %s:%s", hub.config.Host, hub.config.Port)
+	hub.Info("chat hub starts....")
+	hub.Info("lisening to %s:%s", hub.config.Host, hub.config.Port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", hub.config.Host, hub.config.Port))
 	if err != nil {
-		hub.Errorf("failed to listen: %v", err)
+		hub.Error("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
 	pb.RegisterChatBotHubServer(s, hub)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
-		hub.Errorf("failed to serve: %v", err)
+		hub.Error("failed to serve: %v", err)
 	}
 
 	hub.Info("chat hub ends.")

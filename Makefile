@@ -11,7 +11,8 @@ GOIMAGE=golang:1.11-alpine3.8
 SOURCES=$(shell find server -type f -name '*.go' -not -path "./vendor/*")
 BASE=$(GOPATH)/src/$(PACKAGE)
 
-build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) 
+build-angular: $(RUNTIME_PATH)/$(EXECUTABLE)
+	if [ -d $(RUNTIME_PATH)/static/ ]; then chmod -R +w $(RUNTIME_PATH)/static/ ; fi && \
 	cd frontend && \
 	gulp p && \
 	cd .. && \

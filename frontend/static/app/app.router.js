@@ -15,7 +15,7 @@
 
 
       // 默认路由
-      $urlRouterProvider.otherwise("/app/login/login");
+      $urlRouterProvider.otherwise("/app/user/login");
 
 
       // 路由
@@ -32,25 +32,46 @@
         }
       });
 
-      $stateProvider.state('app.login', {
-        url: '/login',
+      $stateProvider.state('app.user', {
+        url: '/user',
         template: '<div ui-view class="fade-in-up" style="height: 100%;overflow-x: hidden;overflow-y: auto;"></div>',
-        title: '登录',
+        title: '用户',
         ncyBreadcrumb: {
-          label: '登录',
+          label: '用户',
           parent:'app'
         }
       });
 
-      $stateProvider.state('app.login.login', {
+      $stateProvider.state('app.user.login', {
         url: "/login",
         templateUrl: VIEW_PATH + "login/views/login.html",
         controller:"loginCtrl",
         ncyBreadcrumb: {
 	  label: '登录',
-          parent:'app.login'
+          parent:'app.user'
         }
       });
+
+      $stateProvider.state('app.manage', {
+        url: '/manage',
+        template: '<div ui-view class="fade-in-up" style="height: 100%;overflow-x: hidden;overflow-y: auto;"></div>',
+        title: '管理',
+        ncyBreadcrumb: {
+          label: '管理',
+          parent:'app'
+        }
+      });
+
+      $stateProvider.state('app.manage.botslist', {
+        url: "/botslist",
+        templateUrl: VIEW_PATH + "manage/views/botslist.html",
+        controller:"botslistCtrl",
+        ncyBreadcrumb: {
+	  label: '机器人列表',
+          parent:'app.manage'
+        }
+      });
+      
 
       // 异步加载需要的ctrl和UI组件
       function loadSequence() {

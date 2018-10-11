@@ -23,21 +23,20 @@ package chatbothub;
 service ChatBotHub {
   rpc EventTunnel (stream EventRequest) returns (stream EventReply) {}
   rpc GetBots (BotsRequest) returns (BotsReply) {}
+  rpc LoginQQ (LoginQQRequest) returns (LoginQQReply) {}
 }
 
-// The request message containing the user's name.
 message EventRequest {
   string eventType = 1;
   string body = 2;
-  string clientid = 3;
+  string clientId = 3;
   string clientType = 4;
 }
 
-// The response message containing the greetings
 message EventReply {
   string eventType = 1;
   string body = 2;
-  string clientid = 3;
+  string clientId = 3;
   string clientType = 4;
 }
 
@@ -55,6 +54,16 @@ message BotsInfo {
   string name = 3;
   int64 startAt = 4;
   int64 lastPing = 5;
-  int64 login = 6;
+  string login = 6;
   int32 status = 7;
+}
+
+message LoginQQRequest {
+  string clientId = 1;
+  uint64 QQNum = 2;
+  string password = 3;
+}
+
+message LoginQQReply {
+  string msg = 1;
 }
