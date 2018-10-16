@@ -12,6 +12,7 @@
       <th style="text-align:center">启动时间</th>
       <th style="text-align:center">最后活跃</th>
       <th style="text-align:center">客户端编号</th>
+      <th style="text-align:center">操作</th>
       
       <tbody>
 	<tr ng-repeat="row in body">
@@ -22,6 +23,14 @@
 	  <td style="text-align:center;width:160px">{{ tsToString(row.startAt) }}</td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
 	  <td style="text-align:left;width:240px">{{ row.clientId }}</td>
+	  <td style="text-align:left;width:160px">
+	    <span ng-if="row.clientType == 'QQBOT'">
+	      <a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>
+	    </span>
+	    <span ng-if="row.clientType == 'WECHATBOT'">
+	      <a href="javascript:;" ng-click="wechatLogin(row)">微信登录</a>
+	    </span>
+	  </td>
 	</tr>
       </tbody>
     </table>

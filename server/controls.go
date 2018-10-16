@@ -18,8 +18,17 @@ type GRPCWrapper struct {
 }
 
 func (w *GRPCWrapper) Cancel() {
-	w.cancel()
-	w.conn.Close()
+	if w == nil {
+		return
+	}
+	
+	if w.cancel != nil {
+		w.cancel()
+	}
+
+	if w.conn != nil {
+		w.conn.Close()
+	}
 }
 
 func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
@@ -143,6 +152,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			1: "初始化",
 			100: "准备登录",
 			150: "等待扫码",
+			151: "登录失败",
 			200: "已登录",
 			500: "连接断开",
 		},

@@ -58,7 +58,17 @@
         }
         return '<span class="' + cls + '">' + match + '</span>';
       });
-    }    
+    }
+
+    $scope.showQQLogin = function (row)  {
+      
+    }
+
+    $scope.wechatLogin = function (row) {
+      buildModel('loginwechat', {clientId: row.clientId}).post(function(data) {
+	$scope.bodypretty = $scope.pretty(data);
+      });
+    }
   }
 })();
 

@@ -5,7 +5,9 @@
     var result = {
       'login': buildUrl('login'),
       'bots': buildUrl('bots'),
-      'consts': buildUrl('consts')
+      'consts': buildUrl('consts'),
+      'loginwechat': buildUrl('loginwechat'),
+      'loginqq': buildUrl('loginqq')
     };
     return result;
     

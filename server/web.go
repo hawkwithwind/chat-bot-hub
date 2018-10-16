@@ -118,8 +118,8 @@ func (err *ClientError) ErrorCode() int {
 	return err.errorCode
 }
 
-func (err *ClientError) Error() string {
-	return err.Error()
+func (err *ClientError) Error() string {	
+	return err.err.Error()
 }
 
 type ErrorHandler struct {
@@ -187,8 +187,6 @@ func (ctx *ErrorHandler) parseUint(s string, base int, bitsize int) uint64 {
 	}
 }
 
-
-
 func (ctx *ErrorHandler) toJson(v interface{}) string {
 	if ctx.err != nil {
 		return ""
@@ -202,6 +200,37 @@ func (ctx *ErrorHandler) toJson(v interface{}) string {
 	}
 }
 
+func (ctx *ErrorHandler) fromJson(jsonstr string) *map[string]interface{} {
+	if ctx.err != nil {
+		return nil
+	}
+
+	ret := make(map[string]interface{})	
+	if err := json.Unmarshal([]byte(jsonstr), &ret); err == nil {
+		return &ret
+	} else {
+		ctx.err = err
+		return nil
+	}
+}
+
+func (ctx *ErrorHandler) fromMap(key string, m map[string]interface{},
+	objname string, defValue interface{}) interface{} {
+	if ctx.err != nil {
+		return nil
+	}
+
+	if v, found := m[key]; found {
+		return v
+	} else {
+		if defValue == nil {
+			ctx.err = fmt.Errorf("%s should have key %s", objname, key)
+			return nil
+		} else {
+			return defValue
+		}
+	}
+}
 
 func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
 	ctx.ok(w, "hello", nil)
