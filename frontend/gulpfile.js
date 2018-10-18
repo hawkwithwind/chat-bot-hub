@@ -21,7 +21,7 @@ var appPath = "static/app/";
 var exculePath = "!static/app/";
 var cssPath = "static/css/";
 //var destPath = staticPath + 'dest/';
-var destPath = '../build/static/';
+var destPath = '/home/build/static/';
 
 // 库文件
 var libConfig = [
@@ -109,50 +109,53 @@ gulp.copy=function(src, dest, base){
 };
 
 /*********
-    合并，压缩css文件
+	  合并，压缩css文件
 ********/
 gulp.task('css', function() {
-	gulp.src(cssConfig, srcConfig)
-		.pipe(concat('app.css'))
-		.pipe(cssmin())
-		.pipe(rename({suffix: '.min'}))
-		.pipe(gulp.dest(destPath + 'css'));
+  return gulp.src(cssConfig, srcConfig)
+    .pipe(concat('app.css'))
+    .pipe(cssmin())
+    .pipe(rename({suffix: '.min'}))
+    .pipe(gulp.dest(destPath + 'css'));
 });
 gulp.task('cssCopy', function() {
-	gulp.src(cssCopyConfig, {base: './' + cssPath})
-        .pipe(gulp.dest(destPath + 'css'));
+  return gulp.src(cssCopyConfig, {base: './' + cssPath})
+    .pipe(gulp.dest(destPath + 'css'));
 });
 
 /*********
-    copy font
- ********/
+	  copy font
+********/
 gulp.task('font', function() {
-  gulp.src([
+  return gulp.src([
     libPath + 'font-awesome/fonts/*',
     libPath + 'simple-line-icons/fonts/*',
     //libPath + 'angular-ui-grid/fonts/*'
   ])
     .pipe(rename({dirname: ''}))
     .pipe(gulp.dest(destPath + 'css/fonts'));
-  
-  gulp.src(libPath + 'bootstrap/fonts/bootstrap/*')
+
+});
+
+gulp.task('font-bootstrap', function() {
+  return gulp.src(libPath + 'bootstrap/fonts/bootstrap/*')
     .pipe(rename({dirname: ''}))
     .pipe(gulp.dest(destPath + 'fonts/bootstrap'));
 });
 
 
 /*********
- 合并，压缩 基础的js  
- ********/
+	  合并，压缩 基础的js  
+********/
 gulp.task('app', function() {
-  gulp.src(appConfig, srcConfig)
+  return gulp.src(appConfig, srcConfig)
     .pipe(concat('app.js', concatConfig))
     .pipe(rename({suffix: '.min'}))
     .pipe(gulp.dest(destPath + 'js'));
 });
 
 gulp.task('appMin', function() {
-  gulp.src(appConfig, srcConfig)
+  return gulp.src(appConfig, srcConfig)
     .pipe(concat('app.js', concatConfig))
     .pipe(uglify().on('error', function(e){
       console.log(e);
@@ -164,7 +167,7 @@ gulp.task('appMin', function() {
 
 // 打包初始化需要的库文件  不提供监控，直接压缩
 gulp.task('lib', function() {
-  gulp.src(libConfig, srcConfig)
+  return gulp.src(libConfig, srcConfig)
     .pipe(concat('lib.js', concatConfig))
     .pipe(uglify().on('error', function(e){
       console.log(e);
@@ -174,22 +177,22 @@ gulp.task('lib', function() {
 });
 
 /*********
- 转换固定模板为js  直接压缩
- ********/
+	  转换固定模板为js  直接压缩
+********/
 gulp.task('template', function() {
-  gulp.src(templateConfig)
+  return gulp.src(templateConfig)
     .pipe(html2js({
-    	outputModuleName: 'templateModal',
-    	useStrict: true,
-    	rename: function (moduleName) {
-    	  if (moduleName.indexOf('views') > -1) {
-    	    return moduleName.replace('static/app/', 'views/');
-	  } else if (moduleName.indexOf('layout') > -1) {
-	    return moduleName.replace('static/app/', 'views/');
-	  } else {
-	    return moduleName.replace('static/app/', '').replace('modal', '');
-	  }
+      outputModuleName: 'templateModal',
+      useStrict: true,
+      rename: function (moduleName) {
+    	if (moduleName.indexOf('views') > -1) {
+    	  return moduleName.replace('static/app/', 'views/');
+	} else if (moduleName.indexOf('layout') > -1) {
+	  return moduleName.replace('static/app/', 'views/');
+	} else {
+	  return moduleName.replace('static/app/', '').replace('modal', '');
 	}
+      }
     }))
     .pipe(concat('template.js'))
     .pipe(uglify().on('error', function(e){
@@ -200,89 +203,35 @@ gulp.task('template', function() {
 });
 
 /*********
-复制文件
+	  复制文件
 ********/
 // 复制转换 app目录下的文件到 dest下
 gulp.task('copyView', function() {
   // html直接复制
-  gulp.copy(viewConfig, destPath + 'views', appPath);
+  return gulp.copy(viewConfig, destPath + 'views', appPath);
 });
 
 gulp.task('copyScript', function() {
   // js需要转换压缩
-  gulp.src(scriptConfig, {base: appPath})
+  return gulp.src(scriptConfig, {base: appPath})
   //.pipe(ngAnnotate())
     .pipe(gulp.dest(destPath + 'js'));
 });
 
 gulp.task('copyScriptMin', function() {
   // js需要转换压缩
-  gulp.src(scriptConfig, {base: appPath})
+  return gulp.src(scriptConfig, {base: appPath})
     .pipe(uglify().on('error', function(e){
       console.log(e);
     }))
     .pipe(gulp.dest(destPath + 'js'));
 });
 
-gulp.task('server', function() {
-	browserSync.init({
-        server: "./",
-        //proxy: "http://www.oms.com:8080/",
-        port: 8080
-    });
-    watchConfig(true);
-})
-
-// 默认任务
-gulp.task('default', function() {
-	watchConfig();
-});
-
-function watchConfig(isReload) {
-	var watch = gulp.watch, 
-		watchConfig = {debounceDelay: 2000},
-		singleFileWatchConfig = extend(srcConfig, {base: appPath});
-	gulp.run('css', 'cssCopy', 'template', 'app', 'font', 'copyScript');
-
-	/**********
-		监控 scriptconfig配置的js文件
-	*********/
-	watch(scriptConfig, watchConfig, function(e) {
-		gulp.src(e.path, singleFileWatchConfig)
-			//.pipe(ngAnnotate())
-			.pipe(gulp.dest(destPath + 'js'))
-
-		isReload && browserSync.reload();
-	});
-	// watch(viewConfig, watchConfig, function(e) {
-	// 	gulp.src(e.path, singleFileWatchConfig)
-	// 		.pipe(gulp.dest(destPath + 'views'))
-	// 	isReload && browserSync.reload();
-	// });
-	watch(appConfig, watchConfig, function(e) {
-		gulp.run('app');
-		isReload && browserSync.reload();
-	});
-
-	watch(cssConfig, watchConfig, function(e) {
-		gulp.run('css');
-		isReload && browserSync.reload();
-	});
-	watch(cssCopyConfig, watchConfig, function(e) {
-		gulp.run('cssCopy');
-		isReload && browserSync.reload();
-	});
-	watch(templateConfig, watchConfig, function() {
-		gulp.run('template');
-		isReload && browserSync.reload();
-	});
-}
-
 // 上线打包
-gulp.task('p', function(){
-  var watch = gulp.watch, watchConfig = {debounceDelay: 2000};
-  gulp.run('lib', 'css', 'cssCopy', 'template', 'appMin', 'font', 'copyScriptMin');
-});
+gulp.task('build', gulp.series
+	  ('lib', 'css', 'cssCopy', 'template', 'appMin', 'font', 'copyScriptMin', function (done) {
+	    done();
+	  }));
 
 function extend(targetObj, obj) {
 	var resultObj = {};
