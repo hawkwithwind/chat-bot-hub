@@ -27,8 +27,8 @@ build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) build-nodejs-image
 
 $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	docker run --rm \
-        --env HTTPS_PROXY=$(HTTPS_PROXY) \
-        --env HTTP_PROXY=$(HTTP_PROXY) \
+        --env HTTPS_PROXY=$(https_proxy) \
+        --env HTTP_PROXY=$(http_proxy) \
         --net=host \
 	-v $(GOPATH)/src:/go/src \
 	-v $(GOPATH)/pkg:/go/pkg \
