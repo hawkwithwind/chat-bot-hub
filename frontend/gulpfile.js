@@ -4,7 +4,7 @@ var gulp = require('gulp');
 //var through = require('through2');
 // 引入组件
 var concat = require('gulp-concat');
-var uglify = require('gulp-uglify');
+var uglify = require('gulp-uglify-es').default;
 var cssmin = require('gulp-cssmin');
 var rename = require('gulp-rename');
 var ngAnnotate = require('gulp-ng-annotate');

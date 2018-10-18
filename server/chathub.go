@@ -135,6 +135,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.err == nil {o.err = fmt.Errorf("unhandled client type %s", bot.ClientType)}
 				}				
 			} else if in.EventType == LOGINFAILED {
+				hub.Info("LOGINFAILED %v", in)
 				if o.err == nil {thebot, o.err = bot.loginFail(in.Body)}
 				if o.err == nil {o.err = fmt.Errorf(in.Body)}
 			} else if in.EventType == MESSAGE {
@@ -191,7 +192,7 @@ func (hub *ChatHub) LoginQQ (ctx context.Context, req *pb.LoginQQRequest) (*pb.L
 		}
 
 		if o.err == nil {
-			bot, o.err = bot.prepareLogin(fmt.Sprintf("%u", req.QQNum))
+			bot, o.err = bot.prepareLogin(fmt.Sprintf("%d", req.QQNum))
 		}
 
 		body := o.toJson(LoginQQBody{QQNum: req.QQNum, Password: req.Password})

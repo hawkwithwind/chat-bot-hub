@@ -21,19 +21,22 @@ build-angular: $(RUNTIME_PATH)/$(EXECUTABLE)
 	cp frontend/index.html $(RUNTIME_PATH)/static/ && \
 	chmod -R -w $(RUNTIME_PATH)/static/
 
-$(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH)
+$(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-image
 	docker run --rm \
 	-v $(GOPATH)/src:/go/src \
 	-v $(GOPATH)/pkg:/go/pkg \
 	-v $(shell pwd)/$(RUNTIME_PATH):/go/bin/${GOOS}_${GOARCH} \
 	-e GOOS=$(GOOS) -e GOARCH=$(GOARCH) -e GOBIN=/go/bin/$(GOOS)_$(GOARCH) -e CGO_ENABLED=0 \
-	$(GOIMAGE) go get -a -installsuffix cgo $(PACKAGE)/server/...
+	golang:withgit go get -a -installsuffix cgo $(PACKAGE)/server/...
 
 #$(RUNTIME_PATH)/dockerfile: runtime-image
 #	sh make_docker_file.sh $(RUNTIME_PATH)/Dockerfile $(RUNTIME_IMAGE) $(EXECUTABLE)
 
 #runtime-image:
 #	docker build -t $(RUNTIME_IMAGE) docker/runtime
+
+build-image:
+	docker build -t golang:withgit docker/build
 
 $(RUNTIME_PATH):
 	[ -d $(RUNTIME_PATH) ] || mkdir $(RUNTIME_PATH)

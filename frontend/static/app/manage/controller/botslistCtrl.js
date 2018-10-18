@@ -1,12 +1,10 @@
 (function() {
   "use strict"
   app.controller("botslistCtrl", botslistCtrl);
-  botslistCtrl.$inject = ["$scope",  "toastr", "buildModel",
-		       "buildPromise", "tools", "buildModelResId", "$sce",
-		       "$httpParamSerializer", "$http", "$window"];
-  function botslistCtrl($scope, toastr,
-			buildModel, buildPromise, tools, buildModelResId, $sce,
-			$httpParamSerializer, $http, $window) {
+  botslistCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
+		       "buildPromise", "tools", "buildModelResId"];
+  function botslistCtrl($scope, $modal, toastr,
+			buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {};
     
     $scope.tsToString = function(unix_timestamp) {
@@ -60,15 +58,42 @@
       });
     }
 
-    $scope.showQQLogin = function (row)  {
-      
+    $scope.showQQLogin = function(row)  {
+      $modal.open({
+	templateUrl: 'loginQQTemplate',
+	controller: qqLoginCtrl,
+	resolve: {
+	  clientId: () => row.clientId
+	}
+      });
     }
 
-    $scope.wechatLogin = function (row) {
+    $scope.wechatLogin = function(row) {
       buildModel('loginwechat', {clientId: row.clientId}).post(function(data) {
 	$scope.bodypretty = $scope.pretty(data);
       });
     }
   }
+
+  app.controller("qqLoginCtrl", qqLoginCtrl);
+  qqLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId"];
+  function qqLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId) {
+    $scope.clientId = clientId;
+    $scope.data = {};
+    $scope.data.clientId = clientId;
+    
+    $scope.close = function() {
+      $uibModalInstance.dismiss();
+    }
+
+    $scope.login = function(data) {
+      buildModel('loginqq', data).post(function(data) {
+	$scope.bodypretty = $scope.pretty(data);
+      });
+
+      $scope.close();
+    }
+  }
+  
 })();
 
