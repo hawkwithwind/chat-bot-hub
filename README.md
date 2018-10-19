@@ -42,7 +42,7 @@ web server can control and get info from grpc server by rpc call. in this way, w
 
 ## Docker deamon
 
-this project uses docker to complie/pack and run all the code, so you need docker deamon installed and running on your local machine. for ubuntu/debian machines
+this project uses docker to complie/pack and run all the code, so you need docker deamon installed and running on your local machine.
 
 ## GOPATH
 
