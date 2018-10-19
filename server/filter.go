@@ -1,13 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
-	"regexp"
 	"reflect"
-	"encoding/json"
-	
+	"regexp"
+	"strings"
+
 	"github.com/google/uuid"
 )
 
@@ -16,12 +16,12 @@ type Filter interface {
 }
 
 type BaseFilter struct {
-	Id string `json:"id"`
-	Name string	`json:"name"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-func (f *BaseFilter) init(name string) string{
+func (f *BaseFilter) init(name string) string {
 	f.Id = uuid.New().String()
 	f.Name = name
 	return f.Id
@@ -37,7 +37,7 @@ type WechatBaseFilter struct {
 	NextFilter Filter `json:"next"`
 }
 
-func NewWechatBaseFilter() *WechatBaseFilter {	
+func NewWechatBaseFilter() *WechatBaseFilter {
 	return &WechatBaseFilter{BaseFilter: BaseFilter{Type: "源:微信"}}
 }
 
@@ -47,28 +47,32 @@ func (f *WechatBaseFilter) String() string {
 }
 
 func (f *WechatBaseFilter) Next(filter Filter) error {
-	if f == nil { return fmt.Errorf("call on empty *WechatBaseFilter")}
+	if f == nil {
+		return fmt.Errorf("call on empty *WechatBaseFilter")
+	}
 	f.NextFilter = filter
 	return nil
 }
 
 func (f *WechatBaseFilter) Fill(msg string) error {
-	if f == nil { return fmt.Errorf("call on empty *WechatBaseFilter")}
-	/*
-	body := o.fromJson(msg)
-
-	if body != nil {
-		content := o.fromMap("content", *body, "eventRequest.body", nil)
-		//description := o.fromMap("description", *body, "eventRequest.body", nil)
-		status := o.fromMap("status", *body, "eventRequest.body", nil)
-		timestamp := o.fromMap("timestamp", *body, "eventRequest.body", nil)
-		uin := o.fromMap("uin", *body, "eventRequest.body", nil)
-		fromUser := o.fromMap("fromUser", *body, "eventRequest.body", nil)
-		toUser := o.fromMap("toUser", *body, "eventRequest.body", nil)
-		msgId := o.fromMap("msgId", *body, "eventRequest.body", nil)
-		msgSource := o.fromMap("msgSource", *body, "eventRequest.body", nil)
+	if f == nil {
+		return fmt.Errorf("call on empty *WechatBaseFilter")
 	}
-    */
+	/*
+		body := o.fromJson(msg)
+
+		if body != nil {
+			content := o.fromMap("content", *body, "eventRequest.body", nil)
+			//description := o.fromMap("description", *body, "eventRequest.body", nil)
+			status := o.fromMap("status", *body, "eventRequest.body", nil)
+			timestamp := o.fromMap("timestamp", *body, "eventRequest.body", nil)
+			uin := o.fromMap("uin", *body, "eventRequest.body", nil)
+			fromUser := o.fromMap("fromUser", *body, "eventRequest.body", nil)
+			toUser := o.fromMap("toUser", *body, "eventRequest.body", nil)
+			msgId := o.fromMap("msgId", *body, "eventRequest.body", nil)
+			msgSource := o.fromMap("msgSource", *body, "eventRequest.body", nil)
+		}
+	*/
 
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
@@ -79,7 +83,7 @@ func (f *WechatBaseFilter) Fill(msg string) error {
 
 type PlainFilter struct {
 	BaseFilter
-	logger *log.Logger
+	logger     *log.Logger
 	NextFilter Filter `json:"next"`
 }
 
@@ -93,12 +97,14 @@ func (f *PlainFilter) String() string {
 }
 
 func (f *PlainFilter) Fill(msg string) error {
-	if f == nil { return fmt.Errorf("call on empty *PlainFilter")}
+	if f == nil {
+		return fmt.Errorf("call on empty *PlainFilter")
+	}
 	brief := msg
 	if len(msg) > 20 {
 		brief = msg[:20]
 	}
-	
+
 	f.logger.Printf("[%s] %s ...", f.Type, brief)
 
 	if f.NextFilter != nil {
@@ -110,8 +116,8 @@ func (f *PlainFilter) Fill(msg string) error {
 
 type RegexRouter struct {
 	BaseFilter
-	NextFilter map[string]Filter `json:"next"`
-	compiledRegexp map[string]*regexp.Regexp
+	NextFilter        map[string]Filter `json:"next"`
+	compiledRegexp    map[string]*regexp.Regexp
 	DefaultNextFilter Filter `json:"defaultNext"`
 }
 
@@ -125,31 +131,39 @@ func (f *RegexRouter) String() string {
 }
 
 func (f *RegexRouter) DefaultNext(filter Filter) error {
-	if f == nil { return fmt.Errorf("call on empty *RegexRouter")}
+	if f == nil {
+		return fmt.Errorf("call on empty *RegexRouter")
+	}
 	f.DefaultNextFilter = filter
 	return nil
 }
 
 func (f *RegexRouter) Next(regstr string, filter Filter) error {
-	if f == nil { return fmt.Errorf("call on empty *RegexRouter")}
+	if f == nil {
+		return fmt.Errorf("call on empty *RegexRouter")
+	}
 	if f.NextFilter == nil {
 		f.NextFilter = make(map[string]Filter)
 	}
 	if f.compiledRegexp == nil {
 		f.compiledRegexp = make(map[string]*regexp.Regexp)
 	}
-	
+
 	compiledregexp := regexp.MustCompile(regstr)
-	
+
 	f.NextFilter[regstr] = filter
 	f.compiledRegexp[regstr] = compiledregexp
 	return nil
 }
 
 func (f *RegexRouter) Fill(msg string) error {
-	if f == nil { return fmt.Errorf("call on empty *RegexRouter")}
-	if f.NextFilter == nil {return nil}
-	
+	if f == nil {
+		return fmt.Errorf("call on empty *RegexRouter")
+	}
+	if f.NextFilter == nil {
+		return nil
+	}
+
 	for k, v := range f.NextFilter {
 		if cr, found := f.compiledRegexp[k]; found {
 			if cr.MatchString(msg) {
@@ -178,7 +192,7 @@ func findByJsonPath(body map[string]interface{}, name string) interface{} {
 			if reflect.TypeOf(part) == reflect.TypeOf(m) {
 				step = part.(map[string]interface{})
 			} else {
-				if kn == len(ks) - 1 {
+				if kn == len(ks)-1 {
 					return part
 				} else {
 					return nil
@@ -188,14 +202,14 @@ func findByJsonPath(body map[string]interface{}, name string) interface{} {
 			return nil
 		}
 	}
-	
+
 	return step
 }
 
 type KVRouter struct {
 	BaseFilter
-	NextFilter map[string]map[string]Filter `json:"next"`
-	DefaultNextFilter Filter `json:"defaultNext"`
+	NextFilter        map[string]map[string]Filter `json:"next"`
+	DefaultNextFilter Filter                       `json:"defaultNext"`
 }
 
 func NewKVRouter() *KVRouter {
@@ -208,12 +222,14 @@ func (f *KVRouter) String() string {
 }
 
 func (f *KVRouter) Next(name string, value string, filter Filter) error {
-	if f == nil { return fmt.Errorf("call on empty *KVRouter")}
-	
+	if f == nil {
+		return fmt.Errorf("call on empty *KVRouter")
+	}
+
 	if f.NextFilter == nil {
 		f.NextFilter = make(map[string]map[string]Filter)
 	}
-	
+
 	if _, found := f.NextFilter[name]; !found {
 		f.NextFilter[name] = make(map[string]Filter)
 	}
@@ -223,19 +239,29 @@ func (f *KVRouter) Next(name string, value string, filter Filter) error {
 }
 
 func (f *KVRouter) DefaultNext(filter Filter) error {
-	if f == nil { return fmt.Errorf("call on empty *KVRouter")}
+	if f == nil {
+		return fmt.Errorf("call on empty *KVRouter")
+	}
 	f.DefaultNextFilter = filter
 	return nil
 }
 
 func (f *KVRouter) Fill(msg string) error {
-	if f == nil { return fmt.Errorf("call on empty *KVRouter")}
-	o := ErrorHandler{}	
+	if f == nil {
+		return fmt.Errorf("call on empty *KVRouter")
+	}
+	o := ErrorHandler{}
 	body := o.fromJson(msg)
 
-	if o.err != nil { return o.err }
-	if f.NextFilter == nil { return nil }
-	if body == nil { return nil }
+	if o.err != nil {
+		return o.err
+	}
+	if f.NextFilter == nil {
+		return nil
+	}
+	if body == nil {
+		return nil
+	}
 
 	errlist := make([]error, 0)
 	fillOnce := false
@@ -257,7 +283,7 @@ func (f *KVRouter) Fill(msg string) error {
 			}
 		}
 	}
-	
+
 	if !fillOnce {
 		if f.DefaultNextFilter != nil {
 			return f.DefaultNextFilter.Fill(msg)

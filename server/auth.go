@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"strings"
 	"encoding/json"
+	"fmt"
 	"net/http"
-		
+	"strings"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/mitchellh/mapstructure"
@@ -77,4 +77,3 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		}
 	})
 }
-

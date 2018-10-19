@@ -32,7 +32,7 @@ type ChatHub struct {
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	o := &ErrorHandler{}
-	
+
 	return &pb.BotsInfo{
 		ClientId:   bot.ClientId,
 		ClientType: bot.ClientType,
@@ -47,21 +47,21 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 
 const (
 	WECHATBOT string = "WECHATBOT"
-	QQBOT string = "QQBOT"
+	QQBOT     string = "QQBOT"
 )
 
 const (
-	PING string = "PING"
-	PONG string = "PONG"
-	REGISTER string = "REGISTER"
-	LOGIN string = "LOGIN"
-	LOGINDONE string = "LOGINDONE"
+	PING        string = "PING"
+	PONG        string = "PONG"
+	REGISTER    string = "REGISTER"
+	LOGIN       string = "LOGIN"
+	LOGINDONE   string = "LOGINDONE"
 	LOGINFAILED string = "LOGINFAILED"
-	MESSAGE string = "MESSAGE"
+	MESSAGE     string = "MESSAGE"
 )
 
 type LoginQQBody struct {
-	QQNum uint64 `json:"qqNumber"`
+	QQNum    uint64 `json:"qqNumber"`
 	Password string `json:"password"`
 }
 
@@ -85,7 +85,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 		if in.EventType == PING {
 			if thebot, found := hub.bots[in.ClientId]; found {
-				ts := time.Now().UnixNano() / 1e6				
+				ts := time.Now().UnixNano() / 1e6
 				pong := pb.EventReply{EventType: "PONG", Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
 				if err := tunnel.Send(&pong); err != nil {
 					hub.Error("send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
@@ -101,7 +101,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			if bot, found = hub.bots[in.ClientId]; !found {
 				bot = NewChatBot()
 			}
-			
+
 			if newbot, err := bot.register(in.ClientId, in.ClientType, tunnel); err != nil {
 				hub.Error("register failed %s", err.Error())
 			} else {
@@ -110,7 +110,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			}
 		} else {
 			var bot *ChatBot
-			var found bool			
+			var found bool
 			if bot, found = hub.bots[in.ClientId]; !found {
 				hub.Error("cannot found c[%s] %s", in.ClientType, in.ClientId)
 				continue
@@ -118,7 +118,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			o := ErrorHandler{}
 			var thebot *ChatBot
-			
+
 			if in.EventType == LOGINDONE {
 				hub.Info("LOGINEDONE %v", in)
 				if bot.ClientType == WECHATBOT {
@@ -128,34 +128,56 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						userName = o.fromMap("userName", *body, "eventRequest.body", nil)
 						// uin := o.fromMap("uin", *body, "eventRequest.body", "")
 					}
-					if o.err == nil {thebot, o.err = bot.loginDone(userName.(string))}
+					if o.err == nil {
+						thebot, o.err = bot.loginDone(userName.(string))
+					}
 				} else if bot.ClientType == QQBOT {
-					if o.err == nil {thebot, o.err = bot.loginDone("")}
+					if o.err == nil {
+						thebot, o.err = bot.loginDone("")
+					}
 				} else {
-					if o.err == nil {o.err = fmt.Errorf("unhandled client type %s", bot.ClientType)}
-				}				
+					if o.err == nil {
+						o.err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+					}
+				}
 			} else if in.EventType == LOGINFAILED {
 				hub.Info("LOGINFAILED %v", in)
-				if o.err == nil {thebot, o.err = bot.loginFail(in.Body)}
-				if o.err == nil {o.err = fmt.Errorf(in.Body)}
+				if o.err == nil {
+					thebot, o.err = bot.loginFail(in.Body)
+				}
+				if o.err == nil {
+					o.err = fmt.Errorf(in.Body)
+				}
 			} else if in.EventType == MESSAGE {
 				if bot.ClientType == WECHATBOT {
-					if o.err == nil {if bot.filter != nil {o.err = bot.filter.Fill(in.Body)}}
+					if o.err == nil {
+						if bot.filter != nil {
+							o.err = bot.filter.Fill(in.Body)
+						}
+					}
 				} else if bot.ClientType == QQBOT {
-					if o.err == nil {if bot.filter != nil {o.err = bot.filter.Fill(in.Body)}}
+					if o.err == nil {
+						if bot.filter != nil {
+							o.err = bot.filter.Fill(in.Body)
+						}
+					}
 				} else {
-					if o.err == nil {o.err = fmt.Errorf("unhandled client type %s", bot.ClientType)}
-				}				
+					if o.err == nil {
+						o.err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+					}
+				}
 			} else {
 				hub.Info("recv unknown event %v", in)
 			}
 
 			if o.err == nil {
-				if thebot != nil {hub.bots[in.ClientId] = thebot}
+				if thebot != nil {
+					hub.bots[in.ClientId] = thebot
+				}
 			} else {
 				hub.Error("[%s] Error %s", in.EventType, o.err.Error())
 			}
-		}		
+		}
 	}
 }
 
@@ -182,10 +204,10 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 	}
 }
 
-func (hub *ChatHub) LoginQQ (ctx context.Context, req *pb.LoginQQRequest) (*pb.LoginQQReply, error) {
+func (hub *ChatHub) LoginQQ(ctx context.Context, req *pb.LoginQQRequest) (*pb.LoginQQReply, error) {
 	hub.Info("recieve login qq cmd from web %s: %d", req.ClientId, req.QQNum)
 	o := ErrorHandler{}
-	
+
 	if bot, found := hub.bots[req.ClientId]; found {
 		if bot.ClientType != QQBOT {
 			o.err = fmt.Errorf("cannot send loginQQ to c[%s] %s", bot.ClientType, bot.ClientId)
@@ -197,15 +219,17 @@ func (hub *ChatHub) LoginQQ (ctx context.Context, req *pb.LoginQQRequest) (*pb.L
 
 		body := o.toJson(LoginQQBody{QQNum: req.QQNum, Password: req.Password})
 		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType: "LOGIN",
+			EventType:  "LOGIN",
 			ClientType: QQBOT,
-			ClientId: req.ClientId,
-			Body: body,
+			ClientId:   req.ClientId,
+			Body:       body,
 		})
 	} else {
-		if o.err == nil {o.err = fmt.Errorf("cannot find bot %s", req.ClientId)}
+		if o.err == nil {
+			o.err = fmt.Errorf("cannot find bot %s", req.ClientId)
+		}
 	}
-		
+
 	if o.err != nil {
 		return &pb.LoginQQReply{Msg: fmt.Sprintf("QQLOGIN FAILED %s", o.err.Error())}, nil
 	} else {
@@ -213,7 +237,7 @@ func (hub *ChatHub) LoginQQ (ctx context.Context, req *pb.LoginQQRequest) (*pb.L
 	}
 }
 
-func (hub *ChatHub) LoginWechat (ctx context.Context, req *pb.LoginWechatRequest) (*pb.LoginWechatReply, error) {
+func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest) (*pb.LoginWechatReply, error) {
 	hub.Info("recieve login wechat cmd from web %s", req.ClientId)
 	o := ErrorHandler{}
 
@@ -227,14 +251,16 @@ func (hub *ChatHub) LoginWechat (ctx context.Context, req *pb.LoginWechatRequest
 		}
 
 		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType: "LOGIN",
+			EventType:  "LOGIN",
 			ClientType: WECHATBOT,
-			ClientId: req.ClientId,			
-		})		
+			ClientId:   req.ClientId,
+		})
 	} else {
-		if o.err == nil {o.err = fmt.Errorf("cannot find bot %s", req.ClientId)}
+		if o.err == nil {
+			o.err = fmt.Errorf("cannot find bot %s", req.ClientId)
+		}
 	}
-	
+
 	if o.err != nil {
 		return &pb.LoginWechatReply{Msg: fmt.Sprintf("WechatLOGIN FAILED %s", o.err.Error())}, nil
 	} else {

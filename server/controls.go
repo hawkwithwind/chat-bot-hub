@@ -2,26 +2,26 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"net/http"
-	
+	"time"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
 type GRPCWrapper struct {
-	conn *grpc.ClientConn
-	client pb.ChatBotHubClient
+	conn    *grpc.ClientConn
+	client  pb.ChatBotHubClient
 	context context.Context
-	cancel context.CancelFunc
+	cancel  context.CancelFunc
 }
 
 func (w *GRPCWrapper) Cancel() {
 	if w == nil {
 		return
 	}
-	
+
 	if w.cancel != nil {
 		w.cancel()
 	}
@@ -42,12 +42,12 @@ func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
 	} else {
 		client := pb.NewChatBotHubClient(conn)
 		gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		
+
 		return &GRPCWrapper{
-			conn: conn,
-			client: client,
+			conn:    conn,
+			client:  client,
 			context: gctx,
-			cancel: cancel,
+			cancel:  cancel,
 		}
 	}
 }
@@ -56,7 +56,7 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 	if ctx.err != nil {
 		return nil
 	}
-	
+
 	if botsreply, err := w.client.GetBots(w.context, &pb.BotsRequest{Secret: "secret"}); err != nil {
 		ctx.err = err
 		return nil
@@ -106,7 +106,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.weberror(ctx, w)
-	
+
 	r.ParseForm()
 	qqnumstr := o.getStringValue(r.Form, "qqnum")
 	pass := o.getStringValue(r.Form, "password")
@@ -118,7 +118,7 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 
 	if loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
 		ClientId: clientId,
-		QQNum: qqnum,
+		QQNum:    qqnum,
 		Password: pass,
 	}); o.err == nil {
 		ctx.ok(w, "", loginreply)
@@ -145,11 +145,11 @@ func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 	ctx.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
-			"QQBOT": "QQ机器人",
+			"QQBOT":     "QQ机器人",
 			"WECHATBOT": "微信机器人",
 		},
 		"status": map[int]string{
-			1: "初始化",
+			1:   "初始化",
 			100: "准备登录",
 			150: "等待扫码",
 			151: "登录失败",

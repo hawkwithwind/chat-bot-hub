@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"log"
 	"os"
+	"time"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
@@ -12,23 +12,23 @@ import (
 type ChatBotStatus int32
 
 const (
-	BeginNew             ChatBotStatus = 0
-	BeginRegistered      ChatBotStatus = 1
-	LoggingPrepared      ChatBotStatus = 100
-	LoggingChallenged    ChatBotStatus = 150
-	LoggingFailed        ChatBotStatus = 151
-	WorkingLoggedIn      ChatBotStatus = 200
-	FailingDisconnected  ChatBotStatus = 500	
+	BeginNew            ChatBotStatus = 0
+	BeginRegistered     ChatBotStatus = 1
+	LoggingPrepared     ChatBotStatus = 100
+	LoggingChallenged   ChatBotStatus = 150
+	LoggingFailed       ChatBotStatus = 151
+	WorkingLoggedIn     ChatBotStatus = 200
+	FailingDisconnected ChatBotStatus = 500
 )
 
 func (status ChatBotStatus) String() string {
 	names := map[ChatBotStatus]string{
-		BeginNew: "新建",
-		BeginRegistered: "已初始化",
-		LoggingPrepared: "准备登录",
-		LoggingChallenged: "等待扫码",
-		LoggingFailed: "登录失败",
-		WorkingLoggedIn: "已登录",
+		BeginNew:            "新建",
+		BeginRegistered:     "已初始化",
+		LoggingPrepared:     "准备登录",
+		LoggingChallenged:   "等待扫码",
+		LoggingFailed:       "登录失败",
+		WorkingLoggedIn:     "已登录",
 		FailingDisconnected: "连接断开",
 	}
 
@@ -36,12 +36,12 @@ func (status ChatBotStatus) String() string {
 }
 
 type ChatBot struct {
-	ClientId   string `json:"clientId"`
-	ClientType string `json:"clientType"`
-	Name       string `json:"name"`
-	StartAt    int64  `json:"startAt"`
-	LastPing   int64  `json:"lastPing"`
-	Login      string `json:"login"`
+	ClientId   string        `json:"clientId"`
+	ClientType string        `json:"clientType"`
+	Name       string        `json:"name"`
+	StartAt    int64         `json:"startAt"`
+	LastPing   int64         `json:"lastPing"`
+	Login      string        `json:"login"`
 	Status     ChatBotStatus `json:"status"`
 	tunnel     pb.ChatBotHub_EventTunnelServer
 	errmsg     string
@@ -59,7 +59,7 @@ func NewChatBot() *ChatBot {
 
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
-	if bot.Status != BeginNew && bot.Status != BeginRegistered  && bot.Status != FailingDisconnected {
+	if bot.Status != BeginNew && bot.Status != BeginRegistered && bot.Status != FailingDisconnected {
 		return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
 	}
 
@@ -74,7 +74,7 @@ func (bot *ChatBot) register(clientId string, clientType string,
 		filter.init("源:微信")
 		pfilter := NewPlainFilter(bot.logger)
 		pfilter.init("空")
-		
+
 		if err := filter.Next(pfilter); err == nil {
 			bot.filter = filter
 		} else {
@@ -96,7 +96,7 @@ func (bot *ChatBot) prepareLogin(login string) (*ChatBot, error) {
 
 func (bot *ChatBot) loginDone(login string) (*ChatBot, error) {
 	bot.Info("loginDone")
-	
+
 	if bot.Status != LoggingPrepared {
 		return bot, fmt.Errorf("bot status %s cannot loginDone", bot.Status)
 	}
@@ -110,7 +110,7 @@ func (bot *ChatBot) loginDone(login string) (*ChatBot, error) {
 
 func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 	bot.Info("loginFail")
-	
+
 	if bot.Status != LoggingPrepared {
 		return bot, fmt.Errorf("bot status %s cannot loginFail", bot.Status)
 	}

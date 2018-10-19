@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
-	"strconv"
 	"reflect"
-	
+	"strconv"
+	"time"
+
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 )
@@ -104,9 +104,8 @@ func (ctx *WebServer) fail(w http.ResponseWriter, msg string) {
 	})
 }
 
-
 type ClientError struct {
-	err error
+	err       error
 	errorCode int
 }
 
@@ -118,7 +117,7 @@ func (err *ClientError) ErrorCode() int {
 	return err.errorCode
 }
 
-func (err *ClientError) Error() string {	
+func (err *ClientError) Error() string {
 	return err.err.Error()
 }
 
@@ -142,7 +141,7 @@ func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
 	if ctx.err != nil {
 		return nil
 	}
-	
+
 	if len(form[name]) > 0 {
 		return form[name]
 	} else {
@@ -155,9 +154,11 @@ func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
 	if ctx.err != nil {
 		return ""
 	}
-	
+
 	v := ctx.getValue(form, name)
-	if ctx.err != nil {return ""}
+	if ctx.err != nil {
+		return ""
+	}
 	return v[0]
 }
 
@@ -205,7 +206,7 @@ func (ctx *ErrorHandler) fromJson(jsonstr string) *map[string]interface{} {
 		return nil
 	}
 
-	ret := make(map[string]interface{})	
+	ret := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(jsonstr), &ret); err == nil {
 		return &ret
 	} else {
