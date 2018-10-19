@@ -14,6 +14,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
+	"github.com/getsentry/raven-go"
 )
 
 type RedisConfig struct {
@@ -29,6 +30,7 @@ type WebConfig struct {
 	Pass         string
 	SecretPhrase string
 	Redis        RedisConfig
+	Sentry       string
 }
 
 type CommonResponse struct {
@@ -263,12 +265,12 @@ func (ctx *WebServer) serve() {
 	ctx.init()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
-	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
-	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
-	r.HandleFunc("/loginqq", ctx.validate(ctx.loginQQ)).Methods("POST")
-	r.HandleFunc("/loginwechat", ctx.validate(ctx.loginWechat)).Methods("POST")
-	r.HandleFunc("/login", ctx.login).Methods("POST")
+	r.HandleFunc("/hello", raven.RecoveryHandler(ctx.validate(ctx.hello))).Methods("GET")
+	r.HandleFunc("/bots", raven.RecoveryHandler(ctx.validate(ctx.getBots))).Methods("GET")
+	r.HandleFunc("/consts", raven.RecoveryHandler(ctx.validate(ctx.getConsts))).Methods("GET")
+	r.HandleFunc("/loginqq", raven.RecoveryHandler(ctx.validate(ctx.loginQQ))).Methods("POST")
+	r.HandleFunc("/loginwechat", raven.RecoveryHandler(ctx.validate(ctx.loginWechat))).Methods("POST")
+	r.HandleFunc("/login", raven.RecoveryHandler(ctx.login)).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 
 	ctx.Info("restful server starts.")

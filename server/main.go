@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v2"
+	"github.com/getsentry/raven-go"
 )
 
 type MainConfig struct {
@@ -56,6 +57,8 @@ func main() {
 		return
 	}
 
+	raven.SetDSN(config.Web.Sentry)
+	
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
