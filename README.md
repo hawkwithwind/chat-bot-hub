@@ -67,7 +67,7 @@ this project uses docker to complie and run all the code, so that if you don't h
 
 docker image build, golang and nodejs build are all need internet access. makefile will make use of ```http_proxy``` and ```https_proxy``` environment and send those to docker container while compiling and packing golang and nodejs code.
 
-for the same reason, the Dockerfiles ```docker/*/Dockerfile``` uses China mirrors for alpine and nodjes registory. if you are in different location, feel free to comment out those lines, or change to other mirrors.
+for the same reason, the Dockerfiles ```docker/*/Dockerfile``` uses China mirrors for alpine and nodejs repositories. if you are in different location, feel free to comment out those lines, or change to other mirrors.
 
 
 - docker/runtime/Dockerfile
