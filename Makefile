@@ -11,6 +11,8 @@ GOIMAGE=golang:1.11-alpine3.8
 SOURCES=$(shell find server -type f -name '*.go' -not -path "./vendor/*")
 BASE=$(GOPATH)/src/$(PACKAGE)
 
+DBPATH="$(chathubdb)"
+
 build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) build-nodejs-image
 	if [ -d $(RUNTIME_PATH)/static/ ]; then chmod -R +w $(RUNTIME_PATH)/static/ ; fi && \
 	docker run --rm \
@@ -60,6 +62,19 @@ fmt:
 	docker run --rm \
 	-v $(shell pwd):/go/src/$(PACKAGE) \
 	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/" && gofmt -l -w $(SOURCES)
+
+
+test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
+	docker run --rm \
+        -e HTTPS_PROXY=$(https_proxy) \
+        -e HTTP_PROXY=$(http_proxy) \
+        -e DBPATH=$(DBPATH) \
+        --net=host \
+	-v $(GOPATH)/src:/go/src \
+	-v $(GOPATH)/pkg:/go/pkg \
+	-v $(shell pwd)/$(RUNTIME_PATH):/go/bin/${GOOS}_${GOARCH} \
+	-e GOOS=$(GOOS) -e GOARCH=$(GOARCH) -e GOBIN=/go/bin/$(GOOS)_$(GOARCH) -e CGO_ENABLED=0 \
+	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/test/ && go test -v ./..."
 
 
 .PHONY: gen
