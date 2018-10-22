@@ -9,9 +9,14 @@
         <meta name="apple-touch-fullscreen" content="yes" />
         <title>CHAT-BOT-HUB</title>
         <link rel="stylesheet" href="css/app.min.css">
-        <!--默认皮肤颜色-->
-        <link rel="stylesheet" data-ng-href="css/themes/darkblue.min.css" />
 	<link rel="stylesheet" data-ng-href="css/pure-min.css" />
+	<!--[if lte IE 8]>
+	    <link rel="stylesheet" href="css/grids-responsive-old-ie-min.css">
+	<![endif]-->
+	<!--[if gt IE 8]><!-->
+	    <link rel="stylesheet" data-ng-href="css/grids-responsive-min.css">
+	<!--<![endif]-->
+	<link rel="stylesheet" data-ng-href="css/themes/pure.theme.css" />
     </head>
     <body data-ng-controller="AppCtrl" class="page-content-white page-sidebar-closed-hide-logo page-sidebar-fixed">
         <div ui-view id="app" class="page-header-fixed"></div>

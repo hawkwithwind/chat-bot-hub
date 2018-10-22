@@ -3,10 +3,10 @@
   app.controller("loginCtrl", loginCtrl);
   loginCtrl.$inject = ["$scope",  "toastr", "buildModel",
 		       "buildPromise", "tools", "buildModelResId", "$sce",
-		       "$httpParamSerializer", "$http", "$window"];
+		       "$httpParamSerializer", "$http", "$window", "$timeout"];
   function loginCtrl($scope, toastr,
 		     buildModel, buildPromise, tools, buildModelResId, $sce,
-		     $httpParamSerializer, $http, $window) {
+		     $httpParamSerializer, $http, $window, $timeout) {
     $scope.body = {};
     
     $scope.login = function(data) {
@@ -15,6 +15,9 @@
       $http.post(url, JSON.stringify(data)).
 	success(function(data, status, headers, config) {
 	  //$scope.bodypretty = $sce.trustAsHtml($scope.pretty(data));
+	  $timeout(function() {
+	    $window.location.href = '#/app/manage/botslist';
+	  }, 100);
 	}).
 	error(function(data, status, headers, config) {
 	  //$scope.bodypretty = $sce.trustAsHtml($scope.pretty(data));

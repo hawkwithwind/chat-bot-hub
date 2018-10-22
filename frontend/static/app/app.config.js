@@ -151,7 +151,6 @@
 	  showError('未知错误');
 	  return $q.reject('')
 	} else {
-	  console.log(rejection.status)
 	  if (rejection.status === 404) {
 	    showError('找不到指定的url');
 	  } else if (rejection.status >= 500) {
