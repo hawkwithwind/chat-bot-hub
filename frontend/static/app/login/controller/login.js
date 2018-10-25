@@ -24,6 +24,15 @@
 	});
     }
 
+    $scope.githublogin = function(data) {
+      $http.get('/githublogin').success(function(data, status, headers, config) {
+	console.log(data);
+	console.log(status);
+	console.log(headers);
+	console.log(config);
+      })
+    }
+
     $scope.pretty = function (json) {
       if (typeof json != 'string') {
         json = JSON.stringify(json, undefined, 2);

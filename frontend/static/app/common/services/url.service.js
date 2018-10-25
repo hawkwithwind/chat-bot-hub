@@ -21,7 +21,7 @@
 	host += ":" + $window.location.port;
       }
       */
-      console.log(host +"," + pathprefix + "," + url);
+      //console.log(host +"," + pathprefix + "," + url);
       return host + pathprefix + url;
     }
   }

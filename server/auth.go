@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	//"net"
+	"net/url"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -83,14 +85,21 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 
 func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
 	session, _ := ctx.store.Get(r, "chatbothub")
-	session.Values["CSRF_STRING"] = string(securecookie.GenerateRandomKey(32))
+	rk := securecookie.GenerateRandomKey(32)
+	dst := make([]byte, hex.EncodedLen(len(rk)))
+	hex.Encode(dst, rk)
+	session.Values["CSRF_STRING"] = string(dst)
 	session.Save(r, w)
+
+	params := url.Values{}
+	params.Set("client_id", ctx.config.GithubOAuth.ClientId)
+	params.Set("redirect_uri", ctx.config.GithubOAuth.Callback)
+	params.Set("state", session.Values["CSRF_STRING"].(string))
 	
-	url := fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&state=%s",
-		ctx.config.GithubOAuth.AuthPath,
-		ctx.config.GithubOAuth.ClientId,
-		ctx.config.GithubOAuth.Callback,
-		session.Values["CSRF_STRING"])
+	
+	url := fmt.Sprintf("%s?%s", ctx.config.GithubOAuth.AuthPath, params.Encode())
+	ctx.Info("CSRF %s", session.Values["CSRF_STRING"])
+	ctx.Info("Redirect to %s", url)	
 
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -98,7 +107,7 @@ func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
 func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.weberror(ctx, w)
-	
+
 	session, _ := ctx.store.Get(r, "chatbothub")
 
 	r.ParseForm()
@@ -106,17 +115,19 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 	code := o.getStringValue(r.Form, "code")
 
 	if o.err == nil {
+		ctx.Info("c")
 		if session.Values["CSRF_STRING"] == state {
+			ctx.Info("d")
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
 			rr.Params["code"] = code
-			rr.Params["redirect_uri"] = "https://chathub.fwyuan.com"
+			rr.Params["redirect_uri"] = ctx.config.Baseurl
 			rr.Params["state"] = state
 			o.err = rr.AcceptMIME("json")
 
 			var resp *RestfulResponse
-			if o.err != nil {
+			if o.err == nil {				
 				if resp, o.err = RestfulCall(rr); o.err == nil {
 					ctx.ok(w, "登录成功", resp.Body)
 				}

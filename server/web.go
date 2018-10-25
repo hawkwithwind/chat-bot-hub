@@ -11,6 +11,9 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+	"context"
+	"os/signal"
+	"sync/atomic"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
@@ -35,6 +38,7 @@ type GithubOAuthConfig struct {
 type WebConfig struct {
 	Host         string
 	Port         string
+	Baseurl      string
 	User         string
 	Pass         string
 	SecretPhrase string
@@ -274,27 +278,123 @@ func (ctx *WebServer) newRedisPool(server string, db string) *redis.Pool {
 	}
 }
 
+type key int
+
+const (
+	requestIDKey key = 0
+)
+
+var (
+	healthy int32
+)
+
 func (ctx *WebServer) serve() {
 	ctx.init()
+	nextRequestID := func() string {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
 
 	r := mux.NewRouter()
+	r.Handle("/healthz", healthz())
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/loginqq",ctx.validate(ctx.loginQQ)).Methods("POST")
 	r.HandleFunc("/loginwechat", ctx.validate(ctx.loginWechat)).Methods("POST")
 	r.HandleFunc("/login", ctx.login).Methods("POST")
+	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
+	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-
-	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))	
 	
-	ctx.Info("restful server starts.")
 	addr := fmt.Sprintf("%s:%s", ctx.config.Host, ctx.config.Port)
 	ctx.Info("listen %s.", addr)
-	err := http.ListenAndServe(addr, handler)
-	if err != nil {
-		ctx.Error("failed %v", err)
+	server := &http.Server{
+		Addr: addr,
+		Handler: tracing(nextRequestID)(logging(ctx.logger)(handler)),
+		ErrorLog: ctx.logger,
+		ReadTimeout: 15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 
+	done := make(chan bool)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+		ctx.Info("Server is shutting down")
+		atomic.StoreInt32(&healthy, 0)
+
+		c, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+		defer cancel()
+
+		server.SetKeepAlivesEnabled(false)
+		if err := server.Shutdown(c); err != nil {
+			ctx.Error("Could not gracefully shutdown server %v", err)
+		}
+		close(done)
+	}()
+
+	ctx.Info("restful server starts.")
+	atomic.StoreInt32(&healthy, 1)
+	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		ctx.Error("failed %v", err)
+	}
+	<-done
+	
 	ctx.Info("Server stopped")
+}
+
+func index() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "Hello, World!")
+	})
+}
+
+func healthz() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.LoadInt32(&healthy) == 1 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+}
+
+func logging(logger *log.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				requestID, ok := r.Context().Value(requestIDKey).(string)
+				if !ok {
+					requestID = "unknown"
+				}
+				logger.Println(requestID, r.Method, r.URL.Path, r.RemoteAddr, r.UserAgent())
+			}()
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func tracing(nextRequestID func() string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestID := r.Header.Get("X-Request-Id")
+			if requestID == "" {
+				requestID = nextRequestID()
+			}
+			ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+			w.Header().Set("X-Request-Id", requestID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }

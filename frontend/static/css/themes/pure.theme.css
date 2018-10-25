@@ -526,3 +526,18 @@ body {
     margin: 0.25em 0;
 }
 
+
+.button-github,
+.button-login {
+    color: white;
+    border-radius: 4px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.button-github {
+    background: #191818;
+}
+
+.fa-github {
+    float:left
+}
