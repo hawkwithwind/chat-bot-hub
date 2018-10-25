@@ -132,6 +132,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 					if strings.Contains(resp.Body, "error") {
 						ctx.fail(w, resp.Body)
 					} else {
+						ctx.Info(resp.Body)
 						http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
 					}
 				}
