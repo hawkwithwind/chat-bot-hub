@@ -129,8 +129,11 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			var resp *RestfulResponse
 			if o.err == nil {				
 				if resp, o.err = RestfulCall(rr); o.err == nil {
-					http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
-					//ctx.ok(w, "登录成功", resp.Body)
+					if strings.Contains(resp.Body, "error") {
+						ctx.fail(w, resp.Body)
+					} else {
+						http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
+					}
 				}
 			}
 		} else {
