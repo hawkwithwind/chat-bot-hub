@@ -122,14 +122,15 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
 			rr.Params["code"] = code
-			rr.Params["redirect_uri"] = ctx.config.Baseurl
+			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
 			o.err = rr.AcceptMIME("json")
 
 			var resp *RestfulResponse
 			if o.err == nil {				
 				if resp, o.err = RestfulCall(rr); o.err == nil {
-					ctx.ok(w, "登录成功", resp.Body)
+					http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
+					//ctx.ok(w, "登录成功", resp.Body)
 				}
 			}
 		} else {
