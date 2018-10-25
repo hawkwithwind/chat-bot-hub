@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	//"net"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
+	"github.com/gorilla/securecookie"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -76,4 +78,51 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			ctx.deny(w, "未登录用户无权限访问")
 		}
 	})
+}
+
+
+func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
+	session, _ := ctx.store.Get(r, "chatbothub")
+	session.Values["CSRF_STRING"] = string(securecookie.GenerateRandomKey(32))
+	session.Save(r, w)
+	
+	url := fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&state=%s",
+		ctx.config.GithubOAuth.AuthPath,
+		ctx.config.GithubOAuth.ClientId,
+		ctx.config.GithubOAuth.Callback,
+		session.Values["CSRF_STRING"])
+
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.weberror(ctx, w)
+	
+	session, _ := ctx.store.Get(r, "chatbothub")
+
+	r.ParseForm()
+	state := o.getStringValue(r.Form, "state")
+	code := o.getStringValue(r.Form, "code")
+
+	if o.err == nil {
+		if session.Values["CSRF_STRING"] == state {
+			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
+			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
+			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
+			rr.Params["code"] = code
+			rr.Params["redirect_uri"] = "https://chathub.fwyuan.com"
+			rr.Params["state"] = state
+			o.err = rr.AcceptMIME("json")
+
+			var resp *RestfulResponse
+			if o.err != nil {
+				if resp, o.err = RestfulCall(rr); o.err == nil {
+					ctx.ok(w, "登录成功", resp.Body)
+				}
+			}
+		} else {
+			ctx.deny(w, "CSRF校验失败")
+		}
+	}
 }

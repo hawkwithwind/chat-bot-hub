@@ -14,7 +14,8 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
-	"github.com/getsentry/raven-go"
+	"github.com/gorilla/sessions"
+	"github.com/getsentry/raven-go"	
 )
 
 type RedisConfig struct {
@@ -23,14 +24,24 @@ type RedisConfig struct {
 	Db   string
 }
 
+type GithubOAuthConfig struct {
+	AuthPath  string
+	TokenPath string
+	ClientId  string
+	ClientSecret string
+	Callback  string
+}
+
 type WebConfig struct {
 	Host         string
 	Port         string
 	User         string
 	Pass         string
 	SecretPhrase string
+	SessionKey   string
 	Redis        RedisConfig
 	Sentry       string
+	GithubOAuth  GithubOAuthConfig
 }
 
 type CommonResponse struct {
@@ -46,10 +57,11 @@ type ErrorMessage struct {
 }
 
 type WebServer struct {
-	logger    *log.Logger
-	redispool *redis.Pool
 	config    WebConfig
 	hubport   string
+	logger    *log.Logger
+	redispool *redis.Pool
+	store     *sessions.CookieStore
 }
 
 func (ctx *WebServer) init() {
@@ -57,6 +69,7 @@ func (ctx *WebServer) init() {
 	ctx.redispool = ctx.newRedisPool(
 		fmt.Sprintf("%s:%s", ctx.config.Redis.Host, ctx.config.Redis.Port),
 		ctx.config.Redis.Db)
+	ctx.store = sessions.NewCookieStore([]byte(ctx.config.SessionKey))
 }
 
 func (ctx *WebServer) Info(msg string, v ...interface{}) {
@@ -265,18 +278,20 @@ func (ctx *WebServer) serve() {
 	ctx.init()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/hello", raven.RecoveryHandler(ctx.validate(ctx.hello))).Methods("GET")
-	r.HandleFunc("/bots", raven.RecoveryHandler(ctx.validate(ctx.getBots))).Methods("GET")
-	r.HandleFunc("/consts", raven.RecoveryHandler(ctx.validate(ctx.getConsts))).Methods("GET")
-	r.HandleFunc("/loginqq", raven.RecoveryHandler(ctx.validate(ctx.loginQQ))).Methods("POST")
-	r.HandleFunc("/loginwechat", raven.RecoveryHandler(ctx.validate(ctx.loginWechat))).Methods("POST")
-	r.HandleFunc("/login", raven.RecoveryHandler(ctx.login)).Methods("POST")
+	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
+	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
+	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
+	r.HandleFunc("/loginqq",ctx.validate(ctx.loginQQ)).Methods("POST")
+	r.HandleFunc("/loginwechat", ctx.validate(ctx.loginWechat)).Methods("POST")
+	r.HandleFunc("/login", ctx.login).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 
+	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+	
 	ctx.Info("restful server starts.")
 	addr := fmt.Sprintf("%s:%s", ctx.config.Host, ctx.config.Port)
 	ctx.Info("listen %s.", addr)
-	err := http.ListenAndServe(addr, r)
+	err := http.ListenAndServe(addr, handler)
 	if err != nil {
 		ctx.Error("failed %v", err)
 	}
