@@ -166,16 +166,15 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		if !req.ContentTypeFlag {
 			if _, found := req.Headers["Content-Type"]; !found {
 				if len(req.Params) > 0 && len(req.Body) == 0 {
-					//req.ContentType("form", "")
+					req.ContentType("form", "")
 				}
 			}
 		}
 		
-		if strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "json") ||
-			strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "xml") {
-			reqbody = bytes.NewBufferString(req.Body)
-		} else {
+		if strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "x-www-form-urlencoded") {
 			reqbody = bytes.NewBufferString(requestBody.Encode())
+		} else {
+			reqbody = bytes.NewBufferString(req.Body)
 		}
 	} else {
 		reqbody = bytes.NewBufferString("")
