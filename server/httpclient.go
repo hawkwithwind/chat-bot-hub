@@ -166,15 +166,16 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		if !req.ContentTypeFlag {
 			if _, found := req.Headers["Content-Type"]; !found {
 				if len(req.Params) > 0 && len(req.Body) == 0 {
-					req.ContentType("form", "")
+					//req.ContentType("form", "")
 				}
 			}
 		}
 		
-		if strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "x-www-form-urlencoded") {
-			reqbody = bytes.NewBufferString(requestBody.Encode())
-		} else {
+		if strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "json") ||
+			strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "xml") {
 			reqbody = bytes.NewBufferString(req.Body)
+		} else {
+			reqbody = bytes.NewBufferString(requestBody.Encode())
 		}
 	} else {
 		reqbody = bytes.NewBufferString("")
@@ -188,7 +189,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	if nreq, err = http.NewRequest(req.Method, targeturi, reqbody); err == nil {
 		for k, v := range req.Headers {
 			nreq.Header.Set(k, v)
-			fmt.Printf("HEADER[%v: %v]", k, v)
+			fmt.Printf("HEADER[%v: %v]\n", k, v)
 		}
 		
 		if nresp, err = client.Do(nreq); err != nil {return nil, err}
