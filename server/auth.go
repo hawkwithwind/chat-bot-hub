@@ -138,16 +138,17 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 					if strings.Contains(resp.Body, "error") {
 						ctx.fail(w, resp.Body)
 					} else {
-						var resparams url.Values
-						if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {
-							ctx.Info(resp.Body)
+						ctx.Info(resp.Body)
+						
+						// var resparams url.Values
+						// if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {							
 							
-							//token := resparams.Get("access_token")
-							//scope := resparams.Get("scope")
-							//token_type := resparams.Get("token_type")
+						// 	token := resparams.Get("access_token")
+						// 	scope := resparams.Get("scope")
+						// 	token_type := resparams.Get("token_type")
 							
-							http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
-						}
+						// 	http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
+						// }
 					}
 				}
 			}
