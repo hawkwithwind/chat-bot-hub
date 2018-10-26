@@ -58,11 +58,11 @@ func (req *RestfulRequest) AcceptMIME(atype string) error {
 	
 	switch atype {
 	case "xml":
-		req.Headers["Accept"] = "application/xml, text/plain, */*"
+		req.Headers["Accept"] = "application/xml"
 	case "json":
-		req.Headers["Accept"] = "application/json, text/plain, */*"
+		req.Headers["Accept"] = "application/json"
 	case "text":
-		req.Headers["Accept"] = "text/plain, */*"
+		req.Headers["Accept"] = "text/plain"
 	default:
 		return fmt.Errorf("unknown mime type %s", atype)
 	}
