@@ -42,7 +42,6 @@ type WebConfig struct {
 	User         string
 	Pass         string
 	SecretPhrase string
-	SessionKey   string
 	Redis        RedisConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
@@ -73,7 +72,7 @@ func (ctx *WebServer) init() {
 	ctx.redispool = ctx.newRedisPool(
 		fmt.Sprintf("%s:%s", ctx.config.Redis.Host, ctx.config.Redis.Port),
 		ctx.config.Redis.Db)
-	ctx.store = sessions.NewCookieStore([]byte(ctx.config.SessionKey))
+	ctx.store = sessions.NewCookieStore([]byte(ctx.config.SecretPhrase)[:64])
 }
 
 func (ctx *WebServer) Info(msg string, v ...interface{}) {

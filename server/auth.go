@@ -24,6 +24,13 @@ type JwtToken struct {
 	Token string `json:"token"`
 }
 
+/*
+jwt token {
+username
+expireat
+}
+*/
+
 func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	var user User
 	_ = json.NewDecoder(req.Body).Decode(&user)
@@ -115,25 +122,32 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 	code := o.getStringValue(r.Form, "code")
 
 	if o.err == nil {
-		ctx.Info("c")
 		if session.Values["CSRF_STRING"] == state {
-			ctx.Info("d")
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
+			rr.Params["scope"] = "read:user user:email"
 			rr.Params["code"] = code
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
 			o.err = rr.AcceptMIME("json")
 
 			var resp *RestfulResponse
-			if o.err == nil {				
+			if o.err == nil {		
 				if resp, o.err = RestfulCall(rr); o.err == nil {
 					if strings.Contains(resp.Body, "error") {
 						ctx.fail(w, resp.Body)
 					} else {
-						ctx.Info(resp.Body)
-						http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
+						var resparams url.Values
+						if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {
+							ctx.Info(resp.Body)
+							
+							//token := resparams.Get("access_token")
+							//scope := resparams.Get("scope")
+							//token_type := resparams.Get("token_type")
+							
+							http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
+						}
 					}
 				}
 			}
