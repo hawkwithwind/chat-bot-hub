@@ -146,7 +146,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 							
 							urr := NewRestfulRequest("post", ctx.config.GithubOAuth.UserPath)
 							urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
-							if o.err = urr.AcceptMIME("json"); o.err != nil {
+							if o.err = urr.AcceptMIME("json"); o.err == nil {
 								var uresp *RestfulResponse
 								if uresp, o.err = RestfulCall(urr); o.err == nil {
 									var urespbody map[string]interface{}
