@@ -126,7 +126,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
-			rr.Params["scope"] = "user"
+			rr.Params["scope"] = "user:email read:user"
 			rr.Params["code"] = code
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
@@ -147,7 +147,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			urespbody := o.GetResponseBody(uresp)
 
 			login := urespbody["login"]
-			avatar_url := urespbody["avatart_url"]
+			avatar_url := urespbody["avatar_url"]
 			email := urespbody["email"]
 
 			ctx.Info("login %s, avatar %s, email %s", login, avatar_url, email)			
