@@ -102,8 +102,8 @@ func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
 	params.Set("client_id", ctx.config.GithubOAuth.ClientId)
 	params.Set("redirect_uri", ctx.config.GithubOAuth.Callback)
 	params.Set("state", session.Values["CSRF_STRING"].(string))
-	
-	
+	params.Set("scope", "read:user user:email")
+		
 	url := fmt.Sprintf("%s?%s", ctx.config.GithubOAuth.AuthPath, params.Encode())
 	ctx.Info("CSRF %s", session.Values["CSRF_STRING"])
 	ctx.Info("Redirect to %s", url)	
@@ -126,7 +126,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
-			rr.Params["scope"] = "user:email"
+			rr.Params["scope"] = "read:user user:email"
 			rr.Params["code"] = code
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
