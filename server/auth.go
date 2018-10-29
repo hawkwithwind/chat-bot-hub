@@ -126,7 +126,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
-			rr.Params["scope"] = "read:user user:email"
+			rr.Params["scope"] = "read:user%20user:email"
 			rr.Params["code"] = code
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
@@ -143,11 +143,13 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
 			urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
 			//o.err = urr.AcceptMIME("json")
-			ctx.Info("URR {%s}", urr)
 			uresp := o.RestfulCall(urr)
-			ctx.Info("URESP {%v}", uresp)
 			urespbody := o.GetResponseBody(uresp)
-			ctx.Info("URESPBODY {%v}", urespbody)
+
+			login := urespbody["login"]
+			avatar_url := urespbody["avatart_url"]
+			
+			
 		} else {
 			ctx.deny(w, "CSRF校验失败")
 		}
