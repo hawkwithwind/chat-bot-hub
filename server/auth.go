@@ -144,7 +144,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 							//scope := respbody["scope"]
 							//token_type := respbody["token_type"]
 							
-							urr := NewRestfulRequest("post", ctx.config.GithubOAuth.UserPath)
+							urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
 							urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
 							if o.err = urr.AcceptMIME("json"); o.err == nil {
 								var uresp *RestfulResponse
