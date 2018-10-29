@@ -44,8 +44,8 @@ func (resp *RestfulResponse) ResponseBody() (map[string]interface{}, error) {
 	for k, _ := range *resp.Header {
 		if k == "Content-Type" {
 			if strings.Contains(resp.Header.Get(k), "application/json") {
-				respbody := make(map[string]interface{})
-				err := json.Unmarshal([]byte(resp.Body), respbody)
+				var respbody = map[string]interface{}
+				err := json.Unmarshal([]byte(resp.Body), &respbody)
 				return respbody, err
 			}
 		}

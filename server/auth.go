@@ -143,7 +143,8 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 
 						var respbody map[string]interface{}
 						respbody, o.err = resp.ResponseBody()
-						ctx.Info("%v[%v]", respbody, o.err)
+						
+						ctx.Info("%v[%v]", respbody, o.err)						
 						ctx.Info("%s %s %s", respbody["access_token"], respbody["scope"], respbody["token_type"])
 
 						// var resparams url.Values
