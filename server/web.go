@@ -30,6 +30,7 @@ type RedisConfig struct {
 type GithubOAuthConfig struct {
 	AuthPath  string
 	TokenPath string
+	UserPath  string
 	ClientId  string
 	ClientSecret string
 	Callback  string

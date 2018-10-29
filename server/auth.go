@@ -138,24 +138,24 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 					if strings.Contains(resp.Body, "error") {
 						ctx.fail(w, resp.Body)
 					} else {
-						ctx.Info(resp.Body)
-						ctx.Info("%s", resp)
-
 						var respbody map[string]interface{}
-						respbody, o.err = resp.ResponseBody()
-						
-						ctx.Info("%v[%v]", respbody, o.err)						
-						ctx.Info("%s %s %s", respbody["access_token"], respbody["scope"], respbody["token_type"])
-
-						// var resparams url.Values
-						// if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {
+						if respbody, o.err = resp.ResponseBody(); o.err == nil {
+							token := respbody["access_token"]
+							//scope := respbody["scope"]
+							//token_type := respbody["token_type"]
 							
-						// 	token := resparams.Get("access_token")
-						// 	scope := resparams.Get("scope")
-						// 	token_type := resparams.Get("token_type")
-							
-						// 	http.Redirect(w, r, ctx.config.Baseurl, http.StatusFound)
-						// }
+							urr := NewRestfulRequest("post", ctx.config.GithubOAuth.UserPath)
+							urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
+							if o.err = urr.AcceptMIME("json"); o.err != nil {
+								var uresp *RestfulResponse
+								if uresp, o.err = RestfulCall(urr); o.err == nil {
+									var urespbody map[string]interface{}
+									if urespbody, o.err = uresp.ResponseBody(); o.err == nil {
+										ctx.Info("%v", urespbody)
+									}
+								}
+							}
+						}
 					}
 				}
 			}
