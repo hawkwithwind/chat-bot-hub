@@ -40,6 +40,20 @@ func (resp *RestfulResponse) String() string {
 	return fmt.Sprintf("%d\n%v\n[%s]\n", resp.StatusCode, headerstr, resp.Body)
 }
 
+func (resp *RestfulResponse) ResponseBody() (map[string]interface{}, error) {
+	for k, _ := range *resp.Header {
+		if k == "Content-Type" {
+			if strings.Contains(resp.Header.Get(k), "application/json") {
+				respbody := make(map[string]interface{})
+				err := json.Unmarshal([]byte(resp.Body), respbody)
+				return respbody, err
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("unhandled response type %s", resp)
+}
+
 func NewRestfulRequest(method string, uri string) *RestfulRequest {
 	return &RestfulRequest{
 		Method: strings.ToUpper(method),

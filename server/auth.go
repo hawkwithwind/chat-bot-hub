@@ -139,9 +139,15 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 						ctx.fail(w, resp.Body)
 					} else {
 						ctx.Info(resp.Body)
-						
+						ctx.Info("%s", resp)
+
+						var respbody map[string]interface{}
+						respbody, o.err = resp.ResponseBody()
+						ctx.Info("%v[%v]", respbody, o.err)
+						ctx.Info("%s %s %s", respbody["access_token"], respbody["scope"], respbody["token_type"])
+
 						// var resparams url.Values
-						// if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {							
+						// if resparams, o.err = url.ParseQuery(resp.Body); o.err == nil {
 							
 						// 	token := resparams.Get("access_token")
 						// 	scope := resparams.Get("scope")
