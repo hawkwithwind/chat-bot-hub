@@ -148,8 +148,9 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 
 			login := urespbody["login"]
 			avatar_url := urespbody["avatart_url"]
-			
-			
+			email := urespbody["email"]
+
+			ctx.Info("login %s, avatar %s, email %s", login, avatar_url, email)			
 		} else {
 			ctx.deny(w, "CSRF校验失败")
 		}
