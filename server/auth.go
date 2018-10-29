@@ -131,34 +131,22 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
 			o.err = rr.AcceptMIME("json")
-
-			var resp *RestfulResponse
-			if o.err == nil {		
-				if resp, o.err = RestfulCall(rr); o.err == nil {
-					if strings.Contains(resp.Body, "error") {
-						ctx.fail(w, resp.Body)
-					} else {
-						var respbody map[string]interface{}
-						if respbody, o.err = resp.ResponseBody(); o.err == nil {
-							token := respbody["access_token"]
-							//scope := respbody["scope"]
-							//token_type := respbody["token_type"]
-							
-							urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
-							urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
-							if o.err = urr.AcceptMIME("json"); o.err == nil {
-								var uresp *RestfulResponse
-								if uresp, o.err = RestfulCall(urr); o.err == nil {
-									var urespbody map[string]interface{}
-									if urespbody, o.err = uresp.ResponseBody(); o.err == nil {
-										ctx.Info("%v", urespbody)
-									}
-								}
-							}
-						}
-					}
+			resp := o.RestfulCall(rr)
+			if o.err == nil {
+				if strings.Contains(resp.Body, "error") {
+					o.err = fmt.Errorf(resp.Body)
 				}
 			}
+			respbody := o.GetResponseBody(resp)
+			token := respbody["access_token"]
+
+			urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
+			urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
+			//o.err = urr.AcceptMIME("json")
+			ctx.Info("%s", urr)
+			uresp := o.RestfulCall(urr)
+			urespbody := o.GetResponseBody(uresp)
+			ctx.Info("%v", urespbody)
 		} else {
 			ctx.deny(w, "CSRF校验失败")
 		}

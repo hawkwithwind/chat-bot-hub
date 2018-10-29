@@ -252,6 +252,29 @@ func (ctx *ErrorHandler) fromMap(key string, m map[string]interface{},
 	}
 }
 
+func (ctx *ErrorHandler) RestfulCall(req *RestfulRequest) *RestfulResponse {
+	if ctx.err != nil {
+		return nil
+	}
+
+	var resp *RestfulResponse
+	if resp, ctx.err = RestfulCall(req); ctx.err == nil {
+		return resp
+	}
+
+	return nil
+}
+
+func (ctx *ErrorHandler) GetResponseBody(resp *RestfulResponse) map[string]interface{} {
+	if ctx.err != nil {
+		return nil
+	}
+
+	var respbody map[string]interface{}
+	respbody, ctx.err = resp.ResponseBody()
+	return respbody
+}
+
 func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
 	ctx.ok(w, "hello", nil)
 }
