@@ -143,10 +143,11 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
 			urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
 			//o.err = urr.AcceptMIME("json")
-			ctx.Info("%s", urr)
+			ctx.Info("URR {%s}", urr)
 			uresp := o.RestfulCall(urr)
+			ctx.Info("URESP {%v}", uresp)
 			urespbody := o.GetResponseBody(uresp)
-			ctx.Info("%v", urespbody)
+			ctx.Info("URESPBODY {%v}", urespbody)
 		} else {
 			ctx.deny(w, "CSRF校验失败")
 		}
