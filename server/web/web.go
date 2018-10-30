@@ -19,8 +19,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type RedisConfig struct {
@@ -30,7 +30,7 @@ type RedisConfig struct {
 }
 
 type DatabaseConfig struct {
-	DriverName string
+	DriverName     string
 	DataSourceName string
 }
 
@@ -99,7 +99,7 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 	if ctx.Err != nil {
 		return
 	}
-	
+
 	// HTTP CODE 403
 	w.WriteHeader(http.StatusForbidden)
 	json.NewEncoder(w).Encode(CommonResponse{
@@ -113,7 +113,7 @@ func (ctx *ErrorHandler) complain(w http.ResponseWriter, code int, msg string) {
 	if ctx.Err != nil {
 		return
 	}
-	
+
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(CommonResponse{
@@ -248,7 +248,7 @@ func (ctx *WebServer) Serve() {
 	if ctx.init() != nil {
 		return
 	}
-	
+
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
@@ -304,19 +304,6 @@ func (ctx *WebServer) Serve() {
 	<-done
 
 	ctx.Info("Server stopped")
-}
-
-func index() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "Hello, World!")
-	})
 }
 
 func healthz() http.Handler {

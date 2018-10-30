@@ -82,7 +82,7 @@ func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass str
 	secret := utils.HexString(utils.CheckSum([]byte(pass)))
 	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
-	
+
 	if ctx.Err == nil {
 		if len(accounts) == 0 {
 			return false
@@ -98,7 +98,6 @@ func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass str
 		return false
 	}
 }
-
 
 func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) Account {
 	if ctx.Err != nil {

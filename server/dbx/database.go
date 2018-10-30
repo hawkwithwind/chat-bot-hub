@@ -9,9 +9,9 @@ import (
 )
 
 type Database struct {
-	Conn           *sqlx.DB
-	Ctx            context.Context
-	Cancel         context.CancelFunc
+	Conn   *sqlx.DB
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
 func (db *Database) Connect(driverName string, dataSourceName string) error {

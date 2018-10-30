@@ -15,9 +15,9 @@ import (
 )
 
 type User struct {
-	AccountName string `json:"accountname"`
-	Password string `json:"password"`
-	ExpireAt time.Time `json:"expireat"`
+	AccountName string    `json:"accountname"`
+	Password    string    `json:"password"`
+	ExpireAt    time.Time `json:"expireat"`
 }
 
 type JwtToken struct {
@@ -28,7 +28,7 @@ func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string) {
 	if ctx.Err != nil {
 		return
 	}
-	
+
 	account := ctx.NewAccount(name, pass)
 	ctx.SaveAccount(db, account)
 }
@@ -37,12 +37,12 @@ func (ctx *ErrorHandler) authorize(s string, name string, pass string) string {
 	if ctx.Err != nil {
 		return ""
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"accountname": name,
 		"password":    pass,
 		"expireat":    time.Now().Add(time.Hour * 24 * 7),
-	})	
+	})
 
 	var tokenstring string
 	if tokenstring, ctx.Err = token.SignedString([]byte(s)); ctx.Err == nil {
@@ -72,7 +72,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		authorizationHeader := req.Header.Get("authorization")
 		o := &ErrorHandler{}
 		defer o.WebError(w)
-		
+
 		if authorizationHeader != "" {
 			bearerToken := strings.Split(authorizationHeader, " ")
 			var token *jwt.Token
@@ -86,7 +86,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				if token.Valid {
 					var user User
 					mapstructure.Decode(token.Claims, &user)
-										
+
 					if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
 						if time.Now().After(user.ExpireAt) {
 							o.deny(w, "身份令牌已过期")
@@ -109,4 +109,3 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		}
 	})
 }
-

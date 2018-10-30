@@ -99,7 +99,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	defer wrapper.Cancel()
 
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"})
-	o.ok(w, "", botsreply)	
+	o.ok(w, "", botsreply)
 }
 
 func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +142,7 @@ func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	
+
 	o.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
 			"QQBOT":     "QQ机器人",
