@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	//"net"
@@ -46,7 +46,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	})
 	tokenString, error := token.SignedString([]byte(ctx.config.SecretPhrase))
 	if error != nil {
-		ctx.fail(w, error.Error())
+		ctx.fail(w, error, "")
 		return
 	}
 
@@ -66,7 +66,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 					return []byte(ctx.config.SecretPhrase), nil
 				})
 				if error != nil {
-					ctx.fail(w, error.Error())
+					ctx.fail(w, error, "")
 					return
 				}
 				if token.Valid {
@@ -89,8 +89,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-
-func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
+func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request) {
 	session, _ := ctx.store.Get(r, "chatbothub")
 	rk := securecookie.GenerateRandomKey(32)
 	dst := make([]byte, hex.EncodedLen(len(rk)))
@@ -103,10 +102,10 @@ func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request)  {
 	params.Set("redirect_uri", ctx.config.GithubOAuth.Callback)
 	params.Set("state", session.Values["CSRF_STRING"].(string))
 	params.Set("scope", "read:user user:email")
-		
+
 	url := fmt.Sprintf("%s?%s", ctx.config.GithubOAuth.AuthPath, params.Encode())
 	ctx.Info("CSRF %s", session.Values["CSRF_STRING"])
-	ctx.Info("Redirect to %s", url)	
+	ctx.Info("Redirect to %s", url)
 
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -126,7 +125,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			rr := NewRestfulRequest("post", ctx.config.GithubOAuth.TokenPath)
 			rr.Params["client_id"] = ctx.config.GithubOAuth.ClientId
 			rr.Params["client_secret"] = ctx.config.GithubOAuth.ClientSecret
-			rr.Params["scope"] = "user:email"
+			rr.Params["scope"] = "read:user user:email"
 			rr.Params["code"] = code
 			rr.Params["redirect_uri"] = ctx.config.GithubOAuth.Callback
 			rr.Params["state"] = state
@@ -142,15 +141,26 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 
 			urr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserPath)
 			urr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
-			//o.err = urr.AcceptMIME("json")
 			uresp := o.RestfulCall(urr)
 			urespbody := o.GetResponseBody(uresp)
 
 			login := urespbody["login"]
 			avatar_url := urespbody["avatar_url"]
-			email := urespbody["email"]
 
-			ctx.Info("login %s, avatar %s, email %s", login, avatar_url, email)			
+			emailrr := NewRestfulRequest("get", ctx.config.GithubOAuth.UserEmailPath)
+			emailrr.Headers["Authorization"] = fmt.Sprintf("token %s", token)
+			emailresp := o.RestfulCall(emailrr)
+
+			var emailbody []map[string]interface{}
+			var email string
+			if o.err == nil {
+				o.err = json.Unmarshal([]byte(emailresp.Body), &emailbody)
+				if len(emailbody) > 0 {
+					email = emailbody[0]["email"].(string)
+				}
+			}
+
+			ctx.Info("login %s, avatar %s, email %s", login, avatar_url, email)
 		} else {
 			ctx.deny(w, "CSRF校验失败")
 		}

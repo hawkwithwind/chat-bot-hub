@@ -1,33 +1,32 @@
 package main
 
 import (
-	"net/http"
-	"net"
-	"net/url"
 	"bytes"
+	"net"
+	"net/http"
+	"net/url"
 	//"io"
-	"time"
-	"fmt"
-	"strings"
-	"io/ioutil"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"io/ioutil"
+	"strings"
+	"time"
 )
 
-
 type RestfulRequest struct {
-	Method  string
-	Headers map[string]string
-	Params  map[string]string
-	Body    string
-	Uri     string
+	Method          string
+	Headers         map[string]string
+	Params          map[string]string
+	Body            string
+	Uri             string
 	ContentTypeFlag bool
-	AcceptFlag bool
+	AcceptFlag      bool
 }
 
 type RestfulResponse struct {
-	Body string
-	Header *http.Header
+	Body       string
+	Header     *http.Header
 	StatusCode int
 }
 
@@ -36,7 +35,7 @@ func (resp *RestfulResponse) String() string {
 	for k, v := range *resp.Header {
 		headerstr += fmt.Sprintf("\n%s: %s", k, v)
 	}
-		
+
 	return fmt.Sprintf("%d\n%v\n[%s]\n", resp.StatusCode, headerstr, resp.Body)
 }
 
@@ -56,12 +55,12 @@ func (resp *RestfulResponse) ResponseBody() (map[string]interface{}, error) {
 
 func NewRestfulRequest(method string, uri string) *RestfulRequest {
 	return &RestfulRequest{
-		Method: strings.ToUpper(method),
-		Uri: uri,
-		Headers: make(map[string]string),
-		Params: make(map[string]string),
+		Method:          strings.ToUpper(method),
+		Uri:             uri,
+		Headers:         make(map[string]string),
+		Params:          make(map[string]string),
 		ContentTypeFlag: false,
-		AcceptFlag: false,
+		AcceptFlag:      false,
 	}
 }
 
@@ -69,7 +68,7 @@ func (req *RestfulRequest) AcceptMIME(atype string) error {
 	if req.Headers == nil {
 		return fmt.Errorf("Headers is nil, consider using NewRestfulRequest")
 	}
-	
+
 	switch atype {
 	case "xml":
 		req.Headers["Accept"] = "application/xml"
@@ -96,7 +95,7 @@ func (req *RestfulRequest) ContentType(ctype string, charset string) error {
 		charset_used = "utf-8"
 	}
 
-	contentType := ""	
+	contentType := ""
 	switch ctype {
 	case "form":
 		contentType = "application/x-www-form-urlencoded"
@@ -120,7 +119,7 @@ func (req *RestfulRequest) SetBodyString(body string, ctype string, charset stri
 
 func (req *RestfulRequest) SetBody(body interface{}, ctype string, charset string) error {
 	text := ""
-	
+
 	switch ctype {
 	case "json":
 		if b, err := json.Marshal(body); err == nil {
@@ -139,10 +138,9 @@ func (req *RestfulRequest) SetBody(body interface{}, ctype string, charset strin
 	default:
 		return fmt.Errorf("type %s not supported", ctype)
 	}
-	
+
 	return req.SetBodyString(text, ctype, charset)
 }
-
 
 func NewHttpClient() *http.Client {
 	var netTransport = &http.Transport{
@@ -151,13 +149,12 @@ func NewHttpClient() *http.Client {
 		}).Dial,
 		TLSHandshakeTimeout: 5 * time.Second,
 	}
-	
+
 	return &http.Client{
-		Timeout: time.Second * 60,
+		Timeout:   time.Second * 60,
 		Transport: netTransport,
 	}
 }
-
 
 func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	client := NewHttpClient()
@@ -173,9 +170,9 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	} else {
 		targeturi = req.Uri
 	}
-	
+
 	var reqbody *bytes.Buffer
-		
+
 	if req.Method == "POST" {
 		if !req.ContentTypeFlag {
 			if _, found := req.Headers["Content-Type"]; !found {
@@ -184,7 +181,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 				}
 			}
 		}
-		
+
 		if strings.Contains(strings.ToLower(req.Headers["Content-Type"]), "x-www-form-urlencoded") {
 			reqbody = bytes.NewBufferString(requestBody.Encode())
 		} else {
@@ -195,29 +192,32 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	}
 
 	var err error
-	var nreq  *http.Request
+	var nreq *http.Request
 	var nresp *http.Response
 	var body []byte
-	
+
 	if nreq, err = http.NewRequest(req.Method, targeturi, reqbody); err == nil {
 		for k, v := range req.Headers {
 			nreq.Header.Set(k, v)
 			fmt.Printf("HEADER[%v: %v]\n", k, v)
 		}
-		
-		if nresp, err = client.Do(nreq); err != nil {return nil, err}
+
+		if nresp, err = client.Do(nreq); err != nil {
+			return nil, err
+		}
 		defer nresp.Body.Close()
 		// TODO: deal with redirect
 		// TODO: deal with cookies
-		
-		if body, err = ioutil.ReadAll(nresp.Body); err != nil {return nil, err}
+
+		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
+			return nil, err
+		}
 		return &RestfulResponse{
-			Body: string(body),
-			Header: &nresp.Header,
+			Body:       string(body),
+			Header:     &nresp.Header,
 			StatusCode: nresp.StatusCode,
 		}, nil
 	} else {
 		return nil, err
 	}
 }
-

@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"log"
 	//"io"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
-	"time"
-	"context"
-	"os/signal"
 	"sync/atomic"
+	"time"
 
 	"github.com/garyburd/redigo/redis"
+	"github.com/getsentry/raven-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/getsentry/raven-go"	
 )
 
 type RedisConfig struct {
@@ -28,12 +28,13 @@ type RedisConfig struct {
 }
 
 type GithubOAuthConfig struct {
-	AuthPath  string
-	TokenPath string
-	UserPath  string
-	ClientId  string
-	ClientSecret string
-	Callback  string
+	AuthPath      string
+	TokenPath     string
+	UserPath      string
+	UserEmailPath string
+	ClientId      string
+	ClientSecret  string
+	Callback      string
 }
 
 type WebConfig struct {
@@ -58,6 +59,7 @@ type CommonResponse struct {
 
 type ErrorMessage struct {
 	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 type WebServer struct {
@@ -80,8 +82,11 @@ func (ctx *WebServer) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
-func (ctx *WebServer) Error(msg string, v ...interface{}) {
+func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {
+	raven.CaptureError(err, nil)
+
 	ctx.logger.Printf(msg, v...)
+	ctx.logger.Printf("Error %v", err)
 }
 
 func (ctx *WebServer) deny(w http.ResponseWriter, msg string) {
@@ -113,13 +118,15 @@ func (ctx *WebServer) ok(w http.ResponseWriter, msg string, body interface{}) {
 	})
 }
 
-func (ctx *WebServer) fail(w http.ResponseWriter, msg string) {
+func (ctx *WebServer) fail(w http.ResponseWriter, err error, msg string) {
 	// HTTP CODE 500
+	raven.CaptureError(err, nil)
+
 	w.WriteHeader(http.StatusInternalServerError)
 	json.NewEncoder(w).Encode(CommonResponse{
 		Code:  -1,
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg},
+		Error: ErrorMessage{Message: msg, Error: err.Error()},
 	})
 }
 
@@ -151,7 +158,7 @@ func (ctx *ErrorHandler) weberror(s *WebServer, w http.ResponseWriter) {
 			c := v.Interface().(*ClientError)
 			s.complain(w, c.ErrorCode(), c.Error())
 		} else {
-			s.fail(w, ctx.err.Error())
+			s.fail(w, ctx.err, "")
 		}
 	}
 }
@@ -322,23 +329,23 @@ func (ctx *WebServer) serve() {
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
-	r.HandleFunc("/loginqq",ctx.validate(ctx.loginQQ)).Methods("POST")
+	r.HandleFunc("/loginqq", ctx.validate(ctx.loginQQ)).Methods("POST")
 	r.HandleFunc("/loginwechat", ctx.validate(ctx.loginWechat)).Methods("POST")
 	r.HandleFunc("/login", ctx.login).Methods("POST")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))	
-	
+	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+
 	addr := fmt.Sprintf("%s:%s", ctx.config.Host, ctx.config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
-		Addr: addr,
-		Handler: tracing(nextRequestID)(logging(ctx.logger)(handler)),
-		ErrorLog: ctx.logger,
-		ReadTimeout: 15 * time.Second,
+		Addr:         addr,
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handler)),
+		ErrorLog:     ctx.logger,
+		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
-		IdleTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	done := make(chan bool)
@@ -350,12 +357,12 @@ func (ctx *WebServer) serve() {
 		ctx.Info("Server is shutting down")
 		atomic.StoreInt32(&healthy, 0)
 
-		c, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		server.SetKeepAlivesEnabled(false)
 		if err := server.Shutdown(c); err != nil {
-			ctx.Error("Could not gracefully shutdown server %v", err)
+			ctx.Error(err, "Could not gracefully shutdown server")
 		}
 		close(done)
 	}()
@@ -363,10 +370,10 @@ func (ctx *WebServer) serve() {
 	ctx.Info("restful server starts.")
 	atomic.StoreInt32(&healthy, 1)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		ctx.Error("failed %v", err)
+		ctx.Error(err, "listen failed")
 	}
 	<-done
-	
+
 	ctx.Info("Server stopped")
 }
 
