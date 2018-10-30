@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"fmt"
@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type RedisConfig struct {
@@ -63,8 +63,8 @@ type ErrorMessage struct {
 }
 
 type WebServer struct {
-	config    WebConfig
-	hubport   string
+	Config    WebConfig
+	Hubport   string
 	logger    *log.Logger
 	redispool *redis.Pool
 	store     *sessions.CookieStore
@@ -73,9 +73,9 @@ type WebServer struct {
 func (ctx *WebServer) init() {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
 	ctx.redispool = ctx.newRedisPool(
-		fmt.Sprintf("%s:%s", ctx.config.Redis.Host, ctx.config.Redis.Port),
-		ctx.config.Redis.Db)
-	ctx.store = sessions.NewCookieStore([]byte(ctx.config.SecretPhrase)[:64])
+		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
+		ctx.Config.Redis.Db)
+	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 }
 
 func (ctx *WebServer) Info(msg string, v ...interface{}) {
@@ -148,138 +148,44 @@ func (err *ClientError) Error() string {
 }
 
 type ErrorHandler struct {
-	err error
+	utils.ErrorHandler
 }
 
-func (ctx *ErrorHandler) weberror(s *WebServer, w http.ResponseWriter) {
-	if ctx.err != nil {
-		v := reflect.ValueOf(ctx.err)
+func (ctx *ErrorHandler) WebError(s *WebServer, w http.ResponseWriter) {
+	if ctx.Err != nil {
+		v := reflect.ValueOf(ctx.Err)
 		if v.Type() == reflect.TypeOf((*ClientError)(nil)) {
 			c := v.Interface().(*ClientError)
 			s.complain(w, c.ErrorCode(), c.Error())
 		} else {
-			s.fail(w, ctx.err, "")
+			s.fail(w, ctx.Err, "")
 		}
 	}
 }
 
 func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return nil
 	}
 
 	if len(form[name]) > 0 {
 		return form[name]
 	} else {
-		ctx.err = NewClientError(-1, fmt.Errorf("参数 %s 不应为空", name))
+		ctx.Err = NewClientError(-1, fmt.Errorf("参数 %s 不应为空", name))
 		return nil
 	}
 }
 
 func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return ""
 	}
 
 	v := ctx.getValue(form, name)
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return ""
 	}
 	return v[0]
-}
-
-func (ctx *ErrorHandler) parseInt(s string, base int, bitsize int) int64 {
-	if ctx.err != nil {
-		return 0
-	}
-
-	if i64, err := strconv.ParseInt(s, base, bitsize); err == nil {
-		return i64
-	} else {
-		ctx.err = err
-		return 0
-	}
-}
-
-func (ctx *ErrorHandler) parseUint(s string, base int, bitsize int) uint64 {
-	if ctx.err != nil {
-		return 0
-	}
-
-	if i64, err := strconv.ParseUint(s, base, bitsize); err == nil {
-		return i64
-	} else {
-		ctx.err = err
-		return 0
-	}
-}
-
-func (ctx *ErrorHandler) toJson(v interface{}) string {
-	if ctx.err != nil {
-		return ""
-	}
-
-	if jsonstr, err := json.Marshal(v); err == nil {
-		return string(jsonstr)
-	} else {
-		ctx.err = err
-		return ""
-	}
-}
-
-func (ctx *ErrorHandler) fromJson(jsonstr string) *map[string]interface{} {
-	if ctx.err != nil {
-		return nil
-	}
-
-	ret := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(jsonstr), &ret); err == nil {
-		return &ret
-	} else {
-		ctx.err = err
-		return nil
-	}
-}
-
-func (ctx *ErrorHandler) fromMap(key string, m map[string]interface{},
-	objname string, defValue interface{}) interface{} {
-	if ctx.err != nil {
-		return nil
-	}
-
-	if v, found := m[key]; found {
-		return v
-	} else {
-		if defValue == nil {
-			ctx.err = fmt.Errorf("%s should have key %s", objname, key)
-			return nil
-		} else {
-			return defValue
-		}
-	}
-}
-
-func (ctx *ErrorHandler) RestfulCall(req *RestfulRequest) *RestfulResponse {
-	if ctx.err != nil {
-		return nil
-	}
-
-	var resp *RestfulResponse
-	if resp, ctx.err = RestfulCall(req); ctx.err == nil {
-		return resp
-	}
-
-	return nil
-}
-
-func (ctx *ErrorHandler) GetResponseBody(resp *RestfulResponse) map[string]interface{} {
-	if ctx.err != nil {
-		return nil
-	}
-
-	var respbody map[string]interface{}
-	respbody, ctx.err = resp.ResponseBody()
-	return respbody
 }
 
 func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +224,7 @@ var (
 	healthy int32
 )
 
-func (ctx *WebServer) serve() {
+func (ctx *WebServer) Serve() {
 	ctx.init()
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
@@ -337,7 +243,7 @@ func (ctx *WebServer) serve() {
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
-	addr := fmt.Sprintf("%s:%s", ctx.config.Host, ctx.config.Port)
+	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,

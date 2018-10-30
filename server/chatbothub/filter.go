@@ -1,4 +1,4 @@
-package main
+package chatbothub
 
 import (
 	"encoding/json"
@@ -251,10 +251,10 @@ func (f *KVRouter) Fill(msg string) error {
 		return fmt.Errorf("call on empty *KVRouter")
 	}
 	o := ErrorHandler{}
-	body := o.fromJson(msg)
+	body := o.FromJson(msg)
 
-	if o.err != nil {
-		return o.err
+	if o.Err != nil {
+		return o.Err
 	}
 	if f.NextFilter == nil {
 		return nil

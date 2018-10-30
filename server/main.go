@@ -9,11 +9,14 @@ import (
 
 	"github.com/getsentry/raven-go"
 	"gopkg.in/yaml.v2"
+
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/web"
 )
 
 type MainConfig struct {
-	Hub ChatHubConfig
-	Web WebConfig
+	Hub chatbothub.ChatHubConfig
+	Web web.WebConfig
 }
 
 var (
@@ -63,16 +66,16 @@ func main() {
 		wg.Add(1)
 		defer wg.Done()
 
-		webserver := WebServer{config: config.Web, hubport: config.Hub.Port}
-		webserver.serve()
+		webserver := web.WebServer{Config: config.Web, Hubport: config.Hub.Port}
+		webserver.Serve()
 	}()
 
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
 
-		qqhub := ChatHub{config: config.Hub}
-		qqhub.serve()
+		hub := chatbothub.ChatHub{Config: config.Hub}
+		hub.Serve()
 	}()
 
 	time.Sleep(5 * time.Second)

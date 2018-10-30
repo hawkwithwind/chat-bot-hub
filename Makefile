@@ -74,7 +74,7 @@ test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	-v $(GOPATH)/pkg:/go/pkg \
 	-v $(shell pwd)/$(RUNTIME_PATH):/go/bin/${GOOS}_${GOARCH} \
 	-e GOOS=$(GOOS) -e GOARCH=$(GOARCH) -e GOBIN=/go/bin/$(GOOS)_$(GOARCH) -e CGO_ENABLED=0 \
-	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/test/ && go test -v ./..."
+	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/ && go test -v ./..."
 
 
 .PHONY: gen

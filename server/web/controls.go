@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"fmt"
@@ -32,12 +32,12 @@ func (w *GRPCWrapper) Cancel() {
 }
 
 func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return nil
 	}
 
 	if conn, err := grpc.Dial(target, grpc.WithInsecure()); err != nil {
-		ctx.err = err
+		ctx.Err = err
 		return nil
 	} else {
 		client := pb.NewChatBotHubClient(conn)
@@ -53,12 +53,12 @@ func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
 }
 
 func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsReply {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return nil
 	}
 
 	if botsreply, err := w.client.GetBots(w.context, &pb.BotsRequest{Secret: "secret"}); err != nil {
-		ctx.err = err
+		ctx.Err = err
 		return nil
 	} else {
 		return botsreply
@@ -66,12 +66,12 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 }
 
 func (ctx *ErrorHandler) LoginQQ(w *GRPCWrapper, req *pb.LoginQQRequest) *pb.LoginQQReply {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return nil
 	}
 
 	if loginreply, err := w.client.LoginQQ(w.context, req); err != nil {
-		ctx.err = err
+		ctx.Err = err
 		return nil
 	} else {
 		return loginreply
@@ -79,12 +79,12 @@ func (ctx *ErrorHandler) LoginQQ(w *GRPCWrapper, req *pb.LoginQQRequest) *pb.Log
 }
 
 func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest) *pb.LoginWechatReply {
-	if ctx.err != nil {
+	if ctx.Err != nil {
 		return nil
 	}
 
 	if loginreply, err := w.client.LoginWechat(w.context, req); err != nil {
-		ctx.err = err
+		ctx.Err = err
 		return nil
 	} else {
 		return loginreply
@@ -93,51 +93,51 @@ func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest)
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.weberror(ctx, w)
+	defer o.WebError(ctx, w)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
-	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); o.err == nil {
+	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); o.Err == nil {
 		ctx.ok(w, "", botsreply)
 	}
 }
 
 func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.weberror(ctx, w)
+	defer o.WebError(ctx, w)
 
 	r.ParseForm()
 	qqnumstr := o.getStringValue(r.Form, "qqnum")
 	pass := o.getStringValue(r.Form, "password")
 	clientId := o.getStringValue(r.Form, "clientId")
-	qqnum := o.parseUint(qqnumstr, 10, 64)
+	qqnum := o.ParseUint(qqnumstr, 10, 64)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
 	if loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
 		ClientId: clientId,
 		QQNum:    qqnum,
 		Password: pass,
-	}); o.err == nil {
+	}); o.Err == nil {
 		ctx.ok(w, "", loginreply)
 	}
 }
 
 func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.weberror(ctx, w)
+	defer o.WebError(ctx, w)
 
 	r.ParseForm()
 	clientId := o.getStringValue(r.Form, "clientId")
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
 	if loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
 		ClientId: clientId,
-	}); o.err == nil {
+	}); o.Err == nil {
 		ctx.ok(w, "", loginreply)
 	}
 }
