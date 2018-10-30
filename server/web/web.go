@@ -18,7 +18,9 @@ import (
 	"github.com/getsentry/raven-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
 type RedisConfig struct {
@@ -27,14 +29,9 @@ type RedisConfig struct {
 	Db   string
 }
 
-type GithubOAuthConfig struct {
-	AuthPath      string
-	TokenPath     string
-	UserPath      string
-	UserEmailPath string
-	ClientId      string
-	ClientSecret  string
-	Callback      string
+type DatabaseConfig struct {
+	DriverName string
+	DataSourceName string
 }
 
 type WebConfig struct {
@@ -45,6 +42,7 @@ type WebConfig struct {
 	Pass         string
 	SecretPhrase string
 	Redis        RedisConfig
+	Database     DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 }
@@ -67,15 +65,23 @@ type WebServer struct {
 	Hubport   string
 	logger    *log.Logger
 	redispool *redis.Pool
+	db        *dbx.Database
 	store     *sessions.CookieStore
 }
 
-func (ctx *WebServer) init() {
+func (ctx *WebServer) init() error {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
 	ctx.redispool = ctx.newRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
+	ctx.db = &dbx.Database{}
+	if err := ctx.db.Connect(ctx.Config.Database.DriverName, ctx.Config.Database.DataSourceName); err != nil {
+		ctx.Error(err, "connect to database failed")
+		return err
+	}
+
+	return nil
 }
 
 func (ctx *WebServer) Info(msg string, v ...interface{}) {
@@ -89,7 +95,11 @@ func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {
 	ctx.logger.Printf("Error %v", err)
 }
 
-func (ctx *WebServer) deny(w http.ResponseWriter, msg string) {
+func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
+	if ctx.Err != nil {
+		return
+	}
+	
 	// HTTP CODE 403
 	w.WriteHeader(http.StatusForbidden)
 	json.NewEncoder(w).Encode(CommonResponse{
@@ -99,7 +109,11 @@ func (ctx *WebServer) deny(w http.ResponseWriter, msg string) {
 	})
 }
 
-func (ctx *WebServer) complain(w http.ResponseWriter, code int, msg string) {
+func (ctx *ErrorHandler) complain(w http.ResponseWriter, code int, msg string) {
+	if ctx.Err != nil {
+		return
+	}
+	
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(CommonResponse{
@@ -109,7 +123,11 @@ func (ctx *WebServer) complain(w http.ResponseWriter, code int, msg string) {
 	})
 }
 
-func (ctx *WebServer) ok(w http.ResponseWriter, msg string, body interface{}) {
+func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{}) {
+	if ctx.Err != nil {
+		return
+	}
+
 	json.NewEncoder(w).Encode(CommonResponse{
 		Code:    0,
 		Ts:      time.Now().Unix(),
@@ -118,15 +136,15 @@ func (ctx *WebServer) ok(w http.ResponseWriter, msg string, body interface{}) {
 	})
 }
 
-func (ctx *WebServer) fail(w http.ResponseWriter, err error, msg string) {
+func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	// HTTP CODE 500
-	raven.CaptureError(err, nil)
+	raven.CaptureError(ctx.Err, nil)
 
 	w.WriteHeader(http.StatusInternalServerError)
 	json.NewEncoder(w).Encode(CommonResponse{
 		Code:  -1,
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg, Error: err.Error()},
+		Error: ErrorMessage{Message: msg, Error: ctx.Err.Error()},
 	})
 }
 
@@ -148,17 +166,17 @@ func (err *ClientError) Error() string {
 }
 
 type ErrorHandler struct {
-	utils.ErrorHandler
+	domains.ErrorHandler
 }
 
-func (ctx *ErrorHandler) WebError(s *WebServer, w http.ResponseWriter) {
+func (ctx *ErrorHandler) WebError(w http.ResponseWriter) {
 	if ctx.Err != nil {
 		v := reflect.ValueOf(ctx.Err)
 		if v.Type() == reflect.TypeOf((*ClientError)(nil)) {
 			c := v.Interface().(*ClientError)
-			s.complain(w, c.ErrorCode(), c.Error())
+			ctx.complain(w, c.ErrorCode(), c.Error())
 		} else {
-			s.fail(w, ctx.Err, "")
+			ctx.fail(w, "")
 		}
 	}
 }
@@ -189,7 +207,9 @@ func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
 }
 
 func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
-	ctx.ok(w, "hello", nil)
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	o.ok(w, "hello", nil)
 }
 
 func (ctx *WebServer) newRedisPool(server string, db string) *redis.Pool {
@@ -225,7 +245,10 @@ var (
 )
 
 func (ctx *WebServer) Serve() {
-	ctx.init()
+	if ctx.init() != nil {
+		return
+	}
+	
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}

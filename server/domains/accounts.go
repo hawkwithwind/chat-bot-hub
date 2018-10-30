@@ -73,13 +73,40 @@ VALUES
 	_, ctx.Err = db.Conn.NamedExecContext(db.Ctx, query, account)
 }
 
+func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass string) bool {
+	if ctx.Err != nil {
+		return false
+	}
+
+	accounts := []Account{}
+	secret := utils.HexString(utils.CheckSum([]byte(pass)))
+	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
+		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
+	
+	if ctx.Err == nil {
+		if len(accounts) == 0 {
+			return false
+		}
+
+		if len(accounts) > 1 {
+			ctx.Err = fmt.Errorf("Account %s more than one instance", name)
+			return false
+		}
+
+		return true
+	} else {
+		return false
+	}
+}
+
+
 func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) Account {
 	if ctx.Err != nil {
 		return Account{}
 	}
 
 	accounts := []Account{}
-	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts, "SELECT * FROM accounts WHERE AccountId=?", aid)
+	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts, "SELECT * FROM accounts WHERE accountid=?", aid)
 	if ctx.Err == nil {
 		if len(accounts) == 0 {
 			ctx.Err = fmt.Errorf("Account %s not found", aid)

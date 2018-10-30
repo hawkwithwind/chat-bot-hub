@@ -93,19 +93,18 @@ func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest)
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.WebError(ctx, w)
+	defer o.WebError(w)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
-	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); o.Err == nil {
-		ctx.ok(w, "", botsreply)
-	}
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"})
+	o.ok(w, "", botsreply)	
 }
 
 func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.WebError(ctx, w)
+	defer o.WebError(w)
 
 	r.ParseForm()
 	qqnumstr := o.getStringValue(r.Form, "qqnum")
@@ -116,18 +115,17 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
-	if loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
+	loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
 		ClientId: clientId,
 		QQNum:    qqnum,
 		Password: pass,
-	}); o.Err == nil {
-		ctx.ok(w, "", loginreply)
-	}
+	})
+	o.ok(w, "", loginreply)
 }
 
 func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
-	defer o.WebError(ctx, w)
+	defer o.WebError(w)
 
 	r.ParseForm()
 	clientId := o.getStringValue(r.Form, "clientId")
@@ -135,15 +133,17 @@ func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
-	if loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
+	loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
 		ClientId: clientId,
-	}); o.Err == nil {
-		ctx.ok(w, "", loginreply)
-	}
+	})
+	o.ok(w, "", loginreply)
 }
 
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
-	ctx.ok(w, "", map[string]interface{}{
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	
+	o.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
 			"QQBOT":     "QQ机器人",
 			"WECHATBOT": "微信机器人",
