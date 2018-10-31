@@ -6,6 +6,8 @@ DB_ALIAS=mysql
 
 [ -f mysql.env ] && export $(grep -v '^#' mysql.env | xargs )
 
+DB_PATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME"
+
 case $1 in
 init*)
     datapath=$2 && \
@@ -53,7 +55,7 @@ up*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME" \
+	   -e DBPATH=$DBPATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \
@@ -66,7 +68,7 @@ down*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME" \
+	   -e DBPATH=$DBPATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \
