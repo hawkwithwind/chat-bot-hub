@@ -70,6 +70,7 @@ VALUES
 		queryParams["email"] = account.Email.String
 	}
 
+	db.NewContext()
 	_, ctx.Err = db.Conn.NamedExecContext(db.Ctx, query, account)
 }
 
@@ -80,6 +81,7 @@ func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass str
 
 	accounts := []Account{}
 	secret := utils.HexString(utils.CheckSum([]byte(pass)))
+	db.NewContext()
 	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
 
@@ -105,6 +107,7 @@ func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) Account {
 	}
 
 	accounts := []Account{}
+	db.NewContext()
 	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts, "SELECT * FROM accounts WHERE accountid=?", aid)
 	if ctx.Err == nil {
 		if len(accounts) == 0 {

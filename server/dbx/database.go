@@ -14,11 +14,14 @@ type Database struct {
 	Cancel context.CancelFunc
 }
 
+func (db *Database) NewContext() {
+	db.Ctx, db.Cancel = context.WithTimeout(context.Background(), 10*time.Second)
+}
+
 func (db *Database) Connect(driverName string, dataSourceName string) error {
 	var err error
 
-	db.Ctx, db.Cancel = context.WithTimeout(context.Background(), 10*time.Second)
-
+	db.NewContext()
 	db.Conn, err = sqlx.ConnectContext(db.Ctx, driverName, dataSourceName)
 	if err != nil {
 		return err
