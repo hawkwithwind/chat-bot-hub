@@ -76,10 +76,19 @@ func (ctx *WebServer) init() error {
 		ctx.Config.Redis.Db)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
-	if err := ctx.db.Connect("mysql", ctx.Config.Database.DataSourceName); err != nil {
-		ctx.Info(ctx.Config.Database.DataSourceName)
-		ctx.Error(err, "connect to database failed")
-		return err
+	retryTimes := 7
+	gap := 2
+	for i = 0; i < retryTimes + 1; i++ {
+		if err := ctx.db.Connect("mysql", ctx.Config.Database.DataSourceName); err != nil {			
+			if i < retryTimes {
+				ctx.Info("wait for mysql server establish...")
+				time.Sleep(gap * time.Second)
+				gap = gap * 2
+			} else {
+				ctx.Error(err, "connect to database failed")
+				return err
+			}
+		}
 	}
 
 	return nil
