@@ -55,10 +55,10 @@ up*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH=$DBPATH \
+	   -e DBPATH=$DB_PATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
-	   -database $DBPATH \
+	   -database $DB_PATH \
 	   up "${@:2}"
     ;;
 
@@ -68,10 +68,10 @@ down*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH=$DBPATH \
+	   -e DBPATH=$DB_PATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
-	   -database $DBPATH \
+	   -database $DB_PATH \
 	   down "${@:2}"
     ;;
 
