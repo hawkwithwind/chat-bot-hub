@@ -2,11 +2,12 @@
 
 MIGRATE_IMAGE=chat-bot-hub:migrate
 DBPATH="mysql://$chathubdb"
+LOCALNETWORK=$chathubnet
 
 case $1 in
 create*)
     docker run --rm \
-	   --net=host \
+	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
@@ -17,7 +18,7 @@ create*)
 
 up*)
     docker run --rm \
-	   --net=host \
+	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
@@ -30,7 +31,7 @@ up*)
 
 down*)
     docker run \
-	   --net=host \
+	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
