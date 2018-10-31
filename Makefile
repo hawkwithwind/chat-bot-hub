@@ -27,7 +27,7 @@ build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) build-nodejs-image
 	cp frontend/index.html $(RUNTIME_PATH)/static/ && \
 	chmod -R -w $(RUNTIME_PATH)/static/
 
-$(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image
+$(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image build-migrate-image
 	docker run --rm \
         --env HTTPS_PROXY=$(https_proxy) \
         --env HTTP_PROXY=$(http_proxy) \
@@ -43,6 +43,9 @@ $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image
 
 #runtime-image:
 #	docker build -t $(RUNTIME_IMAGE) docker/runtime
+
+build-migrate-image:
+	docker build -t $(RUNTIME_IMAGE):migrate docker/migrate
 
 build-nodejs-image:
 	docker build -t $(RUNTIME_IMAGE):build-nodejs docker/build/nodejs
