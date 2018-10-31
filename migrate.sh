@@ -28,7 +28,7 @@ init*)
 	       -e MYSQL_DATABASE=$db_name \
 	       -e MYSQL_USER=$db_user \
 	       -e MYSQL_PASSWORD=$db_password \
-	       -v chatbothub_mysql:/var/lib/mysql \
+	       -v chatbothub-mysql:/var/lib/mysql \
 	       mysql:8.0 \
 	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \
         sleep 5 && \
