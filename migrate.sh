@@ -21,7 +21,7 @@ init*)
 	       --opt type=none \
 	       --opt device=$datapath \
 	       --opt o=bind \
-	       chatbothub_mysql && \
+	       chatbothub-mysql && \
 	docker run --rm -d \
 	       --name chatbothub_mysql_init \
 	       -e MYSQL_ROOT_PASSWORD=$rootpass \
