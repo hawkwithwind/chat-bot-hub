@@ -53,7 +53,7 @@ up*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH="mysql://$DB_USER:$DB_PATH@tcp($DB_ALIAS)/$DB_NAME" \
+	   -e DBPATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME" \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \
@@ -66,7 +66,7 @@ down*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH="mysql://$DB_USER:$DB_PATH@tcp($DB_ALIAS)/$DB_NAME" \
+	   -e DBPATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME" \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \
