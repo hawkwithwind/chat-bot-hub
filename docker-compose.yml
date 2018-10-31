@@ -1,4 +1,15 @@
-version: '2'
+version: '3.4'
+
+x-defualts: &defaults
+  restart: unless-stopped
+  build: docker/runtime
+  depends_on:
+    - redis
+    - mysql
+  volumes:
+    - ./build:/app
+    - ./config:/config
+
 services:
   base:
     build: docker/runtime
@@ -7,16 +18,25 @@ services:
     restart: unless-stopped
     image: redis:3.2-alpine
 
-  web:
+  mysql:
     restart: unless-stopped
-    extends: base
-    command: ./app/server
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${chathubdb_pass}
     volumes:
-      - ./build:/app
-      - ./config:/config
+      - chatbothub-mysql:/var/lib/mysql
+
+  web:
+    <<: *defaults
+    command: ./app/server
     links:
       - redis
     ports:
       - '9000:9000'
       - '13142:13142'
+
+volumes:
+  chatbothub-mysql:
+    external: true
 
