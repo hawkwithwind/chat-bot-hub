@@ -60,6 +60,7 @@ func main() {
 		return
 	}
 
+	log.Printf("%v\n", config.Web.Sentry)
 	raven.SetDSN(config.Web.Sentry)
 
 	go func() {
