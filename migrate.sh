@@ -4,7 +4,7 @@ MIGRATE_IMAGE=chat-bot-hub:migrate
 LOCALNETWORK=chatbothub_default
 DB_ALIAS=mysql
 
-export $(grep -v '^#' mysql.env | xargs )
+[ -f mysql.env ] && export $(grep -v '^#' mysql.env | xargs )
 
 case $1 in
 init*)
