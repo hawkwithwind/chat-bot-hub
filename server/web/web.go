@@ -76,7 +76,7 @@ func (ctx *WebServer) init() error {
 		ctx.Config.Redis.Db)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
-	if err := ctx.db.Connect(ctx.Config.Database.DriverName, ctx.Config.Database.DataSourceName); err != nil {
+	if err := ctx.db.Connect("mysql", ctx.Config.Database.DataSourceName); err != nil {
 		ctx.Error(err, "connect to database failed")
 		return err
 	}
