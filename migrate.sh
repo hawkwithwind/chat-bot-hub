@@ -1,8 +1,10 @@
 #!/bin/bash
 
 MIGRATE_IMAGE=chat-bot-hub:migrate
-DBPATH="mysql://$chathubdb"
-LOCALNETWORK=$chathubnet
+LOCALNETWORK=chatbothub_default
+DB_ALIAS=mysql
+
+export $(grep -v '^#' mysql.env | xargs )
 
 case $1 in
 init*)
@@ -14,7 +16,8 @@ init*)
 	read -p "db_user: " db_user && \
 	read -s -p "db_password: " db_password && \
 	echo "" && \
-        docker volume create --driver local \
+	echo -e "DB_NAME=$db_name\nDB_USER=$db_user\nDB_PASSWORD=$db_password\n" > mysql.env && \
+	docker volume create --driver local \
 	       --opt type=none \
 	       --opt device=$datapath \
 	       --opt o=bind \
@@ -27,7 +30,7 @@ init*)
 	       -e MYSQL_PASSWORD=$db_password \
 	       -v chatbothub_mysql:/var/lib/mysql \
 	       mysql:8.0 \
-	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \	
+	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \
         sleep 5 && \
 	docker logs --tail 100 chatbothub_mysql_init && \
 	docker stop chatbothub_mysql_init
@@ -50,7 +53,7 @@ up*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH=$DBPATH \
+	   -e DBPATH="mysql://$DB_USER:$DB_PATH@tcp($DB_ALIAS)/$DB_NAME" \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \
@@ -63,7 +66,7 @@ down*)
 	   -v `pwd`/migrate:/migrations \
 	   -e LOCAL_USER_ID=`id -u` \
 	   -e LOCAL_GROUP_ID=`id -g` \
-	   -e DBPATH=$DBPATH \
+	   -e DBPATH="mysql://$DB_USER:$DB_PATH@tcp($DB_ALIAS)/$DB_NAME" \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DBPATH \

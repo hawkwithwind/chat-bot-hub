@@ -28,6 +28,8 @@ services:
   web:
     <<: *defaults
     command: ./app/server
+    env_file:
+      - ./mysql.env
     links:
       - redis
     ports:
