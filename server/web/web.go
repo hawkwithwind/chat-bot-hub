@@ -77,6 +77,7 @@ func (ctx *WebServer) init() error {
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
 	if err := ctx.db.Connect("mysql", ctx.Config.Database.DataSourceName); err != nil {
+		ctx.Info(ctx.Config.Database.DataSourceName)
 		ctx.Error(err, "connect to database failed")
 		return err
 	}
