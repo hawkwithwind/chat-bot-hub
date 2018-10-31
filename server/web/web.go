@@ -78,11 +78,11 @@ func (ctx *WebServer) init() error {
 	ctx.db = &dbx.Database{}
 	retryTimes := 7
 	gap := 2
-	for i = 0; i < retryTimes + 1; i++ {
+	for i := 0; i < retryTimes + 1; i++ {
 		if err := ctx.db.Connect("mysql", ctx.Config.Database.DataSourceName); err != nil {			
 			if i < retryTimes {
 				ctx.Info("wait for mysql server establish...")
-				time.Sleep(gap * time.Second)
+				time.Sleep(time.Duration(gap) * time.Second)
 				gap = gap * 2
 			} else {
 				ctx.Error(err, "connect to database failed")
