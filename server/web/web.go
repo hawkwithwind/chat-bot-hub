@@ -254,6 +254,13 @@ var (
 	healthy int32
 )
 
+func sentryContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raven.SetHttpContext(raven.NewHttp(r))
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (ctx *WebServer) Serve() {
 	if ctx.init() != nil {
 		return
@@ -280,7 +287,7 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handler)),
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,

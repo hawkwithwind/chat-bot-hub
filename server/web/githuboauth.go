@@ -91,11 +91,24 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 			}
 
 			ctx.Info("login %s, avatar %s, email %s", login, avatar_url, email)
+			account := o.SelectAccount(ctx.db, login)
+			var tokenString string
+			if o.Err == nil {
+				if account == nil {
+					password := utils.HexString(securecookie.GenerateRandomKey(32))
+					secret := utils.PasswordCheckSum(password)
+					tokenString = o.authorize(ctx.Config.SecretPhrase, login, secret)
+					o.register(ctx.db, login, password)
+				} else {
+					tokenString = o.authorize(ctx.Config.SecretPhrase, account.AccountName, account.Secret)
+				}
+			}
 
-			password := utils.HexString(securecookie.GenerateRandomKey(32))
-			tokenString := o.authorize(ctx.Config.SecretPhrase, login, password)
-			o.register(ctx.db, login, password)
-			o.ok(w, "登录成功", JwtToken{Token: tokenString})
+			if o.Err == nil {
+				url := ctx.Config.Baseurl
+				r.Header.Set("X-CHATBOTHUB-AUTHORIZE", tokenString)
+				http.Redirect(w, r, url, http.StatusFound)
+			}
 		} else {
 			o.deny(w, "CSRF校验失败")
 		}

@@ -17,3 +17,8 @@ func HexString(src []byte) string {
 
 	return string(dst)
 }
+
+func PasswordCheckSum(pass string) string {
+	return HexString(CheckSum([]byte(pass)))
+}
+

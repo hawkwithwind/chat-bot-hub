@@ -40,7 +40,7 @@ func (ctx *ErrorHandler) NewAccount(name string, pass string) *Account {
 		return &Account{
 			AccountId:   rid.String(),
 			AccountName: name,
-			Secret:      utils.HexString(utils.CheckSum([]byte(pass))),
+			Secret:      utils.PasswordCheckSum(pass),
 		}
 	}
 }
@@ -74,6 +74,31 @@ VALUES
 	_, ctx.Err = db.Conn.NamedExecContext(db.Ctx, query, account)
 }
 
+func (ctx *ErrorHandler) SelectAccount(db *dbx.Database, name string) *Account {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	accounts := []Account{}
+	db.NewContext()
+	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
+		"SELECT * FROM accounts WHERE accountname=? AND deleteat is NULL", name)
+
+	if ctx.Err == nil {
+		if len(accounts) == 0 {
+			return nil
+		}
+
+		if len(accounts) > 1 {
+			ctx.Err = fmt.Errorf("Account %s more than one instance", name)
+		}
+
+		return &accounts[0]
+	}
+
+	return nil
+}
+
 func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass string) bool {
 	if ctx.Err != nil {
 		return false
@@ -101,9 +126,9 @@ func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass str
 	}
 }
 
-func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) Account {
+func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) *Account {
 	if ctx.Err != nil {
-		return Account{}
+		return nil
 	}
 
 	accounts := []Account{}
@@ -112,16 +137,16 @@ func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) Account {
 	if ctx.Err == nil {
 		if len(accounts) == 0 {
 			ctx.Err = fmt.Errorf("Account %s not found", aid)
-			return Account{}
+			return nil
 		}
 
 		if len(accounts) > 1 {
 			ctx.Err = fmt.Errorf("Account %s more than one instance", aid)
-			return Account{}
+			return nil
 		}
 
-		return accounts[0]
+		return &accounts[0]
 	} else {
-		return Account{}
+		return nil
 	}
 }
