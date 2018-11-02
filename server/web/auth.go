@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
+	"github.com/gorilla/sessions"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
@@ -18,6 +18,7 @@ import (
 type User struct {
 	AccountName string    `json:"accountname"`
 	Password    string    `json:"password"`
+	Secret      string    `json:"secret"`
 	ExpireAt    time.Time `json:"expireat"`
 }
 
@@ -34,14 +35,14 @@ func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string) {
 	ctx.SaveAccount(db, account)
 }
 
-func (ctx *ErrorHandler) authorize(s string, name string, pass string) string {
+func (ctx *ErrorHandler) authorize(s string, name string, secret string) string {
 	if ctx.Err != nil {
 		return ""
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"accountname": name,
-		"password":    pass,
+		"secret":      secret,
 		"expireat":    time.Now().Add(time.Hour * 24 * 7),
 	})
 
@@ -57,17 +58,20 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
+	var session *sessions.Session
+	session, o.Err = ctx.store.Get(req, "chatbothub")
+	
 	var user User
-	_ = json.NewDecoder(req.Body).Decode(&user)
+	if o.Err == nil {
+		o.Err = json.NewDecoder(req.Body).Decode(&user)
+	}
 
 	if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
-		http.SetCookie(w, &http.Cookie{
-			Name: "X-CHATBOTHUB-AUTHORIZE",
-			Value: tokenString,
-			Expires: time.Now().Add(7 * 24 * time.Hour),
-		})
-		o.ok(w, "登录成功", JwtToken{Token: tokenString})
+		session.Values["X-AUTHORIZE"] = tokenString
+		if o.Err == nil {
+			http.Redirect(w, req, ctx.Config.Baseurl, http.StatusFound)
+		}
 	} else {
 		o.deny(w, "用户名密码不匹配")
 	}
@@ -75,41 +79,39 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		authorizationHeader := req.Header.Get("authorization")
 		o := &ErrorHandler{}
 		defer o.WebError(w)
 
-		if authorizationHeader != "" {
-			bearerToken := strings.Split(authorizationHeader, " ")
-			var token *jwt.Token
-			if len(bearerToken) == 2 {
-				token, o.Err = jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
-					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("解析令牌出错")
-					}
-					return []byte(ctx.Config.SecretPhrase), nil
-				})
-				if token.Valid {
-					var user User
-					mapstructure.Decode(token.Claims, &user)
+		var session *sessions.Session
+		session, o.Err = ctx.store.Get(req, "chatbothub")
+		bearerToken := session.Values["X-AUTHORIZE"]
 
-					if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
-						if time.Now().After(user.ExpireAt) {
-							o.deny(w, "身份令牌已过期")
-						} else {
-							// pass validate
-							context.Set(req, "login", user.AccountName)
-							next(w, req)
-						}
+		if o.Err == nil && bearerToken != "" {
+			var token *jwt.Token
+			token, o.Err = jwt.Parse(bearerToken.(string), func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("解析令牌出错")
+				}
+				return []byte(ctx.Config.SecretPhrase), nil
+			})
+			if token.Valid {
+				var user User
+				mapstructure.Decode(token.Claims, &user)
+
+				if o.AccountValidate(ctx.db, user.AccountName, user.Secret) {
+					if time.Now().After(user.ExpireAt) {
+						o.deny(w, "身份令牌已过期")
 					} else {
-						o.deny(w, "身份令牌未验证通过")
+						// pass validate
+						context.Set(req, "login", user.AccountName)
+						next(w, req)
 					}
 				} else {
-					o.deny(w, "身份令牌无效")
+					o.deny(w, "身份令牌未验证通过")
 				}
 			} else {
-				o.Err = fmt.Errorf("未预期的错误，您的浏览器可能发生了错误的行为")
-			}
+				o.deny(w, "身份令牌无效")
+			}		
 		} else {
 			o.deny(w, "未登录用户无权限访问")
 		}

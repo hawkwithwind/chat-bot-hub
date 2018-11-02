@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -35,9 +34,6 @@ func (ctx *WebServer) githubOAuth(w http.ResponseWriter, r *http.Request) {
 	params.Set("scope", "read:user user:email")
 
 	url := fmt.Sprintf("%s?%s", ctx.Config.GithubOAuth.AuthPath, params.Encode())
-	ctx.Info("CSRF %s", session.Values["CSRF_STRING"])
-	ctx.Info("Redirect to %s", url)
-
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
@@ -103,16 +99,11 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 				} else {
 					tokenString = o.authorize(ctx.Config.SecretPhrase, account.AccountName, account.Secret)
 				}
-			}
+			}			
 
 			if o.Err == nil {
-				url := ctx.Config.Baseurl
-				http.SetCookie(w, &http.Cookie{
-					Name: "X-CHATBOTHUB-AUTHORIZE",
-					Value: tokenString,
-					Expires: time.Now().Add(7 * 24 * time.Hour),
-				})
-				http.Redirect(w, r, url, http.StatusFound)
+				session.Values["X-AUTHORIZE"] = tokenString
+				http.Redirect(w, r, ctx.Config.Baseurl, http.StatusFound)
 			}
 		} else {
 			o.deny(w, "CSRF校验失败")

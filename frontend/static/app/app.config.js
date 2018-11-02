@@ -135,7 +135,7 @@
 	var data = response.data;
 	removeBlock();
 
-	console.log(response.config)
+	console.log(response)
 	
 	if (response.config.url === 'login' && response.data.body.token) {
           //fetch token
