@@ -109,6 +109,8 @@ func (ctx *ErrorHandler) AccountValidateSecret(db *dbx.Database, name string, se
 	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
 
+	fmt.Printf("SELECT ACCOUNT %s %s \n", name ,secret)
+
 	if ctx.Err == nil {
 		if len(accounts) == 0 {
 			return false
