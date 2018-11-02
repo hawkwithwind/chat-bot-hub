@@ -28,6 +28,20 @@ type Account struct {
 	DeleteAt    mysql.NullTime `db:"deleteat"`
 }
 
+func (account *Account) SetEmail(email string) {
+	account.Email = sql.NullString{
+		String: email,
+		Valid: true,
+	}
+}
+
+func (account *Account) SetAvatar(avatar string) {
+	account.Avatar = sql.NullString{
+		String: avatar,
+		Valid: true,
+	}
+}
+
 func (ctx *ErrorHandler) NewAccount(name string, pass string) *Account {
 	if ctx.Err != nil {
 		return nil
@@ -44,6 +58,7 @@ func (ctx *ErrorHandler) NewAccount(name string, pass string) *Account {
 		}
 	}
 }
+
 
 func (ctx *ErrorHandler) SaveAccount(db *dbx.Database, account *Account) {
 	if ctx.Err != nil {

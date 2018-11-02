@@ -32,9 +32,8 @@ func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, em
 	}
 
 	account := ctx.NewAccount(name, pass)
-	account.Email = email
-	account.Avatar = avatar
-	
+	account.SetEmail(email)
+	account.SetAvatar(avatar)
 	ctx.SaveAccount(db, account)
 }
 
