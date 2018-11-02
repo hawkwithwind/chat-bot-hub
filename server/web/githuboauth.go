@@ -94,7 +94,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 					password := utils.HexString(securecookie.GenerateRandomKey(32))
 					secret := utils.PasswordCheckSum(password)
 					tokenString = o.authorize(ctx.Config.SecretPhrase, login, secret)
-					o.register(ctx.db, login, password, email, avatar)
+					o.register(ctx.db, login, password, email, avatar_url)
 				} else {
 					tokenString = o.authorize(ctx.Config.SecretPhrase, account.AccountName, account.Secret)
 				}
