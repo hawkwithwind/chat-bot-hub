@@ -112,7 +112,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			})
 			if token.Valid {
 
-				ctx.Info(token.Claims)
+				ctx.Info("%v" token.Claims)
 				
 				var user User				
 				mapstructure.Decode(token.Claims, &user)
