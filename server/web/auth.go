@@ -48,6 +48,8 @@ func (ctx *ErrorHandler) authorize(s string, name string, secret string) string 
 		"expireat":    utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
 	})
 
+	fmt.Printf("%v\n", token)
+
 	var tokenstring string
 	if tokenstring, ctx.Err = token.SignedString([]byte(s)); ctx.Err == nil {
 		return tokenstring
@@ -109,7 +111,10 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return []byte(ctx.Config.SecretPhrase), nil
 			})
 			if token.Valid {
-				var user User
+
+				ctx.Info(token.Claims)
+				
+				var user User				
 				mapstructure.Decode(token.Claims, &user)
 
 				if o.AccountValidateSecret(ctx.db, user.AccountName, user.Secret) {
