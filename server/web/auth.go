@@ -110,7 +110,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				var user User
 				mapstructure.Decode(token.Claims, &user)
 
-				if o.AccountValidate(ctx.db, user.AccountName, user.Secret) {
+				if o.AccountValidateSecret(ctx.db, user.AccountName, user.Secret) {
 					if time.Now().After(user.ExpireAt) {
 						o.deny(w, "身份令牌已过期")
 					} else {
