@@ -19,7 +19,7 @@ type User struct {
 	AccountName string    `json:"accountname"`
 	Password    string    `json:"password"`
 	Secret      string    `json:"secret"`
-	ExpireAt    time.Time `json:"expireat"`
+	ExpireAt    utils.JSONTime `json:"expireat"`
 }
 
 type JwtToken struct {
@@ -45,7 +45,7 @@ func (ctx *ErrorHandler) authorize(s string, name string, secret string) string 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"accountname": name,
 		"secret":      secret,
-		"expireat":    time.Now().Add(time.Hour * 24 * 7),
+		"expireat":    utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
 	})
 
 	var tokenstring string
@@ -114,8 +114,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 
 				if o.AccountValidateSecret(ctx.db, user.AccountName, user.Secret) {
 					ctx.Info("%v ==> %v", user, time.Now())
-					
-					if time.Now().After(user.ExpireAt) {
+					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")
 					} else {
 						// pass validate
