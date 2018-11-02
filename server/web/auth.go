@@ -69,6 +69,8 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
+		session.Save(req, w)
+		
 		if o.Err == nil {
 			http.Redirect(w, req, ctx.Config.Baseurl, http.StatusFound)
 		}
@@ -91,7 +93,8 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			tokenString = session.Values["X-AUTHORIZE"]
 			var ok bool
 			if bearerToken, ok = tokenString.(string); !ok {
-				o.deny(w, "未登录用户无权访问")
+				o.deny(w, "未登录用户无权限访问")
+				return
 			}
 		}		
 		
@@ -117,12 +120,15 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 					}
 				} else {
 					o.deny(w, "身份令牌未验证通过")
+					return
 				}
 			} else {
 				o.deny(w, "身份令牌无效")
+				return
 			}		
 		} else {
 			o.deny(w, "未登录用户无权限访问")
+			return
 		}
 	})
 }

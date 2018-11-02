@@ -103,6 +103,8 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 
 			if o.Err == nil {
 				session.Values["X-AUTHORIZE"] = tokenString
+				session.Save(r, w)
+				
 				http.Redirect(w, r, ctx.Config.Baseurl, http.StatusFound)
 			}
 		} else {
