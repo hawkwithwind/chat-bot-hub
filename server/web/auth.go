@@ -26,12 +26,15 @@ type JwtToken struct {
 	Token string `json:"token"`
 }
 
-func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string) {
+func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, email string, avatar string) {
 	if ctx.Err != nil {
 		return
 	}
 
 	account := ctx.NewAccount(name, pass)
+	account.Email = email
+	account.Avatar = avatar
+	
 	ctx.SaveAccount(db, account)
 }
 
