@@ -106,7 +106,11 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 
 			if o.Err == nil {
 				url := ctx.Config.Baseurl
-				w.Header.Set("X-CHATBOTHUB-AUTHORIZE", tokenString)
+				http.SetCookie(w, &http.Cookie{
+					Name: "X-CHATBOTHUB-AUTHORIZE",
+					Value: tokenString,
+					Expires: time.Now().Add(7 * 24 * time.Hour),
+				})
 				http.Redirect(w, r, url, http.StatusFound)
 			}
 		} else {
