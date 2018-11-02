@@ -131,7 +131,7 @@ func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass str
 	}
 	
 	secret := utils.HexString(utils.CheckSum([]byte(pass)))
-	return ctx.AccountValidate(db, name, secret)
+	return ctx.AccountValidateSecret(db, name, secret)
 }
 
 func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) *Account {
