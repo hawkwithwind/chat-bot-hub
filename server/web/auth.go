@@ -83,12 +83,21 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		defer o.WebError(w)
 
 		var session *sessions.Session
+		var tokenString interface{}
+		var bearerToken string
 		session, o.Err = ctx.store.Get(req, "chatbothub")
-		bearerToken := session.Values["X-AUTHORIZE"]
-
+		
+		if o.Err == nil {
+			tokenString = session.Values["X-AUTHORIZE"]
+			var ok bool
+			if bearerToken, ok = tokenString.(string); !ok {
+				o.deny(w, "未登录用户无权访问")
+			}
+		}		
+		
 		if o.Err == nil && bearerToken != "" {
 			var token *jwt.Token
-			token, o.Err = jwt.Parse(bearerToken.(string), func(token *jwt.Token) (interface{}, error) {
+			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("解析令牌出错")
 				}
