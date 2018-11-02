@@ -7,6 +7,7 @@ import (
 	"time"
 
 	mt "github.com/mitchellh/mapstructure"
+	
 )
 
 func CheckSum(src []byte) []byte {
@@ -31,6 +32,12 @@ func DecodeMap(src interface{}, target interface{}) error {
 		DecodeHook: func (f reflect.Type, t reflect.Type, data interface{}) (interface{}, error)  {
 			if t == reflect.TypeOf(time.Time{}) && f == reflect.TypeOf("") {
 				return time.Parse(time.RFC3339, data.(string))
+			} else if t == reflect.TypeOf(JSONTime{}) && f == reflect.TypeOf("") {
+				if tt, err := time.Parse(time.RFC3339, data.(string)); err == nil {
+					return JSONTime{tt}, nil
+				} else {
+					return nil, err
+				}
 			}
 
 			return data, nil
