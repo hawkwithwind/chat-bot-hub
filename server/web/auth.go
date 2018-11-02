@@ -8,8 +8,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
-	"github.com/gorilla/sessions"
-	"github.com/mitchellh/mapstructure"
+	"github.com/gorilla/sessions"	
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -22,9 +21,6 @@ type User struct {
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
 
-type JwtToken struct {
-	Token string `json:"token"`
-}
 
 func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, email string, avatar string) {
 	if ctx.Err != nil {
@@ -115,7 +111,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				ctx.Info("%v", token.Claims)
 				
 				var user User				
-				mapstructure.Decode(token.Claims, &user)
+				utils.DecodeMap(token.Claims, &user)
 
 				if o.AccountValidateSecret(ctx.db, user.AccountName, user.Secret) {
 					ctx.Info("%v ==> %v", user, time.Now())

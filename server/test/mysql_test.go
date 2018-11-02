@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"testing"
 
@@ -43,9 +42,9 @@ func TestConn(t *testing.T) {
 func TestAccount(t *testing.T) {
 	o := &domains.ErrorHandler{}
 
-	db := dbx.NewDatabase("mysql", dbpath)
-	o.Err = db.Connect()
-
+	db := &dbx.Database{}
+	o.Err = db.Connect("mysql", dbpath)
+	
 	account := o.NewAccount("abc", "def")
 	o.SaveAccount(db, account)
 
