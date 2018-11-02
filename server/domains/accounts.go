@@ -113,16 +113,19 @@ func (ctx *ErrorHandler) AccountValidateSecret(db *dbx.Database, name string, se
 
 	if ctx.Err == nil {
 		if len(accounts) == 0 {
+			fmt.Println("not found")
 			return false
 		}
 
 		if len(accounts) > 1 {
+			fmt.Println("too many found")
 			ctx.Err = fmt.Errorf("Account %s more than one instance", name)
 			return false
 		}
 
 		return true
 	} else {
+		fmt.Printf("error %v\n", ctx.Err)
 		return false
 	}
 }
