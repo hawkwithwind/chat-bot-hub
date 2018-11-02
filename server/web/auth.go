@@ -62,7 +62,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 	if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
-		req.Header.Set("X-CHATBOTHUB-AUTHORIZE", tokenString)
+		w.Header.Set("X-CHATBOTHUB-AUTHORIZE", tokenString)
 		o.ok(w, "登录成功", JwtToken{Token: tokenString})
 	} else {
 		o.deny(w, "用户名密码不匹配")
