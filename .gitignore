@@ -1,3 +1,4 @@
+data/
 rebuild.sh
 mysql.env
 build/
