@@ -106,9 +106,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			})
 			if token.Valid {
 
-				ctx.Info("%v", token.Claims)
-				
-				var user User				
+				var user User
 				utils.DecodeMap(token.Claims, &user)
 
 				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
