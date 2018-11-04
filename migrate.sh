@@ -8,6 +8,10 @@ DB_ALIAS=mysql
 
 DB_PATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME"
 
+# TEST CONFIGS
+# DB_PATH="mysql://$TESTDBPATH"
+# LOCALNETWORK="host"
+
 case $1 in
 init*)
     datapath=$2 && \
@@ -33,9 +37,8 @@ init*)
 	       -v chatbothub-mysql:/var/lib/mysql \
 	       mysql:8.0 \
 	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \
-        sleep 5 && \
-	docker logs --tail 100 chatbothub_mysql_init && \
-	docker stop chatbothub_mysql_init
+	docker logs -f --tail 100 chatbothub_mysql_init
+    docker stop chatbothub_mysql_init
     ;;
 
 create*)

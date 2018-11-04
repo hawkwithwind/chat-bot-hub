@@ -4,6 +4,7 @@ import (
 	"fmt"
 	//"time"
 	"database/sql"
+	"reflect"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -14,7 +15,27 @@ import (
 )
 
 type ErrorHandler struct {
-	utils.ErrorHandler
+	dbx.ErrorHandler
+}
+
+func (o *ErrorHandler) Head(s interface{}, msg string) interface{} {
+	if o.Err != nil {
+		return nil
+	}
+
+	if v := reflect.ValueOf(s); v.Len() > 1 {
+		o.Err = fmt.Errorf("%s: more than one instance", msg)
+		return nil
+	} else if v.Len() == 0 {
+		return nil
+	} else {
+		if v.Index(0).CanAddr() {
+			return v.Index(0).Addr().Interface()
+		} else {
+			o.Err = fmt.Errorf("value type %v cannot get address", v.Index(0).Type())
+			return nil
+		}
+	}
 }
 
 type Account struct {
@@ -60,8 +81,8 @@ func (ctx *ErrorHandler) NewAccount(name string, pass string) *Account {
 }
 
 
-func (ctx *ErrorHandler) SaveAccount(db *dbx.Database, account *Account) {
-	if ctx.Err != nil {
+func (o *ErrorHandler) SaveAccount(q dbx.Queryable, account *Account) {
+	if o.Err != nil {
 		return
 	}
 
@@ -71,104 +92,60 @@ INSERT INTO accounts
 VALUES
 (:accountid, :accountname, :avatar, :email, :secret)
 `
-	queryParams := dbx.QueryParams{
-		"accountid":   account.AccountId,
-		"accountname": account.AccountName,
-		"secret":      account.Secret,
-	}
 
-	if account.Avatar.Valid {
-		queryParams["avatar"] = account.Avatar.String
-	}
-
-	if account.Email.Valid {
-		queryParams["email"] = account.Email.String
-	}
-
-	db.NewContext()
-	_, ctx.Err = db.Conn.NamedExecContext(db.Ctx, query, account)
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, account)
 }
 
-func (ctx *ErrorHandler) SelectAccount(db *dbx.Database, name string) *Account {
-	if ctx.Err != nil {
+func (o *ErrorHandler) SelectAccount(q dbx.Queryable, name string) *Account {
+	if o.Err != nil {
 		return nil
 	}
 
 	accounts := []Account{}
-	db.NewContext()
-	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND deleteat is NULL", name)
 
-	if ctx.Err == nil {
-		if len(accounts) == 0 {
-			return nil
-		}
-
-		if len(accounts) > 1 {
-			ctx.Err = fmt.Errorf("Account %s more than one instance", name)
-		}
-
-		return &accounts[0]
+	if a := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)); a != nil {
+		return a.(*Account)
+	} else {
+		return nil
 	}
-
-	return nil
 }
 
-func (ctx *ErrorHandler) AccountValidateSecret(db *dbx.Database, name string, secret string) bool {
-	if ctx.Err != nil {
+func (o *ErrorHandler) AccountValidateSecret(q dbx.Queryable, name string, secret string) bool {
+	if o.Err != nil {
 		return false
 	}
 
 	accounts := []Account{}
-	db.NewContext()
-	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts,
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
-
-	if ctx.Err == nil {
-		if len(accounts) == 0 {
-			return false
-		}
-
-		if len(accounts) > 1 {
-			ctx.Err = fmt.Errorf("Account %s more than one instance", name)
-			return false
-		}
-
-		return true
-	} else {
-		return false
-	}
+	
+	return o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)) != nil
 }
 
-func (ctx *ErrorHandler) AccountValidate(db *dbx.Database, name string, pass string) bool {
-	if ctx.Err != nil {
+func (o *ErrorHandler) AccountValidate(q dbx.Queryable, name string, pass string) bool {
+	if o.Err != nil {
 		return false
 	}
 	
 	secret := utils.HexString(utils.CheckSum([]byte(pass)))
-	return ctx.AccountValidateSecret(db, name, secret)
+	return o.AccountValidateSecret(q, name, secret)
 }
 
-func (ctx *ErrorHandler) GetAccountById(db *dbx.Database, aid string) *Account {
-	if ctx.Err != nil {
+func (o *ErrorHandler) GetAccountById(q dbx.Queryable, aid string) *Account {
+	if o.Err != nil {
 		return nil
 	}
 
 	accounts := []Account{}
-	db.NewContext()
-	ctx.Err = db.Conn.SelectContext(db.Ctx, &accounts, "SELECT * FROM accounts WHERE accountid=?", aid)
-	if ctx.Err == nil {
-		if len(accounts) == 0 {
-			ctx.Err = fmt.Errorf("Account %s not found", aid)
-			return nil
-		}
-
-		if len(accounts) > 1 {
-			ctx.Err = fmt.Errorf("Account %s more than one instance", aid)
-			return nil
-		}
-
-		return &accounts[0]
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &accounts, "SELECT * FROM accounts WHERE accountid=?", aid)
+	if a := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", aid)); a != nil {
+		return a.(*Account)
 	} else {
 		return nil
 	}

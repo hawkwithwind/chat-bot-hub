@@ -30,7 +30,7 @@ func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, em
 	account := ctx.NewAccount(name, pass)
 	account.SetEmail(email)
 	account.SetAvatar(avatar)
-	ctx.SaveAccount(db, account)
+	ctx.SaveAccount(db.Conn, account)
 }
 
 func (ctx *ErrorHandler) authorize(s string, name string, secret string) string {
@@ -66,7 +66,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		o.Err = json.NewDecoder(req.Body).Decode(&user)
 	}
 
-	if o.AccountValidate(ctx.db, user.AccountName, user.Password) {
+	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)
@@ -113,7 +113,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				var user User				
 				utils.DecodeMap(token.Claims, &user)
 
-				if o.AccountValidateSecret(ctx.db, user.AccountName, user.Secret) {
+				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
 					ctx.Info("%v ==> %v", user, time.Now())
 					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")

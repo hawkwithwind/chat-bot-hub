@@ -87,7 +87,7 @@ func (ctx *WebServer) githubOAuthCallback(w http.ResponseWriter, r *http.Request
 				}
 			}
 
-			account := o.SelectAccount(ctx.db, login)
+			account := o.SelectAccount(ctx.db.Conn, login)
 			var tokenString string
 			if o.Err == nil {
 				if account == nil {

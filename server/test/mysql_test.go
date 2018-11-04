@@ -43,20 +43,51 @@ func TestAccount(t *testing.T) {
 	o := &domains.ErrorHandler{}
 
 	db := &dbx.Database{}
-	o.Err = db.Connect("mysql", dbpath)
-	
-	account := o.NewAccount("abc", "def")
-	o.SaveAccount(db, account)
+	o.Connect(db, "mysql", dbpath)
 
-	accountfetched := o.GetAccountById(db, account.AccountId)
+	tx := o.Begin(db)
+	if tx == nil {
+		if o.Err != nil {
+			t.Errorf(o.Err.Error())
+		} else {
+			t.Errorf("tx is null from o.Begin(db), but err is nil")
+			return
+		}
+	}
+	defer o.Rollback(tx)
+
+	aname := "abc"
+	apass := "def"
+	account := o.NewAccount(aname, apass)
+	o.SaveAccount(tx, account)
+
+	nid := "123"
+	accountshouldntexists := o.GetAccountById(tx, nid)
+	if o.Err == nil {
+		if accountshouldntexists != nil {
+			t.Errorf("account %s should not exist, found %v", nid, accountshouldntexists)
+		}
+	} else {
+		t.Errorf(o.Err.Error())
+	}
+
+	accountfetched := o.GetAccountById(tx, account.AccountId)
 	if o.Err == nil {
 		//fmt.Printf("account fetched: %v\n", accountfetched)
-		if accountfetched.AccountName != "abc" {
-			t.Errorf("account fetched name should be %s, but was %s", "abc", accountfetched.AccountName)
-		} else if accountfetched.Secret != utils.HexString(utils.CheckSum([]byte("def"))) {
+		if accountfetched.AccountName != aname {
+			t.Errorf("account fetched name should be %s, but was %s", aname, accountfetched.AccountName)
+		} else if accountfetched.Secret != utils.HexString(utils.CheckSum([]byte(apass))) {
 			t.Errorf("account fetched secret checksum failed")
 		}
 	} else {
 		t.Errorf(o.Err.Error())
+	}
+
+	if o.AccountValidate(tx, aname, apass) != true {
+		if o.Err == nil {
+			t.Errorf("accountvalidate failed")
+		} else {
+			t.Errorf(o.Err.Error())
+		}
 	}
 }

@@ -71,7 +71,7 @@ test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	docker run --rm \
         -e HTTPS_PROXY=$(https_proxy) \
         -e HTTP_PROXY=$(http_proxy) \
-        -e DBPATH=$(DBPATH) \
+        -e DBPATH="$(TESTDBPATH)" \
         --net=host \
 	-v $(GOPATH)/src:/go/src \
 	-v $(GOPATH)/pkg:/go/pkg \
