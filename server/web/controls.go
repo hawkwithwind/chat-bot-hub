@@ -94,11 +94,11 @@ func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest)
 	}
 }
 
-func findDevice(bots []domains.Bot, clientid string) *domains.Bot {
+func findDevice(bots []domains.Bot, login string) *domains.Bot {
 	for _, bot := range bots {
-		if bot.BotId == clientid {
+		if bot.Login == login {
 			return &bot
-		}		
+		}
 	}
 
 	return nil
@@ -108,7 +108,6 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
 		BotName string `json:"botName"`
-		Login string `json:"login"`
 		CreateAt int64 `json:"createAt"`
 	}
 	
@@ -131,15 +130,15 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	
 	bs := []BotsInfo{}
 	
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"})
-	for _, info := range botsreply.BotsInfo {
-		if b := findDevice(bots, info.ClientId); b != nil {
-			bs = append(bs, BotsInfo{
-				BotsInfo: *info,
-				BotName: b.BotName,
-				Login: b.Login,
-				CreateAt: b.CreateAt.Time.Unix(),
-			})
+	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); botsreply != nil {
+		for _, info := range botsreply.BotsInfo {
+			if b := findDevice(bots, info.Login); b != nil {
+				bs = append(bs, BotsInfo{
+					BotsInfo: *info,
+					BotName: b.BotName,
+					CreateAt: b.CreateAt.Time.Unix(),
+				})
+			}
 		}
 	}
 	
