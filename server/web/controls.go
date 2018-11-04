@@ -140,7 +140,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 				})
 			} else {
 				bs = append(bs, BotsInfo{
-					BotsInfo: {
+					BotsInfo: pb.BotsInfo{
 						ClientType: b.ChatbotType,
 						Status: 0,
 					},
