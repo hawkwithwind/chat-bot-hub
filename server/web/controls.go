@@ -10,7 +10,7 @@ import (
 	grctx "github.com/gorilla/context"
 	"google.golang.org/grpc"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	//"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type GRPCWrapper struct {
@@ -94,10 +94,10 @@ func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest)
 	}
 }
 
-func findDevice(bots []domains.Bot, login string) *domains.Bot {
+func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 	for _, bot := range bots {
 		if bot.Login == login {
-			return &bot
+			return bot
 		}
 	}
 
@@ -131,8 +131,8 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	bs := []BotsInfo{}
 	
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); botsreply != nil {
-		for _, info := range botsreply.BotsInfo {
-			if b := findDevice(bots, info.Login); b != nil {
+		for _, b := range bots {
+			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo: *info,
 					BotName: b.BotName,
@@ -149,6 +149,8 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 		}
+	} else {
+		o.Err = fmt.Errorf("grpc botsreply is null")
 	}
 	
 	o.ok(w, "", bs)
