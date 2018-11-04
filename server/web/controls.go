@@ -7,7 +7,10 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
+	grctx "github.com/gorilla/context"
 	"google.golang.org/grpc"
+
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type GRPCWrapper struct {
@@ -91,15 +94,56 @@ func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest)
 	}
 }
 
+func findDevice(bots []domains.Bot, clientid string) *domains.Bot {
+	for _, bot := range bots {
+		if bot.BotId == clientid {
+			return &bot
+		}		
+	}
+
+	return nil
+}
+
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
+	type BotsInfo struct {
+		pb.BotsInfo
+		BotName string `json:"botName"`
+		Login string `json:"login"`
+		CreateAt int64 `json:"createAt"`
+	}
+	
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
+	var login string
+	if loginptr := grctx.Get(r, "login"); loginptr != nil {
+		login = loginptr.(string)
+	}
+	
+	bots := o.GetBotsByAccountName(ctx.db.Conn, login)
+	if o.Err == nil && len(bots) == 0 {
+		o.ok(w, "", []BotsInfo{})
+		return
+	}
+	
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
-	defer wrapper.Cancel()
-
+	defer wrapper.Cancel()	
+	
+	bs := []BotsInfo{}
+	
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"})
-	o.ok(w, "", botsreply)
+	for _, info := range botsreply.BotsInfo {
+		if b := findDevice(bots, info.ClientId); b != nil {
+			bs = append(bs, BotsInfo{
+				BotsInfo: *info,
+				BotName: b.BotName,
+				Login: b.Login,
+				CreateAt: b.CreateAt.Time.Unix(),
+			})
+		}
+	}
+	
+	o.ok(w, "", bs)
 }
 
 func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {

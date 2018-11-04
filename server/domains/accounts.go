@@ -97,23 +97,6 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, account)
 }
 
-func (o *ErrorHandler) SelectAccount(q dbx.Queryable, name string) *Account {
-	if o.Err != nil {
-		return nil
-	}
-
-	accounts := []Account{}
-	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &accounts,
-		"SELECT * FROM accounts WHERE accountname=? AND deleteat is NULL", name)
-
-	if a := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)); a != nil {
-		return a.(*Account)
-	} else {
-		return nil
-	}
-}
-
 func (o *ErrorHandler) AccountValidateSecret(q dbx.Queryable, name string, secret string) bool {
 	if o.Err != nil {
 		return false
@@ -145,6 +128,23 @@ func (o *ErrorHandler) GetAccountById(q dbx.Queryable, aid string) *Account {
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &accounts, "SELECT * FROM accounts WHERE accountid=?", aid)
 	if a := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", aid)); a != nil {
+		return a.(*Account)
+	} else {
+		return nil
+	}
+}
+
+func (o *ErrorHandler) GetAccountByName(q dbx.Queryable, name string) *Account {
+	if o.Err != nil {
+		return nil
+	}
+
+	accounts := []Account{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &accounts,
+		"SELECT * FROM accounts WHERE accountname=? AND deleteat is NULL", name)
+
+	if a := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)); a != nil {
 		return a.(*Account)
 	} else {
 		return nil

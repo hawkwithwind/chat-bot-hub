@@ -12,17 +12,19 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
-type Device struct {
-	DeviceId    string         `db:"deviceid"`
-	DeviceName  string         `db:"devicename"`	
+type Bot struct {
+	BotId       string         `db:"botid"`
 	AccountId   string         `db:"accountid"`
+	BotName     string         `db:"botname"`	
+	Login       string         `db:"login"`
 	ChatbotType string         `db:"chatbottype"`
+	LoginInfo   string         `db:"logininfo"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
 	DeleteAt    mysql.NullTime `db:"deleteat"`
 }
 
-func (o *ErrorHandler) NewDevice(name string, bottype string, accountId string) *Device {
+func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {
 	if o.Err != nil {
 		return nil
 	}
@@ -31,47 +33,48 @@ func (o *ErrorHandler) NewDevice(name string, bottype string, accountId string) 
 	if rid, o.Err = uuid.NewRandom(); o.Err != nil {
 		return nil
 	} else {
-		return &Device{
-			DeviceId: rid.String(),
-			DeviceName: name,
+		return &Bot{
+			BotId: rid.String(),
+			BotName: name,
+			Login: login,
 			ChatbotType: bottype,
-			AccountId:   accountId,
+			AccountId: accountId,
 		}
 	}
 }
 
 
-func (o *ErrorHandler) SaveDevice(q dbx.Queryable, device *Device) {
+func (o *ErrorHandler) SaveBot(q dbx.Queryable, bot *Bot) {
 	if o.Err != nil {
 		return
 	}
 
 	query := `
-INSERT INTO devices
-(deviceid, devicename, accountid, chatbottype)
+INSERT INTO bots
+(botid, botname, accountid, login, chatbottype)
 VALUES
-(:deviceid, :devicename, :accountid, :chatbottype)
+(:botid, :botname, :accountid, :login, :chatbottype)
 `
 	ctx, _ := o.DefaultContext()
-	_, o.Err = q.NamedExecContext(ctx, query, device)
+	_, o.Err = q.NamedExecContext(ctx, query, bot)
 }
 
-func (o *ErrorHandler) GetDeviceByAccountName(q dbx.Queryable, accountname string) []Device {
+func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string) []Bot {
 	if o.Err != nil {
 		return nil
 	}
 
-	devices := []Device{}
+	bots := []Bot{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &devices,
+	o.Err = q.SelectContext(ctx, &bots,
 		`
 SELECT d.* 
-FROM devices as d 
+FROM bots as d 
 LEFT JOIN accounts as a on d.accountid = a.accountid
 WHERE a.accountname=? 
   AND a.deleteat is NULL
   AND d.deleteat is NULL`, accountname)
 
-	return devices
+	return bots
 }
 

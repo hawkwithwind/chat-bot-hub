@@ -78,6 +78,19 @@ down*)
 	   down "${@:2}"
     ;;
 
+cmd*)
+    docker run \
+	   --network=$LOCALNETWORK \
+	   -v `pwd`/migrate:/migrations \
+	   -e LOCAL_USER_ID=`id -u` \
+	   -e LOCAL_GROUP_ID=`id -g` \
+	   -e DBPATH=$DB_PATH \
+	   $MIGRATE_IMAGE \
+	   -path=/migrations/ \
+	   -database $DB_PATH \
+	   "${@:2}"
+    ;;
+    
 *)
     echo "./migrate.sh create NAME"
     echo "./migrate.sh up [DIGIT]"
