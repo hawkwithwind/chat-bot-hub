@@ -120,13 +120,6 @@
 	  }
 	}
 
-	// set jwt token bearer
-        var token=$window.sessionStorage.getItem('user_token');
-
-	if (token) {
-          //set authorization header
-          config.headers['Authorization'] = 'Bearer '+token;
-	}
 	return config;
       },
       response: function (response) {

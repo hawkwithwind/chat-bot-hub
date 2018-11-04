@@ -22,7 +22,7 @@
     }
 
     $scope.initView = function(data) {
-      $scope.body = data.body.botsInfo;
+      $scope.body = data.body;
     }
 
     buildPromise(buildModel('consts'))
