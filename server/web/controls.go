@@ -138,6 +138,15 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotName: b.BotName,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
+			} else {
+				bs = append(bs, BotsInfo{
+					BotsInfo: {
+						ClientType: b.ChatbotType,
+						Status: 0,
+					},
+					BotName: b.BotName,
+					CreateAt: b.CreateAt.Time.Unix(),
+				})
 			}
 		}
 	}
