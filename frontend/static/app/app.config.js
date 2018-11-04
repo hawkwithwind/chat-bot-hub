@@ -127,16 +127,7 @@
 	ajaxQueue.splice(ajaxQueue.indexOf(response.config.url), 1);
 	var data = response.data;
 	removeBlock();
-
-	console.log(response)
 	
-	if (response.config.url === 'login' && response.data.body.token) {
-          //fetch token
-          var token=response.data.body.token;
-	  
-          //set token
-          $window.sessionStorage.setItem('user_token', token);
-        }
 	return response;
       },
       responseError: function (rejection) {
