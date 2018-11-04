@@ -131,10 +131,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	bs := []BotsInfo{}
 	
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); botsreply != nil {
-		ctx.Info("botsreply.BotsInfo %v", botsreply.BotsInfo)
-		for i, info := range botsreply.BotsInfo {
-			ctx.Info("[%v] %v", i, info)
-			
+		for _, info := range botsreply.BotsInfo {
 			if b := findDevice(bots, info.Login); b != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo: *info,

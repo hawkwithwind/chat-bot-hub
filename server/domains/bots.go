@@ -3,7 +3,7 @@ package domains
 import (
 	//"fmt"
 	//"time"
-	//"database/sql"
+	"database/sql"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -18,7 +18,7 @@ type Bot struct {
 	BotName     string         `db:"botname"`	
 	Login       string         `db:"login"`
 	ChatbotType string         `db:"chatbottype"`
-	LoginInfo   string         `db:"logininfo"`
+	LoginInfo   sql.NullString `db:"logininfo"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
 	DeleteAt    mysql.NullTime `db:"deleteat"`

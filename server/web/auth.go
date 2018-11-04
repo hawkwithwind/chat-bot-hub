@@ -44,8 +44,6 @@ func (ctx *ErrorHandler) authorize(s string, name string, secret string) string 
 		"expireat":    utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
 	})
 
-	fmt.Printf("%v\n", token)
-
 	var tokenstring string
 	if tokenstring, ctx.Err = token.SignedString([]byte(s)); ctx.Err == nil {
 		return tokenstring
@@ -114,7 +112,6 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				utils.DecodeMap(token.Claims, &user)
 
 				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
-					ctx.Info("%v ==> %v", user, time.Now())
 					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")
 					} else {
