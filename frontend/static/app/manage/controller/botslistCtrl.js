@@ -90,7 +90,8 @@
 
     $scope.login = function(data) {
       buildModel('loginqq', data).post(function(data) {
-	$scope.bodypretty = $scope.pretty(data);
+	//$scope.bodypretty = $scope.pretty(data);
+	console.log(data);
       });
 
       $scope.close();

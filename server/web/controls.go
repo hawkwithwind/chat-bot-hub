@@ -160,20 +160,28 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
+	ctx.Info(">> 1")
+	
 	r.ParseForm()
 	qqnumstr := o.getStringValue(r.Form, "qqnum")
 	pass := o.getStringValue(r.Form, "password")
 	clientId := o.getStringValue(r.Form, "clientId")
 	qqnum := o.ParseUint(qqnumstr, 10, 64)
 
+	ctx.Info(">> 2 %v", o.Err)
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
 	defer wrapper.Cancel()
 
+	ctx.Info(">> 3 %v", o.Err)
+	
 	loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
 		ClientId: clientId,
 		QQNum:    qqnum,
 		Password: pass,
 	})
+
+	ctx.Info(">> 4 %v", o.Err)
 	o.ok(w, "", loginreply)
 }
 
