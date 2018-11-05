@@ -79,6 +79,16 @@ func (ctx *ChatHub) Error(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
+func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
+	for _, v := range hub.bots {
+		if v.ClientType == bottype {
+			return v
+		}
+	}
+
+	return nil
+}
+
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
@@ -214,7 +224,14 @@ func (hub *ChatHub) LoginQQ(ctx context.Context, req *pb.LoginQQRequest) (*pb.Lo
 	hub.Info("recieve login qq cmd from web %s: %d", req.ClientId, req.QQNum)
 	o := ErrorHandler{}
 
-	if bot, found := hub.bots[req.ClientId]; found {
+	var bot *ChatBot
+	if req.ClientId == "" {
+		bot = hub.GetAvailableBot(QQBOT)
+	} else {
+		bot, _ = hub.bots[req.ClientId]
+	}
+
+	if bot != nil {
 		if bot.ClientType != QQBOT {
 			o.Err = fmt.Errorf("cannot send loginQQ to c[%s] %s", bot.ClientType, bot.ClientId)
 		}
@@ -231,9 +248,7 @@ func (hub *ChatHub) LoginQQ(ctx context.Context, req *pb.LoginQQRequest) (*pb.Lo
 			Body:       body,
 		})
 	} else {
-		if o.Err == nil {
-			o.Err = fmt.Errorf("cannot find bot %s", req.ClientId)
-		}
+		o.Err = fmt.Errorf("cannot find bot[%s] %s", QQBOT, req.ClientId)
 	}
 
 	if o.Err != nil {
@@ -247,7 +262,14 @@ func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest)
 	hub.Info("recieve login wechat cmd from web %s", req.ClientId)
 	o := ErrorHandler{}
 
-	if bot, found := hub.bots[req.ClientId]; found {
+	var bot *ChatBot
+	if req.ClientId == "" {
+		bot = hub.GetAvailableBot(WECHATBOT)
+	} else {
+		bot, _ = hub.bots[req.ClientId]
+	}
+
+	if bot != nil {
 		if bot.ClientType != WECHATBOT {
 			o.Err = fmt.Errorf("cannot send loginWechat to c[%s] %s", bot.ClientType, bot.ClientId)
 		}
@@ -262,9 +284,7 @@ func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest)
 			ClientId:   req.ClientId,
 		})
 	} else {
-		if o.Err == nil {
-			o.Err = fmt.Errorf("cannot find bot %s", req.ClientId)
-		}
+		o.Err = fmt.Errorf("cannot find bot %s", req.ClientId)
 	}
 
 	if o.Err != nil {
