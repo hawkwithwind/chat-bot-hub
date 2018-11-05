@@ -63,6 +63,7 @@ type ErrorMessage struct {
 type WebServer struct {
 	Config    WebConfig
 	Hubport   string
+	Hubhost   string
 	logger    *log.Logger
 	redispool *redis.Pool
 	db        *dbx.Database

@@ -125,7 +125,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()	
 	
 	bs := []BotsInfo{}
@@ -150,7 +150,9 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		o.Err = fmt.Errorf("grpc botsreply is null")
+		if o.Err == nil {
+			o.Err = fmt.Errorf("grpc botsreply is null")
+		}
 	}
 	
 	o.ok(w, "", bs)
@@ -170,7 +172,7 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 		clientId = r.Form["clientId"][0]
 	}
 	
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
 	loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
@@ -192,7 +194,7 @@ func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 		clientId = r.Form["clientId"][0]
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
 	loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{

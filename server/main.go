@@ -75,7 +75,7 @@ func main() {
 			wg.Add(1)
 			defer wg.Done()
 
-			webserver := web.WebServer{Config: config.Web, Hubport: config.Hub.Port}
+			webserver := web.WebServer{Config: config.Web, Hubhost: "hub", Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
 	}
