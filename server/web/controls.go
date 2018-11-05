@@ -167,7 +167,7 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 
 	clientId := ""
 	if len(r.Form["clientId"]) > 0 {
-		clientId = r.Form["clientId"]
+		clientId = r.Form["clientId"][0]
 	}
 	
 	wrapper := o.GRPCConnect(fmt.Sprintf("127.0.0.1:%s", ctx.Hubport))
