@@ -122,10 +122,6 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 }
 
 func (ctx *ErrorHandler) complain(w http.ResponseWriter, code int, msg string) {
-	if ctx.Err != nil {
-		return
-	}
-
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(CommonResponse{
