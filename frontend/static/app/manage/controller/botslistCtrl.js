@@ -8,6 +8,8 @@
     $scope.body = {};
     
     $scope.tsToString = function(unix_timestamp) {
+      if(unix_timestamp === undefined) { return "" }
+      
       var date = new Date(unix_timestamp);
 
       var year = date.getFullYear();

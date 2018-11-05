@@ -9,6 +9,7 @@
       <th style="text-align:center">类型</th>
       <th style="text-align:center">帐号</th>
       <th style="text-align:center">状态</th>
+      <th style="text-align:center">创建时间</th>
       <th style="text-align:center">启动时间</th>
       <th style="text-align:center">最后活跃</th>
       <th style="text-align:center">客户端编号</th>
@@ -20,7 +21,7 @@
 	  <td style="text-align:center;width:120px">{{ consts.types[row.clientType] }}</td>
 	  <td style="text-align:center;width:120px">{{ row.login }}</td>
 	  <td style="text-align:center;width:120px">{{ consts.status[row.status] }}</td>
-	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt) }}</td>
+	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.startAt) }}</td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
 	  <td style="text-align:left;width:240px">{{ row.clientId }}</td>

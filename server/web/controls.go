@@ -203,6 +203,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			"WECHATBOT": "微信机器人",
 		},
 		"status": map[int]string{
+			0:   "未连接",
 			1:   "初始化",
 			100: "准备登录",
 			150: "等待扫码",
