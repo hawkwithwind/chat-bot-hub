@@ -59,9 +59,11 @@ func NewChatBot() *ChatBot {
 
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
-	if bot.Status != BeginNew && bot.Status != BeginRegistered && bot.Status != FailingDisconnected {
-		return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
-	}
+
+	
+	// if bot.Status != BeginNew && bot.Status != BeginRegistered && bot.Status != FailingDisconnected {
+	// 	return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
+	// }
 
 	bot.ClientId = clientId
 	bot.ClientType = clientType
@@ -97,13 +99,16 @@ func (bot *ChatBot) prepareLogin(login string) (*ChatBot, error) {
 func (bot *ChatBot) loginDone(login string) (*ChatBot, error) {
 	bot.Info("loginDone")
 
-	if bot.Status != LoggingPrepared {
+	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
 		return bot, fmt.Errorf("bot status %s cannot loginDone", bot.Status)
 	}
 
-	if bot.Login == "" {
-		bot.Login = login
+	if bot.Login != login {
+		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
 	}
+	
+	bot.Login = login
+	
 	bot.Status = WorkingLoggedIn
 	return bot, nil
 }

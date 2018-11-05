@@ -22,6 +22,7 @@ type MainConfig struct {
 
 var (
 	configPath = flag.String("c", "config/config.yml", "config file path")
+	startcmd   = flag.String("s", "", "start command: web/hub") 
 	config     MainConfig
 )
 
@@ -59,7 +60,7 @@ func main() {
 	log.Printf("config path %s", *configPath)
 
 	var wg sync.WaitGroup
-	log.Printf("server starts.")
+	log.Printf("server %s starts.", *startcmd)
 
 	var err error
 	if config, err = loadConfig(*configPath); err != nil {
@@ -69,21 +70,25 @@ func main() {
 	
 	raven.SetDSN(config.Web.Sentry)
 
-	go func() {
-		wg.Add(1)
-		defer wg.Done()
+	if *startcmd == "web" {
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
 
-		webserver := web.WebServer{Config: config.Web, Hubport: config.Hub.Port}
-		webserver.Serve()
-	}()
+			webserver := web.WebServer{Config: config.Web, Hubport: config.Hub.Port}
+			webserver.Serve()
+		}()
+	}
 
-	go func() {
-		wg.Add(1)
-		defer wg.Done()
+	if *startcmd == "hub" {
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
 
-		hub := chatbothub.ChatHub{Config: config.Hub}
-		hub.Serve()
-	}()
+			hub := chatbothub.ChatHub{Config: config.Hub}
+			hub.Serve()
+		}()
+	}
 
 	time.Sleep(5 * time.Second)
 	wg.Wait()

@@ -4,7 +4,7 @@ x-defualts: &defaults
   restart: unless-stopped
   build: docker/runtime
   depends_on:
-    - redis
+    # - redis
     - mysql
   volumes:
     - ./build:/app
@@ -14,9 +14,9 @@ services:
   base:
     build: docker/runtime
     
-  redis:
-    restart: unless-stopped
-    image: redis:3.2-alpine
+  # redis:
+  #   restart: unless-stopped
+  #   image: redis:3.2-alpine
 
   mysql:
     restart: unless-stopped
@@ -27,13 +27,16 @@ services:
       
   web:
     <<: *defaults
-    command: ./app/server
+    command: ./app/server -s web
     env_file:
       - ./mysql.env
-    links:
-      - redis
     ports:
       - '9000:9000'
+
+  hub:
+    <<: *defaults
+    command: ./app/server -s hub
+    ports:
       - '13142:13142'
 
 volumes:
