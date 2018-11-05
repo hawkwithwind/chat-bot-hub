@@ -20,7 +20,10 @@
 	  <td style="text-align:center;width:160px">{{ row.botName }}</td>
 	  <td style="text-align:center;width:120px">{{ consts.types[row.clientType] }}</td>
 	  <td style="text-align:center;width:120px">{{ row.login }}</td>
-	  <td style="text-align:center;width:120px">{{ row.status===undefined ? "未连接" : consts.status[row.status]} }}</td>
+	  <td style="text-align:center;width:120px">
+	    <span ng-if="row.status===undefined">未连接</span>
+	    <span ng-if="row.status!==undefined">{{ consts.status[row.status] }}</span>
+	  </td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.startAt) }}</td>
 	  <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
