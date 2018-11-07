@@ -71,6 +71,11 @@ type LoginQQBody struct {
 	Password string `json:"password"`
 }
 
+type LoginWechatBody struct {
+	Wxid string `json:"wxid"`
+	Password string `json:"password"`
+}
+
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
@@ -275,13 +280,15 @@ func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest)
 		}
 
 		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin("")
+			bot, o.Err = bot.prepareLogin(req.Wxid)
 		}
 
+		body := o.ToJson(LoginWechatBody{Wxid: req.Wxid, Password: req.Password})
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  "LOGIN",
 			ClientType: WECHATBOT,
 			ClientId:   req.ClientId,
+			Body: body,
 		})
 	} else {
 		o.Err = fmt.Errorf("cannot find bot %s", req.ClientId)

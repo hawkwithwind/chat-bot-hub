@@ -101,8 +101,8 @@ func (f *PlainFilter) Fill(msg string) error {
 		return fmt.Errorf("call on empty *PlainFilter")
 	}
 	brief := msg
-	if len(msg) > 20 {
-		brief = msg[:20]
+	if len(msg) > 80 {
+		brief = msg[:80]
 	}
 
 	f.logger.Printf("[%s] %s ...", f.Type, brief)

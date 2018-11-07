@@ -75,6 +75,8 @@ message LoginQQReply {
 
 message LoginWechatRequest {
   string clientId = 1;
+  string wxid = 2;
+  string password = 3;
 }
 
 message LoginWechatReply {

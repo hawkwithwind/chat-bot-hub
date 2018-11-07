@@ -203,6 +203,18 @@ func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
 	}
 }
 
+func (ctx *ErrorHandler) getValueNullable(form url.Values, name string) []string {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if len(form[name]) > 0 {
+		return form[name]
+	} else {
+		return nil
+	}
+}
+
 func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
 	if ctx.Err != nil {
 		return ""
@@ -213,6 +225,19 @@ func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
 		return ""
 	}
 	return v[0]
+}
+
+func (ctx *ErrorHandler) getStringValueDefault(form url.Values, name string, defaultvalue string) string {
+	if ctx.Err != nil {
+		return ""
+	}
+
+	v := ctx.getValueNullable(form, name)
+	if v == nil {
+		return defaultvalue
+	} else {
+		return v[0]
+	}
 }
 
 func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {

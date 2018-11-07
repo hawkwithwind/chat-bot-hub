@@ -166,11 +166,7 @@ func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
 	qqnumstr := o.getStringValue(r.Form, "qqnum")
 	pass := o.getStringValue(r.Form, "password")	
 	qqnum := o.ParseUint(qqnumstr, 10, 64)
-
-	clientId := ""
-	if len(r.Form["clientId"]) > 0 {
-		clientId = r.Form["clientId"][0]
-	}
+	clientId := o.getStringValueDefault(r.Form, "clientId", "")
 	
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
@@ -189,16 +185,17 @@ func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 
 	r.ParseForm()
-	clientId := ""
-	if len(r.Form["clientId"]) > 0 {
-		clientId = r.Form["clientId"][0]
-	}
+	clientId := o.getStringValueDefault(r.Form, "clientId", "")
+	wxid := o.getStringValueDefault(r.Form, "wxid", "")
+	pass := o.getStringValueDefault(r.Form, "password", "")
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
 	loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
 		ClientId: clientId,
+		Wxid: wxid,
+		Password: pass,
 	})
 	o.ok(w, "", loginreply)
 }

@@ -70,6 +70,16 @@
       });
     }
 
+    $scope.showWechatLogin = function(row)  {
+      $modal.open({
+	templateUrl: 'loginWechatTemplate',
+	controller: wechatLoginCtrl,
+	resolve: {
+	  clientId: () => row.clientId
+	}
+      });
+    }
+
     $scope.wechatLogin = function(row) {
       buildModel('loginwechat', {clientId: row.clientId}).post(function(data) {
 	$scope.bodypretty = $scope.pretty(data);
@@ -97,6 +107,26 @@
       $scope.close();
     }
   }
-  
+
+  app.controller("wechatLoginCtrl", qqLoginCtrl);
+  wechatLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId"];
+  function wechatLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId) {
+    $scope.clientId = clientId;
+    $scope.data = {};
+    $scope.data.clientId = clientId;
+    
+    $scope.close = function() {
+      $uibModalInstance.dismiss();
+    }
+
+    $scope.login = function(data) {
+      buildModel('loginwechat', data).post(function(data) {
+	//$scope.bodypretty = $scope.pretty(data);
+	console.log(data);
+      });
+
+      $scope.close();
+    }
+  }
 })();
 
