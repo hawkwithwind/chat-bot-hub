@@ -86,7 +86,7 @@ func (ctx *ChatHub) Error(msg string, v ...interface{}) {
 
 func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
 	for _, v := range hub.bots {
-		if v.ClientType == bottype {
+		if v.ClientType == bottype && v.Status == BeginRegistered {
 			return v
 		}
 	}
