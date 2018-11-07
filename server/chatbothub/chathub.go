@@ -267,23 +267,32 @@ func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest)
 	hub.Info("recieve login wechat cmd from web %s", req.ClientId)
 	o := ErrorHandler{}
 
+	hub.Info(">>> 1")
+
 	var bot *ChatBot
 	if req.ClientId == "" {
+		hub.Info(">>> 2")
 		bot = hub.GetAvailableBot(WECHATBOT)
 	} else {
+		hub.Info(">>> 3")
 		bot, _ = hub.bots[req.ClientId]
 	}
 
 	if bot != nil {
+		hub.Info(">>> 4")
 		if bot.ClientType != WECHATBOT {
 			o.Err = fmt.Errorf("cannot send loginWechat to c[%s] %s", bot.ClientType, bot.ClientId)
 		}
 
+		hub.Info(">>> 4.1")
 		if o.Err == nil {
+			hub.Info(">>> 4.2")
 			bot, o.Err = bot.prepareLogin(req.Wxid)
 		}
 
+		hub.Info(">>> 4.3")
 		body := o.ToJson(LoginWechatBody{Wxid: req.Wxid, Password: req.Password})
+		hub.Info(">>> 4.4 %v", body)
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  "LOGIN",
 			ClientType: WECHATBOT,
@@ -291,12 +300,15 @@ func (hub *ChatHub) LoginWechat(ctx context.Context, req *pb.LoginWechatRequest)
 			Body: body,
 		})
 	} else {
+		hub.Info(">>> 5")
 		o.Err = fmt.Errorf("cannot find bot %s", req.ClientId)
 	}
 
 	if o.Err != nil {
+		hub.Info(">>> 6")
 		return &pb.LoginWechatReply{Msg: fmt.Sprintf("WechatLOGIN FAILED %s", o.Err.Error())}, nil
 	} else {
+		hub.Info(">>> 7")
 		return &pb.LoginWechatReply{Msg: "WechatLOGIN DONE"}, nil
 	}
 }
