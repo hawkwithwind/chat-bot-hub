@@ -81,7 +81,7 @@
     }
 
     $scope.wechatLogin = function(row) {
-      buildModel('loginwechat', {clientId: row.clientId}).post(function(data) {
+      buildModel('loginbot', {clientId: row.clientId}).post(function(data) {
 	$scope.bodypretty = $scope.pretty(data);
       });
     }
