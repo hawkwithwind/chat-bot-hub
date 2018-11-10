@@ -154,6 +154,7 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 	clientType := o.getStringValue(r.Form, "clientType")
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
+	deviceData := o.getStringValueDefault(r.Form, "deviceData", "")
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
@@ -163,6 +164,7 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 		ClientType: clientType,
 		Login: login,
 		Password: pass,
+		DeviceData: deviceData,
 	})
 	o.ok(w, "", loginreply)
 }

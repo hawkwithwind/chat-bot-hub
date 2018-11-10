@@ -74,6 +74,7 @@ const (
 type LoginBody struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
+	DeviceData string `json:"deviceData"`
 }
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -172,9 +173,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var wxData string
 					var token string
 					if body != nil {
-						userName = o.FromMap("userName", *body, "eventRequest.body", nil).(string)
-						wxData = o.FromMap("wxData", *body, "eventRequest.body", nil).(string)
-						token = o.FromMap("token", *body, "eventRequest.body", nil).(string)
+						userName = o.FromMapString("userName", *body, "eventRequest.body", false, "")
+						wxData = o.FromMapString("wxData", *body, "eventRequest.body", true, "")
+						token = o.FromMapString("token", *body, "eventRequest.body", true, "")
 					}
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(userName, wxData, token)
@@ -272,7 +273,7 @@ func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.
 			bot, o.Err = bot.prepareLogin(req.Login)
 		}
 
-		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password})
+		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password, DeviceData: req.DeviceData})
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  "LOGIN",
 			ClientType: req.ClientType,
