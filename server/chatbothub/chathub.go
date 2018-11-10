@@ -74,7 +74,7 @@ const (
 type LoginBody struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
-	LoginInfo string `json:"LoginInfo"`
+	LoginInfo string `json:"loginInfo"`
 }
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
