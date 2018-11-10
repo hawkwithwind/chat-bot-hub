@@ -26,8 +26,7 @@ service ChatBotHub {
 
   // below are for internal web api
   rpc GetBots (BotsRequest) returns (BotsReply) {}  
-  rpc LoginQQ (LoginQQRequest) returns (LoginQQReply) {}
-  rpc LoginWechat (LoginWechatRequest) returns (LoginWechatReply) {}
+  rpc LoginBot (LoginBotRequest) returns (LoginBotReply) {}  
 }
 
 message EventRequest {
@@ -63,22 +62,13 @@ message BotsInfo {
   string filterInfo = 8;
 }
 
-message LoginQQRequest {
+message LoginBotRequest {
   string clientId = 1;
-  uint64 QQNum = 2;
-  string password = 3;
+  string clientType = 2;
+  string login = 3;
+  string password = 4;
 }
 
-message LoginQQReply {
-  string msg = 1;
-}
-
-message LoginWechatRequest {
-  string clientId = 1;
-  string wxid = 2;
-  string password = 3;
-}
-
-message LoginWechatReply {
+message LoginBotReply {
   string msg = 1;
 }

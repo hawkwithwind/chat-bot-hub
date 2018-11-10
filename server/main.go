@@ -85,8 +85,10 @@ func main() {
 			wg.Add(1)
 			defer wg.Done()
 
-			hub := chatbothub.ChatHub{Config: config.Hub}
-			hub.Serve()
+			raven.CapturePanic(func() {
+				hub := chatbothub.ChatHub{Config: config.Hub}
+				hub.Serve()
+			}, nil)
 		}()
 	}
 

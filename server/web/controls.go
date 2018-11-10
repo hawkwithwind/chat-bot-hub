@@ -68,25 +68,12 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 	}
 }
 
-func (ctx *ErrorHandler) LoginQQ(w *GRPCWrapper, req *pb.LoginQQRequest) *pb.LoginQQReply {
+func (ctx *ErrorHandler) LoginBot(w *GRPCWrapper, req *pb.LoginBotRequest) *pb.LoginBotReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if loginreply, err := w.client.LoginQQ(w.context, req); err != nil {
-		ctx.Err = err
-		return nil
-	} else {
-		return loginreply
-	}
-}
-
-func (ctx *ErrorHandler) LoginWechat(w *GRPCWrapper, req *pb.LoginWechatRequest) *pb.LoginWechatReply {
-	if ctx.Err != nil {
-		return nil
-	}
-
-	if loginreply, err := w.client.LoginWechat(w.context, req); err != nil {
+	if loginreply, err := w.client.LoginBot(w.context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else {
@@ -158,43 +145,23 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", bs)
 }
 
-func (ctx *WebServer) loginQQ(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
-	defer o.WebError(w)
-
-	r.ParseForm()
-	qqnumstr := o.getStringValue(r.Form, "qqnum")
-	pass := o.getStringValue(r.Form, "password")	
-	qqnum := o.ParseUint(qqnumstr, 10, 64)
-	clientId := o.getStringValueDefault(r.Form, "clientId", "")
-	
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()
-
-	loginreply := o.LoginQQ(wrapper, &pb.LoginQQRequest{
-		ClientId: clientId,
-		QQNum:    qqnum,
-		Password: pass,
-	})
-
-	o.ok(w, "", loginreply)
-}
-
-func (ctx *WebServer) loginWechat(w http.ResponseWriter, r *http.Request) {
+func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
 	clientId := o.getStringValueDefault(r.Form, "clientId", "")
-	wxid := o.getStringValueDefault(r.Form, "wxid", "")
+	clientType := o.getStringValue(r.Form, "clientType")
+	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	loginreply := o.LoginWechat(wrapper, &pb.LoginWechatRequest{
+	loginreply := o.LoginBot(wrapper, &pb.LoginBotRequest{
 		ClientId: clientId,
-		Wxid: wxid,
+		ClientType: clientType,
+		Login: login,
 		Password: pass,
 	})
 	o.ok(w, "", loginreply)

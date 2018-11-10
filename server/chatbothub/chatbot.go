@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"time"
-
+	
+	"github.com/getsentry/raven-go"
+	
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
@@ -35,6 +37,11 @@ func (status ChatBotStatus) String() string {
 	return names[status]
 }
 
+type DeviceData struct {
+	WxData string `json:"wxData"`
+	Token string `json:"token"`
+}
+
 type ChatBot struct {
 	ClientId   string        `json:"clientId"`
 	ClientType string        `json:"clientType"`
@@ -42,6 +49,7 @@ type ChatBot struct {
 	StartAt    int64         `json:"startAt"`
 	LastPing   int64         `json:"lastPing"`
 	Login      string        `json:"login"`
+	DeviceData DeviceData    `json:"deviceData"`
 	Status     ChatBotStatus `json:"status"`
 	tunnel     pb.ChatBotHub_EventTunnelServer
 	errmsg     string
@@ -51,6 +59,13 @@ type ChatBot struct {
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
 	bot.logger.Printf(msg, v...)
+}
+
+func (bot *ChatBot) Error(err error, msg string, v ...interface{}) {
+	raven.CaptureError(err, nil)
+	
+	bot.logger.Printf(msg, v...)
+	bot.logger.Printf("Error %v", err)
 }
 
 func NewChatBot() *ChatBot {
@@ -96,7 +111,7 @@ func (bot *ChatBot) prepareLogin(login string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(login string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatBot, error) {
 	bot.Info("loginDone")
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -108,9 +123,24 @@ func (bot *ChatBot) loginDone(login string) (*ChatBot, error) {
 	}
 	
 	bot.Login = login
+	bot.DeviceData.WxData = wxdata
+	bot.DeviceData.Token = token
 	
 	bot.Status = WorkingLoggedIn
 	return bot, nil
+}
+
+func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
+	bot.Info("updateToken")
+
+	if bot.Login != login {
+		bot.Info("bot c[%s]{%s} update token login %s != %s",
+			bot.ClientType, bot.ClientId, bot.Login, login)
+		return bot ,nil
+	}
+
+	bot.DeviceData.Token = token
+	return bot, nil	
 }
 
 func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
@@ -122,5 +152,12 @@ func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 
 	bot.errmsg = errmsg
 	bot.Status = LoggingFailed
+	return bot, nil
+}
+
+func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
+	bot.Info("logoutDone")
+
+	bot.Status = BeginRegistered
 	return bot, nil
 }
