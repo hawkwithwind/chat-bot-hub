@@ -67,7 +67,7 @@ message LoginBotRequest {
   string clientType = 2;
   string login = 3;
   string password = 4;
-  string deviceData = 5;
+  string loginInfo = 5;
 }
 
 message LoginBotReply {

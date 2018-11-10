@@ -94,6 +94,7 @@ func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
+		BotId   string `json:"botId"`
 		BotName string `json:"botName"`
 		CreateAt int64 `json:"createAt"`
 	}
@@ -123,6 +124,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 				bs = append(bs, BotsInfo{
 					BotsInfo: *info,
 					BotName: b.BotName,
+					BotId: b.BotId,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
 			} else {
@@ -131,6 +133,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 						ClientType: b.ChatbotType,
 						Status: 0,
 					},
+					BotId: b.BotId,
 					BotName: b.BotName,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -150,12 +153,26 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 
 	r.ParseForm()
+	botId := o.getStringValueDefault(r.Form, "botId", "")
 	clientId := o.getStringValueDefault(r.Form, "clientId", "")
 	clientType := o.getStringValue(r.Form, "clientType")
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
-	deviceData := o.getStringValueDefault(r.Form, "deviceData", "")
 
+	bot := o.GetBotById(ctx.db.Conn, botId)
+	logininfo := ""
+	if bot == nil {
+		if o.Err == nil {
+			o.Err = fmt.Errorf("botid %s not found", botId)
+		}
+	} else {
+		if bot.LoginInfo.Valid {
+			logininfo = bot.LoginInfo.String
+		} else {
+			logininfo = ""
+		}
+	}
+	
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
@@ -164,7 +181,7 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 		ClientType: clientType,
 		Login: login,
 		Password: pass,
-		DeviceData: deviceData,
+		LoginInfo: logininfo,
 	})
 	o.ok(w, "", loginreply)
 }

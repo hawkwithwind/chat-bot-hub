@@ -61,7 +61,7 @@
     <div class="row form-group-padding">
       <div class="col-md-9">
 	<label for="text_qqnum" class="col-md-3 control-label">QQ号</label>
-	<input id="text_qqnum" name="text_qqnum" type="text" class="col-md-6" ng-model="data.qqnum" />
+	<input id="text_qqnum" name="text_qqnum" type="text" class="col-md-6" ng-model="data.login" />
       </div>
     </div>
 
@@ -73,6 +73,7 @@
     </div>
 
     <input id="hidden_clientId" name="hidden_clientId" type="hidden" ng-model="data.clientId" />
+    <input id="hidden_botId" name="hidden_botId" type="hidden" ng-model="data.botId" />
 
     <div class="row form-group-padding">
       <div class="col-md-3">
@@ -91,8 +92,8 @@
   <div class="modal-body form-group-padding" id="loginWechat_modal_body">
     <div class="row form-group-padding">
       <div class="col-md-9">
-	<label for="text_wxid" class="col-md-3 control-label">微信号</label>
-	<input id="text_wxid" name="text_qqnum" type="text" class="col-md-6" ng-model="data.wxid" />
+	<label for="text_login" class="col-md-3 control-label">微信号</label>
+	<input id="text_login" name="text_login" type="text" class="col-md-6" ng-model="data.login" />
       </div>
     </div>
 
@@ -104,6 +105,7 @@
     </div>
 
     <input id="hidden_clientId" name="hidden_clientId" type="hidden" ng-model="data.clientId" />
+    <input id="hidden_botId" name="hidden_botId" type="hidden" ng-model="data.botId" />
 
     <div class="row form-group-padding">
       <div class="col-md-3">

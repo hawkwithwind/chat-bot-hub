@@ -74,7 +74,7 @@ const (
 type LoginBody struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
-	DeviceData string `json:"deviceData"`
+	LoginInfo string `json:"LoginInfo"`
 }
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -258,7 +258,7 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 }
 
 func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.LoginBotReply, error) {
-	hub.Info("recieve login bot cmd from web %s: %d", req.ClientId, req.ClientType, req.Login)
+	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
 	o := ErrorHandler{}
 
 	var bot *ChatBot
@@ -273,7 +273,7 @@ func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.
 			bot, o.Err = bot.prepareLogin(req.Login)
 		}
 
-		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password, DeviceData: req.DeviceData})
+		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password, LoginInfo: req.LoginInfo})
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  "LOGIN",
 			ClientType: req.ClientType,

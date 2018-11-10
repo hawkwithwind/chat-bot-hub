@@ -81,25 +81,30 @@
     }
 
     $scope.wechatLogin = function(row) {
-      buildModel('loginbot', {clientId: row.clientId, clientType: row.clientType}).post(function(data) {
+      buildModel('loginbot', {
+	clientId: row.clientId,
+	clientType: row.clientType,
+	botId: row.botId
+      }).post(function(data) {
 	$scope.bodypretty = $scope.pretty(data);
       });
     }
   }
 
   app.controller("qqLoginCtrl", qqLoginCtrl);
-  qqLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId"];
-  function qqLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId) {
+  qqLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"];
+  function qqLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
     $scope.clientId = clientId;
     $scope.data = {};
     $scope.data.clientId = clientId;
+    $scope.data.clientId = botId;
     
     $scope.close = function() {
       $uibModalInstance.dismiss();
     }
 
     $scope.login = function(data) {
-      buildModel('loginqq', data).post(function(data) {
+      buildModel('loginbot', data).post(function(data) {
 	//$scope.bodypretty = $scope.pretty(data);
 	console.log(data);
       });
@@ -108,12 +113,13 @@
     }
   }
 
-  app.controller("wechatLoginCtrl", qqLoginCtrl);
-  wechatLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId"];
-  function wechatLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId) {
+  app.controller("wechatLoginCtrl", wechatLoginCtrl);
+  wechatLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"];
+  function wechatLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
     $scope.clientId = clientId;
     $scope.data = {};
     $scope.data.clientId = clientId;
+    $scope.data.clientId = botId;
     
     $scope.close = function() {
       $uibModalInstance.dismiss();

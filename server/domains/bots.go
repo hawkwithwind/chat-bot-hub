@@ -1,7 +1,7 @@
 package domains
 
 import (
-	//"fmt"
+	"fmt"
 	//"time"
 	"database/sql"
 
@@ -68,7 +68,7 @@ func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string)
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &bots,
 		`
-SELECT d.* 
+SELECT d.*
 FROM bots as d 
 LEFT JOIN accounts as a on d.accountid = a.accountid
 WHERE a.accountname=? 
@@ -78,3 +78,23 @@ WHERE a.accountname=?
 	return bots
 }
 
+func (o *ErrorHandler) GetBotById(q dbx.Queryable, botid string) *Bot {
+	if o.Err != nil {
+		return nil
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT *
+FROM bots
+WHERE botid=?
+  AND deleteat is NULL`, botid)
+
+	if b := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botid)); b != nil {
+		return b.(*Bot)
+	} else {
+		return nil
+	}
+}
