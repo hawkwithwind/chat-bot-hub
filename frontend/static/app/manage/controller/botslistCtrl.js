@@ -120,7 +120,7 @@
     }
 
     $scope.login = function(data) {
-      buildModel('loginwechat', data).post(function(data) {
+      buildModel('loginbot', data).post(function(data) {
 	//$scope.bodypretty = $scope.pretty(data);
 	console.log(data);
       });
