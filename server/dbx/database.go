@@ -21,8 +21,10 @@ type ErrorHandler struct {
 }
 
 type Queryable interface {
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	Rebind(query string) string
 }
 
 func (o *ErrorHandler) DefaultContext() (context.Context, context.CancelFunc) {

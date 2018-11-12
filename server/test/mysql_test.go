@@ -4,7 +4,8 @@ import (
 	"flag"
 	"os"
 	"testing"
-
+	"database/sql"
+	
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 
@@ -62,10 +63,10 @@ func TestAccount(t *testing.T) {
 	o.SaveAccount(tx, account)
 
 	nid := "123"
-	accountshouldntexists := o.GetAccountById(tx, nid)
+	accountshouldntexist := o.GetAccountById(tx, nid)
 	if o.Err == nil {
-		if accountshouldntexists != nil {
-			t.Errorf("account %s should not exist, found %v", nid, accountshouldntexists)
+		if accountshouldntexist != nil {
+			t.Errorf("account %s should not exist, found %v", nid, accountshouldntexist)
 		}
 	} else {
 		t.Errorf(o.Err.Error())
@@ -89,5 +90,60 @@ func TestAccount(t *testing.T) {
 		} else {
 			t.Errorf(o.Err.Error())
 		}
+	}
+}
+
+func TestBot(t *testing.T) {
+	o := &domains.ErrorHandler{}
+
+	db := &dbx.Database{}
+	o.Connect(db, "mysql", dbpath)
+
+	tx := o.Begin(db)
+	if tx == nil {
+		if o.Err != nil {
+			t.Errorf(o.Err.Error())
+		} else {
+			t.Errorf("tx is null from o.Begin(db), but err is nil")
+		}
+	}
+	defer o.Rollback(tx)
+
+
+	botid := "123"
+	bottype := "WECHATBOT"
+	botname := "abc"
+	login := "wxid_123"
+	bot := o.NewBot(botid, bottype, botname, login)
+	o.SaveBot(tx, bot)
+
+	botfetched := o.GetBotById(tx, botid)
+	if o.Err == nil {
+		if botfetched != nil {
+			if botfetched.BotName != botname {
+				t.Errorf("bot fetched name should be %s, but was %s", botname, botfetched.BotName)				
+			}
+		}
+	} else {
+		t.Errorf(o.Err.Error())		
+	}
+
+	ifstring := "{\"wxData\":\"123\", \"token\":\"456\"}"
+	bot.LoginInfo = sql.NullString{String: ifstring, Valid: true}
+	o.UpdateBot(tx, bot)
+	
+	botfetchedagain := o.GetBotById(tx, botid)
+	if o.Err == nil {
+		if botfetchedagain != nil {
+			if botfetchedagain.LoginInfo.Valid == true {				
+				if botfetchedagain.LoginInfo.String != ifstring {
+					t.Errorf("bot fetched login info should be %s, but was %s", ifstring, botfetched.LoginInfo.String)
+				}
+			} else {
+				t.Errorf("bot fetched login info should not be NULL")
+			}
+		}
+	} else {
+		t.Errorf(o.Err.Error())
 	}
 }

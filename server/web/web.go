@@ -298,6 +298,7 @@ func (ctx *WebServer) Serve() {
 	r.Handle("/healthz", healthz())
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
+	r.HandleFunc("/bots/{botId}/notify", ctx.validate(ctx.echo)).Methods("Post")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/loginbot", ctx.validate(ctx.loginBot)).Methods("POST")	
 	r.HandleFunc("/login", ctx.login).Methods("POST")

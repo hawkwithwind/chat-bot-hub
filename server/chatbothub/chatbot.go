@@ -49,6 +49,7 @@ type ChatBot struct {
 	StartAt    int64         `json:"startAt"`
 	LastPing   int64         `json:"lastPing"`
 	Login      string        `json:"login"`
+	NotifyUrl  string        `json:"notifyurl"`
 	DeviceData DeviceData    `json:"deviceData"`
 	Status     ChatBotStatus `json:"status"`
 	tunnel     pb.ChatBotHub_EventTunnelServer
@@ -101,12 +102,13 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	return bot, nil
 }
 
-func (bot *ChatBot) prepareLogin(login string) (*ChatBot, error) {
+func (bot *ChatBot) prepareLogin(login string, notifyurl string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
 		return bot, fmt.Errorf("bot status %s cannot login", bot.Status)
 	}
 
 	bot.Login = login
+	bot.NotifyUrl = notifyurl
 	bot.Status = LoggingPrepared
 	return bot, nil
 }

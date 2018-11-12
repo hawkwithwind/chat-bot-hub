@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"database/sql"
+	
 	"golang.org/x/net/context"
 	grctx "github.com/gorilla/context"
+	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	//"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
@@ -90,6 +92,67 @@ func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 
 	return nil
 }
+
+func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	
+	vars := mux.Vars(r)
+	fmt.Fprintf(w, "path:\n%v\n", vars)
+	
+	r.ParseForm()
+	fmt.Fprintf(w, "form:\n%v\n", r.Form)
+
+	fmt.Fprintf(w, "body:\n%v\n", r.Body)
+}
+
+func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	r.ParseForm()
+	eventType := o.getStringValue(r.Form, "event")
+	if o.Err != nil {
+		return
+	}
+
+	tx := o.Begin(ctx.db)
+	
+	bot := o.GetBotById(tx, botId)
+	if o.Err != nil {
+		return
+	}
+	if bot == nil {
+		o.Err = fmt.Errorf("bot %s not found", botId)
+		return
+	}
+
+	ifmap := o.FromJson(bot.LoginInfo.String)
+				
+	switch eventType {
+	case "updateToken" :
+		ifmap["token"] = o.getStringValue(r.Form, "token")
+	case "loginDone" :
+		token := o.getStringValueDefault(r.Form, "token", "")
+		if len(token) > 0 {
+			ifmap["token"] = token
+		}
+		wxdata := o.getStringValueDefault(r.Form, "wxdata", "")
+		if len(wxdata) > 0 {
+			ifmap["wxData"] = wxdata
+		}		
+	default:
+		o.Err = fmt.Errorf("unknown event %s", eventType)
+		return
+	}
+
+	bot.LoginInfo = sql.NullString{String: o.ToJson(ifmap), Valid: true}
+	o.UpdateBot(tx, bot)
+	o.Commit(tx)
+}
+
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
@@ -176,10 +239,13 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", botId)
+
 	loginreply := o.LoginBot(wrapper, &pb.LoginBotRequest{
 		ClientId: clientId,
 		ClientType: clientType,
 		Login: login,
+		NotifyUrl: fmt.Sprintf("%s%s", ctx.Config.Baseurl, botnotifypath),
 		Password: pass,
 		LoginInfo: logininfo,
 	})

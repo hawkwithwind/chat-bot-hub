@@ -62,15 +62,15 @@ func (f *WechatBaseFilter) Fill(msg string) error {
 		body := o.fromJson(msg)
 
 		if body != nil {
-			content := o.fromMap("content", *body, "eventRequest.body", nil)
-			//description := o.fromMap("description", *body, "eventRequest.body", nil)
-			status := o.fromMap("status", *body, "eventRequest.body", nil)
-			timestamp := o.fromMap("timestamp", *body, "eventRequest.body", nil)
-			uin := o.fromMap("uin", *body, "eventRequest.body", nil)
-			fromUser := o.fromMap("fromUser", *body, "eventRequest.body", nil)
-			toUser := o.fromMap("toUser", *body, "eventRequest.body", nil)
-			msgId := o.fromMap("msgId", *body, "eventRequest.body", nil)
-			msgSource := o.fromMap("msgSource", *body, "eventRequest.body", nil)
+			content := o.fromMap("content", body, "eventRequest.body", nil)
+			//description := o.fromMap("description", body, "eventRequest.body", nil)
+			status := o.fromMap("status", body, "eventRequest.body", nil)
+			timestamp := o.fromMap("timestamp", body, "eventRequest.body", nil)
+			uin := o.fromMap("uin", body, "eventRequest.body", nil)
+			fromUser := o.fromMap("fromUser", body, "eventRequest.body", nil)
+			toUser := o.fromMap("toUser", body, "eventRequest.body", nil)
+			msgId := o.fromMap("msgId", body, "eventRequest.body", nil)
+			msgSource := o.fromMap("msgSource", body, "eventRequest.body", nil)
 		}
 	*/
 
@@ -267,7 +267,7 @@ func (f *KVRouter) Fill(msg string) error {
 	fillOnce := false
 
 	for k, vmaps := range f.NextFilter {
-		if value := findByJsonPath(*body, k); value != nil {
+		if value := findByJsonPath(body, k); value != nil {
 			var s string
 			if reflect.TypeOf(value) == reflect.TypeOf(s) {
 				if filter, found := vmaps[value.(string)]; found {

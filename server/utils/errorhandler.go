@@ -51,17 +51,17 @@ func (ctx *ErrorHandler) ToJson(v interface{}) string {
 	}
 }
 
-func (ctx *ErrorHandler) FromJson(jsonstr string) *map[string]interface{} {
+func (ctx *ErrorHandler) FromJson(jsonstr string) map[string]interface{} {
 	if ctx.Err != nil {
 		return nil
 	}
 
 	ret := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(jsonstr), &ret); err == nil {
-		return &ret
+		return ret
 	} else {
 		ctx.Err = err
-		return nil
+		return ret
 	}
 }
 

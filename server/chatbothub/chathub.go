@@ -173,9 +173,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var wxData string
 					var token string
 					if body != nil {
-						userName = o.FromMapString("userName", *body, "eventRequest.body", false, "")
-						wxData = o.FromMapString("wxData", *body, "eventRequest.body", true, "")
-						token = o.FromMapString("token", *body, "eventRequest.body", true, "")
+						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
+						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
+						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(userName, wxData, token)
@@ -195,8 +195,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				var userName string
 				var token string
 				if body != nil {
-					userName = o.FromMap("userName", *body, "eventRequest.body", nil).(string)
-					token = o.FromMap("token", *body, "eventRequest.body", nil).(string)
+					userName = o.FromMap("userName", body, "eventRequest.body", nil).(string)
+					token = o.FromMap("token", body, "eventRequest.body", nil).(string)
 				}
 				if o.Err == nil {	
 					thebot, o.Err = bot.updateToken(userName, token)
@@ -270,7 +270,7 @@ func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.
 
 	if bot != nil {
 		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin(req.Login)
+			bot, o.Err = bot.prepareLogin(req.Login, req.NotifyUrl)
 		}
 
 		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password, LoginInfo: req.LoginInfo})
