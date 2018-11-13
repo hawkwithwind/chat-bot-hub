@@ -37,7 +37,7 @@ func (status ChatBotStatus) String() string {
 	return names[status]
 }
 
-type DeviceData struct {
+type LoginInfo struct {
 	WxData string `json:"wxData"`
 	Token string `json:"token"`
 }
@@ -50,7 +50,7 @@ type ChatBot struct {
 	LastPing   int64         `json:"lastPing"`
 	Login      string        `json:"login"`
 	NotifyUrl  string        `json:"notifyurl"`
-	DeviceData DeviceData    `json:"deviceData"`
+	LoginInfo  LoginInfo     `json:"loginInfo"`
 	Status     ChatBotStatus `json:"status"`
 	tunnel     pb.ChatBotHub_EventTunnelServer
 	errmsg     string
@@ -125,8 +125,8 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatB
 	}
 	
 	bot.Login = login
-	bot.DeviceData.WxData = wxdata
-	bot.DeviceData.Token = token
+	bot.LoginInfo.WxData = wxdata
+	bot.LoginInfo.Token = token
 	
 	bot.Status = WorkingLoggedIn
 	return bot, nil
@@ -141,7 +141,7 @@ func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
 		return bot ,nil
 	}
 
-	bot.DeviceData.Token = token
+	bot.LoginInfo.Token = token
 	return bot, nil	
 }
 

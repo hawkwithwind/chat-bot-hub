@@ -83,3 +83,15 @@ func (o *ErrorHandler) Commit(tx *sqlx.Tx) {
 		o.Err = fmt.Errorf("tx is null upon calling tx.Commit")
 	}
 }
+
+func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
+	if tx == nil && o.Err == nil {
+		o.Err = fmt.Errorf("tx is null upon calling CommitOrRollback")
+		return
+	}
+	if o.Err != nil {		
+		o.Err = tx.Rollback()
+	} else {
+		o.Err = tx.Commit()
+	}
+}

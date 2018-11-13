@@ -62,7 +62,7 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 		return nil
 	}
 
-	if botsreply, err := w.client.GetBots(w.context, &pb.BotsRequest{Secret: "secret"}); err != nil {
+	if botsreply, err := w.client.GetBots(w.context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else {
@@ -77,6 +77,9 @@ func (ctx *ErrorHandler) LoginBot(w *GRPCWrapper, req *pb.LoginBotRequest) *pb.L
 
 	if loginreply, err := w.client.LoginBot(w.context, req); err != nil {
 		ctx.Err = err
+		return nil
+	} else if loginreply == nil {
+		ctx.Err = fmt.Errorf("loginreply is nil")
 		return nil
 	} else {
 		return loginreply
@@ -112,14 +115,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	r.ParseForm()
-	eventType := o.getStringValue(r.Form, "event")
-	if o.Err != nil {
-		return
-	}
-
-	tx := o.Begin(ctx.db)
-	
+	tx := o.Begin(ctx.db)	
 	bot := o.GetBotById(tx, botId)
 	if o.Err != nil {
 		return
@@ -128,29 +124,72 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("bot %s not found", botId)
 		return
 	}
+	login := bot.Login
 
-	ifmap := o.FromJson(bot.LoginInfo.String)
-				
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{ login }})
+	if o.Err == nil {
+		if len(botsreply.BotsInfo) == 0 {
+			o.Err = fmt.Errorf("bot [%s]{%s} not activated", botId, login)
+		} else if len(botsreply.BotsInfo) > 1 {
+			o.Err = fmt.Errorf("bot [%s]{%s} multiple instance", botId, login)
+		}
+	}	
+	
+	if o.Err != nil {
+		return
+	}
+	
+	thebotinfo := botsreply.BotsInfo[0]
+	ifmap := o.FromJson(thebotinfo.LoginInfo)
+
+	var localmap map[string]interface{}
+	if bot.LoginInfo.Valid {
+		localmap = o.FromJson(bot.LoginInfo.String)
+	} else {
+		localmap = make(map[string]interface{})
+	}
+
+	r.ParseForm()
+	eventType := o.getStringValue(r.Form, "event")
+		
 	switch eventType {
 	case "updateToken" :
-		ifmap["token"] = o.getStringValue(r.Form, "token")
-	case "loginDone" :
-		token := o.getStringValueDefault(r.Form, "token", "")
-		if len(token) > 0 {
-			ifmap["token"] = token
+		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
+			localmap["token"] = tokenptr.(string)
 		}
-		wxdata := o.getStringValueDefault(r.Form, "wxdata", "")
-		if len(wxdata) > 0 {
-			ifmap["wxData"] = wxdata
+	case "loginDone" :
+		var oldtoken string
+		var oldwxdata string
+		if oldtokenptr, ok := ifmap["token"]; ok {
+			oldtoken = oldtokenptr.(string)
+		} else {
+			oldtoken = ""
+		}
+		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", &oldtoken); tokenptr != nil {
+			if len(tokenptr.(string)) > 0 {
+				localmap["token"] = tokenptr.(string)
+			}
+		}
+		if oldwxdataptr, ok := ifmap["wxData"]; ok {
+			oldwxdata = oldwxdataptr.(string)
+		} else {
+			oldwxdata = ""
 		}		
+		if wxdataptr := o.FromMap("wxdata", ifmap, "botsInfo[0].LoginInfo.WxData", &oldwxdata); wxdataptr != nil {
+			if len(wxdataptr.(string)) > 0 {
+				localmap["wxData"] = wxdataptr.(string)
+			}
+		}
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 		return
 	}
 
-	bot.LoginInfo = sql.NullString{String: o.ToJson(ifmap), Valid: true}
+	bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 	o.UpdateBot(tx, bot)
-	o.Commit(tx)
+	o.CommitOrRollback(tx)
 }
 
 
@@ -177,11 +216,11 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()	
+	defer wrapper.Cancel()
 	
 	bs := []BotsInfo{}
 	
-	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Secret: "secret"}); botsreply != nil {
+	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{} }); botsreply != nil {
 		for _, b := range bots {
 			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
 				bs = append(bs, BotsInfo{

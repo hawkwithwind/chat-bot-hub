@@ -44,7 +44,7 @@ message EventReply {
 }
 
 message BotsRequest {
-  string secret = 1;
+  repeated string logins = 1;
 }
 
 message BotsReply {
@@ -58,8 +58,9 @@ message BotsInfo {
   int64 startAt = 4;
   int64 lastPing = 5;
   string login = 6;
-  int32 status = 7;
-  string filterInfo = 8;
+  string loginInfo = 7;
+  int32 status = 8;
+  string filterInfo = 9;
 }
 
 message LoginBotRequest {

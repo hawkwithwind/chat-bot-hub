@@ -49,6 +49,7 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 		StartAt:    bot.StartAt,
 		LastPing:   bot.LastPing,
 		Login:      bot.Login,
+		LoginInfo:  o.ToJson(bot.LoginInfo),
 		Status:     int32(bot.Status),
 		FilterInfo: o.ToJson(bot.filter),
 	}
@@ -234,10 +235,32 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	}
 }
 
+func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	for _, l := range lines {
+		if l == target {
+			return true
+		}
+	}
+
+	return false	
+}
+
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
+	o := &ErrorHandler{}
+		
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
-		bots = append(bots, NewBotsInfo(v))
+		if len(req.Logins) > 0 {
+			if o.FindFromLines(req.Logins, v.Login) {
+				bots = append(bots, NewBotsInfo(v))
+			}
+		} else {
+			bots = append(bots, NewBotsInfo(v))
+		}
 	}
 	return &pb.BotsReply{BotsInfo: bots}, nil
 }
@@ -259,7 +282,7 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 
 func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.LoginBotReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 
 	var bot *ChatBot
 	if req.ClientId == "" {
