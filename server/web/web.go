@@ -296,7 +296,7 @@ func (ctx *WebServer) Serve() {
 
 	r := mux.NewRouter()
 	r.Handle("/healthz", healthz())	
-	r.HandleFunc("/bots/{botId}/notify", ctx.echo).Methods("Post")
+	r.HandleFunc("/bots/{login}/notify", ctx.echo).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")

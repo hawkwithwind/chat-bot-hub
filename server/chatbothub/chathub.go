@@ -179,8 +179,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(userName, wxData, token)
+						thebot, o.Err = bot.loginDone(userName, wxData, token)						
 					}
+					if o.Err == nil {
+						thebot.
+					}					
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone("", "", "")

@@ -113,27 +113,26 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 	
 	vars := mux.Vars(r)
-	botId := vars["botId"]
+	login := vars["login"]
 
 	tx := o.Begin(ctx.db)	
-	bot := o.GetBotById(tx, botId)
+	bots := o.GetBotByLogin(tx, login)
 	if o.Err != nil {
 		return
 	}
-	if bot == nil {
-		o.Err = fmt.Errorf("bot %s not found", botId)
+	if len(bots) == 0 {
+		o.Err = fmt.Errorf("bot %s not found", login)
 		return
 	}
-	login := bot.Login
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{ login }})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
-			o.Err = fmt.Errorf("bot [%s]{%s} not activated", botId, login)
+			o.Err = fmt.Errorf("bot {%s} not activated", login)
 		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot [%s]{%s} multiple instance", botId, login)
+			o.Err = fmt.Errorf("bot {%s} multiple instance", login)
 		}
 	}	
 	
@@ -144,51 +143,56 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	thebotinfo := botsreply.BotsInfo[0]
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
 
-	var localmap map[string]interface{}
-	if bot.LoginInfo.Valid {
-		localmap = o.FromJson(bot.LoginInfo.String)
-	} else {
-		localmap = make(map[string]interface{})
-	}
-
 	r.ParseForm()
 	eventType := o.getStringValue(r.Form, "event")
+
+	for _, bot := range bots {
 		
-	switch eventType {
-	case "updateToken" :
-		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
-			localmap["token"] = tokenptr.(string)
-		}
-	case "loginDone" :
-		var oldtoken string
-		var oldwxdata string
-		if oldtokenptr, ok := ifmap["token"]; ok {
-			oldtoken = oldtokenptr.(string)
+		var localmap map[string]interface{}
+		if bot.LoginInfo.Valid {
+			localmap = o.FromJson(bot.LoginInfo.String)
 		} else {
-			oldtoken = ""
+			localmap = make(map[string]interface{})
 		}
-		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", &oldtoken); tokenptr != nil {
-			if len(tokenptr.(string)) > 0 {
+		
+		switch eventType {
+		case "updateToken" :
+			if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
 				localmap["token"] = tokenptr.(string)
 			}
-		}
-		if oldwxdataptr, ok := ifmap["wxData"]; ok {
-			oldwxdata = oldwxdataptr.(string)
-		} else {
-			oldwxdata = ""
-		}		
-		if wxdataptr := o.FromMap("wxdata", ifmap, "botsInfo[0].LoginInfo.WxData", &oldwxdata); wxdataptr != nil {
-			if len(wxdataptr.(string)) > 0 {
-				localmap["wxData"] = wxdataptr.(string)
+		case "loginDone" :
+			var oldtoken string
+			var oldwxdata string
+			if oldtokenptr, ok := ifmap["token"]; ok {
+				oldtoken = oldtokenptr.(string)
+			} else {
+				oldtoken = ""
 			}
+			if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", &oldtoken); tokenptr != nil {
+				if len(tokenptr.(string)) > 0 {
+					localmap["token"] = tokenptr.(string)
+				}
+			}
+			if oldwxdataptr, ok := ifmap["wxData"]; ok {
+				oldwxdata = oldwxdataptr.(string)
+			} else {
+				oldwxdata = ""
+			}		
+			if wxdataptr := o.FromMap("wxdata", ifmap, "botsInfo[0].LoginInfo.WxData", &oldwxdata); wxdataptr != nil {
+				if len(wxdataptr.(string)) > 0 {
+					localmap["wxData"] = wxdataptr.(string)
+				}
+			}
+		default:
+			o.Err = fmt.Errorf("unknown event %s", eventType)
+			return
 		}
-	default:
-		o.Err = fmt.Errorf("unknown event %s", eventType)
-		return
-	}
 
-	bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
-	o.UpdateBot(tx, bot)
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		o.UpdateBot(tx, &bot)
+		ctx.Info("update bot %v", bot)
+	}
+	
 	o.CommitOrRollback(tx)
 }
 

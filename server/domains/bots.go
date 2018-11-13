@@ -113,3 +113,20 @@ WHERE botid=?
 		return nil
 	}
 }
+
+func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) []Bot {
+	if o.Err != nil {
+		return nil
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT *
+FROM bots
+WHERE login=?
+  AND deleteat is NULL`, login)
+
+	return bots
+}
