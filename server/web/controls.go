@@ -169,8 +169,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				oldtoken = ""
 			}
 			if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", &oldtoken); tokenptr != nil {
-				if len(tokenptr.(string)) > 0 {
-					localmap["token"] = tokenptr.(string)
+				tk := tokenptr.(*string)
+				if len(*tk) > 0 {
+					localmap["token"] = *tk
 				}
 			}
 			if oldwxdataptr, ok := ifmap["wxData"]; ok {
@@ -179,8 +180,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				oldwxdata = ""
 			}		
 			if wxdataptr := o.FromMap("wxdata", ifmap, "botsInfo[0].LoginInfo.WxData", &oldwxdata); wxdataptr != nil {
-				if len(wxdataptr.(string)) > 0 {
-					localmap["wxData"] = wxdataptr.(string)
+				wd := wxdataptr.(*string)
+				if len(*wd) > 0 {
+					localmap["wxData"] = *wd
 				}
 			}
 		default:
