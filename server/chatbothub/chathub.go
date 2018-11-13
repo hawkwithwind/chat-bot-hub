@@ -16,6 +16,7 @@ import (
 	"github.com/getsentry/raven-go"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ErrorHandler struct {
@@ -29,11 +30,13 @@ type ChatHubConfig struct {
 
 func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
-	hub.bots = make(map[string]*ChatBot)
+	hub.bots = make(map[string]*ChatBot)	
 }
 
 type ChatHub struct {	
 	Config ChatHubConfig
+	Webhost string
+	Webport string
 	logger *log.Logger
 	mux    sync.Mutex
 	bots   map[string]*ChatBot
@@ -182,7 +185,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						thebot, o.Err = bot.loginDone(userName, wxData, token)						
 					}
 					if o.Err == nil {
-						thebot.
+						rr := httpx.NewRestfulRequest("post",
+							fmt.Sprintf("http://%s:%s/bots/%s/notify", hub.Webhost, hub.Webport, thebot.Login))
+						rr.Params["event"] = "loginDone"
+						resp := o.RestfulCall(rr)
+						hub.Info("call notify %v\n returns \n%v", rr, resp)
 					}					
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
