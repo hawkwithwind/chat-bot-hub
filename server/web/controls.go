@@ -139,7 +139,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	eventType := o.getStringValue(r.Form, "event")
 	ctx.Info("notify event %s", eventType)
-	
+
 	var localmap map[string]interface{}
 	if bot.LoginInfo.Valid {
 		localmap = o.FromJson(bot.LoginInfo.String)

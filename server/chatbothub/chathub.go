@@ -210,7 +210,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
-				hub.Info("LOGINEDONE %v", in)
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
 					var userName string
@@ -240,8 +239,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 					}
 				}
+
 			case UPDATETOKEN:
-				hub.Info("UPDATETOKEN %v", in)
 				body := o.FromJson(in.Body)
 				var userName string
 				var token string
@@ -260,11 +259,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}()
 				}
 			case FRIENDREQUEST:
-				hub.Info("FRIENDREQUEST %v", in)
 				var reqstr string
-				reqstr, o.Err = bot.friendRequest(in.Body)				
+				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
-					go func() {						
+					go func() {
 						if _, err := hub.WebNotifyRetry(bot.Login, "friendRequest", reqstr, 5, 1); err != nil {
 							hub.Error(err, "notyfy friendRequest error")
 						}
@@ -273,9 +271,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
+
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE %v", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
+
 			case MESSAGE:
 				if bot.ClientType == WECHATBOT {
 					if bot.filter != nil {
@@ -288,6 +288,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
+
 			default:
 				hub.Info("recv unknown event %v", in)
 			}
