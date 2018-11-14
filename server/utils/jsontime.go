@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"time"
 	"strings"
+	"time"
 )
 
 type JSONTime struct {

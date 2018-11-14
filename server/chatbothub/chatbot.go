@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 	"time"
-	
+
 	"github.com/getsentry/raven-go"
-	
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
@@ -39,7 +39,7 @@ func (status ChatBotStatus) String() string {
 
 type LoginInfo struct {
 	WxData string `json:"wxData"`
-	Token string `json:"token"`
+	Token  string `json:"token"`
 }
 
 type ChatBot struct {
@@ -64,7 +64,7 @@ func (bot *ChatBot) Info(msg string, v ...interface{}) {
 
 func (bot *ChatBot) Error(err error, msg string, v ...interface{}) {
 	raven.CaptureError(err, nil)
-	
+
 	bot.logger.Printf(msg, v...)
 	bot.logger.Printf("Error %v", err)
 }
@@ -76,7 +76,6 @@ func NewChatBot() *ChatBot {
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
 
-	
 	// if bot.Status != BeginNew && bot.Status != BeginRegistered && bot.Status != FailingDisconnected {
 	// 	return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
 	// }
@@ -123,11 +122,11 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatB
 	if bot.Login != login {
 		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
 	}
-	
+
 	bot.Login = login
 	bot.LoginInfo.WxData = wxdata
 	bot.LoginInfo.Token = token
-	
+
 	bot.Status = WorkingLoggedIn
 	return bot, nil
 }
@@ -138,11 +137,11 @@ func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
 	if bot.Login != login {
 		bot.Info("bot c[%s]{%s} update token login %s != %s",
 			bot.ClientType, bot.ClientId, bot.Login, login)
-		return bot ,nil
+		return bot, nil
 	}
 
 	bot.LoginInfo.Token = token
-	return bot, nil	
+	return bot, nil
 }
 
 func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
@@ -165,58 +164,58 @@ func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 }
 
 type BrandList struct {
-	Count int `xml:"count,attr" json:"count"`
-	Ver string `xml:"ver,attr" json:"ver"`
+	Count int    `xml:"count,attr" json:"count"`
+	Ver   string `xml:"ver,attr" json:"ver"`
 }
 
 type Msg struct {
-	FromUserName string `xml:"fromusername,attr" json:"fromUserName"`
-	EncryptUserName string `xml:"encryptusername,attr" json:"encryptUserName"`
-	FromNickName string `xml:"fromnickname,attr" json:"fromNickName"`
-	Content string `xml:"content,attr" json:"content"`
-	Fullpy string `xml:"fullpy,attr" json:"fullpy"`
-	Shortpy string `xml:"shortpy,attr" json:"shortpy"`
-	ImageStatus string `xml:"imagestatus,attr" json:"imageStatus"`
-	Scene string `xml:"scene,attr" json:"scene"`
-	Country string `xml:"country,attr" json:"country"`
-	Province string `xml:"province,attr" json:"province"`
-	City string `xml:"city,attr" json:"city"`
-	Sign string `xml:"sign,attr" json:"sign"`
-	Percard string `xml:"percard,attr" json:"percard"`
-	Sex string `xml:"sex,attr" json:"sex"`
-	Alias string `xml:"alias,attr" json:"alias"`
-	Weibo string `xml:"weibo,attr" json:"weibo"`
-	Albumflag string `xml:"albumflag,attr" json:"albumflag"`
-	Albumstyle string `xml:"albumstyle,attr" json:"albumstyle"`
-	Albumbgimgid string `xml:"albumbgimgid,attr" json:"albumbgimgid"`
-	Snsflag string `xml:"snsflag,attr" json:"snsflag"`
-	Snsbgimgid string `xml:"snsbgimgid,attr" json:"snsbgimgid"`
-	Snsbgobjectid string `xml:"snsbgobjectid,attr" json:"snsbgobjectid"`
-	Mhash string `xml:"mhash,attr" json:"mhash"`
-	Mfullhash string `xml:"mfullhash,attr" json:"mfullhash"`
-	Bigheadimgurl string `xml:"bigheadimgurl,attr" json:"bigheadimgurl"`
-	Smallheadimgurl string `xml:"smallheadimgurl,attr" json:"smallheadimgurl"`
-	Ticket string `xml:"ticket,attr" json:"ticket"`
-	Opcode string `xml:"opcode,attr" json:"opcode"`
-	Googlecontact string `xml:"googlecontact,attr" json:"googlecontact"`
-	Qrticket string `xml:"qrticket,attr" json:"qrticket"`
-	Chatroomusername string `xml:"chatroomusername,attr" json:"chatroomusername"`
-	Sourceusername string `xml:"sourceusername,attr" json:"sourceusername"`
-	Sourcenickname string `xml:"sourcenickname,attr" json:"sourcenickname"`
-	BrandList BrandList `xml:"brandlist" json:"brandlist"`
+	FromUserName     string    `xml:"fromusername,attr" json:"fromUserName"`
+	EncryptUserName  string    `xml:"encryptusername,attr" json:"encryptUserName"`
+	FromNickName     string    `xml:"fromnickname,attr" json:"fromNickName"`
+	Content          string    `xml:"content,attr" json:"content"`
+	Fullpy           string    `xml:"fullpy,attr" json:"fullpy"`
+	Shortpy          string    `xml:"shortpy,attr" json:"shortpy"`
+	ImageStatus      string    `xml:"imagestatus,attr" json:"imageStatus"`
+	Scene            string    `xml:"scene,attr" json:"scene"`
+	Country          string    `xml:"country,attr" json:"country"`
+	Province         string    `xml:"province,attr" json:"province"`
+	City             string    `xml:"city,attr" json:"city"`
+	Sign             string    `xml:"sign,attr" json:"sign"`
+	Percard          string    `xml:"percard,attr" json:"percard"`
+	Sex              string    `xml:"sex,attr" json:"sex"`
+	Alias            string    `xml:"alias,attr" json:"alias"`
+	Weibo            string    `xml:"weibo,attr" json:"weibo"`
+	Albumflag        string    `xml:"albumflag,attr" json:"albumflag"`
+	Albumstyle       string    `xml:"albumstyle,attr" json:"albumstyle"`
+	Albumbgimgid     string    `xml:"albumbgimgid,attr" json:"albumbgimgid"`
+	Snsflag          string    `xml:"snsflag,attr" json:"snsflag"`
+	Snsbgimgid       string    `xml:"snsbgimgid,attr" json:"snsbgimgid"`
+	Snsbgobjectid    string    `xml:"snsbgobjectid,attr" json:"snsbgobjectid"`
+	Mhash            string    `xml:"mhash,attr" json:"mhash"`
+	Mfullhash        string    `xml:"mfullhash,attr" json:"mfullhash"`
+	Bigheadimgurl    string    `xml:"bigheadimgurl,attr" json:"bigheadimgurl"`
+	Smallheadimgurl  string    `xml:"smallheadimgurl,attr" json:"smallheadimgurl"`
+	Ticket           string    `xml:"ticket,attr" json:"ticket"`
+	Opcode           string    `xml:"opcode,attr" json:"opcode"`
+	Googlecontact    string    `xml:"googlecontact,attr" json:"googlecontact"`
+	Qrticket         string    `xml:"qrticket,attr" json:"qrticket"`
+	Chatroomusername string    `xml:"chatroomusername,attr" json:"chatroomusername"`
+	Sourceusername   string    `xml:"sourceusername,attr" json:"sourceusername"`
+	Sourcenickname   string    `xml:"sourcenickname,attr" json:"sourcenickname"`
+	BrandList        BrandList `xml:"brandlist" json:"brandlist"`
 }
 
 func (bot *ChatBot) friendRequest(body string) (string, error) {
 	o := &ErrorHandler{}
-		
+
 	if bot.ClientType == "WECHATBOT" {
 		bodydata := o.FromJson(body)
 		content := o.FromMap("content", bodydata, "body.content", nil)
-		
+
 		if content != nil {
 			var msg Msg
 			o.FromXML(content.(string), &msg)
-			msgstr :=  o.ToJson(&msg)
+			msgstr := o.ToJson(&msg)
 			return msgstr, o.Err
 		} else {
 			return "", fmt.Errorf("c[%s] request should have xml content")

@@ -13,14 +13,14 @@ import (
 )
 
 type FriendRequest struct {
-	FriendRequestId string `db:"friendrequestid"`
-	BotId       string         `db:"botid"`
-	Login       string         `db:"login"`
-	RequestLogin       string         `db:"requestlogin"`
-	RequestBody       string         `db:"requestbody"`
-	Status      string `db:"status"`
-	CreateAt    mysql.NullTime `db:"createat"`
-	UpdateAt    mysql.NullTime `db:"updateat"`
+	FriendRequestId string         `db:"friendrequestid"`
+	BotId           string         `db:"botid"`
+	Login           string         `db:"login"`
+	RequestLogin    string         `db:"requestlogin"`
+	RequestBody     string         `db:"requestbody"`
+	Status          string         `db:"status"`
+	CreateAt        mysql.NullTime `db:"createat"`
+	UpdateAt        mysql.NullTime `db:"updateat"`
 }
 
 func (o *ErrorHandler) NewFriendRequest(botId string, login string, requestlogin string, requestbody string, status string) *FriendRequest {
@@ -34,15 +34,14 @@ func (o *ErrorHandler) NewFriendRequest(botId string, login string, requestlogin
 	} else {
 		return &FriendRequest{
 			FriendRequestId: rid.String(),
-			BotId: botId,			
-			Login: login,
-			RequestLogin: requestlogin,
-			RequestBody: requestbody,
-			Status: status,
+			BotId:           botId,
+			Login:           login,
+			RequestLogin:    requestlogin,
+			RequestBody:     requestbody,
+			Status:          status,
 		}
 	}
 }
-
 
 func (o *ErrorHandler) SaveFriendRequest(q dbx.Queryable, fr *FriendRequest) {
 	if o.Err != nil {
@@ -88,4 +87,3 @@ WHERE login=?
 
 	return frs
 }
-

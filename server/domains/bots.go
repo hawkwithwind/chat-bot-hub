@@ -15,7 +15,7 @@ import (
 type Bot struct {
 	BotId       string         `db:"botid"`
 	AccountId   string         `db:"accountid"`
-	BotName     string         `db:"botname"`	
+	BotName     string         `db:"botname"`
 	Login       string         `db:"login"`
 	ChatbotType string         `db:"chatbottype"`
 	LoginInfo   sql.NullString `db:"logininfo"`
@@ -34,15 +34,14 @@ func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, log
 		return nil
 	} else {
 		return &Bot{
-			BotId: rid.String(),
-			BotName: name,
-			Login: login,
+			BotId:       rid.String(),
+			BotName:     name,
+			Login:       login,
 			ChatbotType: bottype,
-			AccountId: accountId,
+			AccountId:   accountId,
 		}
 	}
 }
-
 
 func (o *ErrorHandler) SaveBot(q dbx.Queryable, bot *Bot) {
 	if o.Err != nil {

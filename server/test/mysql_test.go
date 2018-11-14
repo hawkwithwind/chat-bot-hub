@@ -1,11 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"os"
 	"testing"
-	"database/sql"
-	
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 
@@ -109,7 +109,6 @@ func TestBot(t *testing.T) {
 	}
 	defer o.Rollback(tx)
 
-
 	botid := "123"
 	bottype := "WECHATBOT"
 	botname := "abc"
@@ -121,21 +120,21 @@ func TestBot(t *testing.T) {
 	if o.Err == nil {
 		if botfetched != nil {
 			if botfetched.BotName != botname {
-				t.Errorf("bot fetched name should be %s, but was %s", botname, botfetched.BotName)				
+				t.Errorf("bot fetched name should be %s, but was %s", botname, botfetched.BotName)
 			}
 		}
 	} else {
-		t.Errorf(o.Err.Error())		
+		t.Errorf(o.Err.Error())
 	}
 
 	ifstring := "{\"wxData\":\"123\", \"token\":\"456\"}"
 	bot.LoginInfo = sql.NullString{String: ifstring, Valid: true}
 	o.UpdateBot(tx, bot)
-	
+
 	botfetchedagain := o.GetBotById(tx, botid)
 	if o.Err == nil {
 		if botfetchedagain != nil {
-			if botfetchedagain.LoginInfo.Valid == true {				
+			if botfetchedagain.LoginInfo.Valid == true {
 				if botfetchedagain.LoginInfo.String != ifstring {
 					t.Errorf("bot fetched login info should be %s, but was %s", ifstring, botfetched.LoginInfo.String)
 				}

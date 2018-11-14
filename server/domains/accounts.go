@@ -52,14 +52,14 @@ type Account struct {
 func (account *Account) SetEmail(email string) {
 	account.Email = sql.NullString{
 		String: email,
-		Valid: true,
+		Valid:  true,
 	}
 }
 
 func (account *Account) SetAvatar(avatar string) {
 	account.Avatar = sql.NullString{
 		String: avatar,
-		Valid: true,
+		Valid:  true,
 	}
 }
 
@@ -79,7 +79,6 @@ func (ctx *ErrorHandler) NewAccount(name string, pass string) *Account {
 		}
 	}
 }
-
 
 func (o *ErrorHandler) SaveAccount(q dbx.Queryable, account *Account) {
 	if o.Err != nil {
@@ -106,7 +105,7 @@ func (o *ErrorHandler) AccountValidateSecret(q dbx.Queryable, name string, secre
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
-	
+
 	return o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)) != nil
 }
 
@@ -114,7 +113,7 @@ func (o *ErrorHandler) AccountValidate(q dbx.Queryable, name string, pass string
 	if o.Err != nil {
 		return false
 	}
-	
+
 	secret := utils.HexString(utils.CheckSum([]byte(pass)))
 	return o.AccountValidateSecret(q, name, secret)
 }

@@ -2,16 +2,16 @@ package dbx
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
-	"database/sql"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/jmoiron/sqlx"
 )
 
 type Database struct {
-	Conn   *sqlx.DB
+	Conn *sqlx.DB
 }
 
 type QueryParams map[string]interface{}
@@ -89,7 +89,7 @@ func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
 		o.Err = fmt.Errorf("tx is null upon calling CommitOrRollback")
 		return
 	}
-	if o.Err != nil {		
+	if o.Err != nil {
 		o.Err = tx.Rollback()
 	} else {
 		o.Err = tx.Commit()

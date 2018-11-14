@@ -211,7 +211,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
 			return nil, err
 		}
-		
+
 		return &RestfulResponse{
 			Body:       string(body),
 			Header:     &nresp.Header,

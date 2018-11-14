@@ -5,7 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strconv"
-	
+
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
@@ -74,7 +74,7 @@ func (ctx *ErrorHandler) FromXML(xmlstr string, target interface{}) {
 	ctx.Err = xml.Unmarshal([]byte(xmlstr), target)
 }
 
-func (ctx *ErrorHandler) FromMap (key string, m map[string]interface{},objname string, defValue interface{}) interface{} {
+func (ctx *ErrorHandler) FromMap(key string, m map[string]interface{}, objname string, defValue interface{}) interface{} {
 	if ctx.Err != nil {
 		return nil
 	}
@@ -91,11 +91,11 @@ func (ctx *ErrorHandler) FromMap (key string, m map[string]interface{},objname s
 	}
 }
 
-func (ctx *ErrorHandler) FromMapString (key string, m map[string]interface{}, objname string, haveDefault bool, defValue string) string {
+func (ctx *ErrorHandler) FromMapString(key string, m map[string]interface{}, objname string, haveDefault bool, defValue string) string {
 	if ctx.Err != nil {
 		return ""
 	}
-	
+
 	if v, found := m[key]; found {
 		switch v.(type) {
 		case string:

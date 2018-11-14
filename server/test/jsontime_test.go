@@ -1,29 +1,28 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
-	"encoding/json"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
-
 type User struct {
-	AccountName string    `json:"accountname"`
-	Password    string    `json:"password"`
-	Secret      string    `json:"secret"`
+	AccountName string         `json:"accountname"`
+	Password    string         `json:"password"`
+	Secret      string         `json:"secret"`
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
 
 func TestDecodeTime(t *testing.T) {
 	tt := utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)}
-	
+
 	m := map[string]interface{}{
 		"accountname": "accountname",
-		"secret": "secret",
-		"expireat": tt.Time.Format(time.RFC3339),
+		"secret":      "secret",
+		"expireat":    tt.Time.Format(time.RFC3339),
 	}
 
 	var user User
@@ -37,15 +36,15 @@ func TestDecodeTime(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	
+
 }
 
 func TestJSONTime(t *testing.T) {
 
 	user := &User{
 		AccountName: "accountname",
-		Secret: "secret",
-		ExpireAt: utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
+		Secret:      "secret",
+		ExpireAt:    utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
 	}
 
 	jsonbytes, err := json.Marshal(user)
@@ -57,7 +56,7 @@ func TestJSONTime(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if err != nil {
 		t.Errorf(err.Error())
 	}

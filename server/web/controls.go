@@ -1,14 +1,14 @@
 package web
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
-	"database/sql"
-	
-	"golang.org/x/net/context"
+
 	grctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -98,10 +98,10 @@ func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 
 func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	
+
 	vars := mux.Vars(r)
 	fmt.Fprintf(w, "path:\n%v\n", vars)
-	
+
 	r.ParseForm()
 	fmt.Fprintf(w, "form:\n%v\n", r.Form)
 
@@ -111,28 +111,28 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	
+
 	vars := mux.Vars(r)
 	login := vars["login"]
 
-	tx := o.Begin(ctx.db)	
+	tx := o.Begin(ctx.db)
 	bot := o.GetBotByLogin(tx, login)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{ login }})
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{login}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
 			o.Err = fmt.Errorf("bot {%s} not activated", login)
 		} else if len(botsreply.BotsInfo) > 1 {
 			o.Err = fmt.Errorf("bot {%s} multiple instance", login)
 		}
-	}	
-	
+	}
+
 	if o.Err != nil {
 		return
 	}
-	
+
 	thebotinfo := botsreply.BotsInfo[0]
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
 
@@ -145,17 +145,17 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	} else {
 		localmap = make(map[string]interface{})
 	}
-	
+
 	switch eventType {
-	case "updateToken" :
+	case "updateToken":
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
 			localmap["token"] = tokenptr.(string)
 		}
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-		
-	case "loginDone" :
+
+	case "loginDone":
 		var oldtoken string
 		var oldwxdata string
 		if oldtokenptr, ok := ifmap["token"]; ok {
@@ -173,7 +173,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			oldwxdata = oldwxdataptr.(string)
 		} else {
 			oldwxdata = ""
-		}		
+		}
 		if wxdataptr := o.FromMap("wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
 			wd := wxdataptr.(string)
 			if len(wd) > 0 {
@@ -181,10 +181,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
-		o.UpdateBot(tx, bot)	
+		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-		
-	case "friendRequest" :
+
+	case "friendRequest":
 		reqstr := o.getStringValue(r.Form, "body")
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
@@ -192,29 +192,28 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if funptr := o.FromMap("fromUserName", reqm, "friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
 			}
-		} else {			
+		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
 		fr := o.NewFriendRequest(bot.BotId, login, rlogin, reqstr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 		ctx.Info("save friend request %v", fr)
-		
+
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 	}
-	
+
 	o.CommitOrRollback(tx)
 }
-
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
-		BotId   string `json:"botId"`
-		BotName string `json:"botName"`
-		CreateAt int64 `json:"createAt"`
+		BotId    string `json:"botId"`
+		BotName  string `json:"botName"`
+		CreateAt int64  `json:"createAt"`
 	}
-	
+
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -222,35 +221,35 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	if loginptr := grctx.Get(r, "login"); loginptr != nil {
 		login = loginptr.(string)
 	}
-	
+
 	bots := o.GetBotsByAccountName(ctx.db.Conn, login)
 	if o.Err == nil && len(bots) == 0 {
 		o.ok(w, "", []BotsInfo{})
 		return
 	}
-	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
-	
+
 	bs := []BotsInfo{}
-	
-	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{} }); botsreply != nil {
+
+	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{}}); botsreply != nil {
 		for _, b := range bots {
 			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo: *info,
-					BotName: b.BotName,
-					BotId: b.BotId,
+					BotName:  b.BotName,
+					BotId:    b.BotId,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
 			} else {
 				bs = append(bs, BotsInfo{
 					BotsInfo: pb.BotsInfo{
 						ClientType: b.ChatbotType,
-						Status: 0,
+						Status:     0,
 					},
-					BotId: b.BotId,
-					BotName: b.BotName,
+					BotId:    b.BotId,
+					BotName:  b.BotName,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
 			}
@@ -260,7 +259,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 			o.Err = fmt.Errorf("grpc botsreply is null")
 		}
 	}
-	
+
 	o.ok(w, "", bs)
 }
 
@@ -288,19 +287,19 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 			logininfo = ""
 		}
 	}
-	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", botId)
 
 	loginreply := o.LoginBot(wrapper, &pb.LoginBotRequest{
-		ClientId: clientId,
+		ClientId:   clientId,
 		ClientType: clientType,
-		Login: login,
-		NotifyUrl: fmt.Sprintf("%s%s", ctx.Config.Baseurl, botnotifypath),
-		Password: pass,
-		LoginInfo: logininfo,
+		Login:      login,
+		NotifyUrl:  fmt.Sprintf("%s%s", ctx.Config.Baseurl, botnotifypath),
+		Password:   pass,
+		LoginInfo:  logininfo,
 	})
 	o.ok(w, "", loginreply)
 }

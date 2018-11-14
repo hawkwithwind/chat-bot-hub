@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 	"time"
-	
+
 	"github.com/getsentry/raven-go"
 	"gopkg.in/yaml.v2"
 
@@ -22,7 +22,7 @@ type MainConfig struct {
 
 var (
 	configPath = flag.String("c", "config/config.yml", "config file path")
-	startcmd   = flag.String("s", "", "start command: web/hub") 
+	startcmd   = flag.String("s", "", "start command: web/hub")
 	config     MainConfig
 )
 
@@ -67,7 +67,7 @@ func main() {
 		log.Fatalf("failed to open config file %s, exit.", err)
 		return
 	}
-	
+
 	raven.SetDSN(config.Web.Sentry)
 
 	if *startcmd == "web" {

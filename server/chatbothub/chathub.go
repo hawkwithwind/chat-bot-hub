@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
-	"os"
-	"time"
-	"sync"
 	"math"
+	"net"
 	"net/http"
+	"os"
+	"sync"
+	"time"
 
+	"github.com/getsentry/raven-go"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"github.com/getsentry/raven-go"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
@@ -32,16 +32,16 @@ type ChatHubConfig struct {
 
 func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
-	hub.bots = make(map[string]*ChatBot)	
+	hub.bots = make(map[string]*ChatBot)
 }
 
-type ChatHub struct {	
-	Config ChatHubConfig
+type ChatHub struct {
+	Config  ChatHubConfig
 	Webhost string
 	Webport string
-	logger *log.Logger
-	mux    sync.Mutex
-	bots   map[string]*ChatBot
+	logger  *log.Logger
+	mux     sync.Mutex
+	bots    map[string]*ChatBot
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -66,21 +66,21 @@ const (
 )
 
 const (
-	PING        string = "PING"
-	PONG        string = "PONG"
-	REGISTER    string = "REGISTER"
-	LOGIN       string = "LOGIN"
-	LOGINDONE   string = "LOGINDONE"	
-	LOGINFAILED string = "LOGINFAILED"
-	LOGOUTDONE  string = "LOGOUTDONE"
-	UPDATETOKEN string = "UPDATETOKEN"
-	MESSAGE     string = "MESSAGE"
+	PING          string = "PING"
+	PONG          string = "PONG"
+	REGISTER      string = "REGISTER"
+	LOGIN         string = "LOGIN"
+	LOGINDONE     string = "LOGINDONE"
+	LOGINFAILED   string = "LOGINFAILED"
+	LOGOUTDONE    string = "LOGOUTDONE"
+	UPDATETOKEN   string = "UPDATETOKEN"
+	MESSAGE       string = "MESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
 )
 
 type LoginBody struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login     string `json:"login"`
+	Password  string `json:"password"`
 	LoginInfo string `json:"loginInfo"`
 }
 
@@ -90,7 +90,7 @@ func (ctx *ChatHub) Info(msg string, v ...interface{}) {
 
 func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 	raven.CaptureError(err, nil)
-	
+
 	ctx.logger.Printf(msg, v...)
 	ctx.logger.Printf("Error %v", err)
 }
@@ -98,7 +98,7 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
 	hub.mux.Lock()
 	defer hub.mux.Unlock()
-	
+
 	for _, v := range hub.bots {
 		if v.ClientType == bottype && v.Status == BeginRegistered {
 			return v
@@ -111,7 +111,7 @@ func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
 func (hub *ChatHub) GetBot(clientid string) *ChatBot {
 	hub.mux.Lock()
 	defer hub.mux.Unlock()
-	
+
 	if thebot, found := hub.bots[clientid]; found {
 		return thebot
 	}
@@ -123,12 +123,12 @@ func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.mux.Lock()
 	defer hub.mux.Unlock()
 
-	hub.bots[clientid] = thebot	
+	hub.bots[clientid] = thebot
 }
 
 func (hub *ChatHub) WebNotify(login string, event string, body string) (*httpx.RestfulResponse, error) {
 	o := &ErrorHandler{}
-	
+
 	rr := httpx.NewRestfulRequest("post",
 		fmt.Sprintf("http://%s:%s/bots/%s/notify", hub.Webhost, hub.Webport, login))
 	rr.Params["event"] = event
@@ -143,14 +143,14 @@ func (hub *ChatHub) WebNotify(login string, event string, body string) (*httpx.R
 
 func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
 	retryTimes int, sleepSeconds int) (*httpx.RestfulResponse, error) {
-	
+
 	var resp *httpx.RestfulResponse
 	var err error
-	
-	for i:=0; i<retryTimes; i=i+1 {
+
+	for i := 0; i < retryTimes; i = i + 1 {
 		resp, err = hub.WebNotify(login, "updateToken", "")
 		if err == nil && resp.StatusCode == http.StatusOK {
-				return resp, nil
+			return resp, nil
 		} else {
 			if err == nil && resp.StatusCode != http.StatusOK {
 				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
@@ -159,7 +159,7 @@ func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
 			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
 		}
 	}
-	
+
 	return nil, err
 }
 
@@ -209,7 +209,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			var thebot *ChatBot
 
 			switch eventType := in.EventType; eventType {
-			case LOGINDONE :
+			case LOGINDONE:
 				hub.Info("LOGINEDONE %v", in)
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
@@ -222,14 +222,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(userName, wxData, token)						
+						thebot, o.Err = bot.loginDone(userName, wxData, token)
 					}
 					if o.Err == nil {
 						go func() {
 							if _, err := hub.WebNotifyRetry(thebot.Login, "loginDone", "", 5, 1); err != nil {
 								hub.Error(err, "notify logindone error")
-							}							
-						} ()
+							}
+						}()
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
@@ -249,7 +249,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					userName = o.FromMap("userName", body, "eventRequest.body", nil).(string)
 					token = o.FromMap("token", body, "eventRequest.body", nil).(string)
 				}
-				if o.Err == nil {	
+				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
 				if o.Err == nil {
@@ -257,7 +257,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						if _, err := hub.WebNotifyRetry(thebot.Login, "updateToken", "", 5, 1); err != nil {
 							hub.Error(err, "notify updatetoken error")
 						}
-					} ()
+					}()
 				}
 			case FRIENDREQUEST:
 				hub.Info("FRIENDREQUEST %v", in)
@@ -268,15 +268,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						if _, err := hub.WebNotifyRetry(bot.Login, "friendRequest", reqstr, 5, 1); err != nil {
 							hub.Error(err, "notyfy friendRequest error")
 						}
-					} ()
+					}()
 				}
-			case LOGINFAILED :
+			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE %v", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
-			case MESSAGE :
+			case MESSAGE:
 				if bot.ClientType == WECHATBOT {
 					if bot.filter != nil {
 						o.Err = bot.filter.Fill(in.Body)
@@ -314,12 +314,12 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 		}
 	}
 
-	return false	
+	return false
 }
 
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
-		
+
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {

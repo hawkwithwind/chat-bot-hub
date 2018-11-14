@@ -8,19 +8,18 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
-	"github.com/gorilla/sessions"	
+	"github.com/gorilla/sessions"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type User struct {
-	AccountName string    `json:"accountname"`
-	Password    string    `json:"password"`
-	Secret      string    `json:"secret"`
+	AccountName string         `json:"accountname"`
+	Password    string         `json:"password"`
+	Secret      string         `json:"secret"`
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
-
 
 func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, email string, avatar string) {
 	if ctx.Err != nil {
@@ -58,7 +57,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 	var session *sessions.Session
 	session, o.Err = ctx.store.Get(req, "chatbothub")
-	
+
 	var user User
 	if o.Err == nil {
 		o.Err = json.NewDecoder(req.Body).Decode(&user)
@@ -68,7 +67,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)
-		
+
 		if o.Err == nil {
 			http.Redirect(w, req, ctx.Config.Baseurl, http.StatusFound)
 		}
@@ -86,7 +85,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		var tokenString interface{}
 		var bearerToken string
 		session, o.Err = ctx.store.Get(req, "chatbothub")
-		
+
 		if o.Err == nil {
 			tokenString = session.Values["X-AUTHORIZE"]
 			var ok bool
@@ -94,8 +93,8 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				o.deny(w, "未登录用户无权限访问")
 				return
 			}
-		}		
-		
+		}
+
 		if o.Err == nil && bearerToken != "" {
 			var token *jwt.Token
 			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
@@ -124,7 +123,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			} else {
 				o.deny(w, "身份令牌无效")
 				return
-			}		
+			}
 		} else {
 			o.deny(w, "未登录用户无权限访问")
 			return

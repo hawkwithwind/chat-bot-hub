@@ -79,7 +79,7 @@ func (ctx *WebServer) init() error {
 	ctx.db = &dbx.Database{}
 	retryTimes := 7
 	gap := 2
-	for i := 0; i < retryTimes + 1; i++ {
+	for i := 0; i < retryTimes+1; i++ {
 		o := &ErrorHandler{}
 		if o.Connect(ctx.db, "mysql", ctx.Config.Database.DataSourceName); o.Err != nil {
 			if i < retryTimes {
@@ -295,12 +295,12 @@ func (ctx *WebServer) Serve() {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/healthz", healthz())	
+	r.Handle("/healthz", healthz())
 	r.HandleFunc("/bots/{login}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
-	r.HandleFunc("/loginbot", ctx.validate(ctx.loginBot)).Methods("POST")	
+	r.HandleFunc("/loginbot", ctx.validate(ctx.loginBot)).Methods("POST")
 	r.HandleFunc("/login", ctx.login).Methods("POST")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")

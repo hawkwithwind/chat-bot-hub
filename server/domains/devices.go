@@ -14,7 +14,7 @@ import (
 
 type Device struct {
 	DeviceId    string         `db:"deviceid"`
-	DeviceName  string         `db:"devicename"`	
+	DeviceName  string         `db:"devicename"`
 	AccountId   string         `db:"accountid"`
 	ChatbotType string         `db:"chatbottype"`
 	CreateAt    mysql.NullTime `db:"createat"`
@@ -32,14 +32,13 @@ func (o *ErrorHandler) NewDevice(name string, bottype string, accountId string) 
 		return nil
 	} else {
 		return &Device{
-			DeviceId: rid.String(),
-			DeviceName: name,
+			DeviceId:    rid.String(),
+			DeviceName:  name,
 			ChatbotType: bottype,
 			AccountId:   accountId,
 		}
 	}
 }
-
 
 func (o *ErrorHandler) SaveDevice(q dbx.Queryable, device *Device) {
 	if o.Err != nil {
@@ -74,4 +73,3 @@ WHERE a.accountname=?
 
 	return devices
 }
-

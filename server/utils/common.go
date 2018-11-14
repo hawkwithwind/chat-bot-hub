@@ -7,7 +7,6 @@ import (
 	"time"
 
 	mt "github.com/mitchellh/mapstructure"
-	
 )
 
 func CheckSum(src []byte) []byte {
@@ -29,7 +28,7 @@ func PasswordCheckSum(pass string) string {
 
 func DecodeMap(src interface{}, target interface{}) error {
 	config := &mt.DecoderConfig{
-		DecodeHook: func (f reflect.Type, t reflect.Type, data interface{}) (interface{}, error)  {
+		DecodeHook: func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
 			if t == reflect.TypeOf(time.Time{}) && f == reflect.TypeOf("") {
 				return time.Parse(time.RFC3339, data.(string))
 			} else if t == reflect.TypeOf(JSONTime{}) && f == reflect.TypeOf("") {
