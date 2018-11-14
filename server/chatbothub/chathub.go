@@ -9,6 +9,7 @@ import (
 	"time"
 	"sync"
 	"math"
+	"net/http"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
@@ -148,10 +149,13 @@ func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
 	
 	for i:=0; i<retryTimes; i=i+1 {
 		resp, err = hub.WebNotify(login, "updateToken", "")
-		if err == nil {
-			return resp, nil
+		if err == nil && resp.StatusCode == http.StatusOK {
+				return resp, nil
 		} else {
-			hub.Info("WEB NOTIFY FAILED, retry [%d] ", i)
+			if err == nil && resp.StatusCode != http.StatusOK {
+				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
+			}
+			hub.Error(err, "WEB NOTIFY FAILED")
 			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
 		}
 	}

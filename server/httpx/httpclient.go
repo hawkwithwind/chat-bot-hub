@@ -199,7 +199,6 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	if nreq, err = http.NewRequest(req.Method, targeturi, reqbody); err == nil {
 		for k, v := range req.Headers {
 			nreq.Header.Set(k, v)
-			fmt.Printf("HEADER[%v: %v]\n", k, v)
 		}
 
 		if nresp, err = client.Do(nreq); err != nil {
@@ -212,6 +211,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
 			return nil, err
 		}
+		
 		return &RestfulResponse{
 			Body:       string(body),
 			Header:     &nresp.Header,

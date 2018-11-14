@@ -151,6 +151,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
 			localmap["token"] = tokenptr.(string)
 		}
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		o.UpdateBot(tx, bot)
+		ctx.Info("update bot %v", bot)
+		
 	case "loginDone" :
 		var oldtoken string
 		var oldwxdata string
@@ -176,6 +180,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				localmap["wxData"] = wd
 			}
 		}
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		o.UpdateBot(tx, bot)	
+		ctx.Info("update bot %v", bot)
+		
 	case "friendRequest" :
 		reqstr := o.getStringValue(r.Form, "body")
 		rlogin := ""
@@ -188,16 +196,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
 		fr := o.NewFriendRequest(bot.BotId, login, rlogin, reqstr, "NEW")
-		o.SaveFriendRequest(tx, fr)		
+		o.SaveFriendRequest(tx, fr)
+		ctx.Info("save friend request %v", fr)
+		
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
-		return
 	}
-
-	bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
-	o.UpdateBot(tx, bot)
 	
-	ctx.Info("update bot %v", bot)
 	o.CommitOrRollback(tx)
 }
 
