@@ -148,6 +148,7 @@ func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
 	var err error
 
 	for i := 0; i < retryTimes; i = i + 1 {
+		hub.Info("notify [%d] times", i)
 		resp, err = hub.WebNotify(login, "updateToken", "")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return resp, nil
@@ -263,11 +264,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("FRIENDREQUEST %v", in)
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
+				hub.Info("reqstr %s %v", reqstr, o.Err)
 				if o.Err == nil {
 					go func() {
+						hub.Info("----1")
 						if _, err := hub.WebNotifyRetry(bot.Login, "friendRequest", reqstr, 5, 1); err != nil {
 							hub.Error(err, "notyfy friendRequest error")
 						}
+						hub.Info("----2")
 					}()
 				}
 			case LOGINFAILED:

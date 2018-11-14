@@ -138,7 +138,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	eventType := o.getStringValue(r.Form, "event")
-
+	ctx.Info("notify event %s", eventType)
+	
 	var localmap map[string]interface{}
 	if bot.LoginInfo.Valid {
 		localmap = o.FromJson(bot.LoginInfo.String)
@@ -186,12 +187,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	case "friendRequest":
 		reqstr := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, reqstr)
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
 			reqm := o.FromJson(reqstr)
 			if funptr := o.FromMap("fromUserName", reqm, "friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
 			}
+			ctx.Info("%v\n%s", reqm, rlogin)
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
