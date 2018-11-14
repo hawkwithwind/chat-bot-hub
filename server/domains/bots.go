@@ -114,7 +114,7 @@ WHERE botid=?
 	}
 }
 
-func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) []Bot {
+func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) *Bot {
 	if o.Err != nil {
 		return nil
 	}
@@ -128,5 +128,9 @@ FROM bots
 WHERE login=?
   AND deleteat is NULL`, login)
 
-	return bots
+	if b := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login)); b != nil {
+		return b.(*Bot)
+	} else {
+		return nil
+	}
 }

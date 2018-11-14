@@ -163,3 +163,65 @@ func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 	bot.Status = BeginRegistered
 	return bot, nil
 }
+
+type BrandList struct {
+	Count int `xml:"count,attr" json:"count"`
+	Ver string `xml:"ver,attr" json:"ver"`
+}
+
+type Msg struct {
+	FromUserName string `xml:"fromusername,attr" json:"fromUserName"`
+	EncryptUserName string `xml:"encryptusername,attr" json:"encryptUserName"`
+	FromNickName string `xml:"fromnickname,attr" json:"fromNickName"`
+	Content string `xml:"content,attr" json:"content"`
+	Fullpy string `xml:"fullpy,attr" json:"fullpy"`
+	Shortpy string `xml:"shortpy,attr" json:"shortpy"`
+	ImageStatus string `xml:"imagestatus,attr" json:"imageStatus"`
+	Scene string `xml:"scene,attr" json:"scene"`
+	Country string `xml:"country,attr" json:"country"`
+	Province string `xml:"province,attr" json:"province"`
+	City string `xml:"city,attr" json:"city"`
+	Sign string `xml:"sign,attr" json:"sign"`
+	Percard string `xml:"percard,attr" json:"percard"`
+	Sex string `xml:"sex,attr" json:"sex"`
+	Alias string `xml:"alias,attr" json:"alias"`
+	Weibo string `xml:"weibo,attr" json:"weibo"`
+	Albumflag string `xml:"albumflag,attr" json:"albumflag"`
+	Albumstyle string `xml:"albumstyle,attr" json:"albumstyle"`
+	Albumbgimgid string `xml:"albumbgimgid,attr" json:"albumbgimgid"`
+	Snsflag string `xml:"snsflag,attr" json:"snsflag"`
+	Snsbgimgid string `xml:"snsbgimgid,attr" json:"snsbgimgid"`
+	Snsbgobjectid string `xml:"snsbgobjectid,attr" json:"snsbgobjectid"`
+	Mhash string `xml:"mhash,attr" json:"mhash"`
+	Mfullhash string `xml:"mfullhash,attr" json:"mfullhash"`
+	Bigheadimgurl string `xml:"bigheadimgurl,attr" json:"bigheadimgurl"`
+	Smallheadimgurl string `xml:"smallheadimgurl,attr" json:"smallheadimgurl"`
+	Ticket string `xml:"ticket,attr" json:"ticket"`
+	Opcode string `xml:"opcode,attr" json:"opcode"`
+	Googlecontact string `xml:"googlecontact,attr" json:"googlecontact"`
+	Qrticket string `xml:"qrticket,attr" json:"qrticket"`
+	Chatroomusername string `xml:"chatroomusername,attr" json:"chatroomusername"`
+	Sourceusername string `xml:"sourceusername,attr" json:"sourceusername"`
+	Sourcenickname string `xml:"sourcenickname,attr" json:"sourcenickname"`
+	BrandList BrandList `xml:"brandlist" json:"brandlist"`
+}
+
+func (bot *ChatBot) friendRequest(body string) (string, error) {
+	o := &ErrorHandler{}
+		
+	if bot.ClientType == "WECHATBOT" {
+		bodydata := o.FromJson(body)
+		content := o.FromMap("content", bodydata, "body.content", nil)
+		
+		if content != nil {
+			var msg Msg
+			o.FromXML(content.(string), &msg)
+			msgstr :=  o.ToJson(&msg)
+			return msgstr, o.Err
+		} else {
+			return "", fmt.Errorf("c[%s] request should have xml content")
+		}
+	} else {
+		return "", fmt.Errorf("c[%s] not support friend request", bot.ClientType)
+	}
+}

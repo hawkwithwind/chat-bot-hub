@@ -2,9 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"strconv"
-
+	
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
@@ -63,6 +64,14 @@ func (ctx *ErrorHandler) FromJson(jsonstr string) map[string]interface{} {
 		ctx.Err = err
 		return ret
 	}
+}
+
+func (ctx *ErrorHandler) FromXML(xmlstr string, target interface{}) {
+	if ctx.Err != nil {
+		return
+	}
+
+	ctx.Err = xml.Unmarshal([]byte(xmlstr), target)
 }
 
 func (ctx *ErrorHandler) FromMap (key string, m map[string]interface{},objname string, defValue interface{}) interface{} {

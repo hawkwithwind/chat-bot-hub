@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 	"sync"
+	"math"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
@@ -68,11 +69,12 @@ const (
 	PONG        string = "PONG"
 	REGISTER    string = "REGISTER"
 	LOGIN       string = "LOGIN"
-	LOGINDONE   string = "LOGINDONE"
+	LOGINDONE   string = "LOGINDONE"	
 	LOGINFAILED string = "LOGINFAILED"
 	LOGOUTDONE  string = "LOGOUTDONE"
 	UPDATETOKEN string = "UPDATETOKEN"
 	MESSAGE     string = "MESSAGE"
+	FRIENDREQUEST string = "FRIENDREQUEST"
 )
 
 type LoginBody struct {
@@ -121,6 +123,40 @@ func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	defer hub.mux.Unlock()
 
 	hub.bots[clientid] = thebot	
+}
+
+func (hub *ChatHub) WebNotify(login string, event string, body string) (*httpx.RestfulResponse, error) {
+	o := &ErrorHandler{}
+	
+	rr := httpx.NewRestfulRequest("post",
+		fmt.Sprintf("http://%s:%s/bots/%s/notify", hub.Webhost, hub.Webport, login))
+	rr.Params["event"] = event
+	rr.Params["body"] = body
+	resp := o.RestfulCall(rr)
+
+	if o.Err != nil {
+		hub.Error(o.Err, "WEBNOTIFY %v failed", rr)
+	}
+	return resp, o.Err
+}
+
+func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
+	retryTimes int, sleepSeconds int) (*httpx.RestfulResponse, error) {
+	
+	var resp *httpx.RestfulResponse
+	var err error
+	
+	for i:=0; i<retryTimes; i=i+1 {
+		resp, err = hub.WebNotify(login, "updateToken", "")
+		if err == nil {
+			return resp, nil
+		} else {
+			hub.Info("WEB NOTIFY FAILED, retry [%d] ", i)
+			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
+		}
+	}
+	
+	return nil, err
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -185,12 +221,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						thebot, o.Err = bot.loginDone(userName, wxData, token)						
 					}
 					if o.Err == nil {
-						rr := httpx.NewRestfulRequest("post",
-							fmt.Sprintf("http://%s:%s/bots/%s/notify", hub.Webhost, hub.Webport, thebot.Login))
-						rr.Params["event"] = "loginDone"
-						resp := o.RestfulCall(rr)
-						hub.Info("call notify %v\n returns \n%v", rr, resp)
-					}					
+						go func() {
+							if _, err := hub.WebNotifyRetry(thebot.Login, "loginDone", "", 5, 1); err != nil {
+								hub.Error(err, "notify logindone error")
+							}							
+						} ()
+					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone("", "", "")
@@ -211,7 +247,25 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				if o.Err == nil {	
 					thebot, o.Err = bot.updateToken(userName, token)
-				}				
+				}
+				if o.Err == nil {
+					go func() {
+						if _, err := hub.WebNotifyRetry(thebot.Login, "updateToken", "", 5, 1); err != nil {
+							hub.Error(err, "notify updatetoken error")
+						}
+					} ()
+				}
+			case FRIENDREQUEST:
+				hub.Info("FRIENDREQUEST %v", in)
+				var reqstr string
+				reqstr, o.Err = bot.friendRequest(in.Body)
+				if o.Err == nil {
+					go func() {
+						if _, err := hub.WebNotifyRetry(thebot.Login, "friendRequest", reqstr, 5, 1); err != nil {
+							hub.Error(err, "notyfy friendRequest error")
+						}
+					} ()					
+				}
 			case LOGINFAILED :
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
