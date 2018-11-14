@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
-	"net"
-	"net/http"
+	"net"	
 	"os"
 	"sync"
 	"time"
@@ -17,7 +15,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
@@ -119,48 +116,24 @@ func (hub *ChatHub) GetBot(clientid string) *ChatBot {
 	return nil
 }
 
+func (hub *ChatHub) GetBotByLogin(login string) *ChatBot {
+	hub.mux.Lock()
+	defer hub.mux.Unlock()
+
+	for _, bot := range hub.bots {
+		if bot.Login == login {
+			return bot
+		}
+	}
+
+	return nil
+}
+
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.mux.Lock()
 	defer hub.mux.Unlock()
 
 	hub.bots[clientid] = thebot
-}
-
-func (hub *ChatHub) WebNotify(login string, event string, body string) (*httpx.RestfulResponse, error) {
-	o := &ErrorHandler{}
-
-	rr := httpx.NewRestfulRequest("post",
-		fmt.Sprintf("http://%s:%s/bots/%s/notify", hub.Webhost, hub.Webport, login))
-	rr.Params["event"] = event
-	rr.Params["body"] = body
-	resp := o.RestfulCall(rr)
-
-	if o.Err != nil {
-		hub.Error(o.Err, "WEBNOTIFY %v failed", rr)
-	}
-	return resp, o.Err
-}
-
-func (hub *ChatHub) WebNotifyRetry(login string, event string, body string,
-	retryTimes int, sleepSeconds int) (*httpx.RestfulResponse, error) {
-
-	var resp *httpx.RestfulResponse
-	var err error
-
-	for i := 0; i < retryTimes; i = i + 1 {
-		resp, err = hub.WebNotify(login, event, body)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			return resp, nil
-		} else {
-			if err == nil && resp.StatusCode != http.StatusOK {
-				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
-			}
-			hub.Error(err, "WEB NOTIFY FAILED")
-			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
-		}
-	}
-
-	return nil, err
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -225,9 +198,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 					if o.Err == nil {
 						go func() {
-							if _, err := hub.WebNotifyRetry(thebot.Login, "loginDone", "", 5, 1); err != nil {
-								hub.Error(err, "notify logindone error")
-							}
+							thebot.WebNotifyRetry("loginDone", "", 5, 1)
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
@@ -253,21 +224,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				if o.Err == nil {
 					go func() {
-						if _, err := hub.WebNotifyRetry(thebot.Login, "updateToken", "", 5, 1); err != nil {
-							hub.Error(err, "notify updatetoken error")
-						}
+						thebot.WebNotifyRetry("updateToken", "", 5, 1)
 					}()
 				}
+			
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
 					go func() {
-						if _, err := hub.WebNotifyRetry(bot.Login, "friendRequest", reqstr, 5, 1); err != nil {
-							hub.Error(err, "notyfy friendRequest error")
-						}
+						bot.WebNotifyRetry("friendRequest", reqstr, 5, 1)
 					}()
 				}
+			
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
@@ -349,7 +318,7 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 	}
 }
 
-func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.LoginBotReply, error) {
+func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
 	o := &ErrorHandler{}
 
@@ -377,9 +346,28 @@ func (hub *ChatHub) LoginBot(ctx context.Context, req *pb.LoginBotRequest) (*pb.
 	}
 
 	if o.Err != nil {
-		return &pb.LoginBotReply{Msg: fmt.Sprintf("LOGIN BOT FAILED %s", o.Err.Error())}, nil
+		return &pb.BotLoginReply{Msg: fmt.Sprintf("LOGIN BOT FAILED %s", o.Err.Error())}, nil
 	} else {
-		return &pb.LoginBotReply{Msg: "LOGIN BOT DONE"}, nil
+		return &pb.BotLoginReply{Msg: "LOGIN BOT DONE"}, nil
+	}
+}
+
+func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*pb.BotActionReply, error) {
+	o := &ErrorHandler{}
+
+	bot := hub.GetBotByLogin(req.Login)
+	if bot == nil {
+		o.Err = fmt.Errorf("b[%s] not found", req.Login)
+	}
+
+	if o.Err == nil {
+		o.Err = bot.BotAction(req.ActionType, req.ActionBody)
+	}
+	
+	if o.Err != nil {
+		return &pb.BotActionReply{Success: false, Msg: fmt.Sprintf("Action failed %s", o.Err.Error())}, nil
+	} else {
+		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
 	}
 }
 

@@ -5,10 +5,13 @@ import (
 	"log"
 	"os"
 	"time"
+	"math"
+	"net/http"
 
 	"github.com/getsentry/raven-go"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ChatBotStatus int32
@@ -119,7 +122,7 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatB
 		return bot, fmt.Errorf("bot status %s cannot loginDone", bot.Status)
 	}
 
-	if bot.Login != login {
+	if len(bot.Login) > 0 && bot.Login != login {
 		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
 	}
 
@@ -210,7 +213,7 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 
 	if bot.ClientType == "WECHATBOT" {
 		bodydata := o.FromJson(body)
-		content := o.FromMap("content", bodydata, "body.content", nil)
+		content := o.FromMap("content", bodydata, "body", nil)
 
 		if content != nil {
 			var msg Msg
@@ -222,5 +225,96 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 		}
 	} else {
 		return "", fmt.Errorf("c[%s] not support friend request", bot.ClientType)
+	}
+}
+
+
+func (bot *ChatBot) WebNotify(event string, body string) (*httpx.RestfulResponse, error) {
+	o := &ErrorHandler{}
+
+	rr := httpx.NewRestfulRequest("post", bot.NotifyUrl)
+	rr.Params["event"] = event
+	rr.Params["body"] = body
+	resp := o.RestfulCall(rr)
+
+	if o.Err != nil {
+		bot.Error(o.Err, "WEBNOTIFY %v failed", rr)
+	}
+	return resp, o.Err
+}
+
+func (bot *ChatBot) WebNotifyRetry(event string, body string,
+	retryTimes int, sleepSeconds int) (*httpx.RestfulResponse, error) {
+
+	var resp *httpx.RestfulResponse
+	var err error
+
+	for i := 0; i < retryTimes; i = i + 1 {
+		resp, err = bot.WebNotify(event, body)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return resp, nil
+		} else {
+			if err == nil && resp.StatusCode != http.StatusOK {
+				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
+			}
+			bot.Error(err, "WEB NOTIFY FAILED")
+			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
+		}
+	}
+
+	return nil, err
+}
+
+func (bot *ChatBot) BotAction(actionType string, body string) error {
+	var err error
+	
+	switch actionType {
+	case "AddFriend":
+		err = bot.AddFriend(body)
+	case "SendTextMessage":
+		err = bot.SendTextMessage(body)
+	default:
+		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
+	}
+
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (bot *ChatBot) AddFriend(body string) error {
+	return nil
+}
+
+func (bot *ChatBot) SendTextMessage(body string) error {
+	o := &ErrorHandler{}
+
+	bodym := o.FromJson(body)
+	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+	content := o.FromMapString("content", bodym, "actionbody", false, "")
+	atList := o.FromMap("atList", bodym, "actionbody", []string{}).([]string)
+
+	if o.Err == nil {
+		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
+
+		actionm := map[string]interface{} {
+			"actionType": "SendTextMessage",
+			"body": body,
+		}
+		
+		o.sendEvent(bot.tunnel, &pb.EventReply{
+			EventType: "BotAction",
+			ClientType: bot.ClientType,
+			ClientId: bot.ClientId,
+			Body: o.ToJson(actionm),
+		})
+	}
+
+	if o.Err != nil {
+		return o.Err
+	} else {
+		return nil
 	}
 }

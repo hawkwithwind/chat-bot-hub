@@ -70,12 +70,12 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 	}
 }
 
-func (ctx *ErrorHandler) LoginBot(w *GRPCWrapper, req *pb.LoginBotRequest) *pb.LoginBotReply {
+func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.BotLoginReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if loginreply, err := w.client.LoginBot(w.context, req); err != nil {
+	if loginreply, err := w.client.BotLogin(w.context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if loginreply == nil {
@@ -266,14 +266,15 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", bs)
 }
 
-func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
+func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
-	botId := o.getStringValueDefault(r.Form, "botId", "")
-	clientId := o.getStringValueDefault(r.Form, "clientId", "")
-	clientType := o.getStringValue(r.Form, "clientType")
+	botId := o.getStringValue(r.Form, "botId")
+	clientType := o.getStringValue(r.Form, "clientType")	
+		
+	clientId := o.getStringValueDefault(r.Form, "clientId", "")	
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
 
@@ -296,7 +297,7 @@ func (ctx *WebServer) loginBot(w http.ResponseWriter, r *http.Request) {
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", botId)
 
-	loginreply := o.LoginBot(wrapper, &pb.LoginBotRequest{
+	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
 		ClientId:   clientId,
 		ClientType: clientType,
 		Login:      login,

@@ -26,7 +26,8 @@ service ChatBotHub {
 
   // below are for internal web api
   rpc GetBots (BotsRequest) returns (BotsReply) {}  
-  rpc LoginBot (LoginBotRequest) returns (LoginBotReply) {}  
+  rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
+  rpc BotAction (BotActionRequest) returns (BotActionReply) {}
 }
 
 message EventRequest {
@@ -63,7 +64,7 @@ message BotsInfo {
   string filterInfo = 9;
 }
 
-message LoginBotRequest {
+message BotLoginRequest {
   string clientId = 1;
   string clientType = 2;
   string login = 3;
@@ -72,6 +73,20 @@ message LoginBotRequest {
   string loginInfo = 6;
 }
 
-message LoginBotReply {
+message BotLoginReply {
   string msg = 1;
+}
+
+message BotActionRequest {
+  string actionRequestId = 1;
+  string login = 2;  
+  string actionType = 3;
+  string actionBody = 4;
+}
+
+message BotActionReply {
+  string actionRequestId = 1;
+  bool   success = 2;
+  string msg = 3;
+  string body = 4;
 }
