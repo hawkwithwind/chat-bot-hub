@@ -261,10 +261,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
 					go func() {
-						if _, err := hub.WebNotifyRetry(thebot.Login, "friendRequest", reqstr, 5, 1); err != nil {
+						if _, err := hub.WebNotifyRetry(bot.Login, "friendRequest", reqstr, 5, 1); err != nil {
 							hub.Error(err, "notyfy friendRequest error")
 						}
-					} ()					
+					} ()
 				}
 			case LOGINFAILED :
 				hub.Info("LOGINFAILED %v", in)
