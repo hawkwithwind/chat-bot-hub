@@ -115,7 +115,7 @@ func (bot *ChatBot) prepareLogin(login string, notifyurl string) (*ChatBot, erro
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyUrl string) (*ChatBot, error) {
 	bot.Info("loginDone")
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -127,6 +127,7 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string) (*ChatB
 	}
 
 	bot.Login = login
+	bot.NotifyUrl = notifyUrl
 	bot.LoginInfo.WxData = wxdata
 	bot.LoginInfo.Token = token
 

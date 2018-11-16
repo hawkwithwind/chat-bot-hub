@@ -75,12 +75,6 @@ const (
 	FRIENDREQUEST string = "FRIENDREQUEST"
 )
 
-type LoginBody struct {
-	Login     string `json:"login"`
-	Password  string `json:"password"`
-	LoginInfo string `json:"loginInfo"`
-}
-
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
@@ -188,13 +182,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var userName string
 					var wxData string
 					var token string
+					var notifyUrl string
 					if body != nil {
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
+						notifyUrl = o.FromMapString("notifyUrl", body, "eventRequest.body", false, "")
 					}
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(userName, wxData, token)
+						thebot, o.Err = bot.loginDone(userName, wxData, token, notifyUrl)
 					}
 					if o.Err == nil {
 						go func() {
@@ -203,7 +199,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone("", "", "")
+						thebot, o.Err = bot.loginDone("", "", "", "")
 					}
 				} else {
 					if o.Err == nil {
@@ -318,6 +314,13 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 	}
 }
 
+type LoginBody struct {
+	Login     string `json:"login"`
+	Password  string `json:"password"`
+	LoginInfo string `json:"loginInfo"`
+	NotifyUrl string `json:"notifyUrl"`
+}
+
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
 	o := &ErrorHandler{}
@@ -334,7 +337,13 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 			bot, o.Err = bot.prepareLogin(req.Login, req.NotifyUrl)
 		}
 
-		body := o.ToJson(LoginBody{Login: req.Login, Password: req.Password, LoginInfo: req.LoginInfo})
+		body := o.ToJson(LoginBody{
+			Login: req.Login,
+			Password: req.Password,
+			LoginInfo: req.LoginInfo,
+			NotifyUrl: req.NotifyUrl,
+		})
+		
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  "LOGIN",
 			ClientType: req.ClientType,
