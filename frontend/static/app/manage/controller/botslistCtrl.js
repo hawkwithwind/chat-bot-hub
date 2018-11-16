@@ -81,7 +81,7 @@
     }
 
     $scope.wechatLogin = function(row) {
-      buildModel('loginbot', {
+      buildModel('botlogin', {
 	clientId: row.clientId,
 	clientType: row.clientType,
 	botId: row.botId
@@ -104,7 +104,7 @@
     }
 
     $scope.login = function(data) {
-      buildModel('loginbot', data).post(function(data) {
+      buildModel('botlogin', data).post(function(data) {
 	//$scope.bodypretty = $scope.pretty(data);
 	console.log(data);
       });
@@ -126,7 +126,7 @@
     }
 
     $scope.login = function(data) {
-      buildModel('loginbot', data).post(function(data) {
+      buildModel('botlogin', data).post(function(data) {
 	//$scope.bodypretty = $scope.pretty(data);
 	console.log(data);
       });

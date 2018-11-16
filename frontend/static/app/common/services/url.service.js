@@ -6,7 +6,7 @@
       'login': buildUrl('login'),
       'bots': buildUrl('bots'),
       'consts': buildUrl('consts'),
-      'loginbot': buildUrl('loginbot'),
+      'botlogin': buildUrl('botlogin'),
       'loginqq': buildUrl('loginqq')
     };
     return result;
