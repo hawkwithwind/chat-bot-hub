@@ -63,7 +63,11 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		o.Err = json.NewDecoder(req.Body).Decode(&user)
 	}
 
+	ctx.Info("%s %s", user.AccountName, user.Password)
+	ctx.Info("%s", utils.HexString(utils.CheckSum([]byte(user.Password))))
+	
 	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
+		
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)
@@ -72,6 +76,9 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 			http.Redirect(w, req, ctx.Config.Baseurl, http.StatusFound)
 		}
 	} else {
+		if o.Err != nil {
+			fmt.Printf("err %v\n", o.Err)
+		}
 		o.deny(w, "用户名密码不匹配")
 	}
 }
