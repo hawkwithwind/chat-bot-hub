@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"encoding/json"
 
 	grctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	//"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"	
 )
 
 type GRPCWrapper struct {
@@ -85,6 +85,23 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 		return loginreply
 	}
 }
+
+func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if actionreply, err := w.client.BotAction(w.context, req); err != nil {
+		ctx.Err = err
+		return nil
+	} else if actionreply == nil {
+		ctx.Err = fmt.Errorf("actionreply is nil")
+		return nil
+	} else {
+		return actionreply
+	}
+}
+
 
 func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 	for _, bot := range bots {
@@ -272,8 +289,8 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	botId := o.getStringValue(r.Form, "botId")
-	clientType := o.getStringValue(r.Form, "clientType")	
-		
+	clientType := o.getStringValue(r.Form, "clientType")
+	
 	clientId := o.getStringValueDefault(r.Form, "clientId", "")	
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
@@ -306,6 +323,33 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  logininfo,
 	})
 	o.ok(w, "", loginreply)
+}
+
+func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	login := vars["login"]
+
+	tx := o.Begin(ctx.db)
+	bot := o.GetBotByLogin(tx, login)
+
+	decoder := json.NewDecoder(r.Body)
+	var bodym map[string]interface{}
+    o.Err = decoder.Decode(&bodym)
+
+	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
+	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
+	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
+	
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
+	o.SaveActionRequest(ctx.redispool, ar, 60 * 60)	
+	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
+
+	o.ok(w, "", actionReply)
 }
 
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
