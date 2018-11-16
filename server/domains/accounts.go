@@ -103,8 +103,18 @@ func (o *ErrorHandler) AccountValidateSecret(q dbx.Queryable, name string, secre
 
 	accounts := []Account{}
 	ctx, _ := o.DefaultContext()
+
+	fmt.Printf("Validate : %s %s\n", name, secret)
+	
 	o.Err = q.SelectContext(ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
+
+	if o.Err != nil {
+		fmt.Printf("err %v\n", o.Err)
+	} else {
+		h := o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name))
+		fmt.Printf("head %v \n", h)
+	}
 
 	return o.Head(accounts, fmt.Sprintf("Account %s more than one instance", name)) != nil
 }
