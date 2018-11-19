@@ -346,7 +346,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	botnotifypath := fmt.Sprintf("/bots/%s/notify", botId)
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", login)
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
 		ClientId:   clientId,
