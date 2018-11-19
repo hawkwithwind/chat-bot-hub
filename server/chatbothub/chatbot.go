@@ -119,7 +119,7 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyU
 	bot.Info("loginDone")
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
-		return bot, fmt.Errorf("bot status %s cannot loginDone", bot.Status)
+		return bot, fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status)
 	}
 
 	if len(bot.Login) > 0 && bot.Login != login {
