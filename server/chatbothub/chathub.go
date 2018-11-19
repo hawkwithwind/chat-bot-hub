@@ -240,7 +240,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				thebot, o.Err = bot.loginFail(in.Body)
 
 			case LOGOUTDONE:
-				hub.Info("LOGOUTDONE %v", in)
+				hub.Info("LOGOUTDONE c[%s]", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
 
 			case ACTIONREPLY:

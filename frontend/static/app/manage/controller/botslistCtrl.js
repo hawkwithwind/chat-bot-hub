@@ -86,7 +86,18 @@
 	clientType: row.clientType,
 	botId: row.botId
       }).post(function(data) {
-	$scope.bodypretty = $scope.pretty(data);
+	log.console(data);
+      });
+    }
+
+    $scope.botAction = function(row) {
+      $modal.open({
+	templateUrl: 'botActionTemplate',
+	controller: botActionCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  login: () => row.login
+	}
       });
     }
   }
@@ -119,7 +130,7 @@
     $scope.clientId = clientId;
     $scope.data = {};
     $scope.data.clientId = clientId;
-    $scope.data.clientId = botId;
+    $scope.data.botId = botId;
     
     $scope.close = function() {
       $uibModalInstance.dismiss();
@@ -133,6 +144,36 @@
 
       $scope.close();
     }
+  }
+
+  app.controller("botActionCtrl", botActionCtrl);
+  botActionCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "login"];
+  function botActionCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, login) {
+    $scope.clientId = clientId;
+    $scope.data = {};
+    $scope.data.clientId = clientId;
+    $scope.data.login = login;
+
+    $scope.close = function() {
+      $uibModalInstance.dismiss();
+    }
+
+    let url = "/botaction/" + $scope.data.login + "/notify";
+    
+    $scope.sendAction = function(data) {
+      $http({
+	method: 'POST',
+	url: url,
+	data: JSON.stringify(data)
+      })
+	.then(function (success) {
+	  console.log(success);
+	}, function(error) {
+	  console.log(error);
+	});
+
+      $scope.close();
+    }    
   }
 })();
 

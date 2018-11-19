@@ -43,14 +43,6 @@
   </div>
 </div>
 
-<div class="row">
-  <div class="col-xs-3 col-md-6">
-    <pre style="width:800px" ng-bind-html="bodypretty">
-    </pre>
-  </div>
-</div>
-
-
 <script type="text/ng-template" id="loginQQTemplate">
   <div class="modal-header">
     <button type="button" class="close" ng-click="close()"></button>
@@ -110,6 +102,38 @@
     <div class="row form-group-padding">
       <div class="col-md-3">
 	<button class="btn green" ng-click="login(data)">登录</button>
+      </div>
+    </div>
+  </div>
+</script>
+
+<script type="text/ng-template" id="botActionTemplate">
+  <div class="modal-header">
+    <button type="button" class="close" ng-click="close()"></button>
+    <h3 class="modal-title">发消息</h3>
+  </div>
+
+  <div class="modal-body form-group-padding" id="loginWechat_modal_body">
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<select id="select_type" name="select_type" ng-model="data.actionType" required>
+	  <option value="">选择消息类型</option>
+	  <option value="SendTextMessage">文本消息</option>
+	</select>
+      </div>
+    </div>
+    <div class="row form-group-padding">
+      <div class="col-md-12">
+	<textarea id="textarea_body" name="textarea_body" class="col-md-12" ng-model="data.actionBody" />
+      </div>
+    </div>
+
+    <input id="hidden_clientId" name="hidden_clientId" type="hidden" ng-model="data.clientId" />
+    <input id="hidden_login" name="hidden_login" type="hidden" ng-model="data.login" />
+
+    <div class="row form-group-padding">
+      <div class="col-md-3">
+	<button class="btn green" ng-click="sendAction(data)">发送</button>
       </div>
     </div>
   </div>

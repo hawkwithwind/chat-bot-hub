@@ -93,7 +93,7 @@ func (bot *ChatBot) register(clientId string, clientType string,
 		filter := NewWechatBaseFilter()
 		filter.init("源:微信")
 		pfilter := NewPlainFilter(bot.logger)
-		pfilter.init("空")
+		pfilter.init("日志")
 
 		if err := filter.Next(pfilter); err == nil {
 			bot.filter = filter
@@ -116,7 +116,7 @@ func (bot *ChatBot) prepareLogin(login string, notifyurl string) (*ChatBot, erro
 }
 
 func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyUrl string) (*ChatBot, error) {
-	bot.Info("loginDone")
+	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
 		return bot, fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status)
@@ -136,7 +136,7 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyU
 }
 
 func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
-	bot.Info("updateToken")
+	bot.Info("c[%s:%s]{%s} updateToken", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Login != login {
 		bot.Info("bot c[%s]{%s} update token login %s != %s",
@@ -149,7 +149,7 @@ func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
 }
 
 func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
-	bot.Info("loginFail")
+	bot.Info("c[%s:%s]{%s} loginFail", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != LoggingPrepared {
 		return bot, fmt.Errorf("bot status %s cannot loginFail", bot.Status)
@@ -161,7 +161,7 @@ func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 }
 
 func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
-	bot.Info("logoutDone")
+	bot.Info("c[%s:%s]{%s} logoutDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	bot.Status = BeginRegistered
 	return bot, nil
