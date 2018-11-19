@@ -266,14 +266,14 @@ func (bot *ChatBot) WebNotifyRetry(event string, body string,
 	return nil, err
 }
 
-func (bot *ChatBot) BotAction(actionType string, body string) error {
+func (bot *ChatBot) BotAction(arId string, actionType string, body string) error {
 	var err error
 	
 	switch actionType {
 	case "AddFriend":
-		err = bot.AddFriend(body)
+		err = bot.AddFriend(arId, body)
 	case "SendTextMessage":
-		err = bot.SendTextMessage(body)
+		err = bot.SendTextMessage(arId, body)
 	default:
 		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
 	}
@@ -285,11 +285,11 @@ func (bot *ChatBot) BotAction(actionType string, body string) error {
 	}
 }
 
-func (bot *ChatBot) AddFriend(body string) error {
+func (bot *ChatBot) AddFriend(arId string, body string) error {
 	return nil
 }
 
-func (bot *ChatBot) SendTextMessage(body string) error {
+func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
 	bodym := o.FromJson(body)
@@ -301,6 +301,7 @@ func (bot *ChatBot) SendTextMessage(body string) error {
 		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 
 		actionm := map[string]interface{} {
+			"actionRequestId": arId,
 			"actionType": "SendTextMessage",
 			"body": body,
 		}

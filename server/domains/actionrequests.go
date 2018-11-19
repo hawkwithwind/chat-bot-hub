@@ -18,6 +18,7 @@ type ActionRequest struct {
 	ActionType      string         `json:"actionType"`
 	ActionBody      string         `json:"actionBody"`	
 	Status          string         `json:"status"`
+	Result          string         `json:"result"`
 	CreateAt        utils.JSONTime `json:"createAt"`
 	ReplyAt         utils.JSONTime `json:"replyAt"`
 }

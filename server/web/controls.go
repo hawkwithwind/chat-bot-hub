@@ -12,7 +12,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"	
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type GRPCWrapper struct {
@@ -219,6 +220,39 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		o.SaveFriendRequest(tx, fr)
 		ctx.Info("save friend request %v", fr)
 
+	case "actionReply":
+		reqstr := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, reqstr)
+
+		var awayar domains.ActionRequest
+		o.Err = json.Unmarshal([]byte(reqstr), &awayar)
+		localar := o.GetActionRequest(ctx.redispool, awayar.ActionRequestId)
+		if o.Err == nil {
+			if localar == nil {
+				o.Err = fmt.Errorf("local ar %s not found, or is expired", awayar.ActionRequestId)
+			}
+		}
+
+		if o.Err == nil {
+			localar.ReplyAt = awayar.ReplyAt
+			localar.Result = awayar.Result
+
+			result := o.FromJson(awayar.Result)
+			success := false
+			if result != nil {
+				if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
+					success = scsptr.(bool)
+					if success {
+						localar.Status = "Done"
+					} else {
+						localar.Status = "Failed"
+					}
+				}
+			}
+		}
+
+		o.SaveActionRequest(ctx.redispool, localar, 60 * 60)
+
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 	}
@@ -332,7 +366,21 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
 
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
 	tx := o.Begin(ctx.db)
+	
+	if !o.CheckBotOwner(tx, login, accountName) {
+		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+		return
+	}
+	
 	bot := o.GetBotByLogin(tx, login)
 
 	decoder := json.NewDecoder(r.Body)

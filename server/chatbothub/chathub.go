@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type ErrorHandler struct {
@@ -73,6 +74,7 @@ const (
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
+	ACTIONREPLY   string = "ACTIONREPLY"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -241,6 +243,38 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("LOGOUTDONE %v", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
 
+			case ACTIONREPLY:
+				hub.Info("ACTIONREPLY %v", in)
+				if bot.ClientType == WECHATBOT {
+					body := o.FromJson(in.Body)
+					var actionString string
+					var actionRequestId string
+					var result string
+					if body != nil {
+						actionString = o.FromMapString("body", body, "evnetRequest.body", false, "")
+						result = o.FromMapString("result", body, "evnetRequest.body", false, "")
+					}
+
+					if o.Err == nil {
+						actionBody := o.FromJson(actionString)
+						if actionBody != nil {
+							actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+						}
+					}					
+					
+					if o.Err == nil {
+						go func() {
+							bot.WebNotifyRetry("actionReply", o.ToJson(domains.ActionRequest{
+								ActionRequestId: actionRequestId,
+								Result: result,
+								ReplyAt: utils.JSONTime{Time: time.Now()},
+							}), 5, 1)
+						}()
+					}
+										
+				}
+				
+
 			case MESSAGE:
 				if bot.ClientType == WECHATBOT {
 					if bot.filter != nil {
@@ -370,7 +404,7 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err == nil {
-		o.Err = bot.BotAction(req.ActionType, req.ActionBody)
+		o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
 	}
 	
 	if o.Err != nil {

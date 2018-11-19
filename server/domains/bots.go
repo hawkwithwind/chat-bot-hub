@@ -133,3 +133,23 @@ WHERE login=?
 		return nil
 	}
 }
+
+func (o *ErrorHandler) CheckBotOwner(q dbx.Queryable, login string, accountName string) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT b.*
+FROM bots as b 
+LEFT JOIN accounts as a on b.accountid = a.accountid
+WHERE a.accountname=? 
+  AND b.login=?
+  AND a.deleteat is NULL
+  AND b.deleteat is NULL`, accountName, login)
+
+	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
+}
