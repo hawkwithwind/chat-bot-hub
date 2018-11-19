@@ -29,12 +29,17 @@
 	  <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
 	  <td style="text-align:left;width:240px">{{ row.clientId }}</td>
 	  <td style="width:160px">
-	    <span ng-if="row.clientType == 'QQBOT'">
-	      <a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>
+	    <span ng-if="row.status!=200">
+	      <span ng-if="row.clientType == 'QQBOT'">
+		<a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>
+	      </span>
+	      <span ng-if="row.clientType == 'WECHATBOT'">
+		<a href="javascript:;" ng-click="wechatLogin(row)">扫码登录</a> |
+		<a href="javascript:;" ng-click="showWechatLogin(row)">密码登录</a>
+	      </span>
 	    </span>
-	    <span ng-if="row.clientType == 'WECHATBOT'">
-	      <a href="javascript:;" ng-click="wechatLogin(row)">扫码登录</a> |
-	      <a href="javascript:;" ng-click="showWechatLogin(row)">密码登录</a>
+	    <span ng-if="row.status==200">
+	      <a href="javascript:;" ng-click="botAction(row)">发消息</a>
 	    </span>
 	  </td>
 	</tr>
