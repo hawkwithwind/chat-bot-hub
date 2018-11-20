@@ -161,6 +161,8 @@
     let url = "/botaction/" + $scope.data.login;
     
     $scope.sendAction = function(data) {
+      console.log(data);
+      
       $http({
 	method: 'POST',
 	url: url,
