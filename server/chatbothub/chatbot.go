@@ -295,7 +295,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	bodym := o.FromJson(body)
 	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 	content := o.FromMapString("content", bodym, "actionbody", false, "")
-	atList := o.FromMap("atList", bodym, "actionbody", []string{}).([]string)
+	atList := o.FromMap("atList", bodym, "actionbody", []string{}).([]interface{})
 
 	if o.Err == nil {
 		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
