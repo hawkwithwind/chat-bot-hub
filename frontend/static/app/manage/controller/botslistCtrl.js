@@ -158,7 +158,7 @@
       $uibModalInstance.dismiss();
     }
 
-    let url = "/botaction/" + $scope.data.login + "/notify";
+    let url = "/botaction/" + $scope.data.login;
     
     $scope.sendAction = function(data) {
       $http({
