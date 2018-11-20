@@ -74,6 +74,7 @@ const (
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
+	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
 )
 
@@ -146,7 +147,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			thebot := hub.GetBot(in.ClientId)
 			if thebot != nil {
 				ts := time.Now().UnixNano() / 1e6
-				pong := pb.EventReply{EventType: "PONG", Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
+				pong := pb.EventReply{EventType: PONG, Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
 				if err := tunnel.Send(&pong); err != nil {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
@@ -379,7 +380,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		})
 		
 		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType:  "LOGIN",
+			EventType:  LOGIN,
 			ClientType: req.ClientType,
 			ClientId:   req.ClientId,
 			Body:       body,

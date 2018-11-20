@@ -307,7 +307,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 		}
 		
 		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType: "BotAction",
+			EventType: BOTACTION,
 			ClientType: bot.ClientType,
 			ClientId: bot.ClientId,
 			Body: o.ToJson(actionm),
