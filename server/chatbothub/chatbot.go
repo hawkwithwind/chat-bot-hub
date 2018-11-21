@@ -61,6 +61,11 @@ type ChatBot struct {
 	logger     *log.Logger
 }
 
+const (
+	AddFriend          string = "AddFriend"
+	SendTextMessage    string = "SendTextMessage"
+)
+
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
 	bot.logger.Printf(msg, v...)
 }
@@ -297,13 +302,19 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	content := o.FromMapString("content", bodym, "actionbody", false, "")
 	atList := o.FromMap("atList", bodym, "actionbody", []interface{}{}).([]interface{})
 
+	bodyjson := o.ToJson(map[string]interface{} {
+		"toUserName": toUserName,
+		"content": content,
+		"atList": atList,
+	})
+
 	if o.Err == nil {
 		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 
 		actionm := map[string]interface{} {
 			"actionRequestId": arId,
-			"actionType": "SendTextMessage",
-			"body": body,
+			"actionType": SendTextMessage,
+			"body": bodyjson,
 		}
 		
 		o.sendEvent(bot.tunnel, &pb.EventReply{

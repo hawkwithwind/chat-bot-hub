@@ -248,31 +248,30 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("ACTIONREPLY %v", in)
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
-					var actionString string
+					var actionBody map[string]interface{}
+					var result map[string]interface{}
 					var actionRequestId string
-					var result string
+					
 					if body != nil {
-						actionString = o.FromMapString("body", body, "evnetRequest.body", false, "")
-						result = o.FromMapString("result", body, "evnetRequest.body", false, "")
-					}
-
-					if o.Err == nil {
-						actionBody := o.FromJson(actionString)
-						if actionBody != nil {
-							actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+						if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
+							actionBody = abptr.(map[string]interface{})
 						}
-					}					
+						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
+							result = rptr.(map[string]interface{})
+						}
+						
+						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+					}
 					
 					if o.Err == nil {
 						go func() {
 							bot.WebNotifyRetry("actionReply", o.ToJson(domains.ActionRequest{
 								ActionRequestId: actionRequestId,
-								Result: result,
+								Result: o.ToJson(result),
 								ReplyAt: utils.JSONTime{Time: time.Now()},
 							}), 5, 1)
 						}()
 					}
-										
 				}
 				
 
