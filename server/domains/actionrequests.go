@@ -136,11 +136,13 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	arstr := o.ToJson(ar)
 
 	//o.RedisSend(conn, "MULTI")
-	conn.Send("MULTI")
-	o.RedisSend(conn, "SET", key, arstr)
-	o.RedisSend(conn, "EXPIRE", key, dayExpire)
-	o.RedisSend(conn, "SET", hourkey, arstr)
-	o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
+	if o.Err == nil {o.Err = conn.Send("MULTI")}
+	//o.RedisSend(conn, "SET", key, arstr)
+	if o.Err == nil {o.Err = conn.Send("SET", key, arstr)}
+	//o.RedisSend(conn, "EXPIRE", key, dayExpire)
+	if o.Err == nil {o.Err = conn.Send("EXPIRE", key, dayExpire)}
+	//o.RedisSend(conn, "SET", hourkey, arstr)
+	//o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
 	o.RedisDo(conn, timeout, "EXEC")
 }
 
