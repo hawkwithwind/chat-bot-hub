@@ -3,7 +3,6 @@ package domains
 import (
 	"fmt"
 	"time"
-	"reflect"
 	"encoding/json"
 	
 	"github.com/gomodule/redigo/redis"
@@ -85,6 +84,52 @@ func (o *ErrorHandler) RedisSend(conn redis.Conn, cmd string, args ...interface{
 	o.Err = conn.Send(cmd, args...)
 }
 
+func (o *ErrorHandler) RedisValue(reply interface {}) []interface{} {
+	if o.Err != nil {
+		return nil
+	}
+	
+	switch reply := reply.(type) {
+	case []interface{}:
+		return reply
+	case nil:
+		o.Err = fmt.Errorf("redis nil returned")
+		return nil
+	case redis.Error:
+		o.Err = reply
+		return nil
+	}
+
+	if o.Err == nil {
+		o.Err = fmt.Errorf("redis: unexpected type for Values, got type %T", reply)
+	}
+	return nil
+}
+
+func (o *ErrorHandler) RedisString(reply interface {}) string {
+	if o.Err != nil {
+		return ""
+	}
+	
+	switch reply := reply.(type) {
+	case []byte:
+		return string(reply)
+	case string:
+		return reply
+	case nil:
+		o.Err = fmt.Errorf("redis nil returned")
+		return ""
+	case redis.Error:
+		o.Err = reply
+		return ""
+	}
+
+	if o.Err == nil {
+		o.Err = fmt.Errorf("redis: unexpected type for String, got type %T", reply)
+	}
+	return ""
+}
+
 func (o *ErrorHandler) RateLimit(pool *redis.Pool, ar *ActionRequest) int {
 	if o.Err != nil {
 		return 0
@@ -96,20 +141,18 @@ func (o *ErrorHandler) RateLimit(pool *redis.Pool, ar *ActionRequest) int {
 	conn := pool.Get()
 	defer conn.Close()
 
-	key := "0"
+	key  := "0"
 	count := 0
 	for true {
-		ret := o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000)
-		fmt.Printf("redis scan returned %v %v\n", ret, reflect.ValueOf(ret).Type())
-		retlist := ret.([]interface{})
-		keyptr := retlist[0]
-		fmt.Printf("redis scan[0] %v %v\n", keyptr, reflect.ValueOf(keyptr).Type())
-		key = keyptr.(string)
-
-		payload := retlist[1]
-		fmt.Printf("redis scan[1] %v %v\n", payload, reflect.ValueOf(payload).Type())
-
-		resultlist := payload.([]interface{})
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err == nil {
+			if len(ret) != 2 {
+				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
+			}
+		}
+		key = o.RedisString(ret[0])
+		resultlist := o.RedisValue(ret[1])
+		
 		count += len(resultlist)
 		
 		if key == "0" {
