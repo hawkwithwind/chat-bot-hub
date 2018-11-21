@@ -7,6 +7,7 @@ import (
 	"time"
 	"math"
 	"net/http"
+	"encoding/json"
 
 	"github.com/getsentry/raven-go"
 
@@ -62,7 +63,8 @@ type ChatBot struct {
 }
 
 const (
-	AddFriend          string = "AddFriend"
+	AddContact         string = "AddContact"
+	AcceptUser         string = "AcceptUser"
 	SendTextMessage    string = "SendTextMessage"
 )
 
@@ -177,7 +179,7 @@ type BrandList struct {
 	Ver   string `xml:"ver,attr" json:"ver"`
 }
 
-type Msg struct {
+type WechatFriendRequest struct {
 	FromUserName     string    `xml:"fromusername,attr" json:"fromUserName"`
 	EncryptUserName  string    `xml:"encryptusername,attr" json:"encryptUserName"`
 	FromNickName     string    `xml:"fromnickname,attr" json:"fromNickName"`
@@ -222,7 +224,7 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 		content := o.FromMap("content", bodydata, "body", nil)
 
 		if content != nil {
-			var msg Msg
+			var msg WechatFriendRequest
 			o.FromXML(content.(string), &msg)
 			msgstr := o.ToJson(&msg)
 			return msgstr, o.Err
@@ -275,9 +277,11 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 	var err error
 	
 	switch actionType {
-	case "AddFriend":
-		err = bot.AddFriend(arId, body)
-	case "SendTextMessage":
+	case AddContact:
+		err = bot.AddContact(arId, body)
+	case AcceptUser:
+		err = bot.AcceptUser(arId, body)
+	case SendTextMessage:
 		err = bot.SendTextMessage(arId, body)
 	default:
 		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
@@ -290,39 +294,68 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 	}
 }
 
-func (bot *ChatBot) AddFriend(arId string, body string) error {
+func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, body string) {
+	if o.Err != nil {
+		return
+	}
+	
+	actionm := map[string]interface{} {
+		"actionRequestId": arId,
+		"actionType": actionType,
+		"body": body,
+	}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType: BOTACTION,
+		ClientType: bot.ClientType,
+		ClientId: bot.ClientId,
+		Body: o.ToJson(actionm),
+	})
+}
+
+func (bot *ChatBot) AcceptUser(arId string, body string) error {
+	o := &ErrorHandler{}
+	
+	if bot.ClientType == "WECHATBOT" {
+		var msg WechatFriendRequest
+		o.Err = json.Unmarshal([]byte(body), &msg)
+		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
+		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{} {
+			"stranger": msg.EncryptUserName,
+			"ticket": msg.Ticket,
+		}))
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AcceptUser)
+	}
+
+	if o.Err != nil {
+		return o.Err
+	} else {
+		return nil
+	}
+}
+
+func (bot *ChatBot) AddContact(arId string, body string) error {
 	return nil
 }
 
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
-	bodym := o.FromJson(body)
-	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-	content := o.FromMapString("content", bodym, "actionbody", false, "")
-	atList := o.FromMap("atList", bodym, "actionbody", []interface{}{}).([]interface{})
+	if bot.ClientType == "WECHATBOT" {
+		bodym := o.FromJson(body)
+		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+		content := o.FromMapString("content", bodym, "actionbody", false, "")
+		atList := o.FromMap("atList", bodym, "actionbody", []interface{}{}).([]interface{})
 
-	bodyjson := o.ToJson(map[string]interface{} {
-		"toUserName": toUserName,
-		"content": content,
-		"atList": atList,
-	})
-
-	if o.Err == nil {
 		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
-
-		actionm := map[string]interface{} {
-			"actionRequestId": arId,
-			"actionType": SendTextMessage,
-			"body": bodyjson,
-		}
-		
-		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType: BOTACTION,
-			ClientType: bot.ClientType,
-			ClientId: bot.ClientId,
-			Body: o.ToJson(actionm),
-		})
+		o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{} {
+			"toUserName": toUserName,
+			"content": content,
+			"atList": atList,
+		}))	
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendTextMessage)
 	}
 
 	if o.Err != nil {
