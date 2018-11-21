@@ -267,7 +267,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		o.SaveActionRequest(ctx.redispool, localar, 60 * 60)
+		o.SaveActionRequest(ctx.redispool, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
@@ -417,8 +417,11 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	o.SaveActionRequest(ctx.redispool, ar, 60 * 60)	
+	o.SaveActionRequest(ctx.redispool, ar)
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
+
+	count := o.RateLimit(ctx.redispool, ar)
+	ctx.Info("RateLimit %d", count)
 
 	o.ok(w, "", actionReply)
 }
