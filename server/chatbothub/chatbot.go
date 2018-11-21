@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
-	"math"
-	"net/http"
+	"time"	
 	"encoding/json"
 
 	"github.com/getsentry/raven-go"
@@ -237,40 +235,11 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 }
 
 
-func (bot *ChatBot) WebNotify(event string, body string) (*httpx.RestfulResponse, error) {
-	o := &ErrorHandler{}
-
+func (bot *ChatBot) WebNotifyRequest(event string, body string) *httpx.RestfulRequest {
 	rr := httpx.NewRestfulRequest("post", bot.NotifyUrl)
 	rr.Params["event"] = event
 	rr.Params["body"] = body
-	resp := o.RestfulCall(rr)
-
-	if o.Err != nil {
-		bot.Error(o.Err, "WEBNOTIFY %v failed", rr)
-	}
-	return resp, o.Err
-}
-
-func (bot *ChatBot) WebNotifyRetry(event string, body string,
-	retryTimes int, sleepSeconds int) (*httpx.RestfulResponse, error) {
-
-	var resp *httpx.RestfulResponse
-	var err error
-
-	for i := 0; i < retryTimes; i = i + 1 {
-		resp, err = bot.WebNotify(event, body)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			return resp, nil
-		} else {
-			if err == nil && resp.StatusCode != http.StatusOK {
-				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
-			}
-			bot.Error(err, "WEB NOTIFY FAILED")
-			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
-		}
-	}
-
-	return nil, err
+	return rr
 }
 
 func (bot *ChatBot) BotAction(arId string, actionType string, body string) error {

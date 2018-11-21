@@ -14,6 +14,8 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 )
 
 type GRPCWrapper struct {
@@ -126,6 +128,13 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "body:\n%v\n", r.Body)
 }
 
+func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
+	rr := httpx.NewRestfulRequest("post", bot.Callback.String)
+	rr.Params["event"] = event
+	rr.Params["body"] = body
+	return rr
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -166,7 +175,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch eventType {
-	case "updateToken":
+	case chatbothub.UPDATETOKEN:
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
 			localmap["token"] = tokenptr.(string)
 		}
@@ -174,7 +183,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
 
-	case "loginDone":
+	case chatbothub.LOGINDONE:
 		var oldtoken string
 		var oldwxdata string
 		if oldtokenptr, ok := ifmap["token"]; ok {
@@ -202,7 +211,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
-	case "friendRequest":
+	case chatbothub.FRIENDREQUEST:
 		reqstr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, reqstr)
 		rlogin := ""
@@ -217,9 +226,17 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 		fr := o.NewFriendRequest(bot.BotId, login, rlogin, reqstr, "NEW")
 		o.SaveFriendRequest(tx, fr)
+
+		go func() {
+			eh := &ErrorHandler{}
+			if bot.Callback.Valid {
+				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(fr)), 5, 1)
+			}
+		}()
+		
 		ctx.Info("save friend request %v", fr)
 
-	case "actionReply":
+	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, reqstr)
 
@@ -251,6 +268,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		o.SaveActionRequest(ctx.redispool, localar, 60 * 60)
+
+		go func() {
+			eh := &ErrorHandler{}
+			if bot.Callback.Valid {
+				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1)
+			}
+		}()
 
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)

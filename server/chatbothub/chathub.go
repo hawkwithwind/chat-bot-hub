@@ -17,6 +17,7 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ErrorHandler struct {
@@ -197,7 +198,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 					if o.Err == nil {
 						go func() {
-							thebot.WebNotifyRetry("loginDone", "", 5, 1)
+							httpx.RestfulCallRetry(thebot.WebNotifyRequest(LOGINDONE, ""), 5, 1)
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
@@ -223,7 +224,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				if o.Err == nil {
 					go func() {
-						thebot.WebNotifyRetry("updateToken", "", 5, 1)
+						httpx.RestfulCallRetry(thebot.WebNotifyRequest(UPDATETOKEN, ""), 5, 1)
 					}()
 				}
 			
@@ -232,7 +233,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
 					go func() {
-						bot.WebNotifyRetry("friendRequest", reqstr, 5, 1)
+						httpx.RestfulCallRetry(bot.WebNotifyRequest(FRIENDREQUEST, reqstr), 5, 1)
 					}()
 				}
 			
@@ -265,11 +266,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					
 					if o.Err == nil {
 						go func() {
-							bot.WebNotifyRetry("actionReply", o.ToJson(domains.ActionRequest{
-								ActionRequestId: actionRequestId,
-								Result: o.ToJson(result),
-								ReplyAt: utils.JSONTime{Time: time.Now()},
-							}), 5, 1)
+							httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(ACTIONREPLY, o.ToJson(domains.ActionRequest{
+									ActionRequestId: actionRequestId,
+									Result: o.ToJson(result),
+									ReplyAt: utils.JSONTime{Time: time.Now()},
+								})), 5, 1)
 						}()
 					}
 				}

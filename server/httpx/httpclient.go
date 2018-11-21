@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"time"
+	"math"
 )
 
 type RestfulRequest struct {
@@ -221,3 +222,24 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		return nil, err
 	}
 }
+
+
+func RestfulCallRetry(req *RestfulRequest,	retryTimes int, sleepSeconds int) (*RestfulResponse, error) {
+	var resp *RestfulResponse
+	var err error
+
+	for i := 0; i < retryTimes; i = i + 1 {
+		resp, err = RestfulCall(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return resp, nil
+		} else {
+			if err == nil && resp.StatusCode != http.StatusOK {
+				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
+			}			
+			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
+		}
+	}
+
+	return nil, err
+}
+
