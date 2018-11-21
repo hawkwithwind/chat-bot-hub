@@ -126,9 +126,9 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	}
 
 	key := ar.redisKey()
-	hourkey := ar.redisHourKey()
+	//hourkey := ar.redisHourKey()
 	dayExpire := 24 * 60 * 60
-	hourExpire := 60 * 60
+	//hourExpire := 60 * 60
 
 	conn := pool.Get()
 	defer conn.Close()
