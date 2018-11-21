@@ -72,7 +72,7 @@ func (o *ErrorHandler) RedisDo(conn redis.Conn, timeout time.Duration,
 	}
 
 	var ret interface{}
-	ret, o.Err = redis.DoWithTimeout(conn, timeout, cmd, args)
+	ret, o.Err = redis.DoWithTimeout(conn, timeout, cmd, args...)
 
 	return ret
 }
@@ -82,7 +82,7 @@ func (o *ErrorHandler) RedisSend(conn redis.Conn, cmd string, args ...interface{
 		return
 	}
 
-	o.Err = conn.Send(cmd, args)
+	o.Err = conn.Send(cmd, args...)
 }
 
 func (o *ErrorHandler) RateLimit(pool *redis.Pool, ar *ActionRequest) int {
@@ -126,23 +126,20 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	}
 
 	key := ar.redisKey()
-	//hourkey := ar.redisHourKey()
+	hourkey := ar.redisHourKey()
 	dayExpire := 24 * 60 * 60
-	//hourExpire := 60 * 60
+	hourExpire := 60 * 60
 
 	conn := pool.Get()
 	defer conn.Close()
 
 	arstr := o.ToJson(ar)
 
-	//o.RedisSend(conn, "MULTI")
-	if o.Err == nil {o.Err = conn.Send("MULTI")}
-	//o.RedisSend(conn, "SET", key, arstr)
-	if o.Err == nil {o.Err = conn.Send("SET", key, arstr)}
-	//o.RedisSend(conn, "EXPIRE", key, dayExpire)
-	if o.Err == nil {o.Err = conn.Send("EXPIRE", key, dayExpire)}
-	//o.RedisSend(conn, "SET", hourkey, arstr)
-	//o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
+	o.RedisSend(conn, "MULTI")	
+	o.RedisSend(conn, "SET", key, arstr)	
+	o.RedisSend(conn, "EXPIRE", key, dayExpire)	
+	o.RedisSend(conn, "SET", hourkey, arstr)
+	o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
 	o.RedisDo(conn, timeout, "EXEC")
 }
 
