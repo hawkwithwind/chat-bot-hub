@@ -198,7 +198,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(thebot.WebNotifyRequest(LOGINDONE, ""), 5, 1)
+							req := thebot.WebNotifyRequest(LOGINDONE, "")
+							_, err := httpx.RestfulCallRetry(req, 5, 1)
+							if err != nil {
+								fmt.Printf("call %v failed %v\n", req)
+							}
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
