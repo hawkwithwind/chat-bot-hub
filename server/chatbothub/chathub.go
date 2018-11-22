@@ -196,12 +196,17 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(userName, wxData, token, notifyUrl)
 					}
+					hub.Info("1")
 					if o.Err == nil {
+						hub.Info("2")
 						go func() {
+							hub.Info("3")
 							req := thebot.WebNotifyRequest(LOGINDONE, "")
-							_, err := httpx.RestfulCallRetry(req, 5, 1)
+							hub.Info("4 %v", req)
+							resp, err := httpx.RestfulCallRetry(req, 5, 1)
+							hub.Info("5 %v %v", resp, err)
 							if err != nil {
-								fmt.Printf("call %v failed %v\n", req)
+								fmt.Printf("call %v failed %v\n", req, err)
 							}
 						}()
 					}
