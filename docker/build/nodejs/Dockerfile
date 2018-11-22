@@ -1,5 +1,8 @@
 FROM node:8-slim
-RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+ARG mirror=mirrors.ustc.edu.cn
+ADD modifysource.sh /home/scripts/modifysource.sh
+RUN /bin/bash /home/scripts/modifysource.sh $mirror
+RUN cat /etc/apt/sources.list
 RUN apt-get update
 
 ENV TZ=Asia/Shanghai
