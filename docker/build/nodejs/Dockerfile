@@ -1,15 +1,24 @@
-FROM node:8-alpine
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
-RUN apk add --no-cache --update ca-certificates apache2-utils
+FROM node:8-slim
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update
 
-RUN apk add --no-cache --update tzdata && \
-    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo 'Asia/Shanghai' > /etc/timezone
+ENV TZ=Asia/Shanghai
+RUN apt-get install -y tzdata
+RUN rm /etc/localtime && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
 
+RUN apt-get install -y libssl-dev libz-dev
+RUN apt-get install -y openssl
+
+RUN apt-get install -y locales && \
+    locale-gen && \
+    sed -i 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/g' /etc/locale.gen && \
+    locale-gen && update-locale
 ENV LANG="zh_CN.UTF-8"
-RUN echo "export LC_ALL=zh_CN.UTF-8" >> /etc/profile
+RUN locale -a
 
-RUN apk add --update nodejs-npm
+#RUN apt-get install -y nodejs-npm
 RUN npm config set registry=http://registry.npm.taobao.org
 RUN npm install --global gulp@4.0.0
 
