@@ -1,6 +1,9 @@
 FROM golang:1.11-alpine3.8
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+ARG mirror=mirrors.ustc.edu.cn
+ADD modifysource.sh /home/scripts/modifysource.sh
+RUN /bin/sh /home/scripts/modifysource.sh $mirror
+RUN cat /etc/apk/repositories
 RUN apk add --no-cache --update ca-certificates apache2-utils
 
 RUN apk add --no-cache --update tzdata && \

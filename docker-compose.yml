@@ -2,7 +2,11 @@ version: '3.4'
 
 x-defualts: &defaults
   restart: unless-stopped
-  build: docker/runtime
+  build:
+    context: docker/runtime
+    args:
+      - mirror=$alpine_mirror
+      
   depends_on:
     - redis
     - mysql

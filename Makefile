@@ -45,13 +45,13 @@ $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image bui
 #	docker build -t $(RUNTIME_IMAGE) docker/runtime
 
 build-migrate-image:
-	docker build -t $(RUNTIME_IMAGE):migrate docker/migrate
+	docker build --build-arg mirror=$(alpine_mirror) -t $(RUNTIME_IMAGE):migrate docker/migrate
 
 build-nodejs-image:
-	docker build -t $(RUNTIME_IMAGE):build-nodejs docker/build/nodejs
+	docker build --build-arg mirror=$(debian_mirror) -t $(RUNTIME_IMAGE):build-nodejs docker/build/nodejs
 
 build-golang-image:
-	docker build -t $(RUNTIME_IMAGE):build-golang docker/build/golang
+	docker build --build-arg mirror=$(alpine_mirror) -t $(RUNTIME_IMAGE):build-golang docker/build/golang
 
 $(RUNTIME_PATH):
 	[ -d $(RUNTIME_PATH) ] || mkdir $(RUNTIME_PATH) && \

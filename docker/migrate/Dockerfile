@@ -1,6 +1,9 @@
 FROM migrate/migrate
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+ARG mirror=mirrors.ustc.edu.cn
+ADD modifysource.sh /home/scripts/modifysource.sh
+RUN /bin/sh /home/scripts/modifysource.sh $mirror
+RUN cat /etc/apk/repositories
 
 RUN apk add --no-cache --update 'su-exec>=0.2'
 
