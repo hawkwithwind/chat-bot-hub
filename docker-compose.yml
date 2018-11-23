@@ -1,7 +1,9 @@
-version: '3.4'
+version: '3.5'
 
 x-defualts: &defaults
   restart: unless-stopped
+  networks:
+    - chatbothub-network
   build:
     context: docker/runtime
     args:
@@ -15,15 +17,16 @@ x-defualts: &defaults
     - ./config:/config
 
 services:
-  base:
-    build: docker/runtime
-    
   redis:
      restart: unless-stopped
+     networks:
+      - chatbothub-network
      image: redis:3.2-alpine
 
   mysql:
     restart: unless-stopped
+    networks:
+      - chatbothub-network
     image: mysql:8.0
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
@@ -46,4 +49,9 @@ services:
 volumes:
   chatbothub-mysql:
     external: true
+
+networks:
+  chatbothub-network:
+    name: chatbothub_default
+    
 
