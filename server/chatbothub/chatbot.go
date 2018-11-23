@@ -64,7 +64,7 @@ const (
 	AddContact         string = "AddContact"
 	AcceptUser         string = "AcceptUser"
 	SendTextMessage    string = "SendTextMessage"
-	CreateGroup        string = "CreateGroup"
+	CreateRoom         string = "CreateRoom"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -305,14 +305,14 @@ func (bot *ChatBot) AcceptUser(arId string, body string) error {
 	}
 }
 
-func (bot *ChatBot) CreateGroup(arId string) error {
+func (bot *ChatBot) CreateRoom(arId string) error {
 	o := &ErrorHandler{}
 	
 	if bot.ClientType == "WECHATBOT" {
-		bot.Info("Create Group")
-		o.SendAction(bot, arId, CreateGroup, "")
+		bot.Info("Create Room")
+		o.SendAction(bot, arId, CreateRoom, "")
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, CreateGroup)
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, CreateRoom)
 	}
 
 	if o.Err != nil {

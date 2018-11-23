@@ -105,7 +105,23 @@ func (f *PlainFilter) Fill(msg string) error {
 		brief = msg[:80]
 	}
 
-	f.logger.Printf("[%s] %s ...", f.Type, brief)
+	o := &ErrorHandler{}
+	body := o.FromJson(msg)
+	if body != nil {
+		content := o.FromMapString("content", body, "eventRequest.body", false, "")
+		status := o.FromMapString("status", body, "eventRequest.body", false, "")
+		timestamp := o.FromMapString("timestamp", body, "eventRequest.body", false, "")
+		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
+		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
+		brief = content
+		if len(content) > 80 {
+			brief = content[:80] + "..."
+		}
+		
+		f.logger.Printf("[%s] %s->%s (%s) %s %s", f.Type, fromUser, toUser, status, timestamp, brief)
+	} else {
+		f.logger.Printf("[%s] %s ...", f.Type, brief)
+	}
 
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
