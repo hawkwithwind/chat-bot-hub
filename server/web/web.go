@@ -38,8 +38,6 @@ type WebConfig struct {
 	Host         string
 	Port         string
 	Baseurl      string
-	User         string
-	Pass         string
 	SecretPhrase string
 	Redis        RedisConfig
 	Database     DatabaseConfig

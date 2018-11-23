@@ -333,7 +333,10 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		content := o.FromMapString("content", bodym, "actionbody", false, "")
-		atList := o.FromMap("atList", bodym, "actionbody", []interface{}{}).([]interface{})
+		var atList []interface{}
+		if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
+			atList = atListptr.([]interface{})
+		}
 
 		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 		o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{} {

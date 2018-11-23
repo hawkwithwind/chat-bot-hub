@@ -287,7 +287,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1)
+				if _, err := httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
+					ctx.Error(err, "callback failed")
+				}
 			}
 		}()
 

@@ -54,4 +54,3 @@ networks:
   chatbothub-network:
     name: chatbothub_default
     
-
