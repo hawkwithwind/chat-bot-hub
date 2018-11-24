@@ -107,12 +107,18 @@ func (f *PlainFilter) Fill(msg string) error {
 
 	o := &ErrorHandler{}
 	body := o.FromJson(msg)
+	if o.Err != nil {
+		f.logger.Printf("error %v", o.Err)
+	}	
 	if body != nil {
+		f.logger.Printf("%v", body)
+		
 		content := o.FromMapString("content", body, "eventRequest.body", false, "")
 		status := o.FromMapString("status", body, "eventRequest.body", false, "")
 		timestamp := o.FromMapString("timestamp", body, "eventRequest.body", false, "")
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
+		
 		brief = content
 		if len(content) > 80 {
 			brief = content[:80] + "..."
@@ -126,8 +132,8 @@ func (f *PlainFilter) Fill(msg string) error {
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
 	}
-
-	return nil
+	
+	return o.Err
 }
 
 type RegexRouter struct {
