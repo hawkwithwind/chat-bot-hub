@@ -125,8 +125,12 @@ func (f *PlainFilter) Fill(msg string) error {
 		if len(content) > 80 {
 			brief = content[:80] + "..."
 		}
-		
-		f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, status, brief)
+
+		if len(groupId) > 0 {
+			f.logger.Printf("[%s] %s [%s] %s->%s (%d) %s", f.Type, tm, groupId, fromUser, toUser, status, brief)
+		} else {
+			f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, status, brief)
+		}
 	} else {
 		f.logger.Printf("[%s] %s ...", f.Type, brief)
 	}
