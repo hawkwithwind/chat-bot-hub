@@ -94,7 +94,7 @@ func (f *PlainFilter) Fill(msg string) error {
 	body := o.FromJson(msg)
 	if body != nil {
 		contentptr := o.FromMap("content", body, "eventRequest.body", nil)
-				
+
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
 		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
@@ -111,15 +111,19 @@ func (f *PlainFilter) Fill(msg string) error {
 			}
 
 			if len(groupId) > 0 {
-				f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s", f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, int64(status), brief)
+				f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s",
+					f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, status, brief)
 			} else {
-				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), brief)
+				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s",
+					f.Name, f.Type, mtype, tm, fromUser, toUser, status, brief)
 			}
 		case map[string]interface{}:
-			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: %v", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), content)
-		default:			
-			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %T %v", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), content, content)
-		}			
+			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: %v",
+				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content)
+		default:
+			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %T %v",
+				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content, content)
+		}
 	} else {
 		f.logger.Printf("%s[%s] %s ...", f.Name, f.Type, brief)
 	}
