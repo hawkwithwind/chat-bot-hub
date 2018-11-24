@@ -335,7 +335,7 @@ func (bot *ChatBot) DeleteRoomMember(arId string, body string) error {
 		bodym := o.FromJson(body)
 		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
 		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
-		bot.Info("Delete Room Member %s from %s", groupId, memberId)
+		bot.Info("Delete Room Member %s from %s", memberId, groupId)
 
 		o.SendAction(bot, arId, DeleteRoomMember, o.ToJson(map[string]interface{}{
 			"groupId": groupId,

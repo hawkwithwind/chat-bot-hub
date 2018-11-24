@@ -58,21 +58,6 @@ func (f *WechatBaseFilter) Fill(msg string) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *WechatBaseFilter")
 	}
-	/*
-		body := o.fromJson(msg)
-
-		if body != nil {
-			content := o.fromMap("content", body, "eventRequest.body", nil)
-			//description := o.fromMap("description", body, "eventRequest.body", nil)
-			status := o.fromMap("status", body, "eventRequest.body", nil)
-			timestamp := o.fromMap("timestamp", body, "eventRequest.body", nil)
-			uin := o.fromMap("uin", body, "eventRequest.body", nil)
-			fromUser := o.fromMap("fromUser", body, "eventRequest.body", nil)
-			toUser := o.fromMap("toUser", body, "eventRequest.body", nil)
-			msgId := o.fromMap("msgId", body, "eventRequest.body", nil)
-			msgSource := o.fromMap("msgSource", body, "eventRequest.body", nil)
-		}
-	*/
 
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
@@ -98,7 +83,7 @@ func (f *PlainFilter) String() string {
 
 func (f *PlainFilter) Fill(msg string) error {
 	if f == nil {
-		return fmt.Errorf("call on empty *PlainFilter")
+		return fmt.Errorf("call on empty *TextPlainFilter")
 	}
 	brief := msg
 	if len(msg) > 80 {
@@ -112,9 +97,10 @@ func (f *PlainFilter) Fill(msg string) error {
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
 		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
-		status := o.FromMapFloat("status", body, "eventRequest.body", false, 0)
-		timestamp := o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0)
-		tm := o.BJTimeFromUnix(int64(timestamp))
+		status := int64(o.FromMapFloat("status", body, "eventRequest.body", false, 0))
+		timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
+		tm := o.BJTimeFromUnix(timestamp)
+		mtype := int64(o.FromMapFloat("mtype", body, "eventRequest.body", false, 0))
 
 		brief = content
 		if len(content) > 60 {
@@ -122,12 +108,12 @@ func (f *PlainFilter) Fill(msg string) error {
 		}
 
 		if len(groupId) > 0 {
-			f.logger.Printf("[%s] %s [%s] %s->%s (%d) %s", f.Type, tm, groupId, fromUser, toUser, int64(status), brief)
+			f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s", f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, int64(status), brief)
 		} else {
-			f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, int64(status), brief)
+			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), brief)
 		}
 	} else {
-		f.logger.Printf("[%s] %s ...", f.Type, brief)
+		f.logger.Printf("%s[%s] %s ...", f.Name, f.Type, brief)
 	}
 
 	if f.NextFilter != nil {
