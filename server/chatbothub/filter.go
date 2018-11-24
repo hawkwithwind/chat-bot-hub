@@ -113,24 +113,20 @@ func (f *PlainFilter) Fill(msg string) error {
 		f.logger.Printf("error %v", o.Err)
 	}	
 	if body != nil {
-		f.logger.Printf("%v", body)
-		
-		content := o.FromMapString("content", body, "eventRequest.body", false, "")		
-		timestamp := o.FromMapString("timestamp", body, "eventRequest.body", false, "")
+		content := o.FromMapString("content", body, "eventRequest.body", false, "")
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
-		
-		var status int
-		if statusptr := o.FromMap("status", body, "eventRequest.body", nil); statusptr != nil {
-			status = statusptr.(int)
-		}
+		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
+		status := o.FromMapInt("status", body, "eventRequest.body", false, 0)
+		timestamp := o.FromMapInt("timestamp", body, "eventRequest.body", false, 0)
+		tm := o.BJTimeFromUnix(timestamp)
 		
 		brief = content
 		if len(content) > 80 {
 			brief = content[:80] + "..."
 		}
 		
-		f.logger.Printf("[%s] %s->%s (%d) %s %s", f.Type, fromUser, toUser, status, timestamp, brief)
+		f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, status, brief)
 	} else {
 		f.logger.Printf("[%s] %s ...", f.Type, brief)
 	}

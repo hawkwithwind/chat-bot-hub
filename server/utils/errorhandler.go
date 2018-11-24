@@ -5,12 +5,29 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ErrorHandler struct {
 	Err error
+}
+
+func (ctx *ErrorHandler) BJTimeFromUnix(timestamp int64) time.Time {
+	if ctx.Err != nil {
+		return time.Unix(0, 0)
+	}
+
+	tm := time.Unix(timestamp, 0)
+
+	var loc *time.Location
+	loc, ctx.Err = time.LoadLocation("Asia/Chongqing")
+	if ctx.Err == nil {
+		return tm.In(loc)
+	}
+
+	return time.Unix(0, 0)
 }
 
 func (ctx *ErrorHandler) ParseInt(s string, base int, bitsize int) int64 {
@@ -89,6 +106,31 @@ func (ctx *ErrorHandler) FromMap(key string, m map[string]interface{}, objname s
 			return defValue
 		}
 	}
+}
+
+func (ctx *ErrorHandler) FromMapInt(key string, m map[string]interface{}, objname string, haveDefault bool, defValue int64) int64 {
+	if ctx.Err != nil {
+		return 0
+	}
+
+	if v, found := m[key]; found {
+		switch v.(type) {
+		case int:
+			return int64(v.(int))
+		case int64:
+			return v.(int64)
+		default:
+			ctx.Err = fmt.Errorf("%s[%s] is not int", objname, key)
+		}		
+	} else {
+		if !haveDefault {
+			ctx.Err = fmt.Errorf("%s should have key %s", objname, key)
+		} else {
+			return defValue
+		}
+	}
+
+	return 0
 }
 
 func (ctx *ErrorHandler) FromMapString(key string, m map[string]interface{}, objname string, haveDefault bool, defValue string) string {
