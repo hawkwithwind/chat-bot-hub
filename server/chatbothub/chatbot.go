@@ -339,7 +339,7 @@ func (bot *ChatBot) DeleteRoomMember(arId string, body string) error {
 		
 		o.SendAction(bot, arId, DeleteRoomMember, o.ToJson(map[string]interface{}{
 			"groupId": groupId,
-			"memberId": memberId,
+			"userId": memberId,
 		}))
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, DeleteRoomMember)

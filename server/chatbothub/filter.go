@@ -124,7 +124,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		if len(groupId) > 0 {
 			f.logger.Printf("[%s] %s [%s] %s->%s (%d) %s", f.Type, tm, groupId, fromUser, toUser, int64(status), brief)
 		} else {
-			f.logger.Printf("[%s] %s %s->%s (%d) %f", f.Type, tm, fromUser, toUser, int64(status), brief)
+			f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, int64(status), brief)
 		}
 	} else {
 		f.logger.Printf("[%s] %s ...", f.Type, brief)
