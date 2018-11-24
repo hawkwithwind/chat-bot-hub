@@ -22,7 +22,7 @@ type Bot struct {
 	Callback    sql.NullString `db:"callback"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
-	DeleteAt    mysql.NullTime `db:"deleteat"`	
+	DeleteAt    mysql.NullTime `db:"deleteat"`
 }
 
 func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {

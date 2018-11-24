@@ -64,7 +64,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
-		
+
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)

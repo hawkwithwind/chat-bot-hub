@@ -10,9 +10,9 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"strings"
 	"time"
-	"math"
 )
 
 type RestfulRequest struct {
@@ -223,8 +223,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	}
 }
 
-
-func RestfulCallRetry(req *RestfulRequest,	retryTimes int, sleepSeconds int) (*RestfulResponse, error) {
+func RestfulCallRetry(req *RestfulRequest, retryTimes int, sleepSeconds int) (*RestfulResponse, error) {
 	var resp *RestfulResponse
 	var err error
 
@@ -235,11 +234,10 @@ func RestfulCallRetry(req *RestfulRequest,	retryTimes int, sleepSeconds int) (*R
 		} else {
 			if err == nil && resp.StatusCode != http.StatusOK {
 				err = fmt.Errorf("web notify response not OK\nresponse: \n%v", resp)
-			}			
+			}
 			time.Sleep(time.Duration(math.Round(math.Exp2(float64(i)))) * time.Second)
 		}
 	}
 
 	return nil, err
 }
-

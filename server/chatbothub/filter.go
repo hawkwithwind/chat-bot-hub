@@ -106,7 +106,7 @@ func (f *PlainFilter) Fill(msg string) error {
 	}
 
 	o := &ErrorHandler{}
-	body := o.FromJson(msg)	
+	body := o.FromJson(msg)
 	if body != nil {
 		content := o.FromMapString("content", body, "eventRequest.body", false, "")
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
@@ -115,7 +115,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		status := o.FromMapFloat("status", body, "eventRequest.body", false, 0)
 		timestamp := o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0)
 		tm := o.BJTimeFromUnix(int64(timestamp))
-		
+
 		brief = content
 		if len(content) > 60 {
 			brief = content[:60] + "..."
@@ -133,7 +133,7 @@ func (f *PlainFilter) Fill(msg string) error {
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
 	}
-	
+
 	return o.Err
 }
 

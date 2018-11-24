@@ -2,10 +2,10 @@ package web
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
-	"encoding/json"
 
 	grctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
-	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 )
 
 type GRPCWrapper struct {
@@ -26,19 +26,46 @@ type GRPCWrapper struct {
 }
 
 var (
+	minuteDefaultLimit int = 12
+
 	dayLimit map[string]int = map[string]int{
-		chatbothub.AcceptUser: 200,		
+		chatbothub.AddContact:    100,
+		chatbothub.AcceptUser:    200,
+		chatbothub.CreateRoom:    10,
+		chatbothub.AddRoomMember: 200,
 	}
 
 	hourLimit map[string]int = map[string]int{
-		chatbothub.AcceptUser: 60,
+		chatbothub.AddContact:    20,
+		chatbothub.CreateRoom:    2,
+		chatbothub.AddRoomMember: 60,
 	}
 
 	minuteLimit map[string]int = map[string]int{
-		chatbothub.SendTextMessage: 12,
+		chatbothub.AddContact: 1,
 		chatbothub.AcceptUser: 1,
+		chatbothub.CreateRoom: 1,
 	}
 )
+
+func (o *ErrorHandler) GetRateLimit(actionType string) (int, int, int) {
+	minlimit := minuteDefaultLimit
+	if mlimit, ok := minuteLimit[actionType]; ok {
+		minlimit = mlimit
+	}
+
+	hourlimit := minlimit * 60
+	if hlimit, ok := hourLimit[actionType]; ok {
+		hourlimit = hlimit
+	}
+
+	daylimit := hourlimit * 24
+	if dlimit, ok := dayLimit[actionType]; ok {
+		daylimit = dlimit
+	}
+
+	return daylimit, hourlimit, minlimit
+}
 
 func (w *GRPCWrapper) Cancel() {
 	if w == nil {
@@ -119,7 +146,6 @@ func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb
 		return actionreply
 	}
 }
-
 
 func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
 	for _, bot := range bots {
@@ -248,7 +274,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(fr)), 5, 1)
 			}
 		}()
-		
+
 		ctx.Info("save friend request %v", fr)
 
 	case chatbothub.ACTIONREPLY:
@@ -364,8 +390,8 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	botId := o.getStringValue(r.Form, "botId")
 	clientType := o.getStringValue(r.Form, "clientType")
-	
-	clientId := o.getStringValueDefault(r.Form, "clientId", "")	
+
+	clientId := o.getStringValueDefault(r.Form, "clientId", "")
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
 
@@ -415,17 +441,17 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx := o.Begin(ctx.db)
-	
+
 	if !o.CheckBotOwner(tx, login, accountName) {
 		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
 		return
 	}
-	
+
 	bot := o.GetBotByLogin(tx, login)
 
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
-    o.Err = decoder.Decode(&bodym)
+	o.Err = decoder.Decode(&bodym)
 
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
@@ -434,37 +460,28 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	dayCount, hourCount, minuteCount := o.ActionCount(ctx.redispool, ar)
 	ctx.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
 
-	if o.Err != nil {
+	daylimit, hourlimit, minutelimit := o.GetRateLimit(actionType)
+	if dayCount > daylimit {
+		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", login, actionType, daylimit)
 		return
 	}
-	
-	if daylc, ok := dayLimit[actionType]; ok {
-		if dayCount > daylc {
-			o.Err = fmt.Errorf("%s:%s exceeds day limit %d", login, actionType, daylc)
-			return
-		}
+
+	if hourCount > hourlimit {
+		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", login, actionType, hourlimit)
+		return
 	}
 
-	if hourlc, ok := hourLimit[actionType]; ok {
-		if hourCount > hourlc {
-			o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", login, actionType, hourlc)
-			return
-		}
+	if minuteCount > minutelimit {
+		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", login, actionType, minutelimit)
+		return
 	}
 
-	if minutelc, ok := minuteLimit[actionType]; ok {
-		if minuteCount > minutelc {
-			o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", login, actionType, minutelc)
-			return
-		}
-	}
-		
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	o.SaveActionRequest(ctx.redispool, ar)
-	
+
 	o.ok(w, "", actionReply)
 }
 

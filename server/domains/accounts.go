@@ -103,7 +103,7 @@ func (o *ErrorHandler) AccountValidateSecret(q dbx.Queryable, name string, secre
 
 	accounts := []Account{}
 	ctx, _ := o.DefaultContext()
-	
+
 	o.Err = q.SelectContext(ctx, &accounts,
 		"SELECT * FROM accounts WHERE accountname=? AND secret=? AND deleteat is NULL", name, secret)
 

@@ -1,22 +1,22 @@
 package domains
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-	"encoding/json"
-	
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ActionRequest struct {
 	ActionRequestId string         `json:"actionRequestId"`
 	Login           string         `json:"login"`
 	ActionType      string         `json:"actionType"`
-	ActionBody      string         `json:"actionBody"`	
+	ActionBody      string         `json:"actionBody"`
 	Status          string         `json:"status"`
 	Result          string         `json:"result"`
 	CreateAt        utils.JSONTime `json:"createAt"`
@@ -55,9 +55,7 @@ func (ar *ActionRequest) redisMinuteKeyPattern() string {
 	return fmt.Sprintf("ARMINUTE:%s:%s:*", ar.Login, ar.ActionType)
 }
 
-
-func (o *ErrorHandler) NewActionRequest(login string, actiontype string,
-	actionbody string, status string) *ActionRequest {
+func (o *ErrorHandler) NewActionRequest(login string, actiontype string, actionbody string, status string) *ActionRequest {
 	if o.Err != nil {
 		return nil
 	}
@@ -97,11 +95,11 @@ func (o *ErrorHandler) RedisSend(conn redis.Conn, cmd string, args ...interface{
 	o.Err = conn.Send(cmd, args...)
 }
 
-func (o *ErrorHandler) RedisValue(reply interface {}) []interface{} {
+func (o *ErrorHandler) RedisValue(reply interface{}) []interface{} {
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	switch reply := reply.(type) {
 	case []interface{}:
 		return reply
@@ -119,11 +117,11 @@ func (o *ErrorHandler) RedisValue(reply interface {}) []interface{} {
 	return nil
 }
 
-func (o *ErrorHandler) RedisString(reply interface {}) string {
+func (o *ErrorHandler) RedisString(reply interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
-	
+
 	switch reply := reply.(type) {
 	case []byte:
 		return string(reply)
@@ -147,8 +145,8 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	if o.Err != nil {
 		return 0
 	}
-	
-	key  := "0"
+
+	key := "0"
 	count := 0
 	for true {
 		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
@@ -160,9 +158,9 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 		}
 		key = o.RedisString(ret[0])
 		resultlist := o.RedisValue(ret[1])
-		
+
 		count += len(resultlist)
-		
+
 		if key == "0" {
 			break
 		}
@@ -205,7 +203,7 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 
 	arstr := o.ToJson(ar)
 
-	o.RedisSend(conn, "MULTI")	
+	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
 	o.RedisSend(conn, "EXPIRE", key, keyExpire)
 	o.RedisSend(conn, "SET", daykey, "1")
@@ -245,9 +243,8 @@ func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRe
 func (ar *ActionRequest) ToBotActionRequest() *pb.BotActionRequest {
 	return &pb.BotActionRequest{
 		ActionRequestId: ar.ActionRequestId,
-		Login: ar.Login,
-		ActionType: ar.ActionType,
-		ActionBody: ar.ActionBody,
+		Login:           ar.Login,
+		ActionType:      ar.ActionType,
+		ActionBody:      ar.ActionBody,
 	}
 }
-

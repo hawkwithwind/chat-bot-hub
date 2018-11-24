@@ -1,14 +1,14 @@
 package chatbothub
 
-import (	
+import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net"	
+	"net"
 	"os"
 	"sync"
 	"time"
-	"encoding/json"
 
 	"github.com/getsentry/raven-go"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -16,9 +16,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
@@ -232,7 +232,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 					}()
 				}
-			
+
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
@@ -243,7 +243,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 					}()
 				}
-			
+
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
@@ -259,7 +259,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var actionBody map[string]interface{}
 					var result map[string]interface{}
 					var actionRequestId string
-					
+
 					if body != nil {
 						if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
 							actionBody = abptr.(map[string]interface{})
@@ -267,22 +267,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
 							result = rptr.(map[string]interface{})
 						}
-						
+
 						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
 					}
-					
+
 					if o.Err == nil {
 						go func() {
 							httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(ACTIONREPLY, o.ToJson(domains.ActionRequest{
 									ActionRequestId: actionRequestId,
-									Result: o.ToJson(result),
-									ReplyAt: utils.JSONTime{Time: time.Now()},
+									Result:          o.ToJson(result),
+									ReplyAt:         utils.JSONTime{Time: time.Now()},
 								})), 5, 1)
 						}()
 					}
 				}
-				
 
 			case MESSAGE:
 				if bot.ClientType == WECHATBOT {
@@ -385,12 +384,12 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		}
 
 		body := o.ToJson(LoginBody{
-			Login: req.Login,
-			Password: req.Password,
+			Login:     req.Login,
+			Password:  req.Password,
 			LoginInfo: req.LoginInfo,
 			NotifyUrl: req.NotifyUrl,
 		})
-		
+
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  LOGIN,
 			ClientType: req.ClientType,
@@ -419,7 +418,7 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	if o.Err == nil {
 		o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
 	}
-	
+
 	if o.Err != nil {
 		return &pb.BotActionReply{Success: false, Msg: fmt.Sprintf("Action failed %s", o.Err.Error())}, nil
 	} else {
