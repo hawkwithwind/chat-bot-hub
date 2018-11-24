@@ -117,19 +117,19 @@ func (f *PlainFilter) Fill(msg string) error {
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
 		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
-		status := o.FromMapInt("status", body, "eventRequest.body", false, 0)
-		timestamp := o.FromMapInt("timestamp", body, "eventRequest.body", false, 0)
-		tm := o.BJTimeFromUnix(timestamp)
+		status := o.FromMapFloat("status", body, "eventRequest.body", false, 0)
+		timestamp := o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0)
+		tm := o.BJTimeFromUnix(int64(timestamp))
 		
 		brief = content
-		if len(content) > 80 {
-			brief = content[:80] + "..."
+		if len(content) > 60 {
+			brief = content[:60] + "..."
 		}
 
 		if len(groupId) > 0 {
-			f.logger.Printf("[%s] %s [%s] %s->%s (%d) %s", f.Type, tm, groupId, fromUser, toUser, status, brief)
+			f.logger.Printf("[%s] %s [%s] %s->%s (%f) %s", f.Type, tm, groupId, fromUser, toUser, status, brief)
 		} else {
-			f.logger.Printf("[%s] %s %s->%s (%d) %s", f.Type, tm, fromUser, toUser, status, brief)
+			f.logger.Printf("[%s] %s %s->%s (%d) %f", f.Type, tm, fromUser, toUser, status, brief)
 		}
 	} else {
 		f.logger.Printf("[%s] %s ...", f.Type, brief)

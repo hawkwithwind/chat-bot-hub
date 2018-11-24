@@ -133,6 +133,30 @@ func (ctx *ErrorHandler) FromMapInt(key string, m map[string]interface{}, objnam
 	return 0
 }
 
+func (ctx *ErrorHandler) FromMapFloat(key string, m map[string]interface{}, objname string, haveDefault bool, defValue float64) float64 {
+	if ctx.Err != nil {
+		return 0
+	}
+
+	if v, found := m[key]; found {
+		switch v.(type) {
+		case float64:
+			return v.(float64)
+		default:
+			ctx.Err = fmt.Errorf("%s[%s] is not float", objname, key)
+		}		
+	} else {
+		if !haveDefault {
+			ctx.Err = fmt.Errorf("%s should have key %s", objname, key)
+		} else {
+			return defValue
+		}
+	}
+
+	return 0
+}
+
+
 func (ctx *ErrorHandler) FromMapString(key string, m map[string]interface{}, objname string, haveDefault bool, defValue string) string {
 	if ctx.Err != nil {
 		return ""
