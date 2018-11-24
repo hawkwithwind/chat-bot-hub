@@ -65,6 +65,7 @@ const (
 	AcceptUser         string = "AcceptUser"
 	SendTextMessage    string = "SendTextMessage"
 	CreateRoom         string = "CreateRoom"
+	AddRoomMember      string = "AddRoomMember"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -286,7 +287,7 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 func (bot *ChatBot) AcceptUser(arId string, body string) error {
 	o := &ErrorHandler{}
 	
-	if bot.ClientType == "WECHATBOT" {
+	if bot.ClientType == WECHATBOT {
 		var msg WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
@@ -298,28 +299,41 @@ func (bot *ChatBot) AcceptUser(arId string, body string) error {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AcceptUser)
 	}
 
-	if o.Err != nil {
-		return o.Err
-	} else {
-		return nil
-	}
+	return o.Err
 }
 
 func (bot *ChatBot) CreateRoom(arId string) error {
 	o := &ErrorHandler{}
 	
-	if bot.ClientType == "WECHATBOT" {
+	if bot.ClientType == WECHATBOT {
 		bot.Info("Create Room")
 		o.SendAction(bot, arId, CreateRoom, "")
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, CreateRoom)
 	}
 
-	if o.Err != nil {
-		return o.Err
+	return o.Err	
+}
+
+func (bot *ChatBot) AddRoomMember(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
+		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
+		bot.Info("AddRoomMember %s %s", groupId, memberId)
+
+		o.SendAction(bot, arId, AddRoomMember, o.ToJson(map[string]interface{} {
+			"groupId": groupId,
+			"memberId": memberId,
+		}))
+		
 	} else {
-		return nil
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddRoomMember)
 	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) AddContact(arId string, body string) error {
@@ -329,7 +343,7 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
-	if bot.ClientType == "WECHATBOT" {
+	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		content := o.FromMapString("content", bodym, "actionbody", false, "")
@@ -348,9 +362,5 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendTextMessage)
 	}
 
-	if o.Err != nil {
-		return o.Err
-	} else {
-		return nil
-	}
+	return o.Err
 }

@@ -105,13 +105,8 @@ func (f *PlainFilter) Fill(msg string) error {
 		brief = msg[:80]
 	}
 
-	f.logger.Printf("%s", msg)
-	
 	o := &ErrorHandler{}
-	body := o.FromJson(msg)
-	if o.Err != nil {
-		f.logger.Printf("error %v", o.Err)
-	}	
+	body := o.FromJson(msg)	
 	if body != nil {
 		content := o.FromMapString("content", body, "eventRequest.body", false, "")
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
@@ -127,9 +122,9 @@ func (f *PlainFilter) Fill(msg string) error {
 		}
 
 		if len(groupId) > 0 {
-			f.logger.Printf("[%s] %s [%s] %s->%s (%f) %s", f.Type, tm, groupId, fromUser, toUser, status, brief)
+			f.logger.Printf("[%s] %s [%s] %s->%s (%d) %s", f.Type, tm, groupId, fromUser, toUser, int64(status), brief)
 		} else {
-			f.logger.Printf("[%s] %s %s->%s (%d) %f", f.Type, tm, fromUser, toUser, status, brief)
+			f.logger.Printf("[%s] %s %s->%s (%d) %f", f.Type, tm, fromUser, toUser, int64(status), brief)
 		}
 	} else {
 		f.logger.Printf("[%s] %s ...", f.Type, brief)
