@@ -93,7 +93,8 @@ func (f *PlainFilter) Fill(msg string) error {
 	o := &ErrorHandler{}
 	body := o.FromJson(msg)
 	if body != nil {
-		content := o.FromMapString("content", body, "eventRequest.body", false, "")
+		contentptr := o.FromMap("content", body, "eventRequest.body", nil)
+				
 		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
 		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
 		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
@@ -102,16 +103,23 @@ func (f *PlainFilter) Fill(msg string) error {
 		tm := o.BJTimeFromUnix(timestamp)
 		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
 
-		brief = content
-		if len(content) > 60 {
-			brief = content[:60] + "..."
-		}
+		switch content := contentptr.(type) {
+		case string:
+			brief = content
+			if len(content) > 60 {
+				brief = content[:60] + "..."
+			}
 
-		if len(groupId) > 0 {
-			f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s", f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, int64(status), brief)
-		} else {
-			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), brief)
-		}
+			if len(groupId) > 0 {
+				f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s", f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, int64(status), brief)
+			} else {
+				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), brief)
+			}
+		case map[string]interface{}:
+			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: %v", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), content)
+		default:			
+			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %T %v", f.Name, f.Type, mtype, tm, fromUser, toUser, int64(status), content, content)
+		}			
 	} else {
 		f.logger.Printf("%s[%s] %s ...", f.Name, f.Type, brief)
 	}
