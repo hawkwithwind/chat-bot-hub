@@ -100,7 +100,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		status := int64(o.FromMapFloat("status", body, "eventRequest.body", false, 0))
 		timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
 		tm := o.BJTimeFromUnix(timestamp)
-		mtype := int64(o.FromMapFloat("mtype", body, "eventRequest.body", false, 0))
+		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
 
 		brief = content
 		if len(content) > 60 {
