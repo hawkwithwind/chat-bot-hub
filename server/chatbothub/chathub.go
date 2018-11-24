@@ -1,6 +1,6 @@
 package chatbothub
 
-import (
+import (	
 	"fmt"
 	"io"
 	"log"
@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"encoding/json"
 
 	"github.com/getsentry/raven-go"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -286,7 +287,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case MESSAGE:
 				if bot.ClientType == WECHATBOT {
 					if bot.filter != nil {
-						o.Err = bot.filter.Fill(in.Body)
+						var msg string
+						o.Err = json.Unmarshal([]byte(in.Body), &msg)
+						if o.Err != nil {
+							o.Err = bot.filter.Fill(msg)
+						}
 					}
 				} else if bot.ClientType == QQBOT {
 					if bot.filter != nil {
