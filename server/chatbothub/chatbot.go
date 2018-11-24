@@ -254,6 +254,10 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		err = bot.AcceptUser(arId, body)
 	case SendTextMessage:
 		err = bot.SendTextMessage(arId, body)
+	case CreateRoom:
+		err = bot.CreateRoom(arId)
+	case AddRoomMember:
+		err = bot.AddRoomMember(arId, body)
 	default:
 		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
 	}
