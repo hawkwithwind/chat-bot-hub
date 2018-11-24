@@ -289,7 +289,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if bot.filter != nil {
 						var msg string
 						o.Err = json.Unmarshal([]byte(in.Body), &msg)
-						if o.Err != nil {
+						if o.Err == nil {
 							o.Err = bot.filter.Fill(msg)
 						}
 					}

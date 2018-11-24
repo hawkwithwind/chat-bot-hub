@@ -105,11 +105,12 @@ func (f *PlainFilter) Fill(msg string) error {
 		brief = msg[:80]
 	}
 
+	f.logger.Printf("%s", msg)
+	
 	o := &ErrorHandler{}
 	body := o.FromJson(msg)
 	if o.Err != nil {
 		f.logger.Printf("error %v", o.Err)
-		f.logger.Printf("%s", msg)
 	}	
 	if body != nil {
 		f.logger.Printf("%v", body)
