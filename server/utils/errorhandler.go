@@ -180,6 +180,28 @@ func (ctx *ErrorHandler) FromMapString(key string, m map[string]interface{}, obj
 	return ""
 }
 
+func (o *ErrorHandler) ListValue(value interface{}, hasDefault bool, defValue []interface{}) []interface{} {
+	if o.Err != nil {
+		return nil
+	}
+
+	switch value := value.(type) {
+	case []interface{}:
+		return value
+	case nil:
+		if hasDefault {
+			return defValue
+		} else {
+			o.Err = fmt.Errorf("expect listvalue, but nil")
+			return nil
+		}
+	default:
+		o.Err = fmt.Errorf("expect listvalue but %T", value)
+	}
+
+	return nil
+}
+
 func (ctx *ErrorHandler) RestfulCall(req *httpx.RestfulRequest) *httpx.RestfulResponse {
 	if ctx.Err != nil {
 		return nil

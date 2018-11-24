@@ -246,27 +246,24 @@ func (bot *ChatBot) WebNotifyRequest(event string, body string) *httpx.RestfulRe
 
 func (bot *ChatBot) BotAction(arId string, actionType string, body string) error {
 	var err error
-	
-	switch actionType {
-	case AddContact:
-		err = bot.AddContact(arId, body)
-	case AcceptUser:
-		err = bot.AcceptUser(arId, body)
-	case SendTextMessage:
-		err = bot.SendTextMessage(arId, body)
-	case CreateRoom:
-		err = bot.CreateRoom(arId)
-	case AddRoomMember:
-		err = bot.AddRoomMember(arId, body)
-	default:
+
+	actionMap := map[string]func(*ChatBot, string, string)error{
+		AddContact: (*ChatBot).AddContact,
+		AcceptUser: (*ChatBot).AcceptUser,
+		SendTextMessage: (*ChatBot).SendTextMessage,
+		CreateRoom: (*ChatBot).CreateRoom,
+		AddRoomMember: (*ChatBot).AddRoomMember,
+	}
+
+	bot.Info("%v", actionMap)
+
+	if m, ok := actionMap[actionType]; ok {
+		err = m(bot, arId, body)
+	} else {
 		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
 	}
 
-	if err != nil {
-		return err
-	} else {
-		return nil
-	}
+	return err
 }
 
 func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, body string) {
@@ -306,12 +303,17 @@ func (bot *ChatBot) AcceptUser(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) CreateRoom(arId string) error {
+func (bot *ChatBot) CreateRoom(arId string, body string) error {
 	o := &ErrorHandler{}
 	
 	if bot.ClientType == WECHATBOT {
 		bot.Info("Create Room")
-		o.SendAction(bot, arId, CreateRoom, "")
+		bodym := o.FromJson(body)
+		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
+				
+		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{} {
+			"userList": memberList,
+		}))
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, CreateRoom)
 	}
