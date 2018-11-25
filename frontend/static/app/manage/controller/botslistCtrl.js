@@ -170,7 +170,7 @@
   }
 
   app.controller('editBotCtrl', editBotCtrl);
-  editBotCtrl.$inejct = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "callback"];
+  editBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "callback"];
   function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, callback) {
     $scope.data = {};
     $scope.data.clientId = clientId;
