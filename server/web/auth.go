@@ -123,10 +123,14 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		var bearerToken string = ""
 		var clientType string = ""
 		session, o.Err = ctx.store.Get(req, "chatbothub")
+
+		ctx.Info("1")
 		
 		if o.Err == nil {
+			ctx.Info("2")
 			switch tokenString := session.Values["X-AUTHORIZE"].(type) {
 			case string:
+				ctx.Info("3 %v", tokenString)
 				if tokenString == "" {
 					bearerToken = req.Header.Get("X-AUTHORIZE")
 					clientType  = req.Header.Get("X-CLIENT-TYPE")
@@ -134,10 +138,14 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 					bearerToken = tokenString
 					clientType = USER
 				}
+			case default:
+				ctx.Info("4 %T %v", tokenString, tokenString)
 			}
 		}
 		
 		if o.Err == nil && bearerToken != "" {
+			ctx.Info("5")
+			
 			var token *jwt.Token
 			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -146,7 +154,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return []byte(ctx.Config.SecretPhrase), nil
 			})
 			if token.Valid {
-
+				ctx.Info("7")
 				var user User
 				utils.DecodeMap(token.Claims, &user)
 
@@ -172,6 +180,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 		} else {
+			ctx.Info("6 %v %v", bearerToken, o.Err)
 			o.deny(w, "未登录用户无权限访问")
 			return
 		}
