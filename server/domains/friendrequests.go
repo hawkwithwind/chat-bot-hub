@@ -100,15 +100,13 @@ func (o *ErrorHandler) GetFriendRequestsByLogin(q dbx.Queryable, login string, s
 		o.Err = q.SelectContext(ctx, &frs, `
 SELECT *
 FROM friendrequests
-WHERE login=?
-  AND deleteat is NULL`, login)
+WHERE login=?`, login)
 	} else {
 		o.Err = q.SelectContext(ctx, &frs, `
 SELECT *
 FROM friendrequests
 WHERE login=?
-  AND status=?
-  AND deleteat is NULL`, login, status)
+  AND status=?`, login, status)
 	}
 
 	return frs
