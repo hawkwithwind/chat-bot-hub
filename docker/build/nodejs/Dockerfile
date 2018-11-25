@@ -22,7 +22,7 @@ ENV LANG="zh_CN.UTF-8"
 RUN locale -a
 
 #RUN apt-get install -y nodejs-npm
-RUN npm config set registry=http://registry.npm.taobao.org
+RUN npm config set registry=http://registry.npm.taobao.org -g
 RUN npm install --global gulp@4.0.0
 
 USER node

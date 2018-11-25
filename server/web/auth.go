@@ -32,15 +32,16 @@ func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, em
 	ctx.SaveAccount(db.Conn, account)
 }
 
-func (ctx *ErrorHandler) authorize(s string, name string, secret string) string {
+func (ctx *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time) string {
 	if ctx.Err != nil {
 		return ""
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"accountname": name,
+		"sdkcode":     sdkcode,
 		"secret":      secret,
-		"expireat":    utils.JSONTime{time.Now().Add(time.Hour * 24 * 7)},
+		"expireat":    utils.JSONTime{expireAt},
 	})
 
 	var tokenstring string
@@ -49,6 +50,35 @@ func (ctx *ErrorHandler) authorize(s string, name string, secret string) string 
 	} else {
 		return ""
 	}
+}
+
+func (ctx *ErrorHandler) authorize(s string, name string, secret string) string {
+	if ctx.Err != nil {
+		return ""
+	}
+
+	return ctx.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7))
+}
+
+func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	var accountName string
+	switch login := context.Get(req, "login").(type) {
+	case string:
+		accountName = login
+	default:
+		o.Err = fmt.Errorf("context[login] should be string but [%T]%v", login, login)
+	}
+
+	account := o.GetAccountByName(ctx.db.Conn, accountName)
+	tokenstring := o.generateToken(ctx.Config.SecretPhrase, account.AccountName, "sdkbearer", account.Secret, time.Now().Add(time.Hour*24*365))
+
+	o.ok(w, "", map[string]interface{}{
+		"sdkName": "sdkbearer",
+		"token":   tokenstring,
+	})
 }
 
 func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
