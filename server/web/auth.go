@@ -119,14 +119,13 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		o := &ErrorHandler{}
 		defer o.WebError(w)
 
-		var session *sessions.Session
-		var tokenString interface{}
+		var session *sessions.Session		
 		var bearerToken string
 		var clientType string
 		session, o.Err = ctx.store.Get(req, "chatbothub")
 		
 		if o.Err == nil {
-			switch tokenString = session.Values["X-AUTHORIZE"].(type) {
+			switch tokenString := session.Values["X-AUTHORIZE"].(type) {
 			case string:
 				bearerToken = tokenString
 				clientType = USER
