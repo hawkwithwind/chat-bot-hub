@@ -293,14 +293,15 @@ func (ctx *WebServer) Serve() {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/healthz", healthz())
+	r.Handle("/healthz", healthz())	
 	r.HandleFunc("/bots/{login}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
-	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
+	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")	
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/login", ctx.login).Methods("POST")
+	r.HandleFunc("/sdktoken", ctx.validate(ctx.sdkToken)).Methods("Post")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
