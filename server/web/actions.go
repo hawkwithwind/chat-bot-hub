@@ -158,7 +158,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, login, "")
 			bodym := o.FromJson(localar.ActionBody)
-			rlogin := o.FromMapString("userId", bodym, "actionBody", false, "")
+			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 			if o.Err == nil {
 				for _, fr := range frs {
 					if fr.RequestLogin == rlogin {
