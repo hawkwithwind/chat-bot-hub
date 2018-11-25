@@ -59,6 +59,17 @@ func (o *ErrorHandler) FriendRequestToJson(fr *FriendRequest) string {
 	})
 }
 
+func (fr FriendRequest) MarshalJson() ([]byte, error) {
+	o := &ErrorHandler{}
+
+	jsonstring := o.FriendRequestToJson(&fr)
+	if o.Err != nil {
+		return []byte(""), o.Err
+	} else {
+		return []byte(jsonstring), nil
+	}
+}
+
 func (o *ErrorHandler) SaveFriendRequest(q dbx.Queryable, fr *FriendRequest) {
 	if o.Err != nil {
 		return
