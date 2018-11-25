@@ -134,6 +134,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				if tokenString == "" {
 					bearerToken = req.Header.Get("X-AUTHORIZE")
 					clientType  = req.Header.Get("X-CLIENT-TYPE")
+					ctx.Info("3.5 %s %s", bearerToken, clientType)
 				} else {
 					bearerToken = tokenString
 					clientType = USER
