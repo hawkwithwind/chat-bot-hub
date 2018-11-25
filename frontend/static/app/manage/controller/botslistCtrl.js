@@ -36,30 +36,21 @@
 	    $scope.initView(data);
 	  });
       });
-    
-    $scope.pretty = function (json) {
-      if (typeof json != 'string') {
-        json = JSON.stringify(json, undefined, 2);
-      }
-      
-      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-        var cls = 'number';
-        if (/^"/.test(match)) {
-          if (/:$/.test(match)) {
-            cls = 'key';
-          } else {
-            cls = 'string';
-          }
-        } else if (/true|false/.test(match)) {
-          cls = 'boolean';
-        } else if (/null/.test(match)) {
-          cls = 'null';
-        }
-        return '<span class="' + cls + '">' + match + '</span>';
+
+    $scope.editBot = function(row) {
+      $modal.open({
+	templateUrl: 'editBotTemplate',
+	controller: editBotCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  clientType: () => row.clientType,
+	  botName: () => row.botName,
+	  login: () => row.login,
+	  callback: () => row.callback,	  
+	}
       });
     }
-
+    
     $scope.showQQLogin = function(row)  {
       $modal.open({
 	templateUrl: 'loginQQTemplate',
@@ -177,5 +168,43 @@
       $scope.close();
     }    
   }
+
+  app.controller('editBotCtrl', editBotCtrl);
+  editBotCtrl.$inejct = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "callback"];
+  function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, callback) {
+    $scope.data = {};
+    $scope.data.clientId = clientId;
+    $scope.data.clientType = clientType;
+    $scope.data.login = login;
+    $scope.data.botName = botName;
+    $scope.data.callback = callback;
+
+    $scope.close = function () {
+      $uibModalInstance.dismiss();
+    }
+
+    let url = "/bots/" + $scope.data.login
+
+    $scope.saveBot = function(data) {
+      console.log(data);
+
+      $http({
+	method: 'PUT',
+	url: url,
+	data: data
+      }).then(function(success) {
+	console.log(success);	  
+      }, function(error) {
+	console.log(error);
+      });
+
+      $scope.close();
+    }    
+  }  
+  
 })();
 
+
+
+
+	  
