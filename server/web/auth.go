@@ -14,9 +14,16 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
+const (
+	SDK  string = "SDK"
+	USER string = "USER"
+	SDKCODE string = "sdkbearer"
+)
+
 type User struct {
 	AccountName string         `json:"accountname"`
 	Password    string         `json:"password"`
+	SdkCode     string         `json:"sdkcode"`
 	Secret      string         `json:"secret"`
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
@@ -76,7 +83,7 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 	tokenstring := o.generateToken(ctx.Config.SecretPhrase, account.AccountName, "sdkbearer", account.Secret, time.Now().Add(time.Hour*24*365))
 
 	o.ok(w, "", map[string]interface{}{
-		"sdkName": "sdkbearer",
+		"sdkName": SDKCODE,
 		"token":   tokenstring,
 	})
 }
@@ -116,25 +123,28 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		var session *sessions.Session
 		var tokenString interface{}
 		var bearerToken string
+		var clientType string
 		session, err = ctx.store.Get(req, "chatbothub")
+		ctx.Info("get %v %v", session, err)
 
 		if err == nil {
-			tokenString = session.Values["X-AUTHORIZE"]
+			tokenString = session.Values["X-AUTHORIZE"]			
 			var ok bool
 			if bearerToken, ok = tokenString.(string); !ok {
 				o.deny(w, "未登录用户无权限访问")
 				return
 			}
+			clientType = USER
 		} else {
 			ctx.Info("err %v", err)
 			bearerToken = req.Header.Get("X-AUTHORIZE")
-			clientType := req.Header.Get("X-CLIENT-TYPE")
+			clientType  = req.Header.Get("X-CLIENT-TYPE")
 			if bearerToken == "" || clientType == "" {
 				o.deny(w, "未登录用户无权限访问")
 				return
 			}
 
-			if clientType != "SDK" {
+			if clientType != SDK {
 				o.deny(w, "不支持的用户类型")
 				return
 			}
@@ -157,6 +167,11 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")
 					} else {
+						if clientType == SDK && user.SdkCode != SDKCODE {
+							o.deny(w, "不支持的用户类型")
+							return
+						}
+						
 						// pass validate
 						context.Set(req, "login", user.AccountName)
 						next(w, req)
