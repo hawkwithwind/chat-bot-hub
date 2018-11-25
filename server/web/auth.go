@@ -124,34 +124,25 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		var clientType string = ""
 		session, o.Err = ctx.store.Get(req, "chatbothub")
 
-		ctx.Info("1")
-		
 		if o.Err == nil {
-			ctx.Info("2")
 			switch tokenString := session.Values["X-AUTHORIZE"].(type) {
-			case string:
-				ctx.Info("3 %v", tokenString)
+			case string:				
 				if tokenString == "" {
 					bearerToken = req.Header.Get("X-AUTHORIZE")
-					clientType  = req.Header.Get("X-CLIENT-TYPE")
-					ctx.Info("3.5 %s %s", bearerToken, clientType)
+					clientType  = req.Header.Get("X-CLIENT-TYPE")					
 				} else {
 					bearerToken = tokenString
 					clientType = USER
 				}
 			case nil:
 				bearerToken = req.Header.Get("X-AUTHORIZE")
-				clientType  = req.Header.Get("X-CLIENT-TYPE")
-				ctx.Info("3.6 %s %s", bearerToken, clientType)
-				ctx.Info("3.7 %v", req.Header)
+				clientType  = req.Header.Get("X-CLIENT-TYPE")				
 			default:
-				ctx.Info("4 %T %v", tokenString, tokenString)
+				ctx.Error("unexpected tokenstring %T", tokenString)
 			}
 		}
 		
 		if o.Err == nil && bearerToken != "" {
-			ctx.Info("5")
-			
 			var token *jwt.Token
 			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -160,14 +151,14 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return []byte(ctx.Config.SecretPhrase), nil
 			})
 			if token.Valid {
-				ctx.Info("7")
 				var user User
 				utils.DecodeMap(token.Claims, &user)
-
-				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
+				
+				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {					
 					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")
-					} else {
+						return
+					} else {						
 						if clientType == SDK && user.SdkCode != SDKCODE {
 							o.deny(w, "不支持的用户类型")
 							return
@@ -185,8 +176,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				o.deny(w, "身份令牌无效")
 				return
 			}
-		} else {
-			ctx.Info("6 %v %v", bearerToken, o.Err)
+		} else {			
 			o.deny(w, "未登录用户无权限访问")
 			return
 		}
