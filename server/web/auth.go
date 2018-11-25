@@ -112,16 +112,30 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		o := &ErrorHandler{}
 		defer o.WebError(w)
 
+		var err error
 		var session *sessions.Session
 		var tokenString interface{}
 		var bearerToken string
-		session, o.Err = ctx.store.Get(req, "chatbothub")
+		session, err = ctx.store.Get(req, "chatbothub")
 
-		if o.Err == nil {
+		if err == nil {
 			tokenString = session.Values["X-AUTHORIZE"]
 			var ok bool
 			if bearerToken, ok = tokenString.(string); !ok {
 				o.deny(w, "未登录用户无权限访问")
+				return
+			}
+		} else {
+			ctx.Info("err %v", err)
+			bearerToken = r.Header.Get("X-AUTHORIZE")
+			clientType = r.Header.Get("X-CLIENT-TYPE")
+			if bearerToken == "" || clientType == "" {
+				o.deny(w, "未登录用户无权限访问")
+				return
+			}
+
+			if clientType != "SDK" {
+				o.deny(w, "不支持的用户类型")
 				return
 			}
 		}
