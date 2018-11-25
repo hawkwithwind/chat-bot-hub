@@ -66,7 +66,8 @@
 	templateUrl: 'loginWechatTemplate',
 	controller: wechatLoginCtrl,
 	resolve: {
-	  clientId: () => row.clientId
+	  clientId: () => row.clientId,
+	  botId: () => row.botId
 	}
       });
     }
