@@ -127,8 +127,8 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			}
 		} else {
 			ctx.Info("err %v", err)
-			bearerToken = r.Header.Get("X-AUTHORIZE")
-			clientType = r.Header.Get("X-CLIENT-TYPE")
+			bearerToken = req.Header.Get("X-AUTHORIZE")
+			clientType := req.Header.Get("X-CLIENT-TYPE")
 			if bearerToken == "" || clientType == "" {
 				o.deny(w, "未登录用户无权限访问")
 				return
