@@ -139,7 +139,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 					bearerToken = tokenString
 					clientType = USER
 				}
-			case default:
+			default:
 				ctx.Info("4 %T %v", tokenString, tokenString)
 			}
 		}
