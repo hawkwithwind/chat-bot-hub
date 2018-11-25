@@ -143,6 +143,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				bearerToken = req.Header.Get("X-AUTHORIZE")
 				clientType  = req.Header.Get("X-CLIENT-TYPE")
 				ctx.Info("3.6 %s %s", bearerToken, clientType)
+				ctx.Info("3.7 %v", req.Header)
 			default:
 				ctx.Info("4 %T %v", tokenString, tokenString)
 			}
