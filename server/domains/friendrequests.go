@@ -59,7 +59,7 @@ func (o *ErrorHandler) FriendRequestToJson(fr *FriendRequest) string {
 	})
 }
 
-func (fr FriendRequest) MarshalJson() ([]byte, error) {
+func (fr FriendRequest) MarshalJSON() ([]byte, error) {
 	o := &ErrorHandler{}
 
 	jsonstring := o.FriendRequestToJson(&fr)
