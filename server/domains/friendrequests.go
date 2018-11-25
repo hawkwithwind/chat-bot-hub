@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type FriendRequest struct {
@@ -43,6 +44,21 @@ func (o *ErrorHandler) NewFriendRequest(botId string, login string, requestlogin
 	}
 }
 
+func (o *ErrorHandler) FriendRequestToJson(fr *FriendRequest) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return o.ToJson(map[string]interface{}{
+		"friendRequestId": fr.FriendRequestId,
+		"login":           fr.Login,
+		"requestLogin":    fr.RequestLogin,
+		"requestBody":     fr.RequestBody,
+		"status":          fr.Status,
+		"createAt":        utils.JSONTime{fr.CreateAt.Time},
+	})
+}
+
 func (o *ErrorHandler) SaveFriendRequest(q dbx.Queryable, fr *FriendRequest) {
 	if o.Err != nil {
 		return
@@ -72,18 +88,28 @@ WHERE friendrequestid = :friendrequestid
 	_, o.Err = q.NamedExecContext(ctx, query, fr)
 }
 
-func (o *ErrorHandler) GetFriendRequestsByLogin(q dbx.Queryable, login string) []FriendRequest {
+func (o *ErrorHandler) GetFriendRequestsByLogin(q dbx.Queryable, login string, status string) []FriendRequest {
 	if o.Err != nil {
 		return nil
 	}
 
 	frs := []FriendRequest{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &frs, `
+
+	if status == "" {
+		o.Err = q.SelectContext(ctx, &frs, `
 SELECT *
 FROM friendrequests
 WHERE login=?
   AND deleteat is NULL`, login)
+	} else {
+		o.Err = q.SelectContext(ctx, &frs, `
+SELECT *
+FROM friendrequests
+WHERE login=?
+  AND status=?
+  AND deleteat is NULL`, login, status)
+	}
 
 	return frs
 }

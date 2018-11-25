@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	SDK  string = "SDK"
-	USER string = "USER"
+	SDK     string = "SDK"
+	USER    string = "USER"
 	SDKCODE string = "sdkbearer"
 )
 
@@ -119,29 +119,29 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		o := &ErrorHandler{}
 		defer o.WebError(w)
 
-		var session *sessions.Session		
+		var session *sessions.Session
 		var bearerToken string = ""
 		var clientType string = ""
 		session, o.Err = ctx.store.Get(req, "chatbothub")
 
 		if o.Err == nil {
 			switch tokenString := session.Values["X-AUTHORIZE"].(type) {
-			case string:				
+			case string:
 				if tokenString == "" {
 					bearerToken = req.Header.Get("X-AUTHORIZE")
-					clientType  = req.Header.Get("X-CLIENT-TYPE")					
+					clientType = req.Header.Get("X-CLIENT-TYPE")
 				} else {
 					bearerToken = tokenString
 					clientType = USER
 				}
 			case nil:
 				bearerToken = req.Header.Get("X-AUTHORIZE")
-				clientType  = req.Header.Get("X-CLIENT-TYPE")				
+				clientType = req.Header.Get("X-CLIENT-TYPE")
 			default:
 				ctx.Error(fmt.Errorf("unexpected tokenstring %T", tokenString), "unexpected token")
 			}
 		}
-		
+
 		if o.Err == nil && bearerToken != "" {
 			var token *jwt.Token
 			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
@@ -153,17 +153,17 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			if token.Valid {
 				var user User
 				utils.DecodeMap(token.Claims, &user)
-				
-				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {					
+
+				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
 					if user.ExpireAt.Before(time.Now()) {
 						o.deny(w, "身份令牌已过期")
 						return
-					} else {						
+					} else {
 						if clientType == SDK && user.SdkCode != SDKCODE {
 							o.deny(w, "不支持的用户类型")
 							return
 						}
-						
+
 						// pass validate
 						context.Set(req, "login", user.AccountName)
 						next(w, req)
@@ -176,7 +176,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				o.deny(w, "身份令牌无效")
 				return
 			}
-		} else {			
+		} else {
 			o.deny(w, "未登录用户无权限访问")
 			return
 		}

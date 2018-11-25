@@ -271,7 +271,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(fr)), 5, 1)
+				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.FriendRequestToJson(fr)), 5, 1)
 			}
 		}()
 
@@ -303,6 +303,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						localar.Status = "Done"
 					} else {
 						localar.Status = "Failed"
+					}
+				}
+			}
+		}
+
+		switch localar.ActionType {
+		case chatbothub.AcceptUser:
+			frs := o.GetFriendRequestsByLogin(tx, login, "")
+			bodym := o.FromJson(localar.ActionBody)
+			rlogin := o.FromMapString("userId", bodym, "actionBody", false, "")
+			if o.Err == nil {
+				for _, fr := range frs {
+					if fr.RequestLogin == rlogin {
+						fr.Status = localar.Status
+						o.SaveFriendRequest(tx, &fr)
+						ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
+						break
 					}
 				}
 			}
@@ -423,6 +440,35 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  logininfo,
 	})
 	o.ok(w, "", loginreply)
+}
+
+func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	login := vars["login"]
+
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(ctx.db)
+
+	if !o.CheckBotOwner(tx, login, accountName) {
+		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+		return
+	}
+
+	r.ParseForm()
+	status := o.getStringValue(r.Form, "status")
+	frs := o.GetFriendRequestsByLogin(tx, login, status)
+
+	o.ok(w, "", frs)
 }
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
