@@ -138,7 +138,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				bearerToken = req.Header.Get("X-AUTHORIZE")
 				clientType  = req.Header.Get("X-CLIENT-TYPE")				
 			default:
-				ctx.Error("unexpected tokenstring %T", tokenString)
+				ctx.Error(fmt.Errorf("unexpected tokenstring %T", tokenString), "unexpected token")
 			}
 		}
 		
