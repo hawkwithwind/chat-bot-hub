@@ -119,37 +119,23 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		o := &ErrorHandler{}
 		defer o.WebError(w)
 
-		var err error
 		var session *sessions.Session
 		var tokenString interface{}
 		var bearerToken string
 		var clientType string
-		session, err = ctx.store.Get(req, "chatbothub")
-		ctx.Info("get %v %v", session, err)
-
-		if err == nil {
-			tokenString = session.Values["X-AUTHORIZE"]			
-			var ok bool
-			if bearerToken, ok = tokenString.(string); !ok {
-				o.deny(w, "未登录用户无权限访问")
-				return
-			}
-			clientType = USER
-		} else {
-			ctx.Info("err %v", err)
-			bearerToken = req.Header.Get("X-AUTHORIZE")
-			clientType  = req.Header.Get("X-CLIENT-TYPE")
-			if bearerToken == "" || clientType == "" {
-				o.deny(w, "未登录用户无权限访问")
-				return
-			}
-
-			if clientType != SDK {
-				o.deny(w, "不支持的用户类型")
-				return
-			}
+		session, o.Err = ctx.store.Get(req, "chatbothub")
+		
+		if o.Err == nil {
+			switch tokenString = session.Values["X-AUTHORIZE"].(type) {
+			case string:
+				bearerToken = tokenString
+				clientType = USER
+			case nil:
+				bearerToken = req.Header.Get("X-AUTHORIZE")
+				clientType  = req.Header.Get("X-CLIENT-TYPE")
+			}			
 		}
-
+		
 		if o.Err == nil && bearerToken != "" {
 			var token *jwt.Token
 			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
