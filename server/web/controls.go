@@ -180,6 +180,37 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", bs)
 }
 
+func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	botName := o.getStringValue(r.Form, "botName")
+	clientType := o.getStringValue(r.Form, "clientType")
+	login := o.getStringValue(r.Form, "login")
+	callback := o.getStringValue(r.Form, "callback")
+	loginInfo := o.getStringValue(r.Form, "loginInfo")
+
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(ctx.db)
+	account := o.GetAccountByName(tx, accountName)
+	bot := o.NewBot(botName, clientType, account.AccountId, login)
+	bot.Callback = sql.NullString{String: callback, Valid: true}
+	bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
+
+	o.SaveBot(tx, bot)
+	o.CommitOrRollback(tx)
+
+	o.ok(w, "", bot)
+}
+
 func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)

@@ -69,7 +69,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-
+		
 	case chatbothub.LOGINDONE:
 		var oldtoken string
 		var oldwxdata string

@@ -37,6 +37,13 @@
 	  });
       });
 
+    $scope.createBot = function(row) {
+      $modal.open({
+	templateUrl: 'createBotTemplate',
+	controller: createBotCtrl	
+      });
+    }
+
     $scope.editBot = function(row) {
       $modal.open({
 	templateUrl: 'editBotTemplate',
@@ -201,7 +208,34 @@
 
       $scope.close();
     }    
-  }  
+  }
+
+  app.controller('createBotCtrl', createBotCtrl);
+  createBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools"];
+  function createBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools) {
+    $scope.data = {}
+    
+    $scope.close = function () {
+      $uibModalInstance.dismiss();
+    }
+
+    let url = "/bots/"    
+    $scope.createBot = function(data) {
+      console.log(data);
+
+      $http({
+	method: 'POST',
+	url: url,
+	data: data
+      }).then(function(success) {
+	console.log(success);
+      }, function(error) {
+	console.log(error);
+      });
+
+      $scope.close();
+    }
+  }
   
 })();
 

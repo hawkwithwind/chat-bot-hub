@@ -2,6 +2,14 @@
 <h3 class="page-title">机器人列表</h3>
 
 <div class="row">
+  <div class="col-xs-12 col-md-12">    
+    <div class="col-md-3">
+      <button class="btn green" ng-click="createBot()">新建机器人</button>
+    </div>
+  </div>
+</div>
+
+<div class="row">
   <div class="col-xs-12 col-md-12">
     <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
 	   style="padding:40px;margin:10px;width:auto">
@@ -150,6 +158,55 @@
     <div class="row form-group-padding">
       <div class="col-md-3">
 	<button class="btn green" ng-click="sendAction(data)">发送</button>
+      </div>
+    </div>
+  </div>
+</script>
+
+<script type="text/ng-template" id="createBotTemplate">
+  <div class="modal-header">
+    <button type="button" class="close" ng-click="close()"></button>
+    <h3 class="modal-title">新建机器人</h3>
+  </div>
+  <div class="modal-body form-group-padding" id="editBotBody">
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_botName" class="col-md-3 control-label">名称</label>
+	<input id="text_botName" name="text_botName" type="text" class="col-md-9" ng-model="data.botName" />
+      </div>      
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_type" class="col-md-3 control-label">类型</label>
+	<input id="text_type" name="text_type" type="text" class="col-md-9" ng-model="data.clientType" />
+      </div>
+    </div>
+    
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_login" class="col-md-3 control-label">帐号</label>
+	<input id="text_login" name="text_login" type="text" class="col-md-9" ng-model="data.login" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_callback" class="col-md-3 control-label">回调地址</label>
+	<input id="text_callback" name="text_callback" type="text" class="col-md-9" ng-model="data.callback" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_loginInfo" class="col-md-3 control-label">Login Info</label>
+	<textarea id="text_loginInfo" name="text_loginInfo" rows="10" class="col-md-9" ng-model="data.loginInfo" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-3">
+	<button class="btn green" ng-click="createBot(data)">保存</button>
       </div>
     </div>
   </div>
