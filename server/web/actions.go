@@ -43,7 +43,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if o.Err != nil {
+	if o.Err != nil {		
 		return
 	}
 
@@ -170,7 +170,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					for _, fr := range frs {
 						if fr.RequestLogin == rlogin {
 							fr.Status = localar.Status
-							o.SaveFriendRequest(tx, &fr)
+							o.UpdateFriendRequest(tx, &fr)
 							ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
 							break
 						}
@@ -180,7 +180,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		o.SaveActionRequest(ctx.redispool, localar)
-
+		ctx.Info("save action %v", localar)
+		
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
