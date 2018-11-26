@@ -154,9 +154,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		ctx.Info("action reply %v", localar)
+				
 		switch localar.ActionType {
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, login, "")
+
+			ctx.Info("frs %v", frs)
+			
 			bodym := o.FromJson(localar.ActionBody)
 			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 			if o.Err == nil {
