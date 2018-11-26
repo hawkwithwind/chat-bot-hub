@@ -28,7 +28,7 @@ const (
 )
 
 func (ar *ActionRequest) redisKey() string {
-	return fmt.Sprintf("AR:%s:%s:%s", ar.Login, ar.ActionType, ar.ActionRequestId)
+	return fmt.Sprintf("AR:%s", ar.ActionRequestId)
 }
 
 func (ar *ActionRequest) redisDayKey() string {

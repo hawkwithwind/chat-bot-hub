@@ -154,23 +154,26 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		ctx.Info("action reply %v", localar)
-				
-		switch localar.ActionType {
-		case chatbothub.AcceptUser:
-			frs := o.GetFriendRequestsByLogin(tx, login, "")
-
-			ctx.Info("frs %v", frs)
+		if o.Err == nil {
+			ctx.Info("action reply %v", localar)
 			
-			bodym := o.FromJson(localar.ActionBody)
-			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-			if o.Err == nil {
-				for _, fr := range frs {
-					if fr.RequestLogin == rlogin {
-						fr.Status = localar.Status
-						o.SaveFriendRequest(tx, &fr)
-						ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
-						break
+			
+			switch localar.ActionType {
+			case chatbothub.AcceptUser:
+				frs := o.GetFriendRequestsByLogin(tx, login, "")
+
+				ctx.Info("frs %v", frs)
+				
+				bodym := o.FromJson(localar.ActionBody)
+				rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+				if o.Err == nil {
+					for _, fr := range frs {
+						if fr.RequestLogin == rlogin {
+							fr.Status = localar.Status
+							o.SaveFriendRequest(tx, &fr)
+							ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
+							break
+						}
 					}
 				}
 			}
