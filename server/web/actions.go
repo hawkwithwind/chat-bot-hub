@@ -197,7 +197,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o.CommitOrRollback(tx)
 
 	if o.Err != nil {
-		ctx.Error(err, "error while process action reply")
+		ctx.Error(o.Err, "error while process action reply")
 	}
 }
 
