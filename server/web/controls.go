@@ -221,6 +221,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	botName := o.getStringValue(r.Form, "botName")
 	callback := o.getStringValue(r.Form, "callback")
+	loginInfo := o.getStringValue(r.Form, "loginInfo")
 
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
@@ -242,6 +243,9 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	}
 	if callback != "" {
 		bot.Callback = sql.NullString{String: callback, Valid: true}
+	}
+	if loginInfo != "" {
+		bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 	}
 
 	o.SaveBot(tx, bot)

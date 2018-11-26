@@ -51,9 +51,9 @@ func (o *ErrorHandler) SaveBot(q dbx.Queryable, bot *Bot) {
 
 	query := `
 INSERT INTO bots
-(botid, botname, accountid, login, chatbottype, callback)
+(botid, botname, accountid, login, chatbottype, callback, logininfo)
 VALUES
-(:botid, :botname, :accountid, :login, :chatbottype, :callback)
+(:botid, :botname, :accountid, :login, :chatbottype, :callback, :logininfo)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
