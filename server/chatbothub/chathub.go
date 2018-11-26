@@ -287,6 +287,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
 					var msg string
 					o.Err = json.Unmarshal([]byte(in.Body), &msg)
+					if o.Err != nil {
+						hub.Error(o.Err, "cannot parse %s", in.Body)
+					}
+					
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(msg)
 					}
