@@ -69,6 +69,7 @@ UPDATE bots
 SET logininfo = :logininfo
 , botname = :botname
 , callback = :callback
+, logininfo = :logininfo
 WHERE botid = :botid
 `
 	ctx, _ := o.DefaultContext()

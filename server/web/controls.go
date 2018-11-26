@@ -251,7 +251,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 	}
 
-	o.SaveBot(tx, bot)
+	o.UpdateBot(tx, bot)
 	o.CommitOrRollback(tx)
 
 	o.ok(w, "", nil)
