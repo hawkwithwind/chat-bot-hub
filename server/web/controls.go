@@ -128,6 +128,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		pb.BotsInfo
 		BotId    string `json:"botId"`
 		BotName  string `json:"botName"`
+		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
 	}
 
@@ -163,10 +164,12 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 				bs = append(bs, BotsInfo{
 					BotsInfo: pb.BotsInfo{
 						ClientType: b.ChatbotType,
+						Login:      b.Login,
 						Status:     0,
 					},
 					BotId:    b.BotId,
-					BotName:  b.BotName,
+					BotName:  b.BotName,					
+					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
 			}
