@@ -219,7 +219,7 @@
       $uibModalInstance.dismiss();
     }
 
-    let url = "/bots/"    
+    let url = "/bots"
     $scope.createBot = function(data) {
       console.log(data);
 
