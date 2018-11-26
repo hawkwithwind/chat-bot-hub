@@ -156,8 +156,9 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo: *info,
-					BotName:  b.BotName,
 					BotId:    b.BotId,
+					BotName:  b.BotName,
+					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
 			} else {
