@@ -237,8 +237,12 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 
 	tx := o.Begin(ctx.db)
 	if !o.CheckBotOwner(tx, login, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
-		return
+		if o.Err == nil {
+			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+			return
+		} else {
+			return
+		}
 	}
 
 	bot := o.GetBotByLogin(tx, login)
