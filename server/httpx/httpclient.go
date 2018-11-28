@@ -90,11 +90,11 @@ func (req *RestfulRequest) ContentType(ctype string, charset string) error {
 		return fmt.Errorf("Headers is nil, consider using NewRestfulRequest")
 	}
 
-	charset_used := charset
-	if charset_used == "" {
-		//default using utf-8
-		charset_used = "utf-8"
-	}
+	// charset_used := charset
+	// if charset_used == "" {
+	// 	//default using utf-8
+	// 	charset_used = "utf-8"
+	// }
 
 	contentType := ""
 	switch ctype {
@@ -108,7 +108,7 @@ func (req *RestfulRequest) ContentType(ctype string, charset string) error {
 		return fmt.Errorf("unknown mime type %s", ctype)
 	}
 
-	req.Headers["Content-Type"] = fmt.Sprintf("%s; %s", contentType, charset_used)
+	req.Headers["Content-Type"] = fmt.Sprintf("%s", contentType)
 	req.ContentTypeFlag = true
 	return nil
 }
@@ -201,9 +201,6 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		for k, v := range req.Headers {
 			nreq.Header.Set(k, v)
 		}
-
-		fmt.Printf("[HTTPX] reqbody %v\n", reqbody)
-		fmt.Printf("[HTTPX] nreq %v", nreq)
 
 		if nresp, err = client.Do(nreq); err != nil {
 			return nil, err
