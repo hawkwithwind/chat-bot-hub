@@ -223,9 +223,9 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	login := vars["login"]
 
 	r.ParseForm()
-	botName := o.getStringValue(r.Form, "botName")
-	callback := o.getStringValue(r.Form, "callback")
-	loginInfo := o.getStringValue(r.Form, "loginInfo")
+	botName := o.getStringValueDefault(r.Form, "botName", "")
+	callback := o.getStringValueDefault(r.Form, "callback", "")
+	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
