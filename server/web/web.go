@@ -26,6 +26,7 @@ import (
 type RedisConfig struct {
 	Host string
 	Port string
+	Password string
 	Db   string
 }
 
@@ -72,7 +73,7 @@ func (ctx *WebServer) init() error {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
 	ctx.redispool = ctx.newRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
-		ctx.Config.Redis.Db)
+		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
 	retryTimes := 7
@@ -244,7 +245,7 @@ func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "hello", nil)
 }
 
-func (ctx *WebServer) newRedisPool(server string, db string) *redis.Pool {
+func (ctx *WebServer) newRedisPool(server string, db string, password string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
@@ -252,6 +253,12 @@ func (ctx *WebServer) newRedisPool(server string, db string) *redis.Pool {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
 				return nil, err
+			}
+			if len(password) > 0 {
+				if _, err := c.Do("AUTH", password); err != nil {
+					c.Close()
+					return nil, err
+				}
 			}
 			if _, err := c.Do("SELECT", db); err != nil {
 				c.Close()
