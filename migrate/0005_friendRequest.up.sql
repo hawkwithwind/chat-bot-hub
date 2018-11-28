@@ -1,8 +1,8 @@
 CREATE TABLE `friendrequests` (
 `friendrequestid` VARCHAR(36) NOT NULL,
 `botid` VARCHAR(36) NOT NULL,
-`login` VARCHAR(256) NOT NULL,
-`requestlogin` VARCHAR(256) NOT NULL,
+`login` VARCHAR(128) NOT NULL,
+`requestlogin` VARCHAR(128) NOT NULL,
 `requestbody` TEXT,
 `status` VARCHAR(12) NOT NULL DEFAULT 'NEW',
 `createat` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
