@@ -1,8 +1,8 @@
 CREATE TABLE `bots` (
 `botid` VARCHAR(36) NOT NULL,
 `accountid` VARCHAR(36) NOT NULL,
-`botname` VARCHAR(512) NOT NULL,
-`login` VARCHAR(256) NOT NULL,
+`botname` VARCHAR(128) NOT NULL,
+`login` VARCHAR(128) NOT NULL,
 `chatbottype` VARCHAR(36) NOT NULL,
 `logininfo` TEXT,
 `createat` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

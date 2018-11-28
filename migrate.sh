@@ -35,7 +35,7 @@ init*)
 	       -e MYSQL_USER=$db_user \
 	       -e MYSQL_PASSWORD=$db_password \
 	       -v chatbothub-mysql:/var/lib/mysql \
-	       mysql:8.0 \
+	       mysql:5.6 \
 	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \
 	docker logs -f --tail 100 chatbothub_mysql_init
     docker stop chatbothub_mysql_init
