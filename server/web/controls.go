@@ -121,6 +121,8 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "form:\n%v\n", r.Form)
 
 	fmt.Fprintf(w, "body:\n%v\n", r.Body)
+
+	fmt.Fprintf(w, "req:\n%v\n", r)
 }
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
