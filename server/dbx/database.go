@@ -90,7 +90,7 @@ func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
 		return
 	}
 	if o.Err != nil {
-		o.Err = tx.Rollback()
+		tx.Rollback()
 	} else {
 		o.Err = tx.Commit()
 	}

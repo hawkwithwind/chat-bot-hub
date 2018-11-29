@@ -148,10 +148,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			success := false
 			if result != nil {
 				if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
-					success = scsptr.(bool)
-					status := int(o.FromMapFloat("status", result, "actionReply.result", false, 0))
-					if o.Err == nil && success && status == 0 {						
-						localar.Status = "Done"
+					success = scsptr.(bool)					
+					if o.Err == nil && success {
+						localar.Status = "Failed"
+						
+						if rdataptr := o.FromMap("data", result, "actionReply.result", nil); rdataptr != nil {
+							switch rdata := rdataptr.(type) {
+							case map[string]interface{}:
+								status := int(o.FromMapFloat("status", rdata, "actionReply.result.data", false, 0))
+								if status == 0 {
+									localar.Status = "Done"
+								}
+							default:
+								if o.Err == nil {
+									o.Err = fmt.Errorf("actionReply.result.data not map")
+								}
+							}
+						}						
 					} else {
 						localar.Status = "Failed"
 					}
@@ -214,9 +227,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 	}
-
+	
 	o.CommitOrRollback(tx)
-
 	if o.Err != nil {
 		ctx.Error(o.Err, "error while process action reply")
 	}
