@@ -100,11 +100,10 @@ func (ctx *WebServer) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
-func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {
-	raven.CaptureError(err, nil)
-
+func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {	
 	ctx.logger.Printf(msg, v...)
 	ctx.logger.Printf("Error %v", err)
+	raven.CaptureError(err, nil)
 }
 
 func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {

@@ -85,10 +85,9 @@ func (ctx *ChatHub) Info(msg string, v ...interface{}) {
 }
 
 func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
-	raven.CaptureError(err, nil)
-
 	ctx.logger.Printf(msg, v...)
 	ctx.logger.Printf("Error %v", err)
+	raven.CaptureError(err, nil)
 }
 
 func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {

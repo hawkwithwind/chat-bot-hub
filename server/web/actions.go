@@ -138,6 +138,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		if o.Err != nil { ctx.Error(o.Err, "failed") }
+
 		if o.Err == nil {
 			localar.ReplyAt = awayar.ReplyAt
 			localar.Result = awayar.Result
@@ -156,6 +158,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+
+		ctx.Info("--1")
+		
+		if o.Err != nil { ctx.Error(o.Err, "failed") }
+
+		ctx.Info("--2")
 
 		if o.Err == nil {
 			ctx.Info("action reply %v\n", localar)
@@ -187,6 +195,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		o.SaveActionRequest(ctx.redispool, localar)
+
+		if o.Err != nil {
+			ctx.Error(o.Err, "failed2")
+		}
+		
 		ctx.Info("save action %v\n", localar)
 		
 		go func() {
