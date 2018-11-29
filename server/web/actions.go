@@ -158,19 +158,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if o.Err == nil {
-			ctx.Info("action reply %v", localar)
+			ctx.Info("action reply %v\n", localar)
 						
 			switch localar.ActionType {
 			case chatbothub.AcceptUser:
 				frs := o.GetFriendRequestsByLogin(tx, login, "")
 
-				ctx.Info("frs %v", frs)
+				ctx.Info("frs %v\n", frs)
 				
 				bodym := o.FromJson(localar.ActionBody)
 				rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 				
 				if o.Err == nil {
 					for _, fr := range frs {
+						ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n", rlogin, fr.RequestLogin, fr.Status)
 						if fr.RequestLogin == rlogin && fr.Status == "NEW" {
 							fr.Status = localar.Status
 							o.UpdateFriendRequest(tx, &fr)
@@ -183,15 +184,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		o.SaveActionRequest(ctx.redispool, localar)
-		ctx.Info("save action %v", localar)
+		ctx.Info("save action %v\n", localar)
 		
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
+				if _, err := httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
-				} else {
-					ctx.Info("callback resp %v", resp)
 				}
 			}
 		}()
