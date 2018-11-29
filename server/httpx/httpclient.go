@@ -202,8 +202,6 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 			nreq.Header.Set(k, v)
 		}
 
-		fmt.Printf("\n[HTTPX] nreq %v\n", nreq)
-
 		if nresp, err = client.Do(nreq); err != nil {
 			return nil, err
 		}

@@ -147,7 +147,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if result != nil {
 				if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
 					success = scsptr.(bool)
-					if success {
+					status := int(o.FromMapFloat("status", result, "actionReply.result", false, 0))
+					if o.Err == nil && success && status == 0 {						
 						localar.Status = "Done"
 					} else {
 						localar.Status = "Failed"
@@ -158,8 +159,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err == nil {
 			ctx.Info("action reply %v", localar)
-			
-			
+						
 			switch localar.ActionType {
 			case chatbothub.AcceptUser:
 				frs := o.GetFriendRequestsByLogin(tx, login, "")
@@ -168,13 +168,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				
 				bodym := o.FromJson(localar.ActionBody)
 				rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+				
 				if o.Err == nil {
 					for _, fr := range frs {
-						if fr.RequestLogin == rlogin {
+						if fr.RequestLogin == rlogin && fr.Status == "NEW" {
 							fr.Status = localar.Status
 							o.UpdateFriendRequest(tx, &fr)
 							ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
-							break
+							// dont break, update all fr for the same rlogin
 						}
 					}
 				}
