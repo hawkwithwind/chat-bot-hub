@@ -159,11 +159,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err == nil {
 			ctx.Info("action reply %v\n", localar)
-						
+			
 			switch localar.ActionType {
 			case chatbothub.AcceptUser:
 				frs := o.GetFriendRequestsByLogin(tx, login, "")
-
+				
 				ctx.Info("frs %v\n", frs)
 				
 				bodym := o.FromJson(localar.ActionBody)
@@ -180,6 +180,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+				
+			default:
+				ctx.Info("unhandled action %s", localar.ActionType)
 			}
 		}
 
