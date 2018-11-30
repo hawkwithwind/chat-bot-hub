@@ -24,10 +24,10 @@ import (
 )
 
 type RedisConfig struct {
-	Host string
-	Port string
+	Host     string
+	Port     string
 	Password string
-	Db   string
+	Db       string
 }
 
 type DatabaseConfig struct {
@@ -100,7 +100,7 @@ func (ctx *WebServer) Info(msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 }
 
-func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {	
+func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 	ctx.logger.Printf("Error %v", err)
 	raven.CaptureError(err, nil)
@@ -301,19 +301,28 @@ func (ctx *WebServer) Serve() {
 	r := mux.NewRouter()
 	r.Handle("/healthz", healthz())
 	r.HandleFunc("/echo", ctx.echo).Methods("Post")
-	r.HandleFunc("/bots/{login}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
+
+	// bot CURD (controls.go)
+	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
+	r.HandleFunc("/bots/id/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
 	r.HandleFunc("/bots/{login}", ctx.validate(ctx.updateBot)).Methods("PUT")
 	r.HandleFunc("/bots", ctx.validate(ctx.createBot)).Methods("POST")
-	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
+	r.HandleFunc("/bots/scancreate", ctx.validate(ctx.scanCreateBot)).Methods("POST")
+
+	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
+	r.HandleFunc("/bots/{login}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
+
+	// account login and auth (auth.go)
 	r.HandleFunc("/login", ctx.login).Methods("POST")
 	r.HandleFunc("/sdktoken", ctx.validate(ctx.sdkToken)).Methods("Post")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
+
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 

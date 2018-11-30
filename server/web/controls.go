@@ -125,6 +125,70 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "req:\n%v\n", r)
 }
 
+func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
+	type BotsInfo struct {
+		pb.BotsInfo
+		BotName  string `json:"botName"`
+		Callback string `json:"callback"`
+		CreateAt int64  `json:"createAt"`
+	}
+
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	var accountname string
+	if accountptr := grctx.Get(r, "login"); accountptr != nil {
+		accountname = accountptr.(string)
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
+	bots := o.GetBotsByAccountName(ctx.db.Conn, accountname)
+	for _, bot := range bots {
+		if bot.BotId == botId {
+			botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
+			if botsreply == nil {
+				o.Err = fmt.Errorf("get bots from hub failed")
+				return
+			}
+
+			if o.Err == nil {
+				if len(botsreply.BotsInfo) == 1 {
+					o.ok(w, "", BotsInfo{
+						BotsInfo: *botsreply.BotsInfo[0],
+						BotName:  bot.BotName,
+						Callback: bot.Callback.String,
+						CreateAt: bot.CreateAt.Time.Unix(),
+					})
+					return
+				} else if len(botsreply.BotsInfo) == 0 {
+					o.ok(w, "", BotsInfo{
+						BotsInfo: pb.BotsInfo{
+							ClientType: bot.ChatbotType,
+							Login:      bot.Login,
+							Status:     0,
+							BotId:      bot.BotId,
+						},
+						BotName:  bot.BotName,
+						Callback: bot.Callback.String,
+						CreateAt: bot.CreateAt.Time.Unix(),
+					})
+					return
+				} else {
+					o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
+					return
+				}
+			}
+		}
+	}
+
+	o.ok(w, "bot not found, or no access", BotsInfo{})
+}
+
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
@@ -171,7 +235,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 						Status:     0,
 					},
 					BotId:    b.BotId,
-					BotName:  b.BotName,					
+					BotName:  b.BotName,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -215,6 +279,51 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	o.CommitOrRollback(tx)
 
 	o.ok(w, "", bot)
+}
+
+func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	botName := o.getStringValue(r.Form, "botName")
+	clientType := o.getStringValue(r.Form, "clientType")
+
+	if clientType != "WECHATBOT" {
+		o.Err = fmt.Errorf("scan create bot %s not supported", clientType)
+		return
+	}
+
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(ctx.db)
+	account := o.GetAccountByName(tx, accountName)
+	bot := o.NewBot(botName, clientType, account.AccountId, "")
+
+	o.SaveBot(tx, bot)
+	o.CommitOrRollback(tx)
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
+
+	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
+		ClientId:   "",
+		ClientType: clientType,
+		Login:      "",
+		NotifyUrl:  fmt.Sprintf("%s%s", ctx.Config.Baseurl, botnotifypath),
+		Password:   "",
+		LoginInfo:  "",
+		BotId:      bot.BotId,
+	})
+	o.ok(w, "", loginreply)
 }
 
 func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +402,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.Login)
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
 		ClientId:   clientId,
@@ -302,6 +411,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		NotifyUrl:  fmt.Sprintf("%s%s", ctx.Config.Baseurl, botnotifypath),
 		Password:   pass,
 		LoginInfo:  logininfo,
+		BotId:      botId,
 	})
 	o.ok(w, "", loginreply)
 }

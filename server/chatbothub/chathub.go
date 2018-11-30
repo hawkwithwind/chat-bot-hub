@@ -57,6 +57,8 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 		LoginInfo:  o.ToJson(bot.LoginInfo),
 		Status:     int32(bot.Status),
 		FilterInfo: o.ToJson(bot.filter),
+		BotId:      bot.BotId,
+		ScanUrl:    bot.ScanUrl,
 	}
 }
 
@@ -70,6 +72,7 @@ const (
 	PONG          string = "PONG"
 	REGISTER      string = "REGISTER"
 	LOGIN         string = "LOGIN"
+	LOGINSCAN     string = "LOGINSCAN"
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
 	LOGOUTDONE    string = "LOGOUTDONE"
@@ -213,6 +216,18 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
+			case LOGINSCAN:
+				if bot.ClientType == WECHATBOT {
+					body := o.FromJson(in.Body)
+					var scanUrl string
+					if body != nil {
+						scanUrl = o.FromMapString("url", body, "eventRequest.body", false, "")
+					}
+					if o.Err == nil {
+						thebot, o.Err = bot.loginScan(scanUrl)
+					}
+				}
+
 			case UPDATETOKEN:
 				body := o.FromJson(in.Body)
 				var userName string
@@ -289,7 +304,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err != nil {
 						hub.Error(o.Err, "cannot parse %s", in.Body)
 					}
-					
+
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(msg)
 					}
@@ -335,7 +350,15 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 			if o.FindFromLines(req.Logins, v.Login) {
 				bots = append(bots, NewBotsInfo(v))
 			}
-		} else {
+		}
+
+		if len(req.BotIds) > 0 {
+			if o.FindFromLines(req.BotIds, v.BotId) {
+				bots = append(bots, NewBotsInfo(v))
+			}
+		}
+
+		if len(req.Logins) == 0 && len(req.BotIds) == 0 {
 			bots = append(bots, NewBotsInfo(v))
 		}
 	}
@@ -377,7 +400,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 
 	if bot != nil {
 		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin(req.Login, req.NotifyUrl)
+			bot, o.Err = bot.prepareLogin(req.BotId, req.Login, req.NotifyUrl)
 		}
 
 		body := o.ToJson(LoginBody{

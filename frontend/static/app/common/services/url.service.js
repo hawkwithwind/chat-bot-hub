@@ -8,7 +8,8 @@
       'consts': buildUrl('consts'),
       'botlogin': buildUrl('botlogin'),
       'botaction': buildUrl('botaction'),
-      'loginqq': buildUrl('loginqq')
+      'loginqq': buildUrl('loginqq'),
+      'bots/id': buildUrl('bots/id'),
     };
     return result;
     

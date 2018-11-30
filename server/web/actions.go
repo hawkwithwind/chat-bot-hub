@@ -45,7 +45,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if o.Err != nil {		
+	if o.Err != nil {
 		return
 	}
 
@@ -71,7 +71,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-		
+
 	case chatbothub.LOGINDONE:
 		var oldtoken string
 		var oldwxdata string
@@ -138,7 +138,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if o.Err != nil { ctx.Error(o.Err, "failed") }
+		if o.Err != nil {
+			ctx.Error(o.Err, "failed")
+		}
 
 		if o.Err == nil {
 			localar.ReplyAt = awayar.ReplyAt
@@ -148,10 +150,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			success := false
 			if result != nil {
 				if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
-					success = scsptr.(bool)					
+					success = scsptr.(bool)
 					if o.Err == nil && success {
 						localar.Status = "Failed"
-						
+
 						if rdataptr := o.FromMap("data", result, "actionReply.result", nil); rdataptr != nil {
 							switch rdata := rdataptr.(type) {
 							case map[string]interface{}:
@@ -164,7 +166,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									o.Err = fmt.Errorf("actionReply.result.data not map")
 								}
 							}
-						}						
+						}
 					} else {
 						localar.Status = "Failed"
 					}
@@ -173,23 +175,25 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ctx.Info("--1")
-		
-		if o.Err != nil { ctx.Error(o.Err, "failed") }
+
+		if o.Err != nil {
+			ctx.Error(o.Err, "failed")
+		}
 
 		ctx.Info("--2")
 
 		if o.Err == nil {
 			ctx.Info("action reply %v\n", localar)
-			
+
 			switch localar.ActionType {
 			case chatbothub.AcceptUser:
 				frs := o.GetFriendRequestsByLogin(tx, login, "")
-				
+
 				ctx.Info("frs %v\n", frs)
-				
+
 				bodym := o.FromJson(localar.ActionBody)
 				rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-				
+
 				if o.Err == nil {
 					for _, fr := range frs {
 						ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n", rlogin, fr.RequestLogin, fr.Status)
@@ -201,7 +205,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
-				
+
 			default:
 				ctx.Info("unhandled action %s", localar.ActionType)
 			}
@@ -212,9 +216,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			ctx.Error(o.Err, "failed2")
 		}
-		
+
 		ctx.Info("save action %v\n", localar)
-		
+
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
@@ -227,7 +231,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 	}
-	
+
 	o.CommitOrRollback(tx)
 	if o.Err != nil {
 		ctx.Error(o.Err, "error while process action reply")

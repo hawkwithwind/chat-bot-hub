@@ -229,7 +229,7 @@ func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRe
 
 	arstr, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "GET", key))
 	fmt.Printf("\n[AR] key %s err %v\n %s\n", key, o.Err, arstr)
-	
+
 	if o.Err == nil {
 		o.Err = json.Unmarshal([]byte(arstr), &ar)
 	}
