@@ -150,6 +150,7 @@
     $scope.data = {}
     $scope.data.clientId = clientId
     $scope.data.botId = botId
+    $scope.data.clientType = "WECHATBOT"
     
     $scope.close = () => {
       $uibModalInstance.dismiss()
