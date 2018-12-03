@@ -323,6 +323,8 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  "",
 		BotId:      bot.BotId,
 	})
+
+	
 	o.ok(w, "", loginreply)
 }
 
