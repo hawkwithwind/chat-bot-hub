@@ -29,19 +29,19 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
-	login := vars["login"]
+	botId := vars["botId"]
 
 	tx := o.Begin(ctx.db)
-	bot := o.GetBotByLogin(tx, login)
+	bot := o.GetBotById(tx, botId)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{login}})
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
-			o.Err = fmt.Errorf("bot {%s} not activated", login)
+			o.Err = fmt.Errorf("bot {%s} not activated", botId)
 		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot {%s} multiple instance", login)
+			o.Err = fmt.Errorf("bot {%s} multiple instance", botId)
 		}
 	}
 
@@ -113,7 +113,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		fr := o.NewFriendRequest(bot.BotId, login, rlogin, reqstr, "NEW")
+		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, reqstr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -187,7 +187,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			switch localar.ActionType {
 			case chatbothub.AcceptUser:
-				frs := o.GetFriendRequestsByLogin(tx, login, "")
+				frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
 				ctx.Info("frs %v\n", frs)
 

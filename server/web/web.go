@@ -314,7 +314,7 @@ func (ctx *WebServer) Serve() {
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
-	r.HandleFunc("/bots/{login}/notify", ctx.botNotify).Methods("Post")
+	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
 
 	// account login and auth (auth.go)

@@ -401,10 +401,14 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()
+	if o.Err != nil {
+		return
+	}
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
+	
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
 		ClientId:   clientId,
