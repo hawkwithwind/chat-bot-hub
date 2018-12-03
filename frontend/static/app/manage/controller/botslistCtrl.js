@@ -159,6 +159,8 @@
     $scope.login = (data) => {
       buildModel('botlogin', data).post((data) => {
 	toastr.info(data, '信息')
+      }, (error) => {
+	toastr.error(error, '登录失败')
       })
 
       $scope.close()
