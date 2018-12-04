@@ -191,13 +191,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var token string
 					var notifyUrl string
 					if body != nil {
+						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 						notifyUrl = o.FromMapString("notifyUrl", body, "eventRequest.body", false, "")
 					}
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(userName, wxData, token, notifyUrl)
+						thebot, o.Err = bot.loginDone(botId, userName, wxData, token, notifyUrl)
 					}
 					if o.Err == nil {
 						go func() {
@@ -344,19 +345,15 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
-	hub.Info("req %v", req)
-
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
-			hub.Info("login from %v find %s", req.Logins, v.Login)
 			if o.FindFromLines(req.Logins, v.Login) {
 				bots = append(bots, NewBotsInfo(v))
 			}
 		}
 
 		if len(req.BotIds) > 0 {
-			hub.Info("botid from %v find %s", req.BotIds, v.BotId)
 			if o.FindFromLines(req.BotIds, v.BotId) {
 				bots = append(bots, NewBotsInfo(v))
 			}
@@ -385,6 +382,7 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 }
 
 type LoginBody struct {
+	BotId     string `json:"botId"`
 	Login     string `json:"login"`
 	Password  string `json:"password"`
 	LoginInfo string `json:"loginInfo"`
@@ -408,6 +406,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		}
 
 		body := o.ToJson(LoginBody{
+			BotId:     req.BotId,
 			Login:     req.Login,
 			Password:  req.Password,
 			LoginInfo: req.LoginInfo,

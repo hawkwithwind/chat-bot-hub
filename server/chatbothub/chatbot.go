@@ -135,7 +135,7 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyUrl string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string, notifyUrl string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -146,6 +146,15 @@ func (bot *ChatBot) loginDone(login string, wxdata string, token string, notifyU
 		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
 	}
 
+	if len(bot.BotId) > 0 && bot.BotId != botId {
+		bot.Info("bot c[%s]{%s} botId %s -> %s ", bot.ClientType, bot.ClientId, bot.BotId, botId)
+	}
+
+	if len(botId) > 0 {
+		bot.BotId = botId
+	} else {
+		bot.BotId = "1aa5d8da-7866-48ab-914e-c3d72056044a"
+	}
 	bot.Login = login
 	bot.NotifyUrl = notifyUrl
 	bot.LoginInfo.WxData = wxdata
