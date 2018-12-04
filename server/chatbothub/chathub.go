@@ -344,15 +344,19 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
+	hub.Info("req %v", req)
+
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
+			hub.Info("login from %v find %s", req.Logins, v.Login)
 			if o.FindFromLines(req.Logins, v.Login) {
 				bots = append(bots, NewBotsInfo(v))
 			}
 		}
 
 		if len(req.BotIds) > 0 {
+			hub.Info("botid from %v find %s", req.BotIds, v.BotId)
 			if o.FindFromLines(req.BotIds, v.BotId) {
 				bots = append(bots, NewBotsInfo(v))
 			}
