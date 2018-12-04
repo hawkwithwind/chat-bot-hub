@@ -118,14 +118,13 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	return bot, nil
 }
 
-func (bot *ChatBot) prepareLogin(botId string, login string, notifyurl string) (*ChatBot, error) {
+func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
 		return bot, fmt.Errorf("bot status %s cannot login", bot.Status)
 	}
 
 	bot.BotId = botId
 	bot.Login = login
-	bot.NotifyUrl = notifyurl
 	bot.Status = LoggingPrepared
 	return bot, nil
 }
@@ -135,7 +134,7 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string, notifyUrl string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -156,7 +155,6 @@ func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token s
 		bot.BotId = "1aa5d8da-7866-48ab-914e-c3d72056044a"
 	}
 	bot.Login = login
-	bot.NotifyUrl = notifyUrl
 	bot.LoginInfo.WxData = wxdata
 	bot.LoginInfo.Token = token
 	bot.ScanUrl = ""
@@ -259,8 +257,9 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 	}
 }
 
-func (bot *ChatBot) WebNotifyRequest(event string, body string) *httpx.RestfulRequest {
-	rr := httpx.NewRestfulRequest("post", bot.NotifyUrl)
+func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) *httpx.RestfulRequest {
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
+	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, botnotifypath))
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 	return rr

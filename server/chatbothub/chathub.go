@@ -39,6 +39,7 @@ type ChatHub struct {
 	Config  ChatHubConfig
 	Webhost string
 	Webport string
+	WebBaseUrl string
 	logger  *log.Logger
 	mux     sync.Mutex
 	bots    map[string]*ChatBot
@@ -186,25 +187,25 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case LOGINDONE:
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
+					var botId string
 					var userName string
 					var wxData string
-					var token string
-					var notifyUrl string
+					var token string					
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
-						token = o.FromMapString("token", body, "eventRequest.body", true, "")
-						notifyUrl = o.FromMapString("notifyUrl", body, "eventRequest.body", false, "")
+						token = o.FromMapString("token", body, "eventRequest.body", true, "")						
 					}
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(botId, userName, wxData, token, notifyUrl)
+						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
 					if o.Err == nil {
 						go func() {
-							if _, err := httpx.RestfulCallRetry(thebot.WebNotifyRequest(LOGINDONE, ""), 5, 1); err != nil {
-								hub.Error(err, "webnotify logindone failed\n")
-							}
+							if _, err := httpx.RestfulCallRetry(
+								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
+									hub.Error(err, "webnotify logindone failed\n")
+								}
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
@@ -242,7 +243,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				if o.Err == nil {
 					go func() {
-						if _, err := httpx.RestfulCallRetry(thebot.WebNotifyRequest(UPDATETOKEN, ""), 5, 1); err != nil {
+						if _, err := httpx.RestfulCallRetry(
+							thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
 							hub.Error(err, "webnotify updatetoken failed\n")
 						}
 					}()
@@ -253,7 +255,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
 					go func() {
-						if _, err := httpx.RestfulCallRetry(bot.WebNotifyRequest(FRIENDREQUEST, reqstr), 5, 1); err != nil {
+						if _, err := httpx.RestfulCallRetry(
+							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
 							hub.Error(err, "webnotify friendrequest failed\n")
 						}
 					}()
@@ -289,11 +292,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						go func() {
 							httpx.RestfulCallRetry(
-								bot.WebNotifyRequest(ACTIONREPLY, o.ToJson(domains.ActionRequest{
-									ActionRequestId: actionRequestId,
-									Result:          o.ToJson(result),
-									ReplyAt:         utils.JSONTime{Time: time.Now()},
-								})), 5, 1)
+								bot.WebNotifyRequest(
+									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+										ActionRequestId: actionRequestId,
+										Result:          o.ToJson(result),
+										ReplyAt:         utils.JSONTime{Time: time.Now()},
+									})), 5, 1)
 						}()
 					}
 				}
@@ -385,8 +389,7 @@ type LoginBody struct {
 	BotId     string `json:"botId"`
 	Login     string `json:"login"`
 	Password  string `json:"password"`
-	LoginInfo string `json:"loginInfo"`
-	NotifyUrl string `json:"notifyUrl"`
+	LoginInfo string `json:"loginInfo"`	
 }
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
@@ -402,15 +405,14 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 
 	if bot != nil {
 		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin(req.BotId, req.Login, req.NotifyUrl)
+			bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 		}
 
 		body := o.ToJson(LoginBody{
 			BotId:     req.BotId,
 			Login:     req.Login,
 			Password:  req.Password,
-			LoginInfo: req.LoginInfo,
-			NotifyUrl: req.NotifyUrl,
+			LoginInfo: req.LoginInfo,			
 		})
 
 		o.sendEvent(bot.tunnel, &pb.EventReply{

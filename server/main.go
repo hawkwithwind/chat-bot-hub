@@ -86,7 +86,7 @@ func main() {
 			defer wg.Done()
 
 			raven.CapturePanicAndWait(func() {
-				hub := chatbothub.ChatHub{Config: config.Hub, Webhost: "web", Webport: config.Web.Port}
+				hub := chatbothub.ChatHub{Config: config.Hub, Webhost: "web", Webport: config.Web.Port, WebBaseUrl: config.Web.Baseurl}
 				hub.Serve()
 			}, nil)
 		}()
