@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/getsentry/raven-go"
-
+	"github.com/fluent/fluent-logger-golang/fluent"
+	
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"	
 )
 
 type ChatBotStatus int32
@@ -60,6 +61,8 @@ type ChatBot struct {
 	errmsg     string
 	filter     Filter
 	logger     *log.Logger
+	fluentLogger *fluent.Fluent
+	fluentTag    string
 }
 
 const (
@@ -86,8 +89,13 @@ func (bot *ChatBot) Error(err error, msg string, v ...interface{}) {
 	bot.logger.Printf("Error %v", err)
 }
 
-func NewChatBot() *ChatBot {
-	return &ChatBot{Status: BeginNew, logger: log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime)}
+func NewChatBot(fluentLogger *fluent.Fluent, fluentTag string) *ChatBot {
+	return &ChatBot{
+		Status: BeginNew,
+		logger: log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime),
+		fluentLogger: fluentLogger,
+		fluentTag: fluentTag,
+	}
 }
 
 func (bot *ChatBot) register(clientId string, clientType string,
@@ -107,13 +115,22 @@ func (bot *ChatBot) register(clientId string, clientType string,
 		filter := NewWechatBaseFilter()
 		filter.init("源:微信")
 		pfilter := NewPlainFilter(bot.logger)
-		pfilter.init("日志")
+		pfilter.init("调试")
+		ffilter := NewFluentFilter(bot.fluentLogger, bot.fluentTag)
+		ffilter.init("日志")
 
-		if err := filter.Next(pfilter); err == nil {
-			bot.filter = filter
-		} else {
+		var err error
+		err = filter.Next(pfilter)
+		if err != nil {
 			return bot, err
 		}
+
+		err = pfilter.Next(ffilter)
+		if err != nil {
+			return bot, err
+		}
+
+		bot.filter = filter
 	}
 	return bot, nil
 }
@@ -149,11 +166,7 @@ func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token s
 		bot.Info("bot c[%s]{%s} botId %s -> %s ", bot.ClientType, bot.ClientId, bot.BotId, botId)
 	}
 
-	if len(botId) > 0 {
-		bot.BotId = botId
-	} else {
-		bot.BotId = "1aa5d8da-7866-48ab-914e-c3d72056044a"
-	}
+	bot.BotId = botId
 	bot.Login = login
 	bot.LoginInfo.WxData = wxdata
 	bot.LoginInfo.Token = token

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"github.com/fluent/fluent-logger-golang/fluent"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -25,13 +26,29 @@ type ErrorHandler struct {
 	utils.ErrorHandler
 }
 
+type FluentConfig struct {
+	Host string
+	Port int
+	Tag string
+}
+
 type ChatHubConfig struct {
 	Host string
 	Port string
+	Fluent FluentConfig
 }
 
 func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
+	var err error
+	hub.fluentLogger, err = fluent.New(fluent.Config{
+		FluentPort: hub.Config.Fluent.Port,
+		FluentHost: hub.Config.Fluent.Host,
+		WriteTimeout: 60 * time.Second,
+	})
+	if err != nil {
+		hub.Error(err, "create fluentLogger failed %v", err)
+	}
 	hub.bots = make(map[string]*ChatBot)
 }
 
@@ -41,6 +58,7 @@ type ChatHub struct {
 	Webport string
 	WebBaseUrl string
 	logger  *log.Logger
+	fluentLogger *fluent.Fluent
 	mux     sync.Mutex
 	bots    map[string]*ChatBot
 }
@@ -164,7 +182,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		} else if in.EventType == REGISTER {
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
-				bot = NewChatBot()
+				bot = NewChatBot(hub.fluentLogger, hub.Config.Fluent.Tag)
 			}
 
 			if newbot, err := bot.register(in.ClientId, in.ClientType, tunnel); err != nil {

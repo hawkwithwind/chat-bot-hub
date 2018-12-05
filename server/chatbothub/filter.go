@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-
+	
 	"github.com/google/uuid"
+	"github.com/fluent/fluent-logger-golang/fluent"
 )
 
 type Filter interface {
@@ -81,6 +82,14 @@ func (f *PlainFilter) String() string {
 	return string(jsonstr)
 }
 
+func (f *PlainFilter) Next(filter Filter) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *PlainFilter")
+	}
+	f.NextFilter = filter
+	return nil	
+}
+
 func (f *PlainFilter) Fill(msg string) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *TextPlainFilter")
@@ -128,12 +137,63 @@ func (f *PlainFilter) Fill(msg string) error {
 		f.logger.Printf("%s[%s] %s ...", f.Name, f.Type, brief)
 	}
 
-	if f.NextFilter != nil {
+	if f.NextFilter != nil && o.Err == nil {
 		return f.NextFilter.Fill(msg)
 	}
 
 	return o.Err
 }
+
+type FluentFilter struct {
+	BaseFilter
+	logger *fluent.Fluent
+	tag string
+	NextFilter Filter `json:"next"`
+}
+
+func NewFluentFilter(logger *fluent.Fluent, tag string) *FluentFilter {
+	return &FluentFilter{BaseFilter: BaseFilter{Type: "过滤:Fluent"}, logger: logger, tag: tag}
+}
+
+func (f *FluentFilter) String() string {
+	jsonstr, _ := json.Marshal(f)
+	return string(jsonstr)
+}
+
+func (f *FluentFilter) Next(filter Filter) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *FluentFilter")
+	}
+	f.NextFilter = filter
+	return nil	
+}
+
+func (f *FluentFilter) Fill(msg string) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *FluentFilter")
+	}
+
+	o := &ErrorHandler{}
+	body := o.FromJson(msg)
+	
+	if o.Err == nil {
+		go func() {
+			if body != nil {
+				f.logger.Post(f.tag, body)
+				fmt.Println("[FLUENT] logged body")
+			}
+		}()
+
+		if f.NextFilter != nil {
+			return f.NextFilter.Fill(msg)
+		}
+	} else {
+		return o.Err
+	}
+	
+	return nil
+}
+
 
 type RegexRouter struct {
 	BaseFilter
