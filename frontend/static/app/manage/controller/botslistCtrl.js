@@ -120,6 +120,18 @@
 	}
       })
     }
+
+    $scope.showScanUrl = (row) => {
+      $modal.open({
+	templateUrl: 'scanUrlTemplate',
+	controller: scanUrlCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  login: () => row.login,
+	  botId: () => row.botId,
+	}
+      })
+    }
   }
 
   app.controller("qqLoginCtrl", qqLoginCtrl)
