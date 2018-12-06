@@ -180,7 +180,6 @@ func (f *FluentFilter) Fill(msg string) error {
 		go func() {
 			if body != nil {
 				f.logger.Post(f.tag, body)
-				fmt.Println("[FLUENT] logged body")
 			}
 		}()
 

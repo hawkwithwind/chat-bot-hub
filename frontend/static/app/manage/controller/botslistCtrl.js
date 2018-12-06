@@ -293,7 +293,10 @@
   scanUrlCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "botId"]
   function scanUrlCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, botId) {
     $scope.data = {}
+    $scope.flag = true
+    
     $scope.close = () => {
+      $scope.flag = false
       $uibModalInstance.dismiss()
     }
 
@@ -304,15 +307,19 @@
 	  if(bot.scanUrl !== undefined) {
 	    $scope.data.scanUrl = bot.scanUrl
 	  } else {
+	    if ($scope.flag) {
+	      setTimeout(() => {
+		$scope.refresh()
+	      }, 3000)
+	    }
+	  }
+	} else {
+	  if ($scope.flag) {
 	    setTimeout(() => {
 	      $scope.refresh()
 	    }, 3000)
 	  }
-	} else {
-	  setTimeout(() => {
-	    $scope.refresh()
-	  }, 3000)
-	}	
+	}
       })
     }
     
