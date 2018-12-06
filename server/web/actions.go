@@ -100,6 +100,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
+		if len(bot.Login) == 0 {
+			ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
+			bot.Login = thebotinfo.Login
+			o.UpdateBotLogin(tx, bot)			
+		}
+
 	case chatbothub.FRIENDREQUEST:
 		reqstr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, reqstr)

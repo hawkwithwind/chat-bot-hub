@@ -59,6 +59,20 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
 }
 
+func (o *ErrorHandler) UpdateBotLogin(q dbx.Queryable, bot *Bot) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE bots
+SET login = :login
+WHERE botid = :botid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, bot)
+}
+
 func (o *ErrorHandler) UpdateBot(q dbx.Queryable, bot *Bot) {
 	if o.Err != nil {
 		return
