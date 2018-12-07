@@ -55,7 +55,7 @@
 	templateUrl: 'scanWechatBotTemplate',
 	controller: scanWechatBotCtrl,
 	resolve: {
-	  clientType: () => row.clientType,
+	  clientType: () => 'WECHATBOT'
 	}
       }).then(() => {
 	$scope.refresh()
