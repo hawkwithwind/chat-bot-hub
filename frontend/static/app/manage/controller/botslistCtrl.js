@@ -54,6 +54,9 @@
       $modal.open({
 	templateUrl: 'scanWechatBotTemplate',
 	controller: scanWechatBotCtrl,
+	resolve: {
+	  clientType: () => row.clientType,
+	}
       }).then(() => {
 	$scope.refresh()
       })
@@ -266,9 +269,11 @@
   }
 
   app.controller('scanWechatBotCtrl', scanWechatBotCtrl)
-  scanWechatBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools"]
-  function scanWechatBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools) {
+  scanWechatBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientType"]
+  function scanWechatBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientType) {
     $scope.data = {}
+    $scope.data.clientType = clientType
+    
     $scope.close = () => {
       $uibModalInstance.dismiss()
     }
