@@ -20,6 +20,7 @@ type Bot struct {
 	ChatbotType string         `db:"chatbottype"`
 	LoginInfo   sql.NullString `db:"logininfo"`
 	Callback    sql.NullString `db:"callback"`
+	FilterId    sql.NullString `db:"filterid"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
 	DeleteAt    mysql.NullTime `db:"deleteat"`
@@ -67,6 +68,20 @@ func (o *ErrorHandler) UpdateBotLogin(q dbx.Queryable, bot *Bot) {
 	query := `
 UPDATE bots
 SET login = :login
+WHERE botid = :botid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, bot)
+}
+
+func (o *ErrorHandler) UpdateBotFilterId(q dbx.Queryable, bot *Bot) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE bots
+SET filterid = :filterid
 WHERE botid = :botid
 `
 	ctx, _ := o.DefaultContext()

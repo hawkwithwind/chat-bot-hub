@@ -339,6 +339,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	botName := o.getStringValueDefault(r.Form, "botName", "")
 	callback := o.getStringValueDefault(r.Form, "callback", "")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
+	filterid := o.getStringValueDefault(r.Form, "filterid", "")
 
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
@@ -367,6 +368,10 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	}
 	if loginInfo != "" {
 		bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
+	}
+	if filterid != "" {
+		bot.FilterId = sql.NullString{String: filterid, Valid: true}
+		o.UpdateBotFilterId(tx, bot)
 	}
 
 	o.UpdateBot(tx, bot)
@@ -471,3 +476,64 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+
+func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	filtername := o.getStringValue(r.Form, "name")
+
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(web.db)
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+	if account == nil {
+		o.Err = fmt.Errorf("account %s not found", accountName)
+		return
+	}
+	filter := o.NewFilter(filtername, "", account.AccountId)
+	o.SaveFilter(tx, filter)
+	o.CommitOrRollback(tx)
+
+	o.ok(w, "success", filter)
+}
+
+func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	var accountName string
+	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(web.db)
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+	if account == nil {
+		o.Err = fmt.Errorf("account %s not found", accountName)
+		return
+	}
+
+	filters := o.GetFilterByAccountId(tx, account.AccountId)
+	o.ok(w, "success", filters)		
+}
+
+
+
