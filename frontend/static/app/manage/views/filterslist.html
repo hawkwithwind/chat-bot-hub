@@ -1,0 +1,121 @@
+<div ncy-breadcrumb></div>
+<h3 class="page-title">过滤器列表</h3>
+
+<div class="row">
+  <div class="col-xs-12 col-md-12">    
+    <div class="col-xs-3 col-md-3">
+      <button class="btn green col-md-12" ng-click="createFilter()">新建过滤器</button>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-xs-12 col-md-12">
+    <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
+	   style="padding:40px;margin:10px;width:auto">
+      <th style="text-align:center">ID</th>
+      <th style="text-align:center">名称</th>
+      <th style="text-align:center">类型</th>      
+      <th style="text-align:center">内容</th>
+      <th style="text-align:center">下游</th>
+      <th style="text-align:center">创建时间</th>
+      <th style="text-align:center">操作</th>
+      
+      <tbody>
+	<tr ng-repeat="row in body">
+	  <td style="text-algin:center;width:160px"> {{row.filterId}} </td>
+	  <td style="text-align:center;width:160px">
+	    <a href="javascript:;" ng-click="editFilter(row)">{{ row.filterName }}</a>
+	  </td>
+	  <td style="text-align:center;width:120px">{{ row.filterType }}</td>
+	  <td style="text-align:center;width:120px">{{ row.body }}</td>
+	  <td style="text-align:center;width:120px">{{ row.next }}</td>
+	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>	  
+	  <td style="width:160px">	    
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="text/ng-template" id="createFilterTemplate">
+  <div class="modal-header">
+    <button type="button" class="close" ng-click="close()"></button>
+    <h3 class="modal-title">新建过滤器</h3>
+  </div>
+  <div class="modal-body form-group-padding" id="createFilterBody">
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_filterName" class="col-md-3 control-label">名称</label>
+	<input id="text_filterName" name="text_filterName" type="text" class="col-md-9" ng-model="data.filterName" />
+      </div>      
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_type" class="col-md-3 control-label">类型</label>
+	<input id="text_type" name="text_type" type="text" class="col-md-9" ng-model="data.filterType" />
+      </div>
+    </div>
+    
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_body" class="col-md-3 control-label">内容</label>
+	<textarea id="text_body" name="text_body" rows="10" class="col-md-9" ng-model="data.body" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-3">
+	<button class="btn green" ng-click="createFilter(data)">保存</button>
+      </div>
+    </div>
+  </div>
+</script>
+
+<script type="text/ng-template" id="editFilterTemplate">
+  <div class="modal-header">
+    <button type="button" class="close" ng-click="close()"></button>
+    <h3 class="modal-title">编辑过滤器</h3>    
+  </div>
+  <div class="modal-body form-group-padding" id="editFilterBody">
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_filterName" class="col-md-3 control-label">名称</label>
+	<input id="text_filterName" name="text_filterName" type="text" class="col-md-9" ng-model="data.filterName" />
+      </div>      
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_filterType" class="col-md-3 control-label">类型</label>
+	<input id="text_filterType" name="text_filterType" type="text" class="col-md-9" ng-model="data.filterType" readonly />
+      </div>      
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_body" class="col-md-3 control-label">内容</label>
+	<textarea id="text_body" name="text_body" rows="10" class="col-md-9" ng-model="data.body" />
+      </div>
+    </div>
+
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_next" class="col-md-3 control-label">下游</label>
+	<input id="text_next" name="text_next" type="text" class="col-md-9" ng-model="data.next" />
+      </div>      
+    </div>
+    
+
+    <input id="hidden_filterId" name="hidden_filterId" type="hidden" ng-model="data.filterId" />
+    
+    <div class="row form-group-padding">
+      <div class="col-md-3">
+	<button class="btn green" ng-click="saveFilter(data)">保存</button>
+      </div>
+    </div>
+  </div>
+</script>
+
