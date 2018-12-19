@@ -193,8 +193,9 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
-		BotId    string `json:"botId"`
+		BotId    string `json:"botId"`		
 		BotName  string `json:"botName"`
+		FilterId string `json:"filterId"`
 		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
 	}
@@ -225,6 +226,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotsInfo: *info,
 					BotId:    b.BotId,
 					BotName:  b.BotName,
+					FilterId: b.FilterId,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -237,6 +239,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					},
 					BotId:    b.BotId,
 					BotName:  b.BotName,
+					FilterId: b.FilterId,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
