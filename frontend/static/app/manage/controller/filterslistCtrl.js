@@ -4,7 +4,7 @@
   filterslistCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
 			     "buildPromise", "tools", "buildModelResId"];
   function filterslistCtrl($scope, $modal, toastr,
-			   buildModel, buildPomise, tools, buildModeResId) {
+			   buildModel, buildPromise, tools, buildModeResId) {
     $scope.body = {};
 
     $scope.tsToString = function(unix_timestamp) {
