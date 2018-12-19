@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type GRPCWrapper struct {
@@ -570,6 +571,16 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
+	type FilterVO struct {
+		FilterId string `json:"filterId"`
+		FilterName string `json:"filterName"`
+		FilterType string `json:"filterType"`
+		Body string `json:"body"`
+		Next string `json:"next"`
+		CreateAt utils.JSONTime `json:"createAt"`
+	}
+
+	
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -589,5 +600,17 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filters := o.GetFilterByAccountId(tx, account.AccountId)
-	o.ok(w, "success", filters)
+	var filtervos []FilterVO
+	for _, f := range filters {
+		filtervos = append(filtervos, FilterVO{
+			FilterId: f.FilterId,
+			FilterName: f.FilterName,
+			FilterType: f.FilterType,
+			Body: f.Body.String,
+			Next: f.Next.String,
+			CreateAt: utils.JSONTime{f.CreateAt.Time},
+		})
+	}
+	
+	o.ok(w, "success", filtervos)
 }
