@@ -502,8 +502,9 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	filterId := vars["filterid"]
 
 	r.ParseForm()
-	filtername := o.getStringValue(r.Form, "name")
-	filterbody := o.getStringValue(r.Form, "body")
+	filtername := o.getStringValueDefault(r.Form, "name", "")
+	filterbody := o.getStringValueDefault(r.Form, "body", "")
+	filternext := o.getStringValueDefault(r.Form, "next", "")
 	accountName := o.getAccountName(r)
 	tx := o.Begin(web.db)
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
@@ -521,9 +522,20 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 
 	if o.Err != nil {
 		return
-	}	
-	filter.FilterName = filtername	
-	filter.Body = sql.NullString{ String: filterbody, Valid: true }
+	}
+
+	if filtername != "" {
+		filter.FilterName = filtername
+	}
+
+	if filterbody != "" {
+		filter.Body = sql.NullString{ String: filterbody, Valid: true }
+	}
+
+	if filternext != "" {
+		filter.Next = sql.NullString{ String: filternext, Valid: true }
+	}
+	
 	o.UpdateFilter(tx, filter)
 	o.CommitOrRollback(tx)
 	o.ok(w, "update filter success", filter)
