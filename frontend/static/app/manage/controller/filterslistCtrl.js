@@ -4,7 +4,7 @@
   filterslistCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
 			     "buildPromise", "tools", "buildModelResId"];
   function filterslistCtrl($scope, $modal, toastr,
-			   buildModel, buildPromise, tools, buildModeResId) {
+			   buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {};
 
     $scope.tsToString = function(unix_timestamp) {
@@ -66,8 +66,8 @@
   }
 
   app.controller('createFilterCtrl', createFilterCtrl)
-  createFilterCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModalResId", "buildPromise", "tools"]
-  function createFilterCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModalResId, buildPromise, tools) {
+  createFilterCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools"]
+  function createFilterCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools) {
     $scope.data = {}
 
     $scope.close = () => {
