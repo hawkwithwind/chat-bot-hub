@@ -52,9 +52,9 @@
 	templateUrl: 'editFilterTemplate',
 	controller: editFilterCtrl,
 	resolve: {
-	  filterName: () => row.filterName,
+	  name: () => row.name,
 	  filterId: () => row.filterId,
-	  filterType: () => row.filterType,
+	  type: () => row.type,
 	  body: () => row.body,
 	  next: () => row.next,
 	}
@@ -81,7 +81,7 @@
 	url: url,
 	data: data
       }).then((success) => {
-	toastr.success($scope.data.filterName, '创建成功')
+	toastr.success($scope.data.name, '创建成功')
       }, (error) => {
 	toastr.error(error, '创建失败')
       })
@@ -92,11 +92,11 @@
 
   app.controller('editFilterCtrl', editFilterCtrl)
   editFilterCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "filterName", "filterType", "body", "next", "filterId"]
-  function editFilterCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, filterName, filterType, body, next, filterId) {
+  function editFilterCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, type, body, next, filterId) {
     $scope.data = {
       filterId: filterId,
-      filterName: filterName,
-      filterType: filterType,
+      name: name,
+      type: type,
       body: body,
       next: next,      
     }
