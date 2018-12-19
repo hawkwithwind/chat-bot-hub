@@ -226,7 +226,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotsInfo: *info,
 					BotId:    b.BotId,
 					BotName:  b.BotName,
-					FilterId: b.FilterId,
+					FilterId: b.FilterId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -239,7 +239,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					},
 					BotId:    b.BotId,
 					BotName:  b.BotName,
-					FilterId: b.FilterId,
+					FilterId: b.FilterId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
