@@ -91,7 +91,7 @@
   }
 
   app.controller('editFilterCtrl', editFilterCtrl)
-  editFilterCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "filterName", "filterType", "body", "next", "filterId"]
+  editFilterCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "name", "type", "body", "next", "filterId"]
   function editFilterCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, type, body, next, filterId) {
     $scope.data = {
       filterId: filterId,
