@@ -50,9 +50,9 @@ func (o *ErrorHandler) SaveFilter(q dbx.Queryable, filter *Filter) {
 	}
 
 	query := "INSERT INTO filters " +
-		"(filterid, filtertemplateid, accountid, filtername, filtertype, botid, body, `next`) " +
+		"(filterid, filtertemplateid, accountid, filtername, filtertype, body, `next`) " +
 		" VALUES " +
-		"(:filterid, :filtertemplateid, :accountid, :filtername, :filtertype, :botid, :body, :next)"
+		"(:filterid, :filtertemplateid, :accountid, :filtername, :filtertype, :body, :next)"
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, filter)
 }
