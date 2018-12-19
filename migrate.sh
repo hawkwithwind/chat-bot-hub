@@ -9,8 +9,8 @@ DB_ALIAS=mysql
 DB_PATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME"
 
 # TEST CONFIGS
-DB_PATH="mysql://$TESTDBPATH"
-LOCALNETWORK="host"
+#DB_PATH="mysql://$TESTDBPATH"
+#LOCALNETWORK="host"
 
 case $1 in
 init*)
