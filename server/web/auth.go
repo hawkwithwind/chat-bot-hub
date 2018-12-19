@@ -28,19 +28,35 @@ type User struct {
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
 
-func (ctx *ErrorHandler) register(db *dbx.Database, name string, pass string, email string, avatar string) {
-	if ctx.Err != nil {
+func (o *ErrorHandler) getAccountName(r *http.Request) string {
+	if o.Err != nil {
+		return ""
+	}
+	
+	var accountName string
+	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return ""
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	return accountName
+}
+
+func (o *ErrorHandler) register(db *dbx.Database, name string, pass string, email string, avatar string) {
+	if o.Err != nil {
 		return
 	}
 
-	account := ctx.NewAccount(name, pass)
+	account := o.NewAccount(name, pass)
 	account.SetEmail(email)
 	account.SetAvatar(avatar)
-	ctx.SaveAccount(db.Conn, account)
+	o.SaveAccount(db.Conn, account)
 }
 
-func (ctx *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time) string {
-	if ctx.Err != nil {
+func (o *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time) string {
+	if o.Err != nil {
 		return ""
 	}
 
@@ -52,19 +68,19 @@ func (ctx *ErrorHandler) generateToken(s string, name string, sdkcode string, se
 	})
 
 	var tokenstring string
-	if tokenstring, ctx.Err = token.SignedString([]byte(s)); ctx.Err == nil {
+	if tokenstring, o.Err = token.SignedString([]byte(s)); o.Err == nil {
 		return tokenstring
 	} else {
 		return ""
 	}
 }
 
-func (ctx *ErrorHandler) authorize(s string, name string, secret string) string {
-	if ctx.Err != nil {
+func (o *ErrorHandler) authorize(s string, name string, secret string) string {
+	if o.Err != nil {
 		return ""
 	}
 
-	return ctx.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7))
+	return o.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7))
 }
 
 func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {

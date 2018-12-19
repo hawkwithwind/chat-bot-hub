@@ -324,7 +324,6 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		BotId:      bot.BotId,
 	})
 
-	
 	o.ok(w, "", loginreply)
 }
 
@@ -341,14 +340,8 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 	filterid := o.getStringValueDefault(r.Form, "filterid", "")
 
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
+	accountName := o.getAccountName(r)
+	
 	tx := o.Begin(ctx.db)
 	if !o.CheckBotOwner(tx, login, accountName) {
 		if o.Err == nil {
@@ -411,7 +404,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
-	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
@@ -434,16 +427,13 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 	login := vars["login"]
 
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
+	accountName := o.getAccountName(r)
+	if o.Err != nil {
 		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
-
+	
 	tx := o.Begin(ctx.db)
-
+	
 	if !o.CheckBotOwner(tx, login, accountName) {
 		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
 		return
@@ -477,22 +467,15 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
 	filtername := o.getStringValue(r.Form, "name")
-
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
+	filtertype := o.getStringValue(r.Form, "type")
+	filterbody := o.getStringValueDefault(r.Form, "body", "")
+	accountName := o.getAccountName(r)
 	tx := o.Begin(web.db)
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
@@ -502,25 +485,99 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("account %s not found", accountName)
 		return
 	}
-	filter := o.NewFilter(filtername, "", account.AccountId)
+	filter := o.NewFilter(filtername, filtertype, "", account.AccountId)
+	filter.Body = sql.NullString{String: filterbody, Valid: true}
 	o.SaveFilter(tx, filter)
 	o.CommitOrRollback(tx)
 
 	o.ok(w, "success", filter)
 }
 
+func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	filterId := vars["filterid"]
+
+	r.ParseForm()
+	filtername := o.getStringValue(r.Form, "name")
+	filterbody := o.getStringValue(r.Form, "body")
+	accountName := o.getAccountName(r)
+	tx := o.Begin(web.db)
+	if !o.CheckFilterOwner(tx, filterId, accountName) {
+		if o.Err == nil {
+			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+		}
+		return
+	}
+
+	filter := o.GetFilterById(tx, filterId)
+	if o.Err == nil &&  filter == nil {
+		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
+		return
+	}
+
+	if o.Err != nil {
+		return
+	}	
+	filter.FilterName = filtername	
+	filter.Body = sql.NullString{ String: filterbody, Valid: true }
+	o.UpdateFilter(tx, filter)
+	o.CommitOrRollback(tx)
+	o.ok(w, "update filter success", filter)
+}
+
+func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	
+	vars := mux.Vars(r)
+	filterId := vars["filterid"]
+	
+	r.ParseForm()
+	nextFilterId := o.getStringValue(r.Form, "next")
+	accountName := o.getAccountName(r)
+	tx := o.Begin(web.db)
+	if !o.CheckFilterOwner(tx, filterId, accountName) {
+		if o.Err == nil {
+			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+		}
+		return
+	}
+
+	if !o.CheckFilterOwner(tx, nextFilterId, accountName) {
+		if o.Err == nil {
+			o.Err = NewClientError(-3, fmt.Errorf("无权访问下一级过滤器%s", filterId))
+		}
+		return
+	}
+	
+
+	filter := o.GetFilterById(tx, filterId)
+	if o.Err == nil &&  filter == nil {
+		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
+		return
+	}
+	
+	if o.Err != nil {
+		return
+	}
+	filter.Next = sql.NullString{String: nextFilterId, Valid:true}
+	o.UpdateFilter(tx, filter)
+	o.CommitOrRollback(tx)
+	o.ok(w, "update filter next success", filter)
+}
+
 func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
+	accountName := o.getAccountName(r)
+	if o.Err != nil {
 		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
-
+	
 	tx := o.Begin(web.db)
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
@@ -532,8 +589,5 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filters := o.GetFilterByAccountId(tx, account.AccountId)
-	o.ok(w, "success", filters)		
+	o.ok(w, "success", filters)
 }
-
-
-

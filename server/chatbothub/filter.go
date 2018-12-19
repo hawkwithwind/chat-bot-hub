@@ -7,13 +7,14 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	
-	"github.com/google/uuid"
+
 	"github.com/fluent/fluent-logger-golang/fluent"
+	"github.com/google/uuid"
 )
 
 type Filter interface {
 	Fill(string) error
+	Next(Filter) error
 }
 
 type BaseFilter struct {
@@ -28,6 +29,22 @@ func (f *BaseFilter) init(name string) string {
 	return f.Id
 }
 
+const (
+	WECHATBASEFILTER string = "WechatBaseFilter"
+	PLAINFILTER string = "PlainFilter"
+	FLUENTFILTER string = "FluentFilter"
+	REGEXROUTER string = "RegexRouter"
+	KVROUTER string = "KVRouter"
+)
+
+func NewBaseFilter(filterId string, filterName string, filterType string) BaseFilter {
+	return BaseFilter{
+		Id: filterId,
+		Name: filterName,
+		Type: filterType,
+	}
+}
+
 func (f *BaseFilter) String() string {
 	jsonstr, _ := json.Marshal(f)
 	return string(jsonstr)
@@ -38,8 +55,8 @@ type WechatBaseFilter struct {
 	NextFilter Filter `json:"next"`
 }
 
-func NewWechatBaseFilter() *WechatBaseFilter {
-	return &WechatBaseFilter{BaseFilter: BaseFilter{Type: "源:微信"}}
+func NewWechatBaseFilter(filterId string, filterName string) *WechatBaseFilter {
+	return &WechatBaseFilter{BaseFilter: NewBaseFilter(filterId, filterName, "源:微信")}
 }
 
 func (f *WechatBaseFilter) String() string {
@@ -73,8 +90,8 @@ type PlainFilter struct {
 	NextFilter Filter `json:"next"`
 }
 
-func NewPlainFilter(logger *log.Logger) *PlainFilter {
-	return &PlainFilter{BaseFilter: BaseFilter{Type: "过滤:空"}, logger: logger}
+func NewPlainFilter(filterId string, filterName string, logger *log.Logger) *PlainFilter {
+	return &PlainFilter{BaseFilter: NewBaseFilter(filterId, filterName, "过滤:空"), logger: logger}
 }
 
 func (f *PlainFilter) String() string {
@@ -87,7 +104,7 @@ func (f *PlainFilter) Next(filter Filter) error {
 		return fmt.Errorf("call on empty *PlainFilter")
 	}
 	f.NextFilter = filter
-	return nil	
+	return nil
 }
 
 func (f *PlainFilter) Fill(msg string) error {
@@ -146,13 +163,13 @@ func (f *PlainFilter) Fill(msg string) error {
 
 type FluentFilter struct {
 	BaseFilter
-	logger *fluent.Fluent
-	tag string
+	logger     *fluent.Fluent
+	tag        string
 	NextFilter Filter `json:"next"`
 }
 
-func NewFluentFilter(logger *fluent.Fluent, tag string) *FluentFilter {
-	return &FluentFilter{BaseFilter: BaseFilter{Type: "过滤:Fluent"}, logger: logger, tag: tag}
+func NewFluentFilter(filterId string, filterName string, logger *fluent.Fluent, tag string) *FluentFilter {
+	return &FluentFilter{BaseFilter: NewBaseFilter(filterId, filterName, "过滤:Fluent"), logger: logger, tag: tag}
 }
 
 func (f *FluentFilter) String() string {
@@ -165,7 +182,7 @@ func (f *FluentFilter) Next(filter Filter) error {
 		return fmt.Errorf("call on empty *FluentFilter")
 	}
 	f.NextFilter = filter
-	return nil	
+	return nil
 }
 
 func (f *FluentFilter) Fill(msg string) error {
@@ -175,7 +192,7 @@ func (f *FluentFilter) Fill(msg string) error {
 
 	o := &ErrorHandler{}
 	body := o.FromJson(msg)
-	
+
 	if o.Err == nil {
 		go func() {
 			if body != nil {
@@ -189,10 +206,9 @@ func (f *FluentFilter) Fill(msg string) error {
 	} else {
 		return o.Err
 	}
-	
+
 	return nil
 }
-
 
 type RegexRouter struct {
 	BaseFilter
@@ -201,8 +217,8 @@ type RegexRouter struct {
 	DefaultNextFilter Filter `json:"defaultNext"`
 }
 
-func NewRegexRouter() *RegexRouter {
-	return &RegexRouter{BaseFilter: BaseFilter{Type: "路由:正则"}}
+func NewRegexRouter(filterId string, filterName string) *RegexRouter {
+	return &RegexRouter{BaseFilter: NewBaseFilter(filterId, filterName, "路由:正则")}
 }
 
 func (f *RegexRouter) String() string {
@@ -210,7 +226,7 @@ func (f *RegexRouter) String() string {
 	return string(jsonstr)
 }
 
-func (f *RegexRouter) DefaultNext(filter Filter) error {
+func (f *RegexRouter) Next(filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *RegexRouter")
 	}
@@ -218,10 +234,11 @@ func (f *RegexRouter) DefaultNext(filter Filter) error {
 	return nil
 }
 
-func (f *RegexRouter) Next(regstr string, filter Filter) error {
+func (f *RegexRouter) Branch(regstr string, filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *RegexRouter")
 	}
+	
 	if f.NextFilter == nil {
 		f.NextFilter = make(map[string]Filter)
 	}
@@ -292,8 +309,8 @@ type KVRouter struct {
 	DefaultNextFilter Filter                       `json:"defaultNext"`
 }
 
-func NewKVRouter() *KVRouter {
-	return &KVRouter{BaseFilter: BaseFilter{Type: "路由:字典"}}
+func NewKVRouter(filterId string, filterName string) *KVRouter {
+	return &KVRouter{BaseFilter: NewBaseFilter(filterId, filterName, "路由:字典")}
 }
 
 func (f *KVRouter) String() string {
@@ -301,7 +318,7 @@ func (f *KVRouter) String() string {
 	return string(jsonstr)
 }
 
-func (f *KVRouter) Next(name string, value string, filter Filter) error {
+func (f *KVRouter) Branch(name string, value string, filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *KVRouter")
 	}
@@ -318,7 +335,7 @@ func (f *KVRouter) Next(name string, value string, filter Filter) error {
 	return nil
 }
 
-func (f *KVRouter) DefaultNext(filter Filter) error {
+func (f *KVRouter) Next(filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *KVRouter")
 	}

@@ -24,14 +24,23 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 	return rr
 }
 
+func (o *ErrorHandler) BackEndError(ctx *WebServer) {
+	if o.Err != nil {
+		ctx.Error(o.Err, "back end error")
+	}
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(ctx)
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
 	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+	
 	bot := o.GetBotById(tx, botId)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
@@ -71,6 +80,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
+		return
 
 	case chatbothub.LOGINDONE:
 		var oldtoken string
@@ -80,7 +90,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			oldtoken = ""
 		}
-		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
+		if tokenptr := o.FromMap(
+			"token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
 			tk := tokenptr.(string)
 			if len(tk) > 0 {
 				localmap["token"] = tk
@@ -91,7 +102,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			oldwxdata = ""
 		}
-		if wxdataptr := o.FromMap("wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
+		if wxdataptr := o.FromMap(
+			"wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
 			wd := wxdataptr.(string)
 			if len(wd) > 0 {
 				localmap["wxData"] = wd
@@ -103,8 +115,88 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if len(bot.Login) == 0 {
 			ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
 			bot.Login = thebotinfo.Login
-			o.UpdateBotLogin(tx, bot)			
+			o.UpdateBotLogin(tx, bot)
 		}
+
+		// now, initailize bot's filter, and call chathub to create intances and get connected
+		if !bot.FilterId.Valid {
+			ctx.Info("c[%s] does not have filters")
+			return
+		}
+
+		ctx.Info("c[%s] initializing filters ...", bot.BotId)
+		filterId := bot.FilterId.String
+		lastFilterId := ""
+				
+		for true {
+			filter := o.GetFilterById(tx, filterId)
+			if o.Err != nil {
+				return
+			}
+			if filter == nil {
+				o.Err = fmt.Errorf("cannot find filter %s for bot %s", filterId, bot.BotId)
+				return
+			}
+			ctx.Info("creating filter %s", filter.FilterId)
+
+			// generate filter in chathub
+			var body string
+			if filter.Body.Valid {
+				body = filter.Body.String
+			} else {
+				body = ""
+			}
+			
+			if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
+				FilterId: filter.FilterId,
+				FilterType: filter.FilterType,
+				FilterName: filter.FilterName,
+				Body: body,
+			}); err != nil {
+				o.Err = err
+				return
+			} else if opreply.Code != 0 {
+				o.Err = fmt.Errorf(opreply.Message)
+				return
+			}
+
+			if lastFilterId == "" {
+				// connect root filter to bot
+				if bfreply, err := wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
+					BotId: bot.BotId,
+					FilterId: filter.FilterId,
+				}); err != nil {
+					o.Err = err
+					return
+				} else if bfreply.Code != 0 {
+					o.Err = fmt.Errorf(bfreply.Message)
+					return
+				}
+			} else {
+				// connect filter to lastone
+				if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
+					FilterId: lastFilterId,
+					NextFilterId: filter.FilterId,
+				}); err != nil {
+					o.Err = err
+					return
+				} else if nxtreply.Code != 0 {
+					o.Err = fmt.Errorf(nxtreply.Message)
+					return
+				}
+			}
+
+			//move to next filter
+			lastFilterId = filter.FilterId
+			if filter.Next.Valid {
+				filterId = filter.Next.String
+			} else {
+				ctx.Info("filter %s next is null, init filters finished", filterId)
+				return
+			}
+		}
+		
+		return
 
 	case chatbothub.FRIENDREQUEST:
 		reqstr := o.getStringValue(r.Form, "body")
@@ -112,8 +204,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
 			reqm := o.FromJson(reqstr)
-			if funptr := o.FromMap("fromUserName", reqm, "friendRequest.fromUserName", nil); funptr != nil {
-				rlogin = funptr.(string)
+			if funptr := o.FromMap("fromUserName", reqm,
+				"friendRequest.fromUserName", nil); funptr != nil {
+					rlogin = funptr.(string)
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
 		} else {
@@ -125,7 +218,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.FriendRequestToJson(fr)), 5, 1)
+				httpx.RestfulCallRetry(webCallbackRequest(
+					bot, eventType, eh.FriendRequestToJson(fr)), 5, 1)
 			}
 		}()
 
@@ -138,97 +232,92 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		var awayar domains.ActionRequest
 		o.Err = json.Unmarshal([]byte(reqstr), &awayar)
 		localar := o.GetActionRequest(ctx.redispool, awayar.ActionRequestId)
-		if o.Err == nil {
-			if localar == nil {
-				o.Err = fmt.Errorf("local ar %s not found, or is expired", awayar.ActionRequestId)
-			}
+		if o.Err == nil && localar == nil {
+			o.Err = fmt.Errorf("local ar %s not found, or is expired", awayar.ActionRequestId)
 		}
 
 		if o.Err != nil {
-			ctx.Error(o.Err, "failed")
+			return
 		}
 
-		if o.Err == nil {
-			localar.ReplyAt = awayar.ReplyAt
-			localar.Result = awayar.Result
+		localar.ReplyAt = awayar.ReplyAt
+		localar.Result = awayar.Result
 
-			result := o.FromJson(awayar.Result)
-			success := false
-			if result != nil {
-				if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
-					success = scsptr.(bool)
-					if o.Err == nil && success {
-						localar.Status = "Failed"
+		result := o.FromJson(awayar.Result)
+		success := false
+		if result != nil {
+			if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
+				success = scsptr.(bool)
+				if o.Err == nil && success {
+					localar.Status = "Failed"
 
-						if rdataptr := o.FromMap("data", result, "actionReply.result", nil); rdataptr != nil {
-							switch rdata := rdataptr.(type) {
-							case map[string]interface{}:
-								status := int(o.FromMapFloat("status", rdata, "actionReply.result.data", false, 0))
-								if status == 0 {
-									localar.Status = "Done"
-								}
-							default:
-								if o.Err == nil {
-									o.Err = fmt.Errorf("actionReply.result.data not map")
-								}
+					if rdataptr := o.FromMap(
+						"data", result, "actionReply.result", nil); rdataptr != nil {
+						switch rdata := rdataptr.(type) {
+						case map[string]interface{}:
+							status := int(o.FromMapFloat(
+								"status", rdata, "actionReply.result.data", false, 0))
+							
+							if status == 0 {
+								localar.Status = "Done"
+							}
+						default:
+							if o.Err == nil {
+								o.Err = fmt.Errorf("actionReply.result.data not map")
 							}
 						}
-					} else {
-						localar.Status = "Failed"
 					}
+				} else {
+					localar.Status = "Failed"
 				}
 			}
 		}
+		
+		if o.Err != nil {
+			return
+		}
 
-		ctx.Info("--1")
+
+		ctx.Info("action reply %v\n", localar)
+
+		switch localar.ActionType {
+		case chatbothub.AcceptUser:
+			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
+
+			ctx.Info("frs %v\n", frs)
+
+			bodym := o.FromJson(localar.ActionBody)
+			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+
+			if o.Err != nil {
+				return
+			}
+			
+			for _, fr := range frs {
+				ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n",
+					rlogin, fr.RequestLogin, fr.Status)
+				if fr.RequestLogin == rlogin && fr.Status == "NEW" {
+					fr.Status = localar.Status
+					o.UpdateFriendRequest(tx, &fr)
+					ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
+					// dont break, update all fr for the same rlogin
+				}
+			}
+			
+		default:
+			ctx.Info("unhandled action %s", localar.ActionType)
+		}
 
 		if o.Err != nil {
-			ctx.Error(o.Err, "failed")
+			return
 		}
-
-		ctx.Info("--2")
-
-		if o.Err == nil {
-			ctx.Info("action reply %v\n", localar)
-
-			switch localar.ActionType {
-			case chatbothub.AcceptUser:
-				frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
-
-				ctx.Info("frs %v\n", frs)
-
-				bodym := o.FromJson(localar.ActionBody)
-				rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-
-				if o.Err == nil {
-					for _, fr := range frs {
-						ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n", rlogin, fr.RequestLogin, fr.Status)
-						if fr.RequestLogin == rlogin && fr.Status == "NEW" {
-							fr.Status = localar.Status
-							o.UpdateFriendRequest(tx, &fr)
-							ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
-							// dont break, update all fr for the same rlogin
-						}
-					}
-				}
-
-			default:
-				ctx.Info("unhandled action %s", localar.ActionType)
-			}
-		}
-
 		o.SaveActionRequest(ctx.redispool, localar)
-
-		if o.Err != nil {
-			ctx.Error(o.Err, "failed2")
-		}
-
-		ctx.Info("save action %v\n", localar)
-
+		
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
+				if _, err := httpx.RestfulCallRetry(
+					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
 				}
 			}
@@ -236,11 +325,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
-	}
-
-	o.CommitOrRollback(tx)
-	if o.Err != nil {
-		ctx.Error(o.Err, "error while process action reply")
 	}
 }
 

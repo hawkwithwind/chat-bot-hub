@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"github.com/fluent/fluent-logger-golang/fluent"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -29,12 +29,12 @@ type ErrorHandler struct {
 type FluentConfig struct {
 	Host string
 	Port int
-	Tag string
+	Tag  string
 }
 
 type ChatHubConfig struct {
-	Host string
-	Port string
+	Host   string
+	Port   string
 	Fluent FluentConfig
 }
 
@@ -42,25 +42,28 @@ func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
 	var err error
 	hub.fluentLogger, err = fluent.New(fluent.Config{
-		FluentPort: hub.Config.Fluent.Port,
-		FluentHost: hub.Config.Fluent.Host,
+		FluentPort:   hub.Config.Fluent.Port,
+		FluentHost:   hub.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
 	if err != nil {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
 	hub.bots = make(map[string]*ChatBot)
+	hub.filters = make(map[string]Filter)
 }
 
 type ChatHub struct {
-	Config  ChatHubConfig
-	Webhost string
-	Webport string
-	WebBaseUrl string
-	logger  *log.Logger
+	Config       ChatHubConfig
+	Webhost      string
+	Webport      string
+	WebBaseUrl   string
+	logger       *log.Logger
 	fluentLogger *fluent.Fluent
-	mux     sync.Mutex
-	bots    map[string]*ChatBot
+	muxBots      sync.Mutex
+	bots         map[string]*ChatBot
+	muxFilters   sync.Mutex
+	filters      map[string]Filter
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -113,8 +116,8 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 }
 
 func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
-	hub.mux.Lock()
-	defer hub.mux.Unlock()
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
 
 	for _, v := range hub.bots {
 		if v.ClientType == bottype && v.Status == BeginRegistered {
@@ -126,8 +129,8 @@ func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
 }
 
 func (hub *ChatHub) GetBot(clientid string) *ChatBot {
-	hub.mux.Lock()
-	defer hub.mux.Unlock()
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
 
 	if thebot, found := hub.bots[clientid]; found {
 		return thebot
@@ -137,8 +140,8 @@ func (hub *ChatHub) GetBot(clientid string) *ChatBot {
 }
 
 func (hub *ChatHub) GetBotByLogin(login string) *ChatBot {
-	hub.mux.Lock()
-	defer hub.mux.Unlock()
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
 
 	for _, bot := range hub.bots {
 		if bot.Login == login {
@@ -149,11 +152,42 @@ func (hub *ChatHub) GetBotByLogin(login string) *ChatBot {
 	return nil
 }
 
+func (hub *ChatHub) GetBotById(botId string) *ChatBot {
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
+
+	for _, bot := range hub.bots {
+		if bot.BotId == botId {
+			return bot
+		}
+	}
+
+	return nil
+}
+
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
-	hub.mux.Lock()
-	defer hub.mux.Unlock()
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
 
 	hub.bots[clientid] = thebot
+}
+
+func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
+	hub.muxFilters.Lock()
+	defer hub.muxFilters.Unlock()
+
+	hub.filters[filterId] = thefilter
+}
+
+func (hub *ChatHub) GetFilter(filterId string) Filter {
+	hub.muxFilters.Lock()
+	defer hub.muxFilters.Unlock()
+
+	if thefilter, found := hub.filters[filterId]; found {
+		return thefilter
+	}
+
+	return nil
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -182,7 +216,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		} else if in.EventType == REGISTER {
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
-				bot = NewChatBot(hub.fluentLogger, hub.Config.Fluent.Tag)
+				bot = NewChatBot()
 			}
 
 			if newbot, err := bot.register(in.ClientId, in.ClientType, tunnel); err != nil {
@@ -208,12 +242,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var botId string
 					var userName string
 					var wxData string
-					var token string					
+					var token string
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
-						token = o.FromMapString("token", body, "eventRequest.body", true, "")						
+						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
@@ -222,8 +256,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-									hub.Error(err, "webnotify logindone failed\n")
-								}
+								hub.Error(err, "webnotify logindone failed\n")
+							}
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
@@ -407,7 +441,7 @@ type LoginBody struct {
 	BotId     string `json:"botId"`
 	Login     string `json:"login"`
 	Password  string `json:"password"`
-	LoginInfo string `json:"loginInfo"`	
+	LoginInfo string `json:"loginInfo"`
 }
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
@@ -430,7 +464,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 			BotId:     req.BotId,
 			Login:     req.Login,
 			Password:  req.Password,
-			LoginInfo: req.LoginInfo,			
+			LoginInfo: req.LoginInfo,
 		})
 
 		o.sendEvent(bot.tunnel, &pb.EventReply{
@@ -467,6 +501,75 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	} else {
 		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
 	}
+}
+
+func (hub *ChatHub) CreateFilterByType (
+	filterId string, filterName string, filterType string)  (Filter, error) {
+	var filter Filter
+	switch filterType {
+	case WECHATBASEFILTER:
+		filter = NewWechatBaseFilter(filterId, filterName)
+	case PLAINFILTER:
+		filter = NewPlainFilter(filterId, filterName, hub.logger)
+	case FLUENTFILTER:
+		filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, hub.Config.Fluent.Tag)
+	default:
+		return nil, fmt.Errorf("filter type %s not supported", filterType)
+	}
+
+	return filter, nil
+}
+
+func (hub *ChatHub) FilterCreate(
+	ctx context.Context, req *pb.FilterCreateRequest) (*pb.OperationReply, error) {
+	
+	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
+	if err != nil {
+		return &pb.OperationReply{Code: -1, Message:err.Error()}, err
+	}
+
+	hub.SetFilter(req.FilterId, filter)
+	
+	return &pb.OperationReply{Code:0, Message:"success"}, nil
+}
+
+func (hub *ChatHub) FilterNext(
+	ctx context.Context, req *pb.FilterNextRequest) (*pb.OperationReply, error) {
+
+	parentFilter := hub.GetFilter(req.FilterId)
+	if parentFilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+	}
+
+	nextFilter := hub.GetFilter(req.NextFilterId)
+	if nextFilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.NextFilterId)
+	}
+
+	if err := parentFilter.Next(nextFilter); err != nil {
+		return nil, err
+	} else {
+		return &pb.OperationReply{Code:0, Message:"success"}, nil
+	}	
+}
+
+func (hub *ChatHub) BotFilter(
+	ctx context.Context, req *pb.BotFilterRequest) (*pb.OperationReply, error) {
+
+	thebot := hub.GetBotById(req.BotId)
+	if thebot == nil {
+		return nil, fmt.Errorf("bot %s not found", req.BotId)
+	}
+
+	thefilter := hub.GetFilter(req.FilterId)
+	if thefilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+	}
+
+	thebot.filter = thefilter
+
+	hub.SetBot(thebot.ClientId, thebot)
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
 func (hub *ChatHub) Serve() {

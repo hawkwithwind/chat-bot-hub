@@ -8,10 +8,9 @@ import (
 	"time"
 
 	"github.com/getsentry/raven-go"
-	"github.com/fluent/fluent-logger-golang/fluent"
-	
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"	
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ChatBotStatus int32
@@ -46,23 +45,21 @@ type LoginInfo struct {
 }
 
 type ChatBot struct {
-	ClientId   string        `json:"clientId"`
-	ClientType string        `json:"clientType"`
-	Name       string        `json:"name"`
-	StartAt    int64         `json:"startAt"`
-	LastPing   int64         `json:"lastPing"`
-	Login      string        `json:"login"`
-	NotifyUrl  string        `json:"notifyurl"`
-	LoginInfo  LoginInfo     `json:"loginInfo"`
-	Status     ChatBotStatus `json:"status"`
-	BotId      string        `json:"botId"`
-	ScanUrl    string        `json:"scanUrl"`
-	tunnel     pb.ChatBotHub_EventTunnelServer
-	errmsg     string
-	filter     Filter
-	logger     *log.Logger
-	fluentLogger *fluent.Fluent
-	fluentTag    string
+	ClientId     string        `json:"clientId"`
+	ClientType   string        `json:"clientType"`
+	Name         string        `json:"name"`
+	StartAt      int64         `json:"startAt"`
+	LastPing     int64         `json:"lastPing"`
+	Login        string        `json:"login"`
+	NotifyUrl    string        `json:"notifyurl"`
+	LoginInfo    LoginInfo     `json:"loginInfo"`
+	Status       ChatBotStatus `json:"status"`
+	BotId        string        `json:"botId"`
+	ScanUrl      string        `json:"scanUrl"`
+	tunnel       pb.ChatBotHub_EventTunnelServer
+	errmsg       string
+	filter       Filter
+	logger       *log.Logger
 }
 
 const (
@@ -89,12 +86,10 @@ func (bot *ChatBot) Error(err error, msg string, v ...interface{}) {
 	bot.logger.Printf("Error %v", err)
 }
 
-func NewChatBot(fluentLogger *fluent.Fluent, fluentTag string) *ChatBot {
+func NewChatBot() *ChatBot {
 	return &ChatBot{
-		Status: BeginNew,
-		logger: log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime),
-		fluentLogger: fluentLogger,
-		fluentTag: fluentTag,
+		Status:       BeginNew,
+		logger:       log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime),
 	}
 }
 
@@ -111,27 +106,6 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	bot.tunnel = tunnel
 	bot.Status = BeginRegistered
 
-	if clientType == WECHATBOT {
-		filter := NewWechatBaseFilter()
-		filter.init("源:微信")
-		pfilter := NewPlainFilter(bot.logger)
-		pfilter.init("调试")
-		ffilter := NewFluentFilter(bot.fluentLogger, bot.fluentTag)
-		ffilter.init("日志")
-
-		var err error
-		err = filter.Next(pfilter)
-		if err != nil {
-			return bot, err
-		}
-
-		err = pfilter.Next(ffilter)
-		if err != nil {
-			return bot, err
-		}
-
-		bot.filter = filter
-	}
 	return bot, nil
 }
 

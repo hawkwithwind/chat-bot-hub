@@ -28,6 +28,31 @@ service ChatBotHub {
   rpc GetBots (BotsRequest) returns (BotsReply) {}
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
+  rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
+  rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
+  rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
+}
+
+message OperationReply {
+  int64  code = 1;
+  string message = 2;
+}
+
+message BotFilterRequest {
+  string botId = 1;
+  string filterId = 2;
+}
+
+message FilterCreateRequest {
+  string filterId = 1;
+  string filterType = 2;
+  string filterName = 3;
+  string body = 4;
+}
+
+message FilterNextRequest {
+  string filterId = 1;
+  string nextFilterId = 2;
 }
 
 message EventRequest {
