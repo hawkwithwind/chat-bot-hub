@@ -75,7 +75,7 @@
       $stateProvider.state('app.manage.filterslist', {
 	url: '/filterslist',
 	templateUrl: VIEW_PATH + 'manage/views/filterslist.html',
-	controller: 'filtersCtrl',
+	controller: 'filterslistCtrl',
 	ncyBreadcrumb: {
 	  label: '过滤器列表',
 	  parent: 'app.manage'
