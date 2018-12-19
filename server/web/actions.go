@@ -120,11 +120,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		if !bot.FilterId.Valid {
-			ctx.Info("c[%s] does not have filters")
+			ctx.Info("b[%s] does not have filters", bot.BotId)
 			return
 		}
 
-		ctx.Info("c[%s] initializing filters ...", bot.BotId)
+		ctx.Info("b[%s] initializing filters ...", bot.BotId)
 		filterId := bot.FilterId.String
 		lastFilterId := ""
 				
