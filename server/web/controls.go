@@ -487,7 +487,9 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := o.NewFilter(filtername, filtertype, "", account.AccountId)
-	filter.Body = sql.NullString{String: filterbody, Valid: true}
+	if filterbody != "" {
+		filter.Body = sql.NullString{String: filterbody, Valid: true}
+	}
 	o.SaveFilter(tx, filter)
 	o.CommitOrRollback(tx)
 
@@ -585,8 +587,8 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	type FilterVO struct {
 		FilterId string `json:"filterId"`
-		FilterName string `json:"filterName"`
-		FilterType string `json:"filterType"`
+		Name string `json:"name"`
+		Type string `json:"type"`
 		Body string `json:"body"`
 		Next string `json:"next"`
 		CreateAt utils.JSONTime `json:"createAt"`
@@ -616,8 +618,8 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	for _, f := range filters {
 		filtervos = append(filtervos, FilterVO{
 			FilterId: f.FilterId,
-			FilterName: f.FilterName,
-			FilterType: f.FilterType,
+			Name: f.FilterName,
+			Type: f.FilterType,
 			Body: f.Body.String,
 			Next: f.Next.String,
 			CreateAt: utils.JSONTime{f.CreateAt.Time},
