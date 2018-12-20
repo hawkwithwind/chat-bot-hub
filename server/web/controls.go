@@ -347,6 +347,8 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	accountName := o.getAccountName(r)
 	
 	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+	
 	if !o.CheckBotOwner(tx, login, accountName) {
 		if o.Err == nil {
 			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
@@ -367,13 +369,23 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 	}
 	if filterid != "" {
+		filter := o.GetFilterById(tx, filterid)
+		if o.Err != nil {
+			return
+		}
+		if filter == nil {
+			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
+			return
+		}
+		if !o.CheckFilterOwner(tx, filterid, accountName) {		
+			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
+			return
+		}
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
 		o.UpdateBotFilterId(tx, bot)
 	}
 
 	o.UpdateBot(tx, bot)
-	o.CommitOrRollback(tx)
-
 	o.ok(w, "", nil)
 }
 
