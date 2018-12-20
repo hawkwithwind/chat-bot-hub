@@ -513,6 +513,8 @@ func (hub *ChatHub) CreateFilterByType (
 		filter = NewPlainFilter(filterId, filterName, hub.logger)
 	case FLUENTFILTER:
 		filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, hub.Config.Fluent.Tag)
+	case WEBTRIGGER:
+		filter = NewWebTrigger(filterId, filterName)
 	default:
 		return nil, fmt.Errorf("filter type %s not supported", filterType)
 	}
@@ -556,6 +558,15 @@ func (hub *ChatHub) FilterCreate(
 						return nil, o.Err
 					}
 				}
+			case *WebTrigger:
+				url := o.FromMapString("url", bodym, "body.url", false, "")
+				method := o.FromMapString("method", bodym, "body.method", false, "")
+				if o.Err != nil {
+					return nil, o.Err
+				}
+
+				ff.Action.Url = url
+				ff.Action.Method = method
 			}
 		} else {
 			hub.Info("cannot parse body %s", req.Body)

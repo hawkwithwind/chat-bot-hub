@@ -10,6 +10,8 @@ import (
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/google/uuid"
+
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type Filter interface {
@@ -35,6 +37,7 @@ const (
 	FLUENTFILTER string = "FluentFilter"
 	REGEXROUTER string = "RegexRouter"
 	KVROUTER string = "KVRouter"
+	WEBTRIGGER string = "WebTrigger"
 )
 
 func NewBaseFilter(filterId string, filterName string, filterType string) BaseFilter {
@@ -394,4 +397,46 @@ func (f *KVRouter) Fill(msg string) error {
 	} else {
 		return fmt.Errorf("multiple error occured while trigger filters %v", errlist)
 	}
+}
+
+type WebAction struct {
+	Url string `json:"url"`
+	Method string `json:"method"`
+}
+
+type WebTrigger struct {
+	BaseFilter
+	NextFilter Filter `json:"next"`
+	Action WebAction `json:"action"`
+}
+
+func (f *WebTrigger) String() string {
+	jsonstr, _ := json.Marshal(f)
+	return string(jsonstr)
+}
+
+func NewWebTrigger(filterId string, filterName string) *WebTrigger{
+	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
+}
+
+func (f *WebTrigger) Fill(msg string) error {	
+	go func() {
+		rr := httpx.NewRestfulRequest(f.Action.Method, f.Action.Url)
+		rr.Params["msg"] = msg
+		httpx.RestfulCallRetry(rr, 5, 1)
+	}()
+
+	if f.NextFilter != nil {
+		return f.NextFilter.Fill(msg)
+	}
+	
+	return nil
+}
+
+func (f *WebTrigger) Next(filter Filter) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *WebTrigger")
+	}
+	f.NextFilter = filter
+	return nil
 }
