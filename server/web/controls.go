@@ -527,9 +527,11 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
+
+	web.Info("<%v> %s %s", o.Err, filterId, accountName)
 	
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
