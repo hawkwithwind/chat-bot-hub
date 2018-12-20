@@ -342,7 +342,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	botName := o.getStringValueDefault(r.Form, "botName", "")
 	callback := o.getStringValueDefault(r.Form, "callback", "")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
-	filterid := o.getStringValueDefault(r.Form, "filterid", "")
+	filterid := o.getStringValueDefault(r.Form, "filterId", "")
 
 	accountName := o.getAccountName(r)
 	
