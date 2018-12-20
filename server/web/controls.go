@@ -523,7 +523,14 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
 	filternext := o.getStringValueDefault(r.Form, "next", "")
 	accountName := o.getAccountName(r)
+
+	if o.Err != nil {
+		return
+	}
+	
 	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+	
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
 			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
@@ -554,7 +561,6 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	o.UpdateFilter(tx, filter)
-	o.CommitOrRollback(tx)
 	o.ok(w, "update filter success", filter)
 }
 
