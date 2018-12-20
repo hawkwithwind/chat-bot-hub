@@ -516,7 +516,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
-	filterId := vars["filterid"]
+	filterId := vars["filterId"]
 
 	r.ParseForm()
 	filtername := o.getStringValueDefault(r.Form, "name", "")
@@ -531,12 +531,13 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	web.Info("<%v> %s %s", o.Err, filterId, accountName)
-	
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
 			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
 		}
+	}
+
+	if o.Err != nil {
 		return
 	}
 
