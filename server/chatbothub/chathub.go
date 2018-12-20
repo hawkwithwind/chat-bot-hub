@@ -515,6 +515,10 @@ func (hub *ChatHub) CreateFilterByType (
 		filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, hub.Config.Fluent.Tag)
 	case WEBTRIGGER:
 		filter = NewWebTrigger(filterId, filterName)
+	case KVROUTER:
+		filter = NewKVRouter(filterId, filterName)
+	case REGEXROUTER:
+		filter = NewRegexRouter(filterId, filterName)
 	default:
 		return nil, fmt.Errorf("filter type %s not supported", filterType)
 	}
