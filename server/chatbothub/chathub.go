@@ -528,8 +528,41 @@ func (hub *ChatHub) FilterCreate(
 		return &pb.OperationReply{Code: -1, Message:err.Error()}, err
 	}
 
+	if req.Body != "" {
+		o := &ErrorHandler{}
+		bodym := o.FromJson(req.Body)
+		if o.Err != nil {
+			return nil, o.Err
+		}
+		if bodym != nil {
+			switch ff := filter.(type) {
+			case *KVRouter:
+				for name, nextbody := range bodym {
+					hub.Info("KVRouter processing %s ... ", name)
+					switch nextmap := nextbody.(type) {
+					case map[string]interface{}:
+						for value, f := range nextmap {
+							filterId := f.(string)
+							hub.Info("KVRouter %s:%s -> %s", name, value, filterId)
+							if nextfilter := hub.GetFilter(filterId); nextfilter != nil {
+								ff.Branch(name, value, nextfilter)
+							} else {
+								o.Err = fmt.Errorf("filter %s not found", filterId)
+								return nil, o.Err
+							}
+						}
+					default:
+						o.Err = fmt.Errorf("unexpected nextbody type %T", nextmap)
+						return nil, o.Err
+					}
+				}
+			}
+		} else {
+			hub.Info("cannot parse body %s", req.Body)
+		}
+	}
+
 	hub.SetFilter(req.FilterId, filter)
-	
 	return &pb.OperationReply{Code:0, Message:"success"}, nil
 }
 
