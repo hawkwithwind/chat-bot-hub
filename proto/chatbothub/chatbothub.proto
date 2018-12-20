@@ -31,6 +31,7 @@ service ChatBotHub {
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
+  rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
 }
 
 message OperationReply {
@@ -53,6 +54,17 @@ message FilterCreateRequest {
 message FilterNextRequest {
   string filterId = 1;
   string nextFilterId = 2;
+}
+
+message BranchTag {
+  string Key = 1;
+  string Value = 2;
+}
+
+message RouterBranchRequest {
+  BranchTag tag = 1;
+  string routerId = 2;
+  string filterId = 3;
 }
 
 message EventRequest {

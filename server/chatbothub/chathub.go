@@ -542,26 +542,6 @@ func (hub *ChatHub) FilterCreate(
 		}
 		if bodym != nil {
 			switch ff := filter.(type) {
-			case *KVRouter:
-				for name, nextbody := range bodym {
-					hub.Info("KVRouter processing %s ... ", name)
-					switch nextmap := nextbody.(type) {
-					case map[string]interface{}:
-						for value, f := range nextmap {
-							filterId := f.(string)
-							hub.Info("KVRouter %s:%s -> %s", name, value, filterId)
-							if nextfilter := hub.GetFilter(filterId); nextfilter != nil {
-								ff.Branch(name, value, nextfilter)
-							} else {
-								o.Err = fmt.Errorf("filter %s not found", filterId)
-								return nil, o.Err
-							}
-						}
-					default:
-						o.Err = fmt.Errorf("unexpected nextbody type %T", nextmap)
-						return nil, o.Err
-					}
-				}
 			case *WebTrigger:
 				url := o.FromMapString("url", bodym, "body.url", false, "")
 				method := o.FromMapString("method", bodym, "body.method", false, "")
@@ -599,6 +579,31 @@ func (hub *ChatHub) FilterNext(
 	} else {
 		return &pb.OperationReply{Code:0, Message:"success"}, nil
 	}	
+}
+
+func (hub *ChatHub) RouterBranch(
+	ctx context.Context, req *pb.RouterBranchRequest) (*pb.OperationReply, error) {
+
+	parentFilter := hub.GetFilter(req.RouterId)
+	if parentFilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.RouterId)
+	}
+
+	childFilter := hub.GetFilter(req.FilterId)
+	if childFilter == nil {
+		return nil, fmt.Errorf("child filter $s not found", req.FilterId)
+	}
+
+	switch r := parentFilter.(type) {
+	case Router:
+		if err := r.Branch(BranchTag{Key: req.Tag.Key, Value: req.Tag.Value}, childFilter); err != nil {
+			return nil ,err
+		}
+	default:
+		return nil, fmt.Errorf("filter type %T cannot branch", r)
+	}
+
+	return &pb.OperationReply{Code:0, Message:"success"}, nil
 }
 
 func (hub *ChatHub) BotFilter(

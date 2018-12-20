@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
-	"github.com/google/uuid"
-
+	
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
@@ -19,16 +18,20 @@ type Filter interface {
 	Next(Filter) error
 }
 
+type BranchTag struct {
+	Key string
+	Value string
+}
+
+type Router interface {
+	Filter
+	Branch(tag BranchTag, filter Filter) error
+}
+
 type BaseFilter struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 	Type string `json:"type"`
-}
-
-func (f *BaseFilter) init(name string) string {
-	f.Id = uuid.New().String()
-	f.Name = name
-	return f.Id
 }
 
 const (
@@ -237,11 +240,11 @@ func (f *RegexRouter) Next(filter Filter) error {
 	return nil
 }
 
-func (f *RegexRouter) Branch(regstr string, filter Filter) error {
+func (f *RegexRouter) Branch(tag BranchTag, filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *RegexRouter")
 	}
-	
+
 	if f.NextFilter == nil {
 		f.NextFilter = make(map[string]Filter)
 	}
@@ -249,10 +252,10 @@ func (f *RegexRouter) Branch(regstr string, filter Filter) error {
 		f.compiledRegexp = make(map[string]*regexp.Regexp)
 	}
 
-	compiledregexp := regexp.MustCompile(regstr)
+	compiledregexp := regexp.MustCompile(tag.Key)
 
-	f.NextFilter[regstr] = filter
-	f.compiledRegexp[regstr] = compiledregexp
+	f.NextFilter[tag.Key] = filter
+	f.compiledRegexp[tag.Key] = compiledregexp
 	return nil
 }
 
@@ -321,7 +324,7 @@ func (f *KVRouter) String() string {
 	return string(jsonstr)
 }
 
-func (f *KVRouter) Branch(name string, value string, filter Filter) error {
+func (f *KVRouter) Branch(tag BranchTag, filter Filter) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *KVRouter")
 	}
@@ -330,11 +333,11 @@ func (f *KVRouter) Branch(name string, value string, filter Filter) error {
 		f.NextFilter = make(map[string]map[string]Filter)
 	}
 
-	if _, found := f.NextFilter[name]; !found {
-		f.NextFilter[name] = make(map[string]Filter)
+	if _, found := f.NextFilter[tag.Key]; !found {
+		f.NextFilter[tag.Key] = make(map[string]Filter)
 	}
 
-	f.NextFilter[name][value] = filter
+	f.NextFilter[tag.Key][tag.Value] = filter
 	return nil
 }
 

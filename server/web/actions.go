@@ -13,6 +13,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -27,6 +28,121 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 func (o *ErrorHandler) BackEndError(ctx *WebServer) {
 	if o.Err != nil {
 		ctx.Error(o.Err, "back end error")
+	}
+}
+
+func (o *ErrorHandler) CreateFilterChain(
+	ctx *WebServer, tx dbx.Queryable, wrapper *GRPCWrapper, filterId string) {
+
+	lastFilterId := ""
+	currentFilterId := filterId
+
+	for true {
+		filter := o.GetFilterById(tx, currentFilterId)
+		if o.Err != nil {
+			return
+		}
+		if filter == nil {
+			o.Err = fmt.Errorf("cannot find filter %s", filterId)
+			return
+		}
+		ctx.Info("creating filter %s", filter.FilterId)
+
+		// generate filter in chathub
+		var body string
+		if filter.Body.Valid {
+			body = filter.Body.String
+		} else {
+			body = ""
+		}
+		
+		if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
+			FilterId: filter.FilterId,
+			FilterType: filter.FilterType,
+			FilterName: filter.FilterName,
+			Body: body,
+		}); err != nil {
+			o.Err = err
+			return
+		} else if opreply.Code != 0 {
+			o.Err = fmt.Errorf(opreply.Message)
+			return
+		}
+
+		// routers should create its children first, then create themselves.
+		if body != "" {
+			bodym := o.FromJson(body)
+			switch filter.FilterType {
+			case chatbothub.KVROUTER:
+				if bodym == nil {
+					o.Err = fmt.Errorf("cannot parse filter.body %s", body)
+					return
+				}
+
+				for key, v := range bodym {
+					switch vm := v.(type) {
+					case map[string]string:
+						for value, childFilterId := range vm {
+							ctx.Info("creating child filter %s", childFilterId)
+							o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
+							if o.Err != nil {
+								return
+							}
+							_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+								Tag: &pb.BranchTag{
+									Key: key,
+									Value: value,
+								},
+								RouterId: filter.FilterId,
+								FilterId: childFilterId,
+							})
+						}
+					}
+				}					
+			case chatbothub.REGEXROUTER:
+				for regstr, v := range bodym {
+					switch childFilterId := v.(type) {
+					case string:
+						ctx.Info("creating child filter %s", childFilterId)
+						o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
+						if o.Err != nil {
+							return
+						}
+						// branch this
+						_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+							Tag: &pb.BranchTag{
+								Key: regstr,
+							},
+							RouterId: filter.FilterId,
+							FilterId: childFilterId,
+						})
+					}
+				}
+			}
+		}
+
+		if o.Err != nil {
+			return
+		}
+
+		if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
+			FilterId: lastFilterId,
+			NextFilterId: filter.FilterId,
+		}); err != nil {
+			o.Err = err
+			return
+		} else if nxtreply.Code != 0 {
+			o.Err = fmt.Errorf(nxtreply.Message)
+			return
+		}
+
+		if filter.Next.Valid {
+			lastFilterId = currentFilterId
+			currentFilterId = filter.Next.String
+		} else {
+			ctx.Info("filter %s next is null, init filters finished", filterId)
+			break
+		}
 	}
 }
 
@@ -125,77 +241,15 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ctx.Info("b[%s] initializing filters ...", bot.BotId)
-		filterId := bot.FilterId.String
-		lastFilterId := ""
-				
-		for true {
-			filter := o.GetFilterById(tx, filterId)
-			if o.Err != nil {
-				return
-			}
-			if filter == nil {
-				o.Err = fmt.Errorf("cannot find filter %s for bot %s", filterId, bot.BotId)
-				return
-			}
-			ctx.Info("creating filter %s", filter.FilterId)
-
-			// generate filter in chathub
-			var body string
-			if filter.Body.Valid {
-				body = filter.Body.String
-			} else {
-				body = ""
-			}
-			
-			if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
-				FilterId: filter.FilterId,
-				FilterType: filter.FilterType,
-				FilterName: filter.FilterName,
-				Body: body,
-			}); err != nil {
-				o.Err = err
-				return
-			} else if opreply.Code != 0 {
-				o.Err = fmt.Errorf(opreply.Message)
-				return
-			}
-
-			if lastFilterId == "" {
-				// connect root filter to bot
-				if bfreply, err := wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
-					BotId: bot.BotId,
-					FilterId: filter.FilterId,
-				}); err != nil {
-					o.Err = err
-					return
-				} else if bfreply.Code != 0 {
-					o.Err = fmt.Errorf(bfreply.Message)
-					return
-				}
-			} else {
-				// connect filter to lastone
-				if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
-					FilterId: lastFilterId,
-					NextFilterId: filter.FilterId,
-				}); err != nil {
-					o.Err = err
-					return
-				} else if nxtreply.Code != 0 {
-					o.Err = fmt.Errorf(nxtreply.Message)
-					return
-				}
-			}
-
-			//move to next filter
-			lastFilterId = filter.FilterId
-			if filter.Next.Valid {
-				filterId = filter.Next.String
-			} else {
-				ctx.Info("filter %s next is null, init filters finished", filterId)
-				return
-			}
+		o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
+		if o.Err != nil {
+			return
 		}
 		
+		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
+			BotId: bot.BotId,
+			FilterId: bot.FilterId.String,
+		})
 		return
 
 	case chatbothub.FRIENDREQUEST:
