@@ -127,5 +127,7 @@ WHERE a.accountname=?
   AND a.deleteat is NULL
   AND f.deleteat is NULL`, accountName, filterId)
 
+	fmt.Printf("check filter owner %v\n", filters)
+
 	return nil != o.Head(filters, fmt.Sprintf("Filter %s more than one instance", filterId))
 }
