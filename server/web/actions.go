@@ -367,9 +367,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					// dont break, update all fr for the same rlogin
 				}
 			}
-			
-		default:
-			ctx.Info("unhandled action %s", localar.ActionType)
 		}
 
 		if o.Err != nil {
@@ -395,6 +392,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(w)
 
 	vars := mux.Vars(r)
 	login := vars["login"]

@@ -422,7 +422,7 @@ func NewWebTrigger(filterId string, filterName string) *WebTrigger{
 	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
 }
 
-func (f *WebTrigger) Fill(msg string) error {	
+func (f *WebTrigger) Fill(msg string) error {
 	go func() {
 		rr := httpx.NewRestfulRequest(f.Action.Method, f.Action.Url)
 		rr.Params["msg"] = msg
