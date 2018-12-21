@@ -412,6 +412,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							imageId := rid.String()
 							hub.SetImage(imageId, rawFile)
 							bodym["imageId"] = imageId
+							delete(bodym, "rawFile")
 							if o.Err == nil && bot.filter != nil {
 								o.Err = bot.filter.Fill(o.ToJson(bodym))
 							}
