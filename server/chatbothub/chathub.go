@@ -528,6 +528,7 @@ func (hub *ChatHub) CreateFilterByType (
 
 func (hub *ChatHub) FilterCreate(
 	ctx context.Context, req *pb.FilterCreateRequest) (*pb.OperationReply, error) {
+	hub.Info("FilterCreate %v", req)
 	
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
@@ -563,7 +564,8 @@ func (hub *ChatHub) FilterCreate(
 
 func (hub *ChatHub) FilterNext(
 	ctx context.Context, req *pb.FilterNextRequest) (*pb.OperationReply, error) {
-
+	hub.Info("FilterNext %v", req)
+	
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
 		return nil, fmt.Errorf("filter %s not found", req.FilterId)
