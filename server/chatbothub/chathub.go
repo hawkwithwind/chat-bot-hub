@@ -52,6 +52,7 @@ func (hub *ChatHub) init() {
 	}
 	hub.bots = make(map[string]*ChatBot)
 	hub.filters = make(map[string]Filter)
+	hub.images = make(map[string]string)
 }
 
 type ChatHub struct {
