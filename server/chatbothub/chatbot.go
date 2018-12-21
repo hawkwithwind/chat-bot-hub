@@ -66,6 +66,7 @@ const (
 	AddContact          string = "AddContact"
 	AcceptUser          string = "AcceptUser"
 	SendTextMessage     string = "SendTextMessage"
+	SendAppMessage      string = "SendAppMessage"
 	CreateRoom          string = "CreateRoom"
 	AddRoomMember       string = "AddRoomMember"
 	GetRoomMembers      string = "GetRoomMembers"
@@ -461,27 +462,61 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		var atList []interface{}
-		if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
-			atList = atListptr.([]interface{})
-		}
 		
-		content_if := o.FromMap("content", bodym, "actionbody.content", nil)
+		content_if := o.FromMap("content", bodym, "actionbody", nil)
 		switch content := content_if.(type) {
 		case string:
+			var atList []interface{}
+			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
+				atList = atListptr.([]interface{})
+			}
+			
 			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
 				"toUserName": toUserName,
 				"content":    content,
 				"atList":     atList,
 			}))
+			
+		case map[string]interface{}:
+			bot.Info("Action AppMsg SendMessage %s %T \n%v\n", toUserName, content, content)
+
+			msg_if := o.FromMap("msg", content, "body.content", nil)
+			switch msg := msg_if.(type) {
+			case map[string]interface{}:
+				appmsg_if := o.FromMap("appmsg", msg, "body.content.msg", nil)
+				switch appmsg := appmsg_if.(type) {
+				case map[string]interface{} :
+					url := o.FromMapString("url", appmsg, "body.content.msg.appmsg", false, "")
+					thumburl := o.FromMapString("thumburl", appmsg, "body.content.msg.appmsg", false, "")
+					title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
+					desc := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
+
+					if o.Err != nil {
+						return o.Err
+					}
+
+					o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+						"toUserName": toUserName,
+						"object": map[string]interface{} {
+							"appid": "",
+							"sdkver": "",
+							"title": title,
+							"desc": desc,
+							"url": url,
+							"thumburl": thumburl,
+						},
+					}))
+					
+				default:
+					o.Err = fmt.Errorf("unexpected body.content.msg.appmsg type %T", appmsg)
+				}
+			default:
+				o.Err = fmt.Errorf("unexpected body.content.msg type %T", msg)
+			}
+			
 		default:
-			bot.Info("Action AppMsg SendMessage %s %T \n%v \n%s", toUserName, atList, content, content)
-			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
-				"toUserName": toUserName,
-				"content":    content,
-				"atList":     atList,
-			}))
+			bot.Info("Action unknown SendMessage %s %T \n%v \n", toUserName, content, content)
 		}
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendTextMessage)
