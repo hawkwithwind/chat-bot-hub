@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -64,6 +65,9 @@ type ChatHub struct {
 	bots         map[string]*ChatBot
 	muxFilters   sync.Mutex
 	filters      map[string]Filter
+	muxImages    sync.Mutex
+	images       map[string]string
+	imageIds     []string
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -100,6 +104,7 @@ const (
 	LOGOUTDONE    string = "LOGOUTDONE"
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
+	IMAGEMESSAGE  string = "IMAGEMESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
 	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
@@ -177,6 +182,7 @@ func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
 	defer hub.muxFilters.Unlock()
 
 	hub.filters[filterId] = thefilter
+
 }
 
 func (hub *ChatHub) GetFilter(filterId string) Filter {
@@ -188,6 +194,31 @@ func (hub *ChatHub) GetFilter(filterId string) Filter {
 	}
 
 	return nil
+}
+
+func (hub *ChatHub) SetImage(imageId string, rawfile string) {
+	hub.muxImages.Lock()
+	defer hub.muxImages.Unlock()
+
+	hub.imageIds = append(hub.imageIds, imageId)
+	hub.images[imageId] = rawfile
+
+	if len(hub.imageIds) > 100 {
+		prepareImageId := hub.imageIds[0]
+		delete(hub.images, prepareImageId)
+		hub.imageIds = hub.imageIds[1:]				
+	}
+}
+
+func (hub *ChatHub) GetImage(imageId string) string {
+	hub.muxImages.Lock()
+	defer hub.muxImages.Unlock()
+
+	if rawfile, found := hub.images[imageId]; found {
+		return rawfile
+	}
+
+	return ""
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -364,6 +395,26 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(msg)
+					}
+				} else {
+					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+				}
+
+			case IMAGEMESSAGE:
+				if bot.ClientType == WECHATBOT {
+					bodym := o.FromJson(in.Body)
+					rawFile := o.FromMapString("rawFile", bodym, "actionBody", false, "")
+					if o.Err == nil {
+						var rid uuid.UUID
+						rid, o.Err = uuid.NewRandom()
+						if o.Err == nil {
+							imageId := rid.String()
+							hub.SetImage(imageId, rawFile)
+							bodym["imageId"] = imageId
+							if o.Err == nil && bot.filter != nil {
+								o.Err = bot.filter.Fill(o.ToJson(bodym))
+							}
+						}
 					}
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
