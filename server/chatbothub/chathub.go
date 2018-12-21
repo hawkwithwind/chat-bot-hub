@@ -594,7 +594,7 @@ func (hub *ChatHub) RouterBranch(
 
 	childFilter := hub.GetFilter(req.FilterId)
 	if childFilter == nil {
-		return nil, fmt.Errorf("child filter $s not found", req.FilterId)
+		return nil, fmt.Errorf("child filter %s not found", req.FilterId)
 	}
 
 	switch r := parentFilter.(type) {
