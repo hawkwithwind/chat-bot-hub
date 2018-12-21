@@ -546,6 +546,8 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err == nil {
+		hub.Info("a[%s]", req.ActionType)
+		
 		if req.ActionType == SendImageResourceMessage {
 			bodym := o.FromJson(req.ActionBody)
 			imageId := o.FromMapString("imageId", bodym, "actionbody", false, "")
