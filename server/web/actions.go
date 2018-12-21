@@ -392,7 +392,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	defer o.BackEndError(w)
+	defer o.BackEndError(ctx)
 
 	vars := mux.Vars(r)
 	login := vars["login"]
