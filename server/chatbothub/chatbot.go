@@ -490,7 +490,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					url := o.FromMapString("url", appmsg, "body.content.msg.appmsg", false, "")
 					thumburl := o.FromMapString("thumburl", appmsg, "body.content.msg.appmsg", false, "")
 					title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
-					desc := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
+					des := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
 
 					if o.Err != nil {
 						return o.Err
@@ -502,7 +502,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 							"appid": "",
 							"sdkver": "",
 							"title": title,
-							"desc": desc,
+							"des": des,
 							"url": url,
 							"thumburl": thumburl,
 						},
