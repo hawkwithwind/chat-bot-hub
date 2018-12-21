@@ -546,7 +546,21 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err == nil {
-		o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
+		if req.ActionType == SendImageResourceMessage {
+			bodym := o.FromJson(req.ActionBody)
+			imageId := o.FromMapString("imageId", bodym, "actionbody", false, "")
+			rawFile := hub.GetImage(imageId)
+			if rawFile != "" {
+				bodym["rawFile"] = rawFile
+				if o.Err == nil {
+					o.Err = bot.BotAction(req.ActionRequestId, SendImageMessage, o.ToJson(bodym))
+				}
+			} else {
+				o.Err = fmt.Errorf("image %s not found", imageId)
+			}
+		} else {
+			o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
+		}
 	}
 
 	if o.Err != nil {
