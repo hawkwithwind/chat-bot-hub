@@ -461,18 +461,28 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		content := o.FromMapString("content", bodym, "actionbody", false, "")
 		var atList []interface{}
 		if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 			atList = atListptr.([]interface{})
 		}
-
-		bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
-		o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
-			"toUserName": toUserName,
-			"content":    content,
-			"atList":     atList,
-		}))
+		
+		content_if := o.FromMap("content", bodym, "actionbody.content", nil)
+		switch content := content_if.(type) {
+		case string:
+			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
+			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
+				"toUserName": toUserName,
+				"content":    content,
+				"atList":     atList,
+			}))
+		case default:
+			bot.Info("Action AppMsg SendMessage %s %T \n%v \n%s", toUserName, atList, content, content)
+			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
+				"toUserName": toUserName,
+				"content":    content,
+				"atList":     atList,
+			}))
+		}
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendTextMessage)
 	}
