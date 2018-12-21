@@ -508,16 +508,7 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err == nil {
-		if req.ActionType == SendImageResourceMessage {
-			bodym := o.FromJson(req.ActionBody)
-			o.FromMapString("imageId", bodym, "actionbody", false, "")
-
-			if o.Err == nil {
-				o.Err = bot.BotAction(req.ActionRequestId, SendImageMessage, req.ActionBody)
-			}
-		} else {
-			o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
-		}
+		o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
 	}
 
 	if o.Err != nil {
