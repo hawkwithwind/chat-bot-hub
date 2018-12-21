@@ -82,22 +82,28 @@ func (o *ErrorHandler) CreateFilterChain(
 
 				for key, v := range bodym {
 					switch vm := v.(type) {
-					case map[string]string:
-						for value, childFilterId := range vm {
-							ctx.Info("creating child filter %s", childFilterId)
-							o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
-							if o.Err != nil {
-								return
+					case map[string]interface{}:
+						for value, fid := range vm {
+							switch childFilterId := fid.(type) {
+							case string:
+								ctx.Info("creating child filter %s", childFilterId)
+								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
+								if o.Err != nil {
+									return
+								}
+								_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+									Tag: &pb.BranchTag{
+										Key: key,
+										Value: value,
+									},
+									RouterId: filter.FilterId,
+									FilterId: childFilterId,
+								})
 							}
-							_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
-								Tag: &pb.BranchTag{
-									Key: key,
-									Value: value,
-								},
-								RouterId: filter.FilterId,
-								FilterId: childFilterId,
-							})
 						}
+					default:
+						o.Err = fmt.Errorf("unexpected filter.body.key type %T", vm)
+						return
 					}
 				}					
 			case chatbothub.REGEXROUTER:
