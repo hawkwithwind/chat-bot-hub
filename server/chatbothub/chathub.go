@@ -585,6 +585,7 @@ func (hub *ChatHub) FilterNext(
 
 func (hub *ChatHub) RouterBranch(
 	ctx context.Context, req *pb.RouterBranchRequest) (*pb.OperationReply, error) {
+	hub.Info("RouterBranch %v", req)
 
 	parentFilter := hub.GetFilter(req.RouterId)
 	if parentFilter == nil {

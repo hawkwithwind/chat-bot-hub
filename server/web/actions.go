@@ -74,6 +74,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			bodym := o.FromJson(body)
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
+				ctx.Info("generate KVRouter children")
 				if bodym == nil {
 					o.Err = fmt.Errorf("cannot parse filter.body %s", body)
 					return
@@ -100,6 +101,7 @@ func (o *ErrorHandler) CreateFilterChain(
 					}
 				}					
 			case chatbothub.REGEXROUTER:
+				ctx.Info("generate RegexRouter children")
 				for regstr, v := range bodym {
 					switch childFilterId := v.(type) {
 					case string:
