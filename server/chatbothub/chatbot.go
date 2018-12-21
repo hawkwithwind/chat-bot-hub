@@ -475,7 +475,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				"content":    content,
 				"atList":     atList,
 			}))
-		case default:
+		default:
 			bot.Info("Action AppMsg SendMessage %s %T \n%v \n%s", toUserName, atList, content, content)
 			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
 				"toUserName": toUserName,
