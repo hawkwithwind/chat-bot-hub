@@ -16,7 +16,6 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -52,7 +51,6 @@ func (hub *ChatHub) init() {
 	}
 	hub.bots = make(map[string]*ChatBot)
 	hub.filters = make(map[string]Filter)
-	hub.images = make(map[string]string)
 }
 
 type ChatHub struct {
@@ -66,9 +64,6 @@ type ChatHub struct {
 	bots         map[string]*ChatBot
 	muxFilters   sync.Mutex
 	filters      map[string]Filter
-	muxImages    sync.Mutex
-	images       map[string]string
-	imageIds     []string
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -195,31 +190,6 @@ func (hub *ChatHub) GetFilter(filterId string) Filter {
 	}
 
 	return nil
-}
-
-func (hub *ChatHub) SetImage(imageId string, rawfile string) {
-	hub.muxImages.Lock()
-	defer hub.muxImages.Unlock()
-
-	hub.imageIds = append(hub.imageIds, imageId)
-	hub.images[imageId] = rawfile
-
-	if len(hub.imageIds) > 100 {
-		prepareImageId := hub.imageIds[0]
-		delete(hub.images, prepareImageId)
-		hub.imageIds = hub.imageIds[1:]				
-	}
-}
-
-func (hub *ChatHub) GetImage(imageId string) string {
-	hub.muxImages.Lock()
-	defer hub.muxImages.Unlock()
-
-	if rawfile, found := hub.images[imageId]; found {
-		return rawfile
-	}
-
-	return ""
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -405,19 +375,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case IMAGEMESSAGE:
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
-					rawFile := o.FromMapString("rawFile", bodym, "actionBody", false, "")
+					o.FromMapString("imageId", bodym, "actionBody", false, "")
+					
 					if o.Err == nil {
-						var rid uuid.UUID
-						rid, o.Err = uuid.NewRandom()
-						if o.Err == nil {
-							imageId := rid.String()
-							hub.SetImage(imageId, rawFile)
-							bodym["imageId"] = imageId
-							delete(bodym, "rawFile")
-							if o.Err == nil && bot.filter != nil {
-								o.Err = bot.filter.Fill(o.ToJson(bodym))
-							}
-						}
+						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
@@ -549,16 +510,10 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	if o.Err == nil {
 		if req.ActionType == SendImageResourceMessage {
 			bodym := o.FromJson(req.ActionBody)
-			imageId := o.FromMapString("imageId", bodym, "actionbody", false, "")
-			rawFile := hub.GetImage(imageId)
+			o.FromMapString("imageId", bodym, "actionbody", false, "")
 
-			if rawFile != "" {
-				bodym["rawFile"] = rawFile
-				if o.Err == nil {
-					o.Err = bot.BotAction(req.ActionRequestId, SendImageMessage, o.ToJson(bodym))
-				}
-			} else {
-				o.Err = fmt.Errorf("image %s not found", imageId)
+			if o.Err == nil {
+				o.Err = bot.BotAction(req.ActionRequestId, SendImageMessage, req.ActionBody)
 			}
 		} else {
 			o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)

@@ -262,7 +262,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		AddContact:          (*ChatBot).AddContact,
 		AcceptUser:          (*ChatBot).AcceptUser,
 		SendTextMessage:     (*ChatBot).SendTextMessage,
-		SendImageMessage:    (*ChatBot).SendImageMessage,
+		SendImageResourceMessage:    (*ChatBot).SendImageResourceMessage,
 		CreateRoom:          (*ChatBot).CreateRoom,
 		AddRoomMember:       (*ChatBot).AddRoomMember,
 		GetRoomMembers:      (*ChatBot).GetRoomMembers,
@@ -528,21 +528,21 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SendImageMessage(arId string, body string) error {
+func (bot *ChatBot) SendImageResourceMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		o.FromMapString("rawFile", bodym, "actionbody", false, "")
+		o.FromMapString("imageId", bodym, "actionbody", false, "")
 
 		if o.Err != nil {
 			return o.Err
 		}
 
-		o.SendAction(bot, arId, SendImageMessage, body)
+		o.SendAction(bot, arId, SendImageResourceMessage, body)
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageMessage)
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageResourceMessage)
 	}
 
 	return o.Err
