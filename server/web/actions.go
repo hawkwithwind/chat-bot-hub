@@ -125,15 +125,17 @@ func (o *ErrorHandler) CreateFilterChain(
 			return
 		}
 
-		if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
-			FilterId: lastFilterId,
-			NextFilterId: filter.FilterId,
-		}); err != nil {
-			o.Err = err
-			return
-		} else if nxtreply.Code != 0 {
-			o.Err = fmt.Errorf(nxtreply.Message)
-			return
+		if lastFilterId != "" {
+			if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
+				FilterId: lastFilterId,
+				NextFilterId: filter.FilterId,
+			}); err != nil {
+				o.Err = err
+				return
+			} else if nxtreply.Code != 0 {
+				o.Err = fmt.Errorf(nxtreply.Message)
+				return
+			}
 		}
 
 		if filter.Next.Valid {
