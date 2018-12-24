@@ -144,7 +144,7 @@ func (f *PlainFilter) Fill(msg string) error {
 
 		var msgSource WechatMsgSource
 		o.FromXML(msgsource, &msgSource)
-		body['msgsource'] = msgSource
+		body["msgsource"] = msgSource
 
 		switch content := contentptr.(type) {
 		case string:
