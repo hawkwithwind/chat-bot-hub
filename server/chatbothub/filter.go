@@ -144,6 +144,9 @@ func (f *PlainFilter) Fill(msg string) error {
 
 		var msgSource WechatMsgSource
 		o.FromXML(msgsource, &msgSource)
+		if o.Err != nil {
+			f.logger.Printf("err %v\n%s\n", msgsource)
+		}
 		body["msgsource"] = msgSource
 
 		switch content := contentptr.(type) {
