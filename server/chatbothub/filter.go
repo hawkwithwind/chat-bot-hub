@@ -142,10 +142,12 @@ func (f *PlainFilter) Fill(msg string) error {
 		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
 		msgsource := o.FromMapString("msgsource", body, "eventRequest.body", true, "")
 
+		f.logger.Printf("body\n%v\n", body)
+
 		var msgSource WechatMsgSource
 		o.FromXML(msgsource, &msgSource)
 		if o.Err != nil {
-			f.logger.Printf("err %v\n%s\n", msgsource)
+			f.logger.Printf("err %v\n%s\n", o.Err, msgsource)
 		}
 		body["msgsource"] = msgSource
 
