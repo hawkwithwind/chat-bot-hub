@@ -482,38 +482,47 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			}))
 			
 		case map[string]interface{}:
-			bot.Info("Action AppMsg SendMessage %s %T \n%v\n", toUserName, content, content)
+			
 
 			msg_if := o.FromMap("msg", content, "body.content", nil)
 			switch msg := msg_if.(type) {
 			case map[string]interface{}:
 				appmsg_if := o.FromMap("appmsg", msg, "body.content.msg", nil)
-				switch appmsg := appmsg_if.(type) {
-				case map[string]interface{} :
-					url := o.FromMapString("url", appmsg, "body.content.msg.appmsg", false, "")
-					thumburl := o.FromMapString("thumburl", appmsg, "body.content.msg.appmsg", false, "")
-					title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
-					des := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
+				if appmsg_if != nil {
+					bot.Info("Action AppMsg SendMessage %s %T \n%v\n", toUserName, content, content)
+					switch appmsg := appmsg_if.(type) {
+					case map[string]interface{} :
+						url := o.FromMapString("url", appmsg, "body.content.msg.appmsg", false, "")
+						thumburl := o.FromMapString("thumburl", appmsg, "body.content.msg.appmsg", false, "")
+						title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
+						des := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
 
-					if o.Err != nil {
-						return o.Err
+						if o.Err != nil {
+							return o.Err
+						}
+
+						o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+							"toUserName": toUserName,
+							"object": map[string]interface{} {
+								"appid": "",
+								"sdkver": "",
+								"title": title,
+								"des": des,
+								"url": url,
+								"thumburl": thumburl,
+							},
+						}))
+						
+					default:
+						o.Err = fmt.Errorf("unexpected body.content.msg.appmsg type %T", appmsg)
 					}
-
-					o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-						"toUserName": toUserName,
-						"object": map[string]interface{} {
-							"appid": "",
-							"sdkver": "",
-							"title": title,
-							"des": des,
-							"url": url,
-							"thumburl": thumburl,
-						},
-					}))
-					
-				default:
-					o.Err = fmt.Errorf("unexpected body.content.msg.appmsg type %T", appmsg)
+				} else {
+					emoji_if := o.FromMap("emoji", msg, "body.content.msg", nil)
+					if emoji_if != nil {
+						bot.Info("Action Emoji SendMessage %s %T \n%v\n", toUserName, content, content)
+					}
 				}
+				
 			default:
 				o.Err = fmt.Errorf("unexpected body.content.msg type %T", msg)
 			}

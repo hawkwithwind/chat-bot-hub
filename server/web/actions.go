@@ -367,6 +367,16 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					// dont break, update all fr for the same rlogin
 				}
 			}
+
+		case chatbothub.GetRoomMembers:
+			bodym := o.FromJson(localar.ActionBody)
+			groupId := o.FromMapString("groupId", bodym, "actionBody", false, "")
+
+			if o.Err != nil {
+				return
+			}
+
+			ctx.Info("groupId %s, retruned\n%v\n", groupId, localar.Result)
 		}
 
 		if o.Err != nil {
