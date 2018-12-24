@@ -140,16 +140,17 @@ func (f *PlainFilter) Fill(msg string) error {
 		timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
 		tm := o.BJTimeFromUnix(timestamp)
 		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
-		msgsource := o.FromMapString("msgsource", body, "eventRequest.body", true, "")
+		msgsourcexml := o.FromMapString("msgSource", body, "eventRequest.body", true, "")
 
-		f.logger.Printf("body\n%v\n", body)
-
-		var msgSource WechatMsgSource
-		o.FromXML(msgsource, &msgSource)
-		if o.Err != nil {
-			f.logger.Printf("err %v\n%s\n", o.Err, msgsource)
+		if msgsourcexml != "" {
+			var msgSource WechatMsgSource
+			o.FromXML(msgsourcexml, &msgSource)
+			if o.Err != nil {
+				f.logger.Printf("err %v\n%s\n", o.Err, msgsourcexml)
+			} else {
+				body["msgSource"] = msgSource
+			}
 		}
-		body["msgsource"] = msgSource
 
 		switch content := contentptr.(type) {
 		case string:
