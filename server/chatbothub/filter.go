@@ -113,6 +113,12 @@ func (f *PlainFilter) Next(filter Filter) error {
 	return nil
 }
 
+type WechatMsgSource struct {
+	AtUserList string `xml:"atuserlist" json:"atUserList"`
+	Silence int `xml:"silence" json:"silence"`
+	MemberCount int `xml:"membercount" json:"memberCount"`
+}
+
 func (f *PlainFilter) Fill(msg string) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *TextPlainFilter")
@@ -134,6 +140,11 @@ func (f *PlainFilter) Fill(msg string) error {
 		timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
 		tm := o.BJTimeFromUnix(timestamp)
 		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
+		msgsource := o.FromMapString("msgsource", body, "eventRequest.body", true, "")
+
+		var msgSource WechatMsgSource
+		o.FromXML(msgsource, &msgSource)
+		body['msgsource'] = msgSource
 
 		switch content := contentptr.(type) {
 		case string:
@@ -149,6 +160,7 @@ func (f *PlainFilter) Fill(msg string) error {
 				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s",
 					f.Name, f.Type, mtype, tm, fromUser, toUser, status, brief)
 			}
+			
 		case map[string]interface{}:
 			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: %v",
 				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content)
@@ -161,7 +173,7 @@ func (f *PlainFilter) Fill(msg string) error {
 	}
 
 	if f.NextFilter != nil && o.Err == nil {
-		return f.NextFilter.Fill(msg)
+		return f.NextFilter.Fill(o.ToJson(body))
 	}
 
 	return o.Err
