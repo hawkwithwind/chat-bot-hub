@@ -382,8 +382,9 @@ func (bot *ChatBot) GetContactQRCode(arId string, body string) error {
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		style := o.FromMapInt("style", bodym, "actionbody", false, 0)
-		bot.Info("get contact QRCode %s %s", userId, style)
+		style_f := o.FromMapFloat("style", bodym, "actionbody", false, 0.0)
+		style := int(style_f)
+		bot.Info("get contact QRCode %s %d", userId, style)
 
 		o.SendAction(bot, arId, GetContactQRCode, o.ToJson(map[string]interface{}{
 			"userId": userId,
