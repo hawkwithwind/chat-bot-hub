@@ -15,7 +15,7 @@
 
 
       // 默认路由
-      $urlRouterProvider.otherwise("/app/user/login");
+      $urlRouterProvider.otherwise("/app/manage/botslist");
 
 
       // 路由

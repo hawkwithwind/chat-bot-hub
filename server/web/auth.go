@@ -123,7 +123,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		session.Save(req, w)
 
 		if o.Err == nil {
-			http.Redirect(w, req, ctx.Config.Baseurl, http.StatusFound)
+			http.Redirect(w, req, "/", http.StatusFound)
 		}
 	} else {
 		o.deny(w, "用户名密码不匹配")
