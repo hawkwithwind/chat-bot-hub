@@ -291,7 +291,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
-		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, reqstr)
+		debugstr := reqstr
+		if len(debugstr) > 120 {
+			debugstr = debugstr[:120]
+		}
+		
+		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, debugstr)
 
 		var awayar domains.ActionRequest
 		o.Err = json.Unmarshal([]byte(reqstr), &awayar)
