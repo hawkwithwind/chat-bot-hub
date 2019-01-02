@@ -22,7 +22,7 @@ init*)
 	read -p "db_user: " db_user && \
 	read -s -p "db_password: " db_password && \
 	echo "" && \
-	echo -e "DB_NAME=$db_name\nDB_USER=$db_user\nDB_PASSWORD=$db_password\nALIAS=$DB_ALIAS" > mysql.env && \
+	echo -e "DB_NAME=$db_name\nDB_USER=$db_user\nDB_PASSWORD=$db_password\nDB_ALIAS=$DB_ALIAS" > mysql.env && \
 	docker volume create --driver local \
 	       --opt type=none \
 	       --opt device=$datapath \
