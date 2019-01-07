@@ -71,6 +71,7 @@ const (
 	SendImageResourceMessage string = "SendImageResourceMessage"
 	CreateRoom          string = "CreateRoom"
 	AddRoomMember       string = "AddRoomMember"
+	InviteRoomMember    string = "InviteRoomMember"
 	GetRoomMembers      string = "GetRoomMembers"
 	DeleteRoomMember    string = "DeleteRoomMember"
 	SetRoomAnnouncement string = "SetRoomAnnouncement"
@@ -265,6 +266,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SendImageResourceMessage:    (*ChatBot).SendImageResourceMessage,
 		CreateRoom:          (*ChatBot).CreateRoom,
 		AddRoomMember:       (*ChatBot).AddRoomMember,
+		InviteRoomMember:    (*ChatBot).InviteRoomMember,
 		GetRoomMembers:      (*ChatBot).GetRoomMembers,
 		DeleteRoomMember:    (*ChatBot).DeleteRoomMember,
 		SetRoomAnnouncement: (*ChatBot).SetRoomAnnouncement,
@@ -433,6 +435,27 @@ func (bot *ChatBot) AddRoomMember(arId string, body string) error {
 
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddRoomMember)
+	}
+
+	return o.Err
+}
+
+func (bot *ChatBot) InviteRoomMember(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
+		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
+		bot.Info("InviteRoomMember %s %s", groupId, memberId)
+
+		o.SendAction(bot, arId, InviteRoomMember, o.ToJson(map[string]interface{}{
+			"groupId": groupId,
+			"userId":  memberId,
+		}))
+
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, InviteRoomMember)
 	}
 
 	return o.Err
