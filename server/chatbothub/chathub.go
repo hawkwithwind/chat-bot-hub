@@ -389,7 +389,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					hub.Info("status message\n%s\n", in.Body)
 					
-					bodym := o.FromJson(in.Body)
+					var msg string
+					o.Err = json.Unmarshal([]byte(in.Body), &msg)
+					if o.Err != nil {
+						hub.Error(o.Err, "cannot parse %s", in.Body)
+					}
+					
+					bodym := o.FromJson(msg)
 					hub.Info("status message %v", bodym)
 					
 					if o.Err == nil {
