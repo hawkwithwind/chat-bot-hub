@@ -289,6 +289,17 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		ctx.Info("save friend request %v", fr)
 
+	case chatbothub.STATUSMESSAGE:
+		bodystr := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
+
+		go func() {
+			if bot.Callback.Valid {
+				httpx.RestfulCallRetry(webCallbackRequest(
+					bot, eventType, bodystr), 5, 1)
+			}
+		}()
+
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
 		debugstr := reqstr

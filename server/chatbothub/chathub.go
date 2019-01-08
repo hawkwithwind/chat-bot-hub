@@ -101,6 +101,7 @@ const (
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	IMAGEMESSAGE  string = "IMAGEMESSAGE"
+	STATUSMESSAGE string = "STATUSMESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
 	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
@@ -311,8 +312,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					go func() {
 						if _, err := httpx.RestfulCallRetry(
 							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-							hub.Error(err, "webnotify friendrequest failed\n")
-						}
+								hub.Error(err, "webnotify friendrequest failed\n")
+							}
 					}()
 				}
 
@@ -382,6 +383,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+				}
+
+			case STATUSMESSAGE:
+				if bot.ClientType == WECHATBOT {
+					bodym := o.FromJson(in.Body)
+					hub.Info("status message %v", bodym)
+					
+					if o.Err == nil {
+						go func() {
+							if _, err := httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
+									hub.Error(err, "webnotify statusmessage failed\n")
+								}
+						}()
+					}
 				}
 
 			default:
