@@ -387,6 +387,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case STATUSMESSAGE:
 				if bot.ClientType == WECHATBOT {
+					hub.Info("status message\n%s\n", in.Body)
+					
 					bodym := o.FromJson(in.Body)
 					hub.Info("status message %v", bodym)
 					
