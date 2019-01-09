@@ -50,7 +50,10 @@ func loadConfig(configPath string) (MainConfig, error) {
 	dbpassword := os.Getenv("DB_PASSWORD")
 	dbname := os.Getenv("DB_NAME")
 	dblink := os.Getenv("DB_ALIAS")
-	c.Web.Database.DataSourceName = fmt.Sprintf("%s:%s@tcp(%s)/%s", dbuser, dbpassword, dblink, dbname)
+	dbparams := os.Getenv("DB_PARAMS")
+	c.Web.Database.DataSourceName = fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", dbuser, dbpassword, dblink, dbname, dbparams)
+
+	fmt.Println(c.Web.Database.DataSourceName)
 	return c, nil
 }
 

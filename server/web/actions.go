@@ -21,7 +21,7 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 
-	fmt.Printf("rr: %v", rr)
+	//fmt.Printf("rr: %v", rr)
 	return rr
 }
 
