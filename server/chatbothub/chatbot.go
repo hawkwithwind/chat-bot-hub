@@ -77,6 +77,7 @@ const (
 	SetRoomAnnouncement string = "SetRoomAnnouncement"
 	SetRoomName         string = "SetRoomName"
 	GetContactQRCode    string = "GetContactQRCode"
+	SearchContact       string = "SearchContact"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -272,6 +273,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SetRoomAnnouncement: (*ChatBot).SetRoomAnnouncement,
 		SetRoomName:         (*ChatBot).SetRoomName,
 		GetContactQRCode:    (*ChatBot).GetContactQRCode,
+		SearchContact:       (*ChatBot).SearchContact,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -300,6 +302,25 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+func (bot *ChatBot) SearchContact(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bot.Info("Search Contact")
+		bodym := o.FromJson(body)
+		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
+		
+		o.SendAction(bot, arId, SearchContact, o.ToJson(map[string]interface{} {
+			"userId": userId,
+		}))
+		
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SearchContact)
+	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) AcceptUser(arId string, body string) error {
