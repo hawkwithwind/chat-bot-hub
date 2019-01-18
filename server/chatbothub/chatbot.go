@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/getsentry/raven-go"
 
@@ -526,6 +527,73 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 	return nil
 }
 
+type WechatMsg struct {
+	AppMsg  WechatAppMsg `json:"appmsg"`
+	FromUserName string `json:"fromusername"`
+	Scene int `json:"scene"`
+	CommentUrl string `json:"commenturl"`
+}
+
+type WechatAppMsg struct {
+	Attributions WechatAppMsgAttributions `json:"$"`
+	Title string `json:"title"`
+	Des string `json:"des"`
+	Action string `json:"action"`
+	Type int `json:"type"`
+	ShowType int `json:"showtype"`
+	SoundType int `json:"soundtype"`
+	MediaTagName string `json:"mediatagname"`
+	MessageExt string `json:"messageext"`
+	MessageAction string `json:"messageaction"`
+	Content string `json:"content"`
+	ContentAttr string	 `json:"contentattr"`
+	Url string `json:"url"`
+	LowUrl string `json:"lowurl"`
+	DataUrl string `json:"dataurl"`
+	LowDataUrl string `json:"lowdataurl"`
+	ExtInfo string `json:"extinfo"`
+	SourceUserName string `json:"sourceusername"`
+	SourceDisplayName string `json:"sourcedisplayname"`
+	ThumbUrl string `json:"thumburl"`
+	Md5 string `json:"md5"`
+	StatExtStr string `json:"statextstr"`
+	WeAppInfo WechatWeAppInfo `json:"weappinfo"`
+	AppAttach WechatAppAttach `json:"appattach"`
+}
+
+type WechatAppMsgAttributions struct {
+	Appid string `json:"appid"`
+	Sdkver string `json:"sdkver"`
+}
+
+type WechatWeAppInfo struct {
+	UserName string `json:"username"`
+	AppId string `json:"appid"`
+	Type int `json:"type"`
+	Version int `json:"version"`
+	WeAppIconUrl string `json:"weappiconurl"`
+	PagePath string `json:"pagepath"`
+	ShareId string `json:"shareId"`
+	AppServiceType int `json:"appservicetype"`
+}
+
+type WechatAppAttach struct {
+	TotalLen int `json:"totallen"`
+	AttachId string `json:"attachid"`
+	Emoticonmd5 string `json:"emoticonmd5"`
+	FileExt string `json:"fileext"`
+	CdnThumbUrl string `json:"cdnthumburl"`
+	CdnThumbMd5 string `json:"cdnthumbmd5"`
+	CdnThumbLength int `json:"cdnthumblength"`
+	CdnThumbWidth int `json:"cdnthumbwidth"`
+	CdnThumbHeight int `json:"cdnthumbheight"`
+	CdnThumbBasekey string `json:"cdnthumbbasekey"`
+	Aeskey string `json:"aeskey"`
+	EncryVer int `json:"encryver"`
+	FileKey string `json:"filekey"`
+}
+
+
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
@@ -549,100 +617,125 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			}))
 			
 		case map[string]interface{}:
-			
+			var msg WechatMsg
+			o.Err = json.Unmarshal([]byte(o.ToJson(bodym["content"])), &msg)
+			if o.Err != nil {
+				return o.Err
+			}
 
-			msg_if := o.FromMap("msg", content, "body.content", nil)
-			switch msg := msg_if.(type) {
-			case map[string]interface{}:
-				appmsg_if := o.FromMap("appmsg", msg, "body.content.msg", nil)
-				if appmsg_if != nil {
-					bot.Info("Action AppMsg SendMessage %s %T \n%v\n", toUserName, content, content)
-					switch appmsg := appmsg_if.(type) {
-					case map[string]interface{} :
-						url := o.FromMapString("url", appmsg, "body.content.msg.appmsg", false, "")
-						thumburl := o.FromMapString("thumburl", appmsg, "body.content.msg.appmsg", false, "")
-						title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
-						des := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
+			appmsg := msg.AppMsg
 
-						mtype := int(o.FromMapFloat("type",appmsg, "body.content.msg.appmsg", false, 0))
-						
-						if o.Err != nil {
-							return o.Err
-						}
-
-						switch mtype {
-						case 5:
-							o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-								"toUserName": toUserName,
-								"object": map[string]interface{} {
-									"appid": "",
-									"sdkver": "",
-									"title": title,
-									"des": des,
-									"url": url,
-									"thumburl": thumburl,
-								},
-							}))
-						case 33:
-							weappinfo_if := o.FromMap("weappinfo", appmsg, "body.content.msg.appmsg", nil)
-							if weappinfo_if != nil {
-								switch weappinfo := weappinfo_if.(type) {
-								case map[string]interface{} :
-									weappiconurl := o.FromMapString("weappiconurl", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
-									shareId := o.FromMapString("shareId", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
-									appservicetype := int(o.FromMapFloat("appservicetype", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, 0))
-									username := o.FromMapString("username", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
-									appid := o.FromMapString("appid", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
-									wetype := int(o.FromMapFloat("type", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, 0))
-									version := int(o.FromMapFloat("version", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, 0))
-
-									if o.Err != nil {
-										return o.Err
-									}
-
-									o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-										"toUserName": toUserName,
-										"object": map[string]interface{} {
-											"appid": "",
-											"sdkver": "",
-											"title": title,
-											"des": des,
-											"url": url,
-											"thumburl": thumburl,
-											"weappinfo": map[string]interface{} {
-												"weappiconurl": weappiconurl,
-												"shareId": shareId,
-												"appservicetype": appservicetype,
-												"username": username,
-												"appid": appid,
-												"type": wetype,
-												"version": version,
-											},
-										},
-									}))
-								}
-							}
-						}
-						
-					default:
-						o.Err = fmt.Errorf("unexpected body.content.msg.appmsg type %T", appmsg)
-					}
-				} else {
-					emoji_if := o.FromMap("emoji", msg, "body.content.msg", nil)
-					if emoji_if != nil {
-						bot.Info("Action Emoji SendMessage %s %T \n%v\n", toUserName, content, content)
-					}
-				}
+			switch appmsg.Type {
+			case 5:
+				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+					"toUserName": toUserName,
+					"object": map[string]interface{} {
+						"appid": appmsg.Attributions.Appid,
+						"sdkver": appmsg.Attributions.Sdkver,
+						"title":  appmsg.Title,
+						"des": appmsg.Des,
+						"url": appmsg.Url,
+						"thumburl": appmsg.ThumbUrl,
+					},
+				}))
+			case 33:
+				xml := `<appmsg appid="%s" sdkver="%s">
+<title>%s</title>
+<des>%s</des>
+<action></action>
+<type>%d</type>
+<showtype>%d</showtype>
+<soundtype>%d</soundtype>
+<mediatagname></mediatagname>
+<messageext></messageext>
+<messageaction></messageaction>
+<content></content>
+<contentattr>%s</contentattr>
+<url>%s</url>
+<lowurl></lowurl>
+<dataurl></dataurl>
+<lowdataurl></lowdataurl>
+<extinfo></extinfo>
+<sourceusername>%s</sourceusername>
+<sourcedisplayname>%s</sourcedisplayname>
+<thumburl></thumburl>
+<md5></md5>
+<statextstr></statextstr>
+<weappinfo>
+<username><![CDATA[%s]]></username>
+<appid><![CDATA[%s]]></appid>
+<type>%d</type>
+<version>%d</version>
+<weappiconurl><![CDATA[%s]]></weappiconurl>
+<pagepath><![CDATA[%s]]></pagepath>
+<shareId><![CDATA[%s]]></shareId>
+<appservicetype>%d</appservicetype>
+</weappinfo>
+<appattach>
+<totallen>%d</totallen>
+<attachid />
+<emoticonmd5 />
+<fileext />
+<cdnthumburl>%s</cdnthumburl>
+<cdnthumbmd5>%s</cdnthumbmd5>
+<cdnthumblength>%d</cdnthumblength>
+<cdnthumbwidth>%d</cdnthumbwidth>
+<cdnthumbheight>%d</cdnthumbheight>
+<cdnthumbaeskey>%s</cdnthumbaeskey>
+<aeskey>%s</aeskey>
+<encryver>%d</encryver>
+<filekey>%s</filekey>
+</appattach>
+</appmsg>`
 				
-			default:
-				o.Err = fmt.Errorf("unexpected body.content.msg type %T", msg)
+				xml = fmt.Sprintf(xml,
+					appmsg.Attributions.Appid,
+					appmsg.Attributions.Sdkver,
+					appmsg.Title,
+					appmsg.Des,
+					appmsg.Action,
+					appmsg.Type,
+					appmsg.ShowType,
+					appmsg.SoundType,
+					appmsg.MediaTagName,
+					appmsg.MessageExt,
+					appmsg.MessageAction,
+					appmsg.Content,
+					appmsg.ContentAttr,
+					appmsg.Url,
+					appmsg.LowUrl,
+					appmsg.DataUrl,
+					appmsg.LowDataUrl,
+					appmsg.ExtInfo,
+					appmsg.SourceUserName,
+					appmsg.SourceDisplayName,
+					appmsg.ThumbUrl,
+					appmsg.Md5,
+					appmsg.StatExtStr,
+					appmsg.WeAppInfo.UserName,
+					appmsg.WeAppInfo.AppId,
+					appmsg.WeAppInfo.Type,
+					appmsg.WeAppInfo.Version,
+					appmsg.WeAppInfo.WeAppIconUrl,
+					appmsg.WeAppInfo.PagePath,
+					appmsg.WeAppInfo.ShareId,
+					appmsg.WeAppInfo.AppServiceType,
+					appmsg.AppAttach.CdnThumbUrl,
+					appmsg.AppAttach.CdnThumbMd5,
+					appmsg.AppAttach.CdnThumbLength,
+					appmsg.AppAttach.CdnThumbWidth,
+					appmsg.AppAttach.CdnThumbHeight,
+					appmsg.AppAttach.CdnThumbBasekey,
+					appmsg.AppAttach.Aeskey,
+					appmsg.AppAttach.EncryVer,
+					appmsg.AppAttach.FileKey)
+
+				xml = strings.Replace(xml, "\n", "", -1)
+				
+				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+					"toUserName": toUserName,
+					"xml": xml,
+				}))
 			}
 			
 		default:
