@@ -570,16 +570,16 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 										"body.content.msg.appmsg.weappinfo", false, "")
 									shareId := o.FromMapString("shareId", weappinfo,
 										"body.content.msg.appmsg.weappinfo", false, "")
-									appservicetype := o.FromMapString("appservicetype", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
+									appservicetype := int(o.FromMapFloat("appservicetype", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, 0))
 									username := o.FromMapString("username", weappinfo,
 										"body.content.msg.appmsg.weappinfo", false, "")
 									appid := o.FromMapString("appid", weappinfo,
 										"body.content.msg.appmsg.weappinfo", false, "")
-									wetype := o.FromMapString("type", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
-									version := o.FromMapString("version", weappinfo,
-										"body.content.msg.appmsg.weappinfo", false, "")
+									wetype := int(o.FromMapFloat("type", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, 0))
+									version := int(o.FromMapFloat("version", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, 0))
 
 									if o.Err != nil {
 										return o.Err
