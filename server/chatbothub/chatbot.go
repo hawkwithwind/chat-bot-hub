@@ -322,6 +322,8 @@ func (bot *ChatBot) SendAppMessage(arId string, body string) error {
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
 	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) SearchContact(arId string, body string) error {
