@@ -316,7 +316,7 @@ func (bot *ChatBot) SendAppMessage(arId string, body string) error {
 
 		o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{} {
 			"toUserName": toUserName,
-			"object": xml,
+			"xml": xml,
 		}))
 		
 	} else {
