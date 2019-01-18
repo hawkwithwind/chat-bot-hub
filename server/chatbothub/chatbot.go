@@ -542,21 +542,72 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 						title := o.FromMapString("title", appmsg, "body.content.msg.appmsg", false, "")
 						des := o.FromMapString("des", appmsg, "body.content.msg.appmsg", false, "")
 
+						mtype := int(o.FromMapFloat("type",appmsg, "body.content.msg.appmsg", false, 0))
+						
 						if o.Err != nil {
 							return o.Err
 						}
 
-						o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-							"toUserName": toUserName,
-							"object": map[string]interface{} {
-								"appid": "",
-								"sdkver": "",
-								"title": title,
-								"des": des,
-								"url": url,
-								"thumburl": thumburl,
-							},
-						}))
+						switch mtype {
+						case 5:
+							o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+								"toUserName": toUserName,
+								"object": map[string]interface{} {
+									"appid": "",
+									"sdkver": "",
+									"title": title,
+									"des": des,
+									"url": url,
+									"thumburl": thumburl,
+								},
+							}))
+						case 33:
+							weappinfo_if := o.FromMap("weappinfo", appmsg, "body.content.msg.appmsg", nil)
+							if weappinfo_if != nil {
+								switch weappinfo := weappinfo_if.(type) {
+								case map[string]interface{} :
+									weappiconurl := o.FromMapString("weappiconurl", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									shareId := o.FromMapString("shareId", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									appservicetype := o.FromMapString("appservicetype", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									username := o.FromMapString("username", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									appid := o.FromMapString("appid", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									wetype := o.FromMapString("type", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+									version := o.FromMapString("version", weappinfo,
+										"body.content.msg.appmsg.weappinfo", false, "")
+
+									if o.Err != nil {
+										return o.Err
+									}
+
+									o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+										"toUserName": toUserName,
+										"object": map[string]interface{} {
+											"appid": "",
+											"sdkver": "",
+											"title": title,
+											"des": des,
+											"url": url,
+											"thumburl": thumburl,
+											"weappinfo": map[string]interface{} {
+												"weappiconurl": weappiconurl,
+												"shareId": shareId,
+												"appservicetype": appservicetype,
+												"username": username,
+												"appid": appid,
+												"type": wetype,
+												"version": version,
+											},
+										},
+									}))
+								}
+							}
+						}
 						
 					default:
 						o.Err = fmt.Errorf("unexpected body.content.msg.appmsg type %T", appmsg)
