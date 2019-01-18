@@ -264,6 +264,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		AddContact:          (*ChatBot).AddContact,
 		AcceptUser:          (*ChatBot).AcceptUser,
 		SendTextMessage:     (*ChatBot).SendTextMessage,
+		SendAppMessage:      (*ChatBot).SendAppMessage,
 		SendImageResourceMessage:    (*ChatBot).SendImageResourceMessage,
 		CreateRoom:          (*ChatBot).CreateRoom,
 		AddRoomMember:       (*ChatBot).AddRoomMember,
@@ -302,6 +303,25 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+func (bot *ChatBot) SendAppMessage(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bot.Info("SendAppMessage")
+		bodym := o.FromJson(body)
+		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+		xml := o.FromMapString("xml", bodym, "actionbody", false, "")
+
+		o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{} {
+			"toUserName": toUserName,
+			"object": xml,
+		}))
+		
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
+	}
 }
 
 func (bot *ChatBot) SearchContact(arId string, body string) error {
