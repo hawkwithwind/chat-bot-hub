@@ -625,6 +625,8 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 			appmsg := msg.AppMsg
 
+			bot.Info("appms %v", appmsg)
+
 			switch appmsg.Type {
 			case 5:
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
@@ -731,6 +733,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					appmsg.AppAttach.FileKey)
 
 				xml = strings.Replace(xml, "\n", "", -1)
+				bot.Info("xml\n%s\n", xml)
 				
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
