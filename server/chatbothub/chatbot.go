@@ -653,25 +653,25 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				xml := `<appmsg appid="%s" sdkver="%s">
 <title>%s</title>
 <des>%s</des>
-<action></action>
+<action>%s</action>
 <type>%s</type>
 <showtype>%s</showtype>
 <soundtype>%s</soundtype>
-<mediatagname></mediatagname>
-<messageext></messageext>
-<messageaction></messageaction>
-<content></content>
+<mediatagname>%s</mediatagname>
+<messageext>%s</messageext>
+<messageaction>%s</messageaction>
+<content>%s</content>
 <contentattr>%s</contentattr>
 <url>%s</url>
-<lowurl></lowurl>
-<dataurl></dataurl>
-<lowdataurl></lowdataurl>
-<extinfo></extinfo>
+<lowurl>%s</lowurl>
+<dataurl>%s</dataurl>
+<lowdataurl>%s</lowdataurl>
+<extinfo>%s</extinfo>
 <sourceusername>%s</sourceusername>
 <sourcedisplayname>%s</sourcedisplayname>
-<thumburl></thumburl>
-<md5></md5>
-<statextstr></statextstr>
+<thumburl>%s</thumburl>
+<md5>%s</md5>
+<statextstr>%s</statextstr>
 <weappinfo>
 <username><![CDATA[%s]]></username>
 <appid><![CDATA[%s]]></appid>
@@ -731,6 +731,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					appmsg.WeAppInfo.PagePath,
 					appmsg.WeAppInfo.ShareId,
 					appmsg.WeAppInfo.AppServiceType,
+					appmsg.AppAttach.TotalLen,
 					appmsg.AppAttach.CdnThumbUrl,
 					appmsg.AppAttach.CdnThumbMd5,
 					appmsg.AppAttach.CdnThumbLength,
