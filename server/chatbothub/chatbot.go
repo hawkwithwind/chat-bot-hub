@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/getsentry/raven-go"
 
@@ -46,39 +46,39 @@ type LoginInfo struct {
 }
 
 type ChatBot struct {
-	ClientId     string        `json:"clientId"`
-	ClientType   string        `json:"clientType"`
-	Name         string        `json:"name"`
-	StartAt      int64         `json:"startAt"`
-	LastPing     int64         `json:"lastPing"`
-	Login        string        `json:"login"`
-	NotifyUrl    string        `json:"notifyurl"`
-	LoginInfo    LoginInfo     `json:"loginInfo"`
-	Status       ChatBotStatus `json:"status"`
-	BotId        string        `json:"botId"`
-	ScanUrl      string        `json:"scanUrl"`
-	tunnel       pb.ChatBotHub_EventTunnelServer
-	errmsg       string
-	filter       Filter
-	logger       *log.Logger
+	ClientId   string        `json:"clientId"`
+	ClientType string        `json:"clientType"`
+	Name       string        `json:"name"`
+	StartAt    int64         `json:"startAt"`
+	LastPing   int64         `json:"lastPing"`
+	Login      string        `json:"login"`
+	NotifyUrl  string        `json:"notifyurl"`
+	LoginInfo  LoginInfo     `json:"loginInfo"`
+	Status     ChatBotStatus `json:"status"`
+	BotId      string        `json:"botId"`
+	ScanUrl    string        `json:"scanUrl"`
+	tunnel     pb.ChatBotHub_EventTunnelServer
+	errmsg     string
+	filter     Filter
+	logger     *log.Logger
 }
 
 const (
-	AddContact          string = "AddContact"
-	AcceptUser          string = "AcceptUser"
-	SendTextMessage     string = "SendTextMessage"
-	SendAppMessage      string = "SendAppMessage"
-	SendImageMessage    string = "SendImageMessage"
+	AddContact               string = "AddContact"
+	AcceptUser               string = "AcceptUser"
+	SendTextMessage          string = "SendTextMessage"
+	SendAppMessage           string = "SendAppMessage"
+	SendImageMessage         string = "SendImageMessage"
 	SendImageResourceMessage string = "SendImageResourceMessage"
-	CreateRoom          string = "CreateRoom"
-	AddRoomMember       string = "AddRoomMember"
-	InviteRoomMember    string = "InviteRoomMember"
-	GetRoomMembers      string = "GetRoomMembers"
-	DeleteRoomMember    string = "DeleteRoomMember"
-	SetRoomAnnouncement string = "SetRoomAnnouncement"
-	SetRoomName         string = "SetRoomName"
-	GetContactQRCode    string = "GetContactQRCode"
-	SearchContact       string = "SearchContact"
+	CreateRoom               string = "CreateRoom"
+	AddRoomMember            string = "AddRoomMember"
+	InviteRoomMember         string = "InviteRoomMember"
+	GetRoomMembers           string = "GetRoomMembers"
+	DeleteRoomMember         string = "DeleteRoomMember"
+	SetRoomAnnouncement      string = "SetRoomAnnouncement"
+	SetRoomName              string = "SetRoomName"
+	GetContactQRCode         string = "GetContactQRCode"
+	SearchContact            string = "SearchContact"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -94,8 +94,8 @@ func (bot *ChatBot) Error(err error, msg string, v ...interface{}) {
 
 func NewChatBot() *ChatBot {
 	return &ChatBot{
-		Status:       BeginNew,
-		logger:       log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime),
+		Status: BeginNew,
+		logger: log.New(os.Stdout, "[BOT] ", log.Ldate|log.Ltime),
 	}
 }
 
@@ -262,20 +262,20 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 	var err error
 
 	actionMap := map[string]func(*ChatBot, string, string) error{
-		AddContact:          (*ChatBot).AddContact,
-		AcceptUser:          (*ChatBot).AcceptUser,
-		SendTextMessage:     (*ChatBot).SendTextMessage,
-		SendAppMessage:      (*ChatBot).SendAppMessage,
-		SendImageResourceMessage:    (*ChatBot).SendImageResourceMessage,
-		CreateRoom:          (*ChatBot).CreateRoom,
-		AddRoomMember:       (*ChatBot).AddRoomMember,
-		InviteRoomMember:    (*ChatBot).InviteRoomMember,
-		GetRoomMembers:      (*ChatBot).GetRoomMembers,
-		DeleteRoomMember:    (*ChatBot).DeleteRoomMember,
-		SetRoomAnnouncement: (*ChatBot).SetRoomAnnouncement,
-		SetRoomName:         (*ChatBot).SetRoomName,
-		GetContactQRCode:    (*ChatBot).GetContactQRCode,
-		SearchContact:       (*ChatBot).SearchContact,
+		AddContact:               (*ChatBot).AddContact,
+		AcceptUser:               (*ChatBot).AcceptUser,
+		SendTextMessage:          (*ChatBot).SendTextMessage,
+		SendAppMessage:           (*ChatBot).SendAppMessage,
+		SendImageResourceMessage: (*ChatBot).SendImageResourceMessage,
+		CreateRoom:               (*ChatBot).CreateRoom,
+		AddRoomMember:            (*ChatBot).AddRoomMember,
+		InviteRoomMember:         (*ChatBot).InviteRoomMember,
+		GetRoomMembers:           (*ChatBot).GetRoomMembers,
+		DeleteRoomMember:         (*ChatBot).DeleteRoomMember,
+		SetRoomAnnouncement:      (*ChatBot).SetRoomAnnouncement,
+		SetRoomName:              (*ChatBot).SetRoomName,
+		GetContactQRCode:         (*ChatBot).GetContactQRCode,
+		SearchContact:            (*ChatBot).SearchContact,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -315,11 +315,11 @@ func (bot *ChatBot) SendAppMessage(arId string, body string) error {
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		xml := o.FromMapString("xml", bodym, "actionbody", false, "")
 
-		o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{} {
+		o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 			"toUserName": toUserName,
-			"xml": xml,
+			"xml":        xml,
 		}))
-		
+
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
 	}
@@ -334,11 +334,11 @@ func (bot *ChatBot) SearchContact(arId string, body string) error {
 		bot.Info("Search Contact")
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		
-		o.SendAction(bot, arId, SearchContact, o.ToJson(map[string]interface{} {
+
+		o.SendAction(bot, arId, SearchContact, o.ToJson(map[string]interface{}{
 			"userId": userId,
 		}))
-		
+
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SearchContact)
 	}
@@ -528,11 +528,11 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 }
 
 type WechatMsg struct {
-	AppInfo WechatAppInfo `json:"appinfo"`
-	AppMsg  WechatAppMsg `json:"appmsg"`
-	FromUserName string `json:"fromusername"`
-	Scene int `json:"scene"`
-	CommentUrl string `json:"commenturl"`
+	AppInfo      WechatAppInfo `json:"appinfo"`
+	AppMsg       WechatAppMsg  `json:"appmsg"`
+	FromUserName string        `json:"fromusername"`
+	Scene        int           `json:"scene"`
+	CommentUrl   string        `json:"commenturl"`
 }
 
 type WechatAppInfo struct {
@@ -541,64 +541,63 @@ type WechatAppInfo struct {
 }
 
 type WechatAppMsg struct {
-	Attributions WechatAppMsgAttributions `json:"$"`
-	Title string `json:"title"`
-	Des string `json:"des"`
-	Action string `json:"action"`
-	Type int `json:"type"`
-	ShowType int `json:"showtype"`
-	SoundType int `json:"soundtype"`
-	MediaTagName string `json:"mediatagname"`
-	MessageExt string `json:"messageext"`
-	MessageAction string `json:"messageaction"`
-	Content string `json:"content"`
-	ContentAttr string	 `json:"contentattr"`
-	Url string `json:"url"`
-	LowUrl string `json:"lowurl"`
-	DataUrl string `json:"dataurl"`
-	LowDataUrl string `json:"lowdataurl"`
-	ExtInfo string `json:"extinfo"`
-	SourceUserName string `json:"sourceusername"`
-	SourceDisplayName string `json:"sourcedisplayname"`
-	ThumbUrl string `json:"thumburl"`
-	Md5 string `json:"md5"`
-	StatExtStr string `json:"statextstr"`
-	WeAppInfo WechatWeAppInfo `json:"weappinfo"`
-	AppAttach WechatAppAttach `json:"appattach"`
+	Attributions      WechatAppMsgAttributions `json:"$"`
+	Title             string                   `json:"title"`
+	Des               string                   `json:"des"`
+	Action            string                   `json:"action"`
+	Type              int                      `json:"type"`
+	ShowType          int                      `json:"showtype"`
+	SoundType         int                      `json:"soundtype"`
+	MediaTagName      string                   `json:"mediatagname"`
+	MessageExt        string                   `json:"messageext"`
+	MessageAction     string                   `json:"messageaction"`
+	Content           string                   `json:"content"`
+	ContentAttr       string                   `json:"contentattr"`
+	Url               string                   `json:"url"`
+	LowUrl            string                   `json:"lowurl"`
+	DataUrl           string                   `json:"dataurl"`
+	LowDataUrl        string                   `json:"lowdataurl"`
+	ExtInfo           string                   `json:"extinfo"`
+	SourceUserName    string                   `json:"sourceusername"`
+	SourceDisplayName string                   `json:"sourcedisplayname"`
+	ThumbUrl          string                   `json:"thumburl"`
+	Md5               string                   `json:"md5"`
+	StatExtStr        string                   `json:"statextstr"`
+	WeAppInfo         WechatWeAppInfo          `json:"weappinfo"`
+	AppAttach         WechatAppAttach          `json:"appattach"`
 }
 
 type WechatAppMsgAttributions struct {
-	Appid string `json:"appid"`
+	Appid  string `json:"appid"`
 	Sdkver string `json:"sdkver"`
 }
 
 type WechatWeAppInfo struct {
-	UserName string `json:"username"`
-	AppId string `json:"appid"`
-	Type int `json:"type"`
-	Version int `json:"version"`
-	WeAppIconUrl string `json:"weappiconurl"`
-	PagePath string `json:"pagepath"`
-	ShareId string `json:"shareId"`
-	AppServiceType int `json:"appservicetype"`
+	UserName       string `json:"username"`
+	AppId          string `json:"appid"`
+	Type           int    `json:"type"`
+	Version        int    `json:"version"`
+	WeAppIconUrl   string `json:"weappiconurl"`
+	PagePath       string `json:"pagepath"`
+	ShareId        string `json:"shareId"`
+	AppServiceType int    `json:"appservicetype"`
 }
 
 type WechatAppAttach struct {
-	TotalLen int `json:"totallen"`
-	AttachId string `json:"attachid"`
-	Emoticonmd5 string `json:"emoticonmd5"`
-	FileExt string `json:"fileext"`
-	CdnThumbUrl string `json:"cdnthumburl"`
-	CdnThumbMd5 string `json:"cdnthumbmd5"`
-	CdnThumbLength int `json:"cdnthumblength"`
-	CdnThumbWidth int `json:"cdnthumbwidth"`
-	CdnThumbHeight int `json:"cdnthumbheight"`
+	TotalLen        int    `json:"totallen"`
+	AttachId        string `json:"attachid"`
+	Emoticonmd5     string `json:"emoticonmd5"`
+	FileExt         string `json:"fileext"`
+	CdnThumbUrl     string `json:"cdnthumburl"`
+	CdnThumbMd5     string `json:"cdnthumbmd5"`
+	CdnThumbLength  string `json:"cdnthumblength"`
+	CdnThumbWidth   string `json:"cdnthumbwidth"`
+	CdnThumbHeight  string `json:"cdnthumbheight"`
 	CdnThumbBasekey string `json:"cdnthumbbasekey"`
-	Aeskey string `json:"aeskey"`
-	EncryVer int `json:"encryver"`
-	FileKey string `json:"filekey"`
+	Aeskey          string `json:"aeskey"`
+	EncryVer        string `json:"encryver"`
+	FileKey         string `json:"filekey"`
 }
-
 
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
@@ -606,7 +605,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		
+
 		content_if := o.FromMap("content", bodym, "actionbody", nil)
 		switch content := content_if.(type) {
 		case string:
@@ -614,17 +613,17 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 				atList = atListptr.([]interface{})
 			}
-			
+
 			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
 				"toUserName": toUserName,
 				"content":    content,
 				"atList":     atList,
 			}))
-			
+
 		case map[string]interface{}:
 			msg_if := o.FromMap("msg", content, "content", nil)
-			
+
 			var msg WechatMsg
 			o.Err = json.Unmarshal([]byte(o.ToJson(msg_if)), &msg)
 			if o.Err != nil {
@@ -641,12 +640,12 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			case 5:
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
-					"object": map[string]interface{} {
-						"appid": appmsg.Attributions.Appid,
-						"sdkver": appmsg.Attributions.Sdkver,
-						"title":  appmsg.Title,
-						"des": appmsg.Des,
-						"url": appmsg.Url,
+					"object": map[string]interface{}{
+						"appid":    appmsg.Attributions.Appid,
+						"sdkver":   appmsg.Attributions.Sdkver,
+						"title":    appmsg.Title,
+						"des":      appmsg.Des,
+						"url":      appmsg.Url,
 						"thumburl": appmsg.ThumbUrl,
 					},
 				}))
@@ -699,7 +698,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 <filekey>%s</filekey>
 </appattach>
 </appmsg>`
-				
+
 				xml = fmt.Sprintf(xml,
 					appmsg.Attributions.Appid,
 					appmsg.Attributions.Sdkver,
@@ -744,13 +743,13 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 				xml = strings.Replace(xml, "\n", "", -1)
 				bot.Info("xml\n%s\n", xml)
-				
+
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
-					"xml": xml,
+					"xml":        xml,
 				}))
 			}
-			
+
 		default:
 			bot.Info("Action unknown SendMessage %s %T \n%v \n", toUserName, content, content)
 		}

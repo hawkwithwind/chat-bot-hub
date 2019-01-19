@@ -312,8 +312,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					go func() {
 						if _, err := httpx.RestfulCallRetry(
 							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-								hub.Error(err, "webnotify friendrequest failed\n")
-							}
+							hub.Error(err, "webnotify friendrequest failed\n")
+						}
 					}()
 				}
 
@@ -327,7 +327,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case ACTIONREPLY:
 				hub.Info("ACTIONREPLY %s", in.Body[:120])
-				
+
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
 					var actionBody map[string]interface{}
@@ -341,7 +341,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
 							result = rptr.(map[string]interface{})
 						}
-						
+
 						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
 					}
 
@@ -377,7 +377,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
 					o.FromMapString("imageId", bodym, "actionBody", false, "")
-					
+
 					if o.Err == nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}
@@ -388,22 +388,22 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case STATUSMESSAGE:
 				if bot.ClientType == WECHATBOT {
 					hub.Info("status message\n%s\n", in.Body)
-					
+
 					var msg string
 					o.Err = json.Unmarshal([]byte(in.Body), &msg)
 					if o.Err != nil {
 						hub.Error(o.Err, "cannot parse %s", in.Body)
 					}
-					
+
 					bodym := o.FromJson(msg)
 					hub.Info("status message %v", bodym)
-					
+
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
-									hub.Error(err, "webnotify statusmessage failed\n")
-								}
+								hub.Error(err, "webnotify statusmessage failed\n")
+							}
 						}()
 					}
 				}
@@ -542,8 +542,8 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 }
 
-func (hub *ChatHub) CreateFilterByType (
-	filterId string, filterName string, filterType string)  (Filter, error) {
+func (hub *ChatHub) CreateFilterByType(
+	filterId string, filterName string, filterType string) (Filter, error) {
 	var filter Filter
 	switch filterType {
 	case WECHATBASEFILTER:
@@ -568,10 +568,10 @@ func (hub *ChatHub) CreateFilterByType (
 func (hub *ChatHub) FilterCreate(
 	ctx context.Context, req *pb.FilterCreateRequest) (*pb.OperationReply, error) {
 	hub.Info("FilterCreate %v", req)
-	
+
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
-		return &pb.OperationReply{Code: -1, Message:err.Error()}, err
+		return &pb.OperationReply{Code: -1, Message: err.Error()}, err
 	}
 
 	if req.Body != "" {
@@ -598,13 +598,13 @@ func (hub *ChatHub) FilterCreate(
 	}
 
 	hub.SetFilter(req.FilterId, filter)
-	return &pb.OperationReply{Code:0, Message:"success"}, nil
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
 func (hub *ChatHub) FilterNext(
 	ctx context.Context, req *pb.FilterNextRequest) (*pb.OperationReply, error) {
 	hub.Info("FilterNext %v", req)
-	
+
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
 		return nil, fmt.Errorf("filter %s not found", req.FilterId)
@@ -618,8 +618,8 @@ func (hub *ChatHub) FilterNext(
 	if err := parentFilter.Next(nextFilter); err != nil {
 		return nil, err
 	} else {
-		return &pb.OperationReply{Code:0, Message:"success"}, nil
-	}	
+		return &pb.OperationReply{Code: 0, Message: "success"}, nil
+	}
 }
 
 func (hub *ChatHub) RouterBranch(
@@ -639,13 +639,13 @@ func (hub *ChatHub) RouterBranch(
 	switch r := parentFilter.(type) {
 	case Router:
 		if err := r.Branch(BranchTag{Key: req.Tag.Key, Value: req.Tag.Value}, childFilter); err != nil {
-			return nil ,err
+			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("filter type %T cannot branch", r)
 	}
 
-	return &pb.OperationReply{Code:0, Message:"success"}, nil
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
 func (hub *ChatHub) BotFilter(

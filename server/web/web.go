@@ -328,7 +328,6 @@ func tracing(nextRequestID func() string) func(http.Handler) http.Handler {
 	}
 }
 
-
 func (ctx *WebServer) Serve() {
 	if ctx.init() != nil {
 		return

@@ -25,7 +25,7 @@ type Filter struct {
 
 func (o *ErrorHandler) NewFilter(
 	name string, filterType string, templateId string, accountId string) *Filter {
-	
+
 	if o.Err != nil {
 		return nil
 	}

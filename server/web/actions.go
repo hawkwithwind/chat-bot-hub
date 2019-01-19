@@ -11,9 +11,9 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
-	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -55,12 +55,12 @@ func (o *ErrorHandler) CreateFilterChain(
 		} else {
 			body = ""
 		}
-		
+
 		if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
-			FilterId: filter.FilterId,
+			FilterId:   filter.FilterId,
 			FilterType: filter.FilterType,
 			FilterName: filter.FilterName,
-			Body: body,
+			Body:       body,
 		}); err != nil {
 			o.Err = err
 			return
@@ -93,7 +93,7 @@ func (o *ErrorHandler) CreateFilterChain(
 								}
 								_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
-										Key: key,
+										Key:   key,
 										Value: value,
 									},
 									RouterId: filter.FilterId,
@@ -105,7 +105,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						o.Err = fmt.Errorf("unexpected filter.body.key type %T", vm)
 						return
 					}
-				}					
+				}
 			case chatbothub.REGEXROUTER:
 				ctx.Info("generate RegexRouter children")
 				for regstr, v := range bodym {
@@ -135,7 +135,7 @@ func (o *ErrorHandler) CreateFilterChain(
 
 		if lastFilterId != "" {
 			if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
-				FilterId: lastFilterId,
+				FilterId:     lastFilterId,
 				NextFilterId: filter.FilterId,
 			}); err != nil {
 				o.Err = err
@@ -166,7 +166,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	bot := o.GetBotById(tx, botId)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
@@ -255,9 +255,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			return
 		}
-		
+
 		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
-			BotId: bot.BotId,
+			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
 		return
@@ -270,7 +270,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			reqm := o.FromJson(reqstr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
-					rlogin = funptr.(string)
+				rlogin = funptr.(string)
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
 		} else {
@@ -297,8 +297,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if bot.Callback.Valid {
 				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
 					bot, eventType, bodystr), 5, 1); err != nil {
-						ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
-					}
+					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
+				}
 			}
 		}()
 
@@ -308,7 +308,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if len(debugstr) > 120 {
 			debugstr = debugstr[:120]
 		}
-		
+
 		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, debugstr)
 
 		var awayar domains.ActionRequest
@@ -339,7 +339,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						case map[string]interface{}:
 							status := int(o.FromMapFloat(
 								"status", rdata, "actionReply.result.data", false, 0))
-							
+
 							if status == 0 {
 								localar.Status = "Done"
 							}
@@ -354,11 +354,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		
+
 		if o.Err != nil {
 			return
 		}
-
 
 		ctx.Info("action reply %v\n", localar)
 
@@ -374,7 +373,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if o.Err != nil {
 				return
 			}
-			
+
 			for _, fr := range frs {
 				ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n",
 					rlogin, fr.RequestLogin, fr.Status)
@@ -401,7 +400,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		o.SaveActionRequest(ctx.redispool, localar)
-		
+
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {

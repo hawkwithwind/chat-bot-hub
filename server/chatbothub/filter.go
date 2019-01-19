@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
-	
+
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
@@ -19,7 +19,7 @@ type Filter interface {
 }
 
 type BranchTag struct {
-	Key string
+	Key   string
 	Value string
 }
 
@@ -36,16 +36,16 @@ type BaseFilter struct {
 
 const (
 	WECHATBASEFILTER string = "WechatBaseFilter"
-	PLAINFILTER string = "PlainFilter"
-	FLUENTFILTER string = "FluentFilter"
-	REGEXROUTER string = "RegexRouter"
-	KVROUTER string = "KVRouter"
-	WEBTRIGGER string = "WebTrigger"
+	PLAINFILTER      string = "PlainFilter"
+	FLUENTFILTER     string = "FluentFilter"
+	REGEXROUTER      string = "RegexRouter"
+	KVROUTER         string = "KVRouter"
+	WEBTRIGGER       string = "WebTrigger"
 )
 
 func NewBaseFilter(filterId string, filterName string, filterType string) BaseFilter {
 	return BaseFilter{
-		Id: filterId,
+		Id:   filterId,
 		Name: filterName,
 		Type: filterType,
 	}
@@ -114,9 +114,9 @@ func (f *PlainFilter) Next(filter Filter) error {
 }
 
 type WechatMsgSource struct {
-	AtUserList string `xml:"atuserlist" json:"atUserList"`
-	Silence int `xml:"silence" json:"silence"`
-	MemberCount int `xml:"membercount" json:"memberCount"`
+	AtUserList  string `xml:"atuserlist" json:"atUserList"`
+	Silence     int    `xml:"silence" json:"silence"`
+	MemberCount int    `xml:"membercount" json:"memberCount"`
 }
 
 func (f *PlainFilter) Fill(msg string) error {
@@ -166,7 +166,7 @@ func (f *PlainFilter) Fill(msg string) error {
 				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s",
 					f.Name, f.Type, mtype, tm, fromUser, toUser, status, brief)
 			}
-			
+
 		case map[string]interface{}:
 			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: %v",
 				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content)
@@ -421,14 +421,14 @@ func (f *KVRouter) Fill(msg string) error {
 }
 
 type WebAction struct {
-	Url string `json:"url"`
+	Url    string `json:"url"`
 	Method string `json:"method"`
 }
 
 type WebTrigger struct {
 	BaseFilter
-	NextFilter Filter `json:"next"`
-	Action WebAction `json:"action"`
+	NextFilter Filter    `json:"next"`
+	Action     WebAction `json:"action"`
 }
 
 func (f *WebTrigger) String() string {
@@ -436,7 +436,7 @@ func (f *WebTrigger) String() string {
 	return string(jsonstr)
 }
 
-func NewWebTrigger(filterId string, filterName string) *WebTrigger{
+func NewWebTrigger(filterId string, filterName string) *WebTrigger {
 	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
 }
 
@@ -450,7 +450,7 @@ func (f *WebTrigger) Fill(msg string) error {
 	if f.NextFilter != nil {
 		return f.NextFilter.Fill(msg)
 	}
-	
+
 	return nil
 }
 

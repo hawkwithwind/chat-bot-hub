@@ -32,7 +32,7 @@ func (o *ErrorHandler) getAccountName(r *http.Request) string {
 	if o.Err != nil {
 		return ""
 	}
-	
+
 	var accountName string
 	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
 		o.Err = fmt.Errorf("context.login is null")

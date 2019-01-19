@@ -193,7 +193,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
-		BotId    string `json:"botId"`		
+		BotId    string `json:"botId"`
 		BotName  string `json:"botName"`
 		FilterId string `json:"filterId"`
 		Callback string `json:"callback"`
@@ -345,10 +345,10 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	filterid := o.getStringValueDefault(r.Form, "filterId", "")
 
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	if !o.CheckBotOwner(tx, login, accountName) {
 		if o.Err == nil {
 			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
@@ -377,7 +377,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
-		if !o.CheckFilterOwner(tx, filterid, accountName) {		
+		if !o.CheckFilterOwner(tx, filterid, accountName) {
 			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
@@ -447,9 +447,9 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 	if o.Err != nil {
 		return
 	}
-	
+
 	tx := o.Begin(ctx.db)
-	
+
 	if !o.CheckBotOwner(tx, login, accountName) {
 		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
 		return
@@ -542,7 +542,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil &&  filter == nil {
+	if o.Err == nil && filter == nil {
 		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
@@ -556,13 +556,13 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if filterbody != "" {
-		filter.Body = sql.NullString{ String: filterbody, Valid: true }
+		filter.Body = sql.NullString{String: filterbody, Valid: true}
 	}
 
 	if filternext != "" {
-		filter.Next = sql.NullString{ String: filternext, Valid: true }
+		filter.Next = sql.NullString{String: filternext, Valid: true}
 	}
-	
+
 	o.UpdateFilter(tx, filter)
 	o.ok(w, "update filter success", filter)
 }
@@ -570,10 +570,10 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	
+
 	vars := mux.Vars(r)
 	filterId := vars["filterid"]
-	
+
 	r.ParseForm()
 	nextFilterId := o.getStringValue(r.Form, "next")
 	accountName := o.getAccountName(r)
@@ -591,18 +591,17 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	
 
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil &&  filter == nil {
+	if o.Err == nil && filter == nil {
 		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
-	
+
 	if o.Err != nil {
 		return
 	}
-	filter.Next = sql.NullString{String: nextFilterId, Valid:true}
+	filter.Next = sql.NullString{String: nextFilterId, Valid: true}
 	o.UpdateFilter(tx, filter)
 	o.CommitOrRollback(tx)
 	o.ok(w, "update filter next success", filter)
@@ -610,15 +609,14 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 
 func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	type FilterVO struct {
-		FilterId string `json:"filterId"`
-		Name string `json:"name"`
-		Type string `json:"type"`
-		Body string `json:"body"`
-		Next string `json:"next"`
+		FilterId string         `json:"filterId"`
+		Name     string         `json:"name"`
+		Type     string         `json:"type"`
+		Body     string         `json:"body"`
+		Next     string         `json:"next"`
 		CreateAt utils.JSONTime `json:"createAt"`
 	}
 
-	
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -626,7 +624,7 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	tx := o.Begin(web.db)
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
@@ -642,13 +640,13 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	for _, f := range filters {
 		filtervos = append(filtervos, FilterVO{
 			FilterId: f.FilterId,
-			Name: f.FilterName,
-			Type: f.FilterType,
-			Body: f.Body.String,
-			Next: f.Next.String,
+			Name:     f.FilterName,
+			Type:     f.FilterType,
+			Body:     f.Body.String,
+			Next:     f.Next.String,
 			CreateAt: utils.JSONTime{f.CreateAt.Time},
 		})
 	}
-	
+
 	o.ok(w, "success", filtervos)
 }
