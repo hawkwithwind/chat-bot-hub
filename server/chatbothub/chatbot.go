@@ -545,9 +545,9 @@ type WechatAppMsg struct {
 	Title             string                   `json:"title"`
 	Des               string                   `json:"des"`
 	Action            string                   `json:"action"`
-	Type              int                      `json:"type"`
-	ShowType          int                      `json:"showtype"`
-	SoundType         int                      `json:"soundtype"`
+	Type              string                   `json:"type"`
+	ShowType          string                   `json:"showtype"`
+	SoundType         string                   `json:"soundtype"`
 	MediaTagName      string                   `json:"mediatagname"`
 	MessageExt        string                   `json:"messageext"`
 	MessageAction     string                   `json:"messageaction"`
@@ -575,12 +575,12 @@ type WechatAppMsgAttributions struct {
 type WechatWeAppInfo struct {
 	UserName       string `json:"username"`
 	AppId          string `json:"appid"`
-	Type           int    `json:"type"`
-	Version        int    `json:"version"`
+	Type           string `json:"type"`
+	Version        string `json:"version"`
 	WeAppIconUrl   string `json:"weappiconurl"`
 	PagePath       string `json:"pagepath"`
 	ShareId        string `json:"shareId"`
-	AppServiceType int    `json:"appservicetype"`
+	AppServiceType string `json:"appservicetype"`
 }
 
 type WechatAppAttach struct {
@@ -629,7 +629,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			if o.Err != nil {
 				return o.Err
 			}
-
+			
 			appmsg := msg.AppMsg
 
 			bot.Info("msg json\n%s\n", o.ToJson(msg_if))
@@ -637,7 +637,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			bot.Info("appmsg %v", appmsg)
 
 			switch appmsg.Type {
-			case 5:
+			case "5":
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
 					"object": map[string]interface{}{
@@ -649,14 +649,14 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 						"thumburl": appmsg.ThumbUrl,
 					},
 				}))
-			case 33:
+			case "33":
 				xml := `<appmsg appid="%s" sdkver="%s">
 <title>%s</title>
 <des>%s</des>
 <action></action>
-<type>%d</type>
-<showtype>%d</showtype>
-<soundtype>%d</soundtype>
+<type>%s</type>
+<showtype>%s</showtype>
+<soundtype>%s</soundtype>
 <mediatagname></mediatagname>
 <messageext></messageext>
 <messageaction></messageaction>
@@ -675,26 +675,26 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 <weappinfo>
 <username><![CDATA[%s]]></username>
 <appid><![CDATA[%s]]></appid>
-<type>%d</type>
-<version>%d</version>
+<type>%s</type>
+<version>%s</version>
 <weappiconurl><![CDATA[%s]]></weappiconurl>
 <pagepath><![CDATA[%s]]></pagepath>
 <shareId><![CDATA[%s]]></shareId>
-<appservicetype>%d</appservicetype>
+<appservicetype>%s</appservicetype>
 </weappinfo>
 <appattach>
-<totallen>%d</totallen>
+<totallen>%s</totallen>
 <attachid />
 <emoticonmd5 />
 <fileext />
 <cdnthumburl>%s</cdnthumburl>
 <cdnthumbmd5>%s</cdnthumbmd5>
-<cdnthumblength>%d</cdnthumblength>
-<cdnthumbwidth>%d</cdnthumbwidth>
-<cdnthumbheight>%d</cdnthumbheight>
+<cdnthumblength>%s</cdnthumblength>
+<cdnthumbwidth>%s</cdnthumbwidth>
+<cdnthumbheight>%s</cdnthumbheight>
 <cdnthumbaeskey>%s</cdnthumbaeskey>
 <aeskey>%s</aeskey>
-<encryver>%d</encryver>
+<encryver>%s</encryver>
 <filekey>%s</filekey>
 </appattach>
 </appmsg>`
