@@ -584,7 +584,7 @@ type WechatWeAppInfo struct {
 }
 
 type WechatAppAttach struct {
-	TotalLen        int    `json:"totallen"`
+	TotalLen        string `json:"totallen"`
 	AttachId        string `json:"attachid"`
 	Emoticonmd5     string `json:"emoticonmd5"`
 	FileExt         string `json:"fileext"`
