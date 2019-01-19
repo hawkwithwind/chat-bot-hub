@@ -528,10 +528,16 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 }
 
 type WechatMsg struct {
+	AppInfo WechatAppInfo `json:"appinfo"`
 	AppMsg  WechatAppMsg `json:"appmsg"`
 	FromUserName string `json:"fromusername"`
 	Scene int `json:"scene"`
 	CommentUrl string `json:"commenturl"`
+}
+
+type WechatAppInfo struct {
+	AppName string `json:"appname"`
+	Version string `json:"version"`
 }
 
 type WechatAppMsg struct {
@@ -617,15 +623,17 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			}))
 			
 		case map[string]interface{}:
+			msg_if := o.FromMap("msg", content, "content", nil)
+			
 			var msg WechatMsg
-			o.Err = json.Unmarshal([]byte(o.ToJson(bodym["content"])), &msg)
+			o.Err = json.Unmarshal([]byte(o.ToJson(msg_if)), &msg)
 			if o.Err != nil {
 				return o.Err
 			}
 
 			appmsg := msg.AppMsg
 
-			bot.Info("content\n%s\n", o.ToJson(bodym["content"]))
+			bot.Info("msg json\n%s\n", o.ToJson(msg_if))
 			bot.Info("msg %v", msg)
 			bot.Info("appmsg %v", appmsg)
 
