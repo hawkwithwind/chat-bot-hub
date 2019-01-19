@@ -625,7 +625,9 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 			appmsg := msg.AppMsg
 
-			bot.Info("appms %v", appmsg)
+			bot.Info("content\n%s\n", o.ToJson(bodym["content"]))
+			bot.Info("msg %v", msg)
+			bot.Info("appmsg %v", appmsg)
 
 			switch appmsg.Type {
 			case 5:
