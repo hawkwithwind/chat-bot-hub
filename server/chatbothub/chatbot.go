@@ -531,7 +531,7 @@ type WechatMsg struct {
 	AppInfo      WechatAppInfo `json:"appinfo"`
 	AppMsg       WechatAppMsg  `json:"appmsg"`
 	FromUserName string        `json:"fromusername"`
-	Scene        int           `json:"scene"`
+	Scene        string        `json:"scene"`
 	CommentUrl   string        `json:"commenturl"`
 }
 
