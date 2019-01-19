@@ -593,7 +593,7 @@ type WechatAppAttach struct {
 	CdnThumbLength  string `json:"cdnthumblength"`
 	CdnThumbWidth   string `json:"cdnthumbwidth"`
 	CdnThumbHeight  string `json:"cdnthumbheight"`
-	CdnThumbBasekey string `json:"cdnthumbbasekey"`
+	CdnThumbAeskey  string `json:"cdnthumbaeskey"`
 	Aeskey          string `json:"aeskey"`
 	EncryVer        string `json:"encryver"`
 	FileKey         string `json:"filekey"`
@@ -666,6 +666,21 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 <lowurl>%s</lowurl>
 <dataurl>%s</dataurl>
 <lowdataurl>%s</lowdataurl>
+<appattach>
+<totallen>%s</totallen>
+<attachid />
+<emoticonmd5 />
+<fileext />
+<cdnthumburl>%s</cdnthumburl>
+<cdnthumbmd5>%s</cdnthumbmd5>
+<cdnthumblength>%s</cdnthumblength>
+<cdnthumbwidth>%s</cdnthumbwidth>
+<cdnthumbheight>%s</cdnthumbheight>
+<cdnthumbaeskey>%s</cdnthumbaeskey>
+<aeskey>%s</aeskey>
+<encryver>%s</encryver>
+<filekey>%s</filekey>
+</appattach>
 <extinfo>%s</extinfo>
 <sourceusername>%s</sourceusername>
 <sourcedisplayname>%s</sourcedisplayname>
@@ -682,21 +697,6 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 <shareId><![CDATA[%s]]></shareId>
 <appservicetype>%s</appservicetype>
 </weappinfo>
-<appattach>
-<totallen>%s</totallen>
-<attachid />
-<emoticonmd5 />
-<fileext />
-<cdnthumburl>%s</cdnthumburl>
-<cdnthumbmd5>%s</cdnthumbmd5>
-<cdnthumblength>%s</cdnthumblength>
-<cdnthumbwidth>%s</cdnthumbwidth>
-<cdnthumbheight>%s</cdnthumbheight>
-<cdnthumbaeskey>%s</cdnthumbaeskey>
-<aeskey>%s</aeskey>
-<encryver>%s</encryver>
-<filekey>%s</filekey>
-</appattach>
 </appmsg>`
 
 				xml = fmt.Sprintf(xml,
@@ -717,6 +717,16 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					appmsg.LowUrl,
 					appmsg.DataUrl,
 					appmsg.LowDataUrl,
+					appmsg.AppAttach.TotalLen,
+					appmsg.AppAttach.CdnThumbUrl,
+					appmsg.AppAttach.CdnThumbMd5,
+					appmsg.AppAttach.CdnThumbLength,
+					appmsg.AppAttach.CdnThumbWidth,
+					appmsg.AppAttach.CdnThumbHeight,
+					appmsg.AppAttach.CdnThumbAeskey,
+					appmsg.AppAttach.Aeskey,
+					appmsg.AppAttach.EncryVer,
+					appmsg.AppAttach.FileKey,
 					appmsg.ExtInfo,
 					appmsg.SourceUserName,
 					appmsg.SourceDisplayName,
@@ -730,17 +740,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					appmsg.WeAppInfo.WeAppIconUrl,
 					appmsg.WeAppInfo.PagePath,
 					appmsg.WeAppInfo.ShareId,
-					appmsg.WeAppInfo.AppServiceType,
-					appmsg.AppAttach.TotalLen,
-					appmsg.AppAttach.CdnThumbUrl,
-					appmsg.AppAttach.CdnThumbMd5,
-					appmsg.AppAttach.CdnThumbLength,
-					appmsg.AppAttach.CdnThumbWidth,
-					appmsg.AppAttach.CdnThumbHeight,
-					appmsg.AppAttach.CdnThumbBasekey,
-					appmsg.AppAttach.Aeskey,
-					appmsg.AppAttach.EncryVer,
-					appmsg.AppAttach.FileKey)
+					appmsg.WeAppInfo.AppServiceType)
 
 				xml = strings.Replace(xml, "\n", "", -1)
 				bot.Info("xml\n%s\n", xml)
