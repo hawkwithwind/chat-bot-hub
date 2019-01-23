@@ -444,7 +444,9 @@ func (f *WebTrigger) Fill(msg string) error {
 	go func() {
 		rr := httpx.NewRestfulRequest(f.Action.Method, f.Action.Url)
 		rr.Params["msg"] = msg
-		httpx.RestfulCallRetry(rr, 5, 1)
+		if resp, err := httpx.RestfulCallRetry(rr, 5, 1); err != nil {
+			fmt.Printf("[WebTrigger] failed %s\n%v\n", err, resp)
+		}
 	}()
 
 	if f.NextFilter != nil {
