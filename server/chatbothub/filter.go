@@ -155,8 +155,8 @@ func (f *PlainFilter) Fill(msg string) error {
 		switch content := contentptr.(type) {
 		case string:
 			brief = content
-			if len(content) > 60 {
-				brief = content[:60] + "..."
+			if len(content) > 120 {
+				brief = content[:120] + "..."
 			}
 
 			if len(groupId) > 0 {
