@@ -636,8 +636,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			bot.Info("msg %v", msg)
 			bot.Info("appmsg %v", appmsg)
 
-			switch appmsg.Type {
-			case "5":
+			if appmsg.Type == "5" {
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
 					"object": map[string]interface{}{
@@ -649,7 +648,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 						"thumburl": appmsg.ThumbUrl,
 					},
 				}))
-			case "33":
+			} else if appmsg.Type == "33" || appmsg.Type == "36" {
 				xml := `<appmsg appid="%s" sdkver="%s">
 <title>%s</title>
 <des>%s</des>
