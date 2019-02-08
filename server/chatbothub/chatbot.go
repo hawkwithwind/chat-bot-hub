@@ -77,6 +77,7 @@ const (
 	DeleteRoomMember         string = "DeleteRoomMember"
 	SetRoomAnnouncement      string = "SetRoomAnnouncement"
 	SetRoomName              string = "SetRoomName"
+	GetRoomQRCode            string = "GetRoomQRCode"
 	GetContactQRCode         string = "GetContactQRCode"
 	SearchContact            string = "SearchContact"
 )
@@ -274,8 +275,9 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		DeleteRoomMember:         (*ChatBot).DeleteRoomMember,
 		SetRoomAnnouncement:      (*ChatBot).SetRoomAnnouncement,
 		SetRoomName:              (*ChatBot).SetRoomName,
+		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
-		SearchContact:            (*ChatBot).SearchContact,
+		SearchContact:            (*ChatBot).SearchContact,		
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -304,6 +306,25 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+func (bot *ChatBot) GetRoomQRCode(arId string, body string) error {
+	o := &ErrorHandler{}
+	
+	if bot.ClientType == WECHATBOT {
+		bot.Info("GetRoomQRCode")
+		bodym := o.FromJson(body)
+		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
+
+		o.SendAction(bot, arId, GetRoomQRCode, o.ToJson(map[string]interface{}{
+			"groupId": groupId,
+		}))
+
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
+	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) SendAppMessage(arId string, body string) error {
