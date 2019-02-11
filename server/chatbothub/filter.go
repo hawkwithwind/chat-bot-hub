@@ -160,19 +160,19 @@ func (f *PlainFilter) Fill(msg string) error {
 			}
 
 			if len(groupId) > 0 {
-				f.logger.Printf("%s[%s](%d) %s [%s] %s->%s (%d) %s",
-					f.Name, f.Type, mtype, tm, groupId, fromUser, toUser, status, brief)
+				f.logger.Printf("%s[%s](%d) [%s] %s->%s (%d) %s",
+					f.Name, f.Type, mtype, groupId, fromUser, toUser, status, brief)
 			} else {
-				f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %s",
-					f.Name, f.Type, mtype, tm, fromUser, toUser, status, brief)
+				f.logger.Printf("%s[%s](%d) %s->%s (%d) %s",
+					f.Name, f.Type, mtype, fromUser, toUser, status, brief)
 			}
 
 		case map[string]interface{}:
-			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) appmsg: {%s}%s",
-				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content["title"], content["sourcedisplayname"])
+			f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: {%s}%s",
+				f.Name, f.Type, mtype, fromUser, toUser, status, content["title"], content["sourcedisplayname"])
 		default:
-			f.logger.Printf("%s[%s](%d) %s %s->%s (%d) %T %v",
-				f.Name, f.Type, mtype, tm, fromUser, toUser, status, content, content)
+			f.logger.Printf("%s[%s](%d) %s->%s (%d) %T %v",
+				f.Name, f.Type, mtype, fromUser, toUser, status, content, content)
 		}
 	} else {
 		f.logger.Printf("%s[%s] %s ...", f.Name, f.Type, brief)
