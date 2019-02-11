@@ -620,57 +620,7 @@ type WechatAppAttach struct {
 	FileKey        string `json:"filekey"`
 }
 
-func (bot *ChatBot) SendTextMessage(arId string, body string) error {
-	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-
-		content_if := o.FromMap("content", bodym, "actionbody", nil)
-		switch content := content_if.(type) {
-		case string:
-			var atList []interface{}
-			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
-				atList = atListptr.([]interface{})
-			}
-
-			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
-			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
-				"toUserName": toUserName,
-				"content":    content,
-				"atList":     atList,
-			}))
-
-		case map[string]interface{}:
-			msg_if := o.FromMap("msg", content, "content", nil)
-
-			var msg WechatMsg
-			o.Err = json.Unmarshal([]byte(o.ToJson(msg_if)), &msg)
-			if o.Err != nil {
-				return o.Err
-			}
-
-			appmsg := msg.AppMsg
-
-			bot.Info("msg json\n%s\n", o.ToJson(msg_if))
-			bot.Info("msg %v", msg)
-			bot.Info("appmsg %v", appmsg)
-
-			if appmsg.Type == "5" {
-				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-					"toUserName": toUserName,
-					"object": map[string]interface{}{
-						"appid":    appmsg.Attributions.Appid,
-						"sdkver":   appmsg.Attributions.Sdkver,
-						"title":    appmsg.Title,
-						"des":      appmsg.Des,
-						"url":      appmsg.Url,
-						"thumburl": appmsg.ThumbUrl,
-					},
-				}))
-			} else if appmsg.Type == "33" || appmsg.Type == "36" {
-				xml := `<appmsg appid="%s" sdkver="%s">
+const WeAppXmlTemp string = `<appmsg appid="%s" sdkver="%s">
 <title>%s</title>
 <des>%s</des>
 <action>%s</action>
@@ -719,7 +669,54 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 </weappinfo>
 </appmsg>`
 
-				xml = fmt.Sprintf(xml,
+func (bot *ChatBot) SendTextMessage(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+
+		content_if := o.FromMap("content", bodym, "actionbody", nil)
+		switch content := content_if.(type) {
+		case string:
+			var atList []interface{}
+			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
+				atList = atListptr.([]interface{})
+			}
+
+			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
+			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
+				"toUserName": toUserName,
+				"content":    content,
+				"atList":     atList,
+			}))
+
+		case map[string]interface{}:
+			msg_if := o.FromMap("msg", content, "content", nil)
+
+			var msg WechatMsg
+			o.Err = json.Unmarshal([]byte(o.ToJson(msg_if)), &msg)
+			if o.Err != nil {
+				return o.Err
+			}
+
+			appmsg := msg.AppMsg
+			bot.Info("appmsg %v", appmsg)
+
+			if appmsg.Type == "5" {
+				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+					"toUserName": toUserName,
+					"object": map[string]interface{}{
+						"appid":    appmsg.Attributions.Appid,
+						"sdkver":   appmsg.Attributions.Sdkver,
+						"title":    appmsg.Title,
+						"des":      appmsg.Des,
+						"url":      appmsg.Url,
+						"thumburl": appmsg.ThumbUrl,
+					},
+				}))
+			} else if appmsg.Type == "33" || appmsg.Type == "36" {
+				xml := fmt.Sprintf(WeAppXmlTemp,
 					appmsg.Attributions.Appid,
 					appmsg.Attributions.Sdkver,
 					appmsg.Title,
@@ -763,7 +760,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					appmsg.WeAppInfo.AppServiceType)
 
 				xml = strings.Replace(xml, "\n", "", -1)
-				bot.Info("xml\n%s\n", xml)
+				//bot.Info("xml\n%s\n", xml)
 
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,

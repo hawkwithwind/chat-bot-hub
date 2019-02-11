@@ -156,6 +156,42 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
+type WeContactInfo struct {
+	Id              int      `json:"id"`
+	MType           int      `json:"mType"`
+	MsgType         int      `json:"msgType"`
+	Continue        int      `json:"continue"`
+	Status          int      `json:"Status"`
+	Source          int      `json:"source"`
+	Uin             int64    `json:"uin"`
+	UserName        string   `json:"userName"`
+	NickName        string   `json:"nickName"`
+	PyInitial       string   `json:"pyInitial"`
+	QuanPin         string   `json:"quanPin"`
+	Stranger        string   `json:"stranger"`
+	BigHead         string   `json:"bigHead"`
+	SmallHead       string   `json:"smallHead"`
+	BitMask         int64    `json:"bitMask"`
+	BitValue        int64    `json:"bitValue"`
+	ImageFlag       int      `json:"imageFlag"`
+	Sex             int      `json:"sex"`
+	Intro           string   `json:"intro"`
+	Country         string   `json:"country"`
+	Provincia       string   `json:"provincia"`
+	City            string   `json:"city"`
+	Label           string   `json:"label"`
+	Remark          string   `json:"remark"`
+	RemarkPyInitial string   `json:"remarkPyInitial"`
+	RemarkQuanPin   string   `json:"remarkQuanPin"`
+	Level           string   `json:"level"`
+	Signature       string   `json:"signature"`
+	ChatRoomId      int64    `json:"chatroomId"`
+	ChatRoomOwner   string   `json:"chatroomOwner"`
+	Member          []string `json:"member"`
+	MaxMemberCount  int      `json:"maxMemberCount"`
+	MemberCount     int      `json:"memberCount"`
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -302,6 +338,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}()
+
+	case chatbothub.CONTACTINFO:
+		bodystr := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
+
+		if thebotinfo.ClientType == "WECHATBOT" {
+			var info WeContactInfo
+			o.Err = json.Unmarshal([]byte(bodystr), &info)
+			if o.Err != nil {
+				return
+			}
+
+			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+		}
 
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
