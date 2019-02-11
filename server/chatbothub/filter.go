@@ -170,8 +170,8 @@ func (f *PlainFilter) Fill(msg string) error {
 		case map[string]interface{}:
 			switch msg := content["msg"].(type) {
 			case map[string]interface{}:
-				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: {%s}%s",
-					f.Name, f.Type, mtype, fromUser, toUser, status, msg["sourcedisplayname"], msg["title"])
+				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
+					f.Name, f.Type, mtype, fromUser, toUser, status, msg) //["sourcedisplayname"], msg["title"]
 			default:
 				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
 					f.Name, f.Type, mtype, fromUser, toUser, status, msg)
