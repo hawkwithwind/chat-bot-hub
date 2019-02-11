@@ -101,6 +101,14 @@ func NewChatBot() *ChatBot {
 	}
 }
 
+func (bot *ChatBot) canReLogin() bool {
+	return bot.Status == BeginRegistered &&
+		len(bot.BotId) > 0 &&
+		len(bot.Login) > 0 &&
+		len(bot.LoginInfo.WxData) > 0 &&
+		len(bot.LoginInfo.Token) > 0
+}
+
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
 

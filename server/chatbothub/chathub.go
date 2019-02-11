@@ -229,6 +229,26 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
+				if newbot.canReLogin() {
+					//relogin the bot
+					o := ErrorHandler{}
+
+					newbot, o.Err = newbot.prepareLogin(newbot.BotId, newbot.Login)
+					o.sendEvent(bot.tunnel, &pb.EventReply{
+						EventType:  LOGIN,
+						ClientType: in.ClientType,
+						ClientId:   in.ClientId,
+						Body: o.ToJson(
+							LoginBody{
+								BotId:     newbot.BotId,
+								Login:     newbot.Login,
+								LoginInfo: o.ToJson(newbot.LoginInfo),
+							}),
+					})
+					if o.Err != nil {
+						hub.Error(o.Err, "c[%s] %s relogin failed", in.ClientType, in.ClientId)
+					}
+				}
 			}
 		} else {
 			var bot *ChatBot
