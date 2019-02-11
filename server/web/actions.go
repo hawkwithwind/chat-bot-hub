@@ -341,8 +341,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	case chatbothub.CONTACTINFO:
 		bodystr := o.getStringValue(r.Form, "body")
-		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
-
 		if thebotinfo.ClientType == "WECHATBOT" {
 			var info WeContactInfo
 			o.Err = json.Unmarshal([]byte(bodystr), &info)
@@ -351,6 +349,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+		}
+
+	case chatbothub.GROUPINFO:
+		bodystr := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
+
+		if thebotinfo.ClientType == "WECHATBOT" {
+			
 		}
 
 	case chatbothub.ACTIONREPLY:
