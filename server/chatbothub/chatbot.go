@@ -80,6 +80,7 @@ const (
 	GetRoomQRCode            string = "GetRoomQRCode"
 	GetContactQRCode         string = "GetContactQRCode"
 	SearchContact            string = "SearchContact"
+	SyncContact              string = "SyncContact"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -278,6 +279,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
 		SearchContact:            (*ChatBot).SearchContact,
+		SyncContact:              (*ChatBot).SyncContact,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -306,6 +308,19 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+func (bot *ChatBot) SyncContact(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bot.Info("SyncContact")
+		o.SendAction(bot, arId, SyncContact, "")
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SyncContact)
+	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) GetRoomQRCode(arId string, body string) error {
