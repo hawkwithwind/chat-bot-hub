@@ -603,7 +603,7 @@ func (hub *ChatHub) FilterCreate(
 
 func (hub *ChatHub) FilterNext(
 	ctx context.Context, req *pb.FilterNextRequest) (*pb.OperationReply, error) {
-	hub.Info("FilterNext %v", req)
+	//hub.Info("FilterNext %v", req)
 
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
@@ -624,7 +624,7 @@ func (hub *ChatHub) FilterNext(
 
 func (hub *ChatHub) RouterBranch(
 	ctx context.Context, req *pb.RouterBranchRequest) (*pb.OperationReply, error) {
-	hub.Info("RouterBranch %v", req)
+	//hub.Info("RouterBranch %v", req)
 
 	parentFilter := hub.GetFilter(req.RouterId)
 	if parentFilter == nil {
