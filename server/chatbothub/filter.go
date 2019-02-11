@@ -138,7 +138,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
 		status := int64(o.FromMapFloat("status", body, "eventRequest.body", false, 0))
 		timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
-		tm := o.BJTimeFromUnix(timestamp)
+		//tm := o.BJTimeFromUnix(timestamp)
 		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
 		msgsourcexml := o.FromMapString("msgSource", body, "eventRequest.body", true, "")
 
