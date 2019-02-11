@@ -315,7 +315,7 @@ func (bot *ChatBot) SyncContact(arId string, body string) error {
 
 	if bot.ClientType == WECHATBOT {
 		bot.Info("SyncContact")
-		o.SendAction(bot, arId, SyncContact, "")
+		o.SendAction(bot, arId, SyncContact, "{}")
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SyncContact)
 	}

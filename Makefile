@@ -79,10 +79,13 @@ test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	-e GOOS=$(GOOS) -e GOARCH=$(GOARCH) -e GOBIN=/go/bin/$(GOOS)_$(GOARCH) -e CGO_ENABLED=0 \
 	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/ && go test -v ./..."
 
+cgo: $(RUNTIME_PATH)/$(EXECUTABLE)
 
-.PHONY: gen
+.PHONY: gen cgo
 
 gen:
 	cd proto && \
 	protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub
+
+
 
