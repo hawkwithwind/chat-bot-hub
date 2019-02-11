@@ -103,6 +103,8 @@ const (
 	IMAGEMESSAGE  string = "IMAGEMESSAGE"
 	STATUSMESSAGE string = "STATUSMESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
+	CONTACTINFO   string = "CONTACTINFO"
+	GROUPINFO     string = "GROUPINFO"
 	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
 )
@@ -403,6 +405,40 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							if _, err := httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
 								hub.Error(err, "webnotify statusmessage failed\n")
+							}
+						}()
+					}
+				}
+
+			case CONTACTINFO:
+				if bot.ClientType == WECHATBOT {
+					hub.Info("contact info \n%s\n", in.Body)
+
+					bodym := o.FromJson(in.Body)
+					hub.Info("contact info %v", bodym)
+
+					if o.Err == nil {
+						go func() {
+							if _, err := httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
+								hub.Error(err, "webnotify contact info failed\n")
+							}
+						}()
+					}
+				}
+
+			case GROUPINFO:
+				if bot.ClientType == WECHATBOT {
+					hub.Info("group info \n%s\n", in.Body)
+
+					bodym := o.FromJson(in.Body)
+					hub.Info("group info %v", bodym)
+
+					if o.Err == nil {
+						go func() {
+							if _, err := httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
+								hub.Error(err, "webnotify group info failed\n")
 							}
 						}()
 					}

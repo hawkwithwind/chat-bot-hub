@@ -277,7 +277,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SetRoomName:              (*ChatBot).SetRoomName,
 		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
-		SearchContact:            (*ChatBot).SearchContact,		
+		SearchContact:            (*ChatBot).SearchContact,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -310,7 +310,7 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 
 func (bot *ChatBot) GetRoomQRCode(arId string, body string) error {
 	o := &ErrorHandler{}
-	
+
 	if bot.ClientType == WECHATBOT {
 		bot.Info("GetRoomQRCode")
 		bodym := o.FromJson(body)
@@ -605,19 +605,19 @@ type WechatWeAppInfo struct {
 }
 
 type WechatAppAttach struct {
-	TotalLen        string `json:"totallen"`
-	AttachId        string `json:"attachid"`
-	Emoticonmd5     string `json:"emoticonmd5"`
-	FileExt         string `json:"fileext"`
-	CdnThumbUrl     string `json:"cdnthumburl"`
-	CdnThumbMd5     string `json:"cdnthumbmd5"`
-	CdnThumbLength  string `json:"cdnthumblength"`
-	CdnThumbWidth   string `json:"cdnthumbwidth"`
-	CdnThumbHeight  string `json:"cdnthumbheight"`
-	CdnThumbAeskey  string `json:"cdnthumbaeskey"`
-	Aeskey          string `json:"aeskey"`
-	EncryVer        string `json:"encryver"`
-	FileKey         string `json:"filekey"`
+	TotalLen       string `json:"totallen"`
+	AttachId       string `json:"attachid"`
+	Emoticonmd5    string `json:"emoticonmd5"`
+	FileExt        string `json:"fileext"`
+	CdnThumbUrl    string `json:"cdnthumburl"`
+	CdnThumbMd5    string `json:"cdnthumbmd5"`
+	CdnThumbLength string `json:"cdnthumblength"`
+	CdnThumbWidth  string `json:"cdnthumbwidth"`
+	CdnThumbHeight string `json:"cdnthumbheight"`
+	CdnThumbAeskey string `json:"cdnthumbaeskey"`
+	Aeskey         string `json:"aeskey"`
+	EncryVer       string `json:"encryver"`
+	FileKey        string `json:"filekey"`
 }
 
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
@@ -650,7 +650,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			if o.Err != nil {
 				return o.Err
 			}
-			
+
 			appmsg := msg.AppMsg
 
 			bot.Info("msg json\n%s\n", o.ToJson(msg_if))
