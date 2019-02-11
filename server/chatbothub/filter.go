@@ -177,12 +177,12 @@ func (f *PlainFilter) Fill(msg string) error {
 				default:
 					f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
 						f.Name, f.Type, mtype, fromUser, toUser, status, appmsg)
-				}					
+				}
 			default:
 				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
 					f.Name, f.Type, mtype, fromUser, toUser, status, msg)
 			}
-			
+
 		default:
 			f.logger.Printf("%s[%s](%d) %s->%s (%d) %T %v",
 				f.Name, f.Type, mtype, fromUser, toUser, status, content, content)
