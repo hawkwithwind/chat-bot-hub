@@ -150,7 +150,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			lastFilterId = currentFilterId
 			currentFilterId = filter.Next.String
 		} else {
-			ctx.Info("filter %s next is null, init filters finished", filterId)
+			//ctx.Info("filter %s next is null, init filters finished", filterId)
 			break
 		}
 	}
@@ -183,7 +183,7 @@ type WeContactInfo struct {
 	Remark          string   `json:"remark"`
 	RemarkPyInitial string   `json:"remarkPyInitial"`
 	RemarkQuanPin   string   `json:"remarkQuanPin"`
-	Level           string   `json:"level"`
+	Level           int      `json:"level"`
 	Signature       string   `json:"signature"`
 	ChatRoomId      int64    `json:"chatroomId"`
 	ChatRoomOwner   string   `json:"chatroomOwner"`
