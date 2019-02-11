@@ -46,7 +46,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = fmt.Errorf("cannot find filter %s", filterId)
 			return
 		}
-		ctx.Info("creating filter %s", filter.FilterId)
+		//ctx.Info("creating filter %s", filter.FilterId)
 
 		// generate filter in chathub
 		var body string
@@ -74,9 +74,9 @@ func (o *ErrorHandler) CreateFilterChain(
 			bodym := o.FromJson(body)
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
-				ctx.Info("generate KVRouter children")
+				//ctx.Info("generate KVRouter children")
 				if bodym == nil {
-					o.Err = fmt.Errorf("cannot parse filter.body %s", body)
+					o.Err = fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body)
 					return
 				}
 
@@ -86,7 +86,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						for value, fid := range vm {
 							switch childFilterId := fid.(type) {
 							case string:
-								ctx.Info("creating child filter %s", childFilterId)
+								//ctx.Info("creating child filter %s", childFilterId)
 								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 								if o.Err != nil {
 									return
@@ -102,16 +102,16 @@ func (o *ErrorHandler) CreateFilterChain(
 							}
 						}
 					default:
-						o.Err = fmt.Errorf("unexpected filter.body.key type %T", vm)
+						o.Err = fmt.Errorf("Error generate KVRouter children: unexpected filter.body.key type %T", vm)
 						return
 					}
 				}
 			case chatbothub.REGEXROUTER:
-				ctx.Info("generate RegexRouter children")
+				//ctx.Info("generate RegexRouter children")
 				for regstr, v := range bodym {
 					switch childFilterId := v.(type) {
 					case string:
-						ctx.Info("creating child filter %s", childFilterId)
+						//ctx.Info("creating child filter %s", childFilterId)
 						o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 						if o.Err != nil {
 							return
@@ -255,6 +255,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			return
 		}
+		ctx.Info("b[%s] initializing filters done", bot.BotId)
 
 		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
