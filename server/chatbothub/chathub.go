@@ -567,7 +567,7 @@ func (hub *ChatHub) CreateFilterByType(
 
 func (hub *ChatHub) FilterCreate(
 	ctx context.Context, req *pb.FilterCreateRequest) (*pb.OperationReply, error) {
-	hub.Info("FilterCreate %v", req)
+	//hub.Info("FilterCreate %v", req)
 
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
