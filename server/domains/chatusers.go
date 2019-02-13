@@ -110,7 +110,7 @@ func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatu
 		chatuser = o.NewChatUser(chatusername, ctype, "")
 		o.SaveChatUser(q, chatuser)
 	}
-	
+
 	if o.Err != nil {
 		return nil
 	} else {

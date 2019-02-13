@@ -253,7 +253,7 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 			msgstr := o.ToJson(&msg)
 			return msgstr, o.Err
 		} else {
-			return "", fmt.Errorf("c[%s] request should have xml content")
+			return "", fmt.Errorf("c[%s] request should have xml content", bot.ClientType)
 		}
 	} else {
 		return "", fmt.Errorf("c[%s] not support friend request", bot.ClientType)

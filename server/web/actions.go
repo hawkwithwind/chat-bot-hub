@@ -366,11 +366,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, owner.ChatUserId, info.MemberCount, info.MaxMemberCount)
 				chatgroup.SetAvatar(info.SmallHead)
 				chatgroup.SetExt(bodystr)
-				
+
 				o.UpdateOrCreateChatGroup(tx, chatgroup)
 				if o.Err != nil {
 					return
 				}
+
+				var chatgroupMembers []*domains.ChatGroupMember
 
 				for _, memberName := range info.Member {
 					localop := ErrorHandler{}
@@ -385,7 +387,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					cgm := localop.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1)
-					localop.SaveIgnoreGroupMember(tx, cgm)
+					chatgroupMembers = append(chatgroupMembers, cgm)
+				}
+
+				if len(chatgroupMembers) > 0 {
+					o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
 				}
 
 				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
@@ -395,7 +401,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
 				chatuser.SetAvatar(info.SmallHead)
 				chatuser.SetExt(bodystr)
-				
+
 				o.UpdateOrCreateChatUser(tx, chatuser)
 				if o.Err != nil {
 					return

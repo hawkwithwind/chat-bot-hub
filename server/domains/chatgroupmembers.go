@@ -4,6 +4,7 @@ import (
 	"fmt"
 	//"time"
 	"database/sql"
+	"strings"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -73,7 +74,7 @@ VALUES
 }
 
 func (o *ErrorHandler) SaveIgnoreGroupMember(q dbx.Queryable, chatGroupMember *ChatGroupMember) {
-		if o.Err != nil {
+	if o.Err != nil {
 		return
 	}
 
@@ -87,6 +88,44 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, chatGroupMember)
 }
 
+func (o *ErrorHandler) SaveIgnoreGroupMembers(q dbx.Queryable, chatGroupMembers []*ChatGroupMember) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+INSERT IGNORE INTO chatgroupmembers
+(chatgroupmemberid, chatgroupid, chatmemberid, attendance, invitedby, groupnickname)
+VALUES`
+
+	var valueStrings []string
+	var valueArgs []interface{}
+	for _, member := range chatGroupMembers {
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?)")
+
+		valueArgs = append(valueArgs,
+			member.ChatGroupMemberId,
+			member.ChatGroupId,
+			member.ChatMemberId,
+			member.Attendance,
+		)
+
+		if member.InvitedBy.Valid {
+			valueArgs = append(valueArgs, member.InvitedBy.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if member.GroupNickName.Valid {
+			valueArgs = append(valueArgs, member.GroupNickName.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+	}
+
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf("%s %s", query, strings.Join(valueStrings, ",")), valueArgs...)
+}
 
 func (o *ErrorHandler) GetChatGroupMemberById(q dbx.Queryable, gmid string) *ChatGroupMember {
 	if o.Err != nil {

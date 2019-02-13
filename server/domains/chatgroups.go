@@ -14,19 +14,19 @@ import (
 )
 
 type ChatGroup struct {
-	ChatGroupId string         `db:"chatgroupid"`
-	GroupName   string         `db:"groupname"`
-	Type        string         `db:"type"`
-	Alias       sql.NullString `db:"alias"`
-	NickName    string         `db:"nickname"`
-	Owner       string         `db:"owner"`
-	Avatar      sql.NullString `db:"avatar"`
-	MemberCount int            `db:"membercount"`
-	MaxMemberCount int         `db:"maxmembercount"`
-	Ext         sql.NullString `db:"ext"`
-	CreateAt    mysql.NullTime `db:"createat"`
-	UpdateAt    mysql.NullTime `db:"updateat"`
-	DeleteAt    mysql.NullTime `db:"deleteat"`
+	ChatGroupId    string         `db:"chatgroupid"`
+	GroupName      string         `db:"groupname"`
+	Type           string         `db:"type"`
+	Alias          sql.NullString `db:"alias"`
+	NickName       string         `db:"nickname"`
+	Owner          string         `db:"owner"`
+	Avatar         sql.NullString `db:"avatar"`
+	MemberCount    int            `db:"membercount"`
+	MaxMemberCount int            `db:"maxmembercount"`
+	Ext            sql.NullString `db:"ext"`
+	CreateAt       mysql.NullTime `db:"createat"`
+	UpdateAt       mysql.NullTime `db:"updateat"`
+	DeleteAt       mysql.NullTime `db:"deleteat"`
 }
 
 func (chatgroup *ChatGroup) SetAlias(alias string) {
@@ -50,7 +50,7 @@ func (chatgroup *ChatGroup) SetExt(ext string) {
 	}
 }
 
-func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname string, owner string, membercount int ,maxmembercount int) *ChatGroup {
+func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname string, owner string, membercount int, maxmembercount int) *ChatGroup {
 	if ctx.Err != nil {
 		return nil
 	}
@@ -60,12 +60,12 @@ func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname s
 		return nil
 	} else {
 		return &ChatGroup{
-			ChatGroupId: rid.String(),
-			GroupName:   groupname,
-			Type:        ctype,
-			NickName:    nickname,
-			Owner:       owner,
-			MemberCount: membercount,
+			ChatGroupId:    rid.String(),
+			GroupName:      groupname,
+			Type:           ctype,
+			NickName:       nickname,
+			Owner:          owner,
+			MemberCount:    membercount,
 			MaxMemberCount: maxmembercount,
 		}
 	}
