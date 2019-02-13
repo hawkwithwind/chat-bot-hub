@@ -371,13 +371,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
-
 				
 				members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, info.Member)
 				if o.Err != nil {
 					return
 				} else if len(members) != len(info.Member) {
-					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d", info.UserName, len(info.Member), len(members))
+					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", info.UserName, len(info.Member), len(members), members)
 					return
 				}
 

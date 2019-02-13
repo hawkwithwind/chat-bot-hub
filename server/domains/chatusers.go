@@ -196,8 +196,9 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 
 	if o.Err != nil {
 		return []ChatUser{}
+	} else {
+		return chatusers
 	}
-	return chatusers
 }
 
 func (o *ErrorHandler) GetChatUserById(q dbx.Queryable, cuid string) *ChatUser {
@@ -234,13 +235,18 @@ func (o *ErrorHandler) GetChatUserByName(q dbx.Queryable, ctype string, username
 
 func (o *ErrorHandler) GetChatUsersByNames(q dbx.Queryable, ctype string, chatusernames []string) []ChatUser {
 	if o.Err != nil {
-		return nil
+		return []ChatUser{}
+	}
+
+	if len(chatusernames) == 0 {
+		return []ChatUser{}
 	}
 
 	const query string = `
 SELECT * FROM chatusers
 WHERE type = "%s"
   AND username IN ("%s")
+  AND deleteat is NULL
 `
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
