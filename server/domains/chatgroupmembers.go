@@ -18,7 +18,7 @@ type ChatGroupMember struct {
 	ChatGroupId       string         `db:"chatgroupid"`
 	ChatMemberId      string         `db:"chatmemberid"`
 	InvitedBy         sql.NullString `db:"invitedby"`
-	Attendance        int            `db:"Attendance"`
+	Attendance        int            `db:"attendance"`
 	GroupNickName     sql.NullString `db:"groupnickname"`
 	CreateAt          mysql.NullTime `db:"createat"`
 	UpdateAt          mysql.NullTime `db:"updateat"`
