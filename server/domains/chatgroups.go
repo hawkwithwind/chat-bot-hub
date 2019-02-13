@@ -78,9 +78,9 @@ func (o *ErrorHandler) SaveChatGroup(q dbx.Queryable, chatgroup *ChatGroup) {
 
 	query := `
 INSERT INTO chatgroups
-(chatgroupid, groupname, type, alias, nickname, owner, avatar, ext)
+(chatgroupid, groupname, type, alias, nickname, owner, avatar, membercount, maxmembercount, ext)
 VALUES
-(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :ext)
+(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :membercount, :maxmembercount, :ext)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
@@ -93,15 +93,17 @@ func (o *ErrorHandler) UpdateOrCreateChatGroup(q dbx.Queryable, chatgroup *ChatG
 
 	query := `
 INSERT INTO chatgroups
-(chatgroupid, groupname, type, alias, nickname, owner, avatar, ext)
+(chatgroupid, groupname, type, alias, nickname, owner, avatar, membercount, maxmembercount, ext)
 VALUES
-(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :ext)
+(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :membercount, :maxmembercount, :ext)
 ON DUPLICATE KEY UPDATE
   groupname=VALUES(groupname),
   alias=VALUES(alias),
   nickname=VALUES(nickname),
   owner=VALUES(owner),
   avatar=VALUES(avatar),
+  membercount=VALUES(membercount),
+  maxmembercount=VALUES(maxmembercount),
   ext=VALUES(ext)
 `
 	ctx, _ := o.DefaultContext()
