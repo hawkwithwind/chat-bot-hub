@@ -4,6 +4,7 @@ import (
 	"fmt"
 	//"time"
 	"database/sql"
+	"strings"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -100,12 +101,57 @@ ON DUPLICATE KEY UPDATE
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
 
+func (o *ErrorHandler) SaveIgnoreChatUsers(q dbx.Queryable, chatusers []*ChatUser) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+INSERT IGNORE INTO chatusers
+(chatuserid, username, type, nickname, alias, avatar, ext)
+VALUES`
+
+	var valueStrings []string
+	var valueArgs []interface{}
+	for _, chatuser := range chatusers {
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
+		
+		valueArgs = append(valueArgs,
+			chatuser.ChatUserId,
+			chatuser.UserName,
+			chatuser.Type,
+			chatuser.NickName,
+		)
+		
+		if chatuser.Alias.Valid {
+			valueArgs = append(valueArgs, chatuser.Alias.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Avatar.Valid {
+			valueArgs = append(valueArgs, chatuser.Avatar.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Ext.Valid {
+			valueArgs = append(valueArgs, chatuser.Ext.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+	}
+
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf("%s %s", query, strings.Join(valueStrings, ",")),  valueArgs...)
+}
+
 func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatusername string) *ChatUser {
 	if o.Err != nil {
 		return nil
 	}
-
-	chatuser := o.GetChatUserByName(q, chatusername)
+	
+	chatuser := o.GetChatUserByName(q, ctype, chatusername)
 	if chatuser == nil {
 		chatuser = o.NewChatUser(chatusername, ctype, "")
 		o.SaveChatUser(q, chatuser)
@@ -116,6 +162,39 @@ func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatu
 	} else {
 		return chatuser
 	}
+}
+
+func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chatusernames []string) []ChatUser {
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+
+	chatusers := o.GetChatUsersByNames(q, ctype, chatusernames)
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+
+	notfound := make(map[string]int)
+	for _, username  := range chatusernames {
+		notfound[username] = 1
+	}
+	
+	for _, chatuser := range chatusers {
+		delete(notfound, chatuser.UserName)
+	}
+
+	nfUsers := make([]*ChatUser, 0, len(notfound))
+	for nfname, _ := range notfound {
+		newuser := o.NewChatUser(nfname, ctype, "")
+		nfUsers = append(nfUsers, newuser)
+		chatusers = append(chatusers, *newuser)
+	}
+	o.SaveIgnoreChatUsers(q, nfUsers)
+
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+	return chatusers
 }
 
 func (o *ErrorHandler) GetChatUserById(q dbx.Queryable, cuid string) *ChatUser {
@@ -133,7 +212,7 @@ func (o *ErrorHandler) GetChatUserById(q dbx.Queryable, cuid string) *ChatUser {
 	}
 }
 
-func (o *ErrorHandler) GetChatUserByName(q dbx.Queryable, username string) *ChatUser {
+func (o *ErrorHandler) GetChatUserByName(q dbx.Queryable, ctype string, username string) *ChatUser {
 	if o.Err != nil {
 		return nil
 	}
@@ -141,11 +220,28 @@ func (o *ErrorHandler) GetChatUserByName(q dbx.Queryable, username string) *Chat
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,
-		"SELECT * FROM chatusers WHERE username=? AND deleteat is NULL", username)
+		"SELECT * FROM chatusers WHERE type=? AND username=? AND deleteat is NULL", ctype, username)
 
-	if chatuser := o.Head(chatusers, fmt.Sprintf("chatuser %s more than one instance", username)); chatuser != nil {
+	if chatuser := o.Head(chatusers, fmt.Sprintf("chatuser %s %s more than one instance", ctype, username)); chatuser != nil {
 		return chatuser.(*ChatUser)
 	} else {
 		return nil
 	}
+}
+
+func (o *ErrorHandler) GetChatUsersByNames(q dbx.Queryable, ctype string, chatusernames []string) []ChatUser {
+	if o.Err != nil {
+		return nil
+	}
+
+	const query string = `
+SELECT * FROM chatusers
+WHERE type = "%s"
+  AND username IN ("%s")
+`
+	chatusers := []ChatUser{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatusers, fmt.Sprintf(query, ctype, strings.Join(chatusernames, `", "`)))
+
+	return chatusers
 }

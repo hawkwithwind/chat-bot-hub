@@ -372,23 +372,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				var chatgroupMembers []*domains.ChatGroupMember
-
-				for _, memberName := range info.Member {
-					localop := ErrorHandler{}
-					defer localop.BackEndError(ctx)
-
-					member := localop.FindOrCreateChatUser(tx, thebotinfo.ClientType, memberName)
-					if localop.Err != nil {
-						continue
-					} else if member == nil {
-						localop.Err = fmt.Errorf("cannot find either create room member %s", memberName)
-						continue
-					}
-
-					cgm := localop.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1)
-					chatgroupMembers = append(chatgroupMembers, cgm)
+				
+				members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, info.Member)
+				if o.Err != nil {
+					return
+				} else if len(members) != len(info.Member) {
+					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d", info.UserName, len(info.Member), len(members))
+					return
 				}
+
+				var chatgroupMembers []*domains.ChatGroupMember
+				for _, member := range members {
+					chatgroupMembers = append(chatgroupMembers,
+						o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
+				}			
 
 				if len(chatgroupMembers) > 0 {
 					o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
