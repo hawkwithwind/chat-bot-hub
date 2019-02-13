@@ -189,7 +189,10 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 		nfUsers = append(nfUsers, newuser)
 		chatusers = append(chatusers, *newuser)
 	}
-	o.SaveIgnoreChatUsers(q, nfUsers)
+	
+	if len(nfUsers) > 0 {
+		o.SaveIgnoreChatUsers(q, nfUsers)
+	}
 
 	if o.Err != nil {
 		return []ChatUser{}
