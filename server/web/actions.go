@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -349,6 +350,59 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+			// insert or update contact for this contact
+			if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
+				// group
+				// find or create owner
+				owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.ChatRoomOwner)
+				if o.Err != nil {
+					return
+				} else if owner == nil {
+					o.Err = fmt.Errorf("cannot find either create room owner %s", info.ChatRoomOwner)
+					return
+				}
+
+				// create and save group
+				chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, owner.ChatUserId, info.MemberCount, info.MaxMemberCount)
+				chatgroup.SetAvatar(info.SmallHead)
+				chatgroup.SetExt(bodystr)
+				
+				o.UpdateOrCreateChatGroup(tx, chatgroup)
+				if o.Err != nil {
+					return
+				}
+
+				for _, memberName := range info.Member {
+					localop := ErrorHandler{}
+					defer localop.BackEndError(ctx)
+
+					member := localop.FindOrCreateChatUser(tx, thebotinfo.ClientType, memberName)
+					if localop.Err != nil {
+						continue
+					} else if member == nil {
+						localop.Err = fmt.Errorf("cannot find either create room member %s", memberName)
+						continue
+					}
+
+					cgm := localop.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1)
+					localop.SaveIgnoreGroupMember(tx, cgm)
+				}
+
+				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
+			} else {
+				// user
+				// create or update user
+				chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
+				chatuser.SetAvatar(info.SmallHead)
+				chatuser.SetExt(bodystr)
+				
+				o.UpdateOrCreateChatUser(tx, chatuser)
+				if o.Err != nil {
+					return
+				}
+
+				ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)
+			}
 		}
 
 	case chatbothub.GROUPINFO:
@@ -423,8 +477,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
-			ctx.Info("frs %v\n", frs)
-
 			bodym := o.FromJson(localar.ActionBody)
 			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 
@@ -433,8 +485,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			for _, fr := range frs {
-				ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n",
-					rlogin, fr.RequestLogin, fr.Status)
+				// ctx.Info("rlogin %s, fr.RequestLogin %s, fr.Status %s\n",
+				// 	rlogin, fr.RequestLogin, fr.Status)
 				if fr.RequestLogin == rlogin && fr.Status == "NEW" {
 					fr.Status = localar.Status
 					o.UpdateFriendRequest(tx, &fr)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -93,5 +94,25 @@ func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
 		tx.Rollback()
 	} else {
 		o.Err = tx.Commit()
+	}
+}
+
+func (o *ErrorHandler) Head(s interface{}, msg string) interface{} {
+	if o.Err != nil {
+		return nil
+	}
+
+	if v := reflect.ValueOf(s); v.Len() > 1 {
+		o.Err = fmt.Errorf("%s: more than one instance", msg)
+		return nil
+	} else if v.Len() == 0 {
+		return nil
+	} else {
+		if v.Index(0).CanAddr() {
+			return v.Index(0).Addr().Interface()
+		} else {
+			o.Err = fmt.Errorf("value type %v cannot get address", v.Index(0).Type())
+			return nil
+		}
 	}
 }

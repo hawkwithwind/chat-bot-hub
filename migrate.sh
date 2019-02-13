@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 MIGRATE_IMAGE=chat-bot-hub:migrate
 LOCALNETWORK=chatbothub_default
@@ -23,7 +23,7 @@ init*)
 	read -s -p "db_password: " db_password && \
 	echo "" && \
 	echo -e "DB_NAME=$db_name\nDB_USER=$db_user\nDB_PASSWORD=$db_password\nDB_ALIAS=$DB_ALIAS" > mysql.env && \
-	echo "\nDB_PARAMS=charset=utf8mb4&collation=utf8mb4_unicode_ci\n" >> mysql.env
+	echo -e "\nDB_PARAMS=charset=utf8mb4&collation=utf8mb4_unicode_ci\n" >> mysql.env
 	docker volume create --driver local \
 	       --opt type=none \
 	       --opt device=$datapath \
