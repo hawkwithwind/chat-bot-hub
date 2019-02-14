@@ -26,7 +26,7 @@ type ChatGroupMember struct {
 	DeleteAt          mysql.NullTime `db:"deleteat"`
 }
 
-func (chatGroupMember *ChatGroupMember) SetAlias(invitedby string) {
+func (chatGroupMember *ChatGroupMember) SetInvitedBy(invitedby string) {
 	chatGroupMember.InvitedBy = sql.NullString{
 		String: invitedby,
 		Valid:  true,

@@ -23,6 +23,11 @@ type ActionRequest struct {
 	ReplyAt         utils.JSONTime `json:"replyAt"`
 }
 
+type ActionResult struct {
+	Data interface{} `json:"data"`
+	Success bool `json:"success"`
+}
+
 const (
 	timeout time.Duration = time.Duration(10) * time.Second
 )

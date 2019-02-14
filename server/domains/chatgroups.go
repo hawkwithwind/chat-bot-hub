@@ -125,7 +125,7 @@ func (o *ErrorHandler) GetChatGroupById(q dbx.Queryable, cgid string) *ChatGroup
 	}
 }
 
-func (o *ErrorHandler) GetChatGroupByName(q dbx.Queryable, groupname string) *ChatGroup {
+func (o *ErrorHandler) GetChatGroupByName(q dbx.Queryable, ctype string, groupname string) *ChatGroup {
 	if o.Err != nil {
 		return nil
 	}
@@ -133,7 +133,10 @@ func (o *ErrorHandler) GetChatGroupByName(q dbx.Queryable, groupname string) *Ch
 	chatgroups := []ChatGroup{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatgroups,
-		"SELECT * FROM chatgroups WHERE groupname=? AND deleteat is NULL", groupname)
+		`SELECT * FROM chatgroups 
+WHERE groupname=? 
+  AND type=? 
+  AND deleteat is NULL`, groupname, ctype)
 
 	if chatgroup := o.Head(chatgroups, fmt.Sprintf("chatgroup %s more than one instance", groupname)); chatgroup != nil {
 		return chatgroup.(*ChatGroup)

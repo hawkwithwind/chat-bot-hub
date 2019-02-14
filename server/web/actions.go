@@ -157,7 +157,7 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
-type WeContactInfo struct {
+type WechatContactInfo struct {
 	Id              int      `json:"id"`
 	MType           int      `json:"mType"`
 	MsgType         int      `json:"msgType"`
@@ -192,6 +192,25 @@ type WeContactInfo struct {
 	MaxMemberCount  int      `json:"maxMemberCount"`
 	MemberCount     int      `json:"memberCount"`
 }
+
+type WechatGroupInfo struct {
+	ChatRoomId int `json:"chatroomId"`
+	Count int `json:"count"`
+	Member []WechatGroupMember `json:"member"`
+	Message string `json:"message"`
+	Status int `json:"status"`
+	UserName string `json:"userName"`
+}
+
+type WechatGroupMember struct {
+	BigHead string `json:"bigHead"`
+	ChatRoomNickName string `json:"chatroomNickName"`
+	InvitedBy string `json:"invitedBy"`
+	NickName string `json:"nickName"`
+	SmallHead string `json:"smallHead"`
+	UserName string `json:"userName"`
+}
+
 
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
@@ -343,7 +362,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	case chatbothub.CONTACTINFO:
 		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
-			var info WeContactInfo
+			info := WechatContactInfo{}
 			o.Err = json.Unmarshal([]byte(bodystr), &info)
 			if o.Err != nil {
 				return
@@ -371,24 +390,25 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
-				
-				members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, info.Member)
-				if o.Err != nil {
-					return
-				} else if len(members) != len(info.Member) {
-					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", info.UserName, len(info.Member), len(members), members)
-					return
-				}
 
-				var chatgroupMembers []*domains.ChatGroupMember
-				for _, member := range members {
-					chatgroupMembers = append(chatgroupMembers,
-						o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
-				}			
+				// info.Member contains both wxid and alias, dont use those
+				// members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, info.Member)
+				// if o.Err != nil {
+				// 	return
+				// } else if len(members) != len(info.Member) {
+				// 	o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", info.UserName, len(info.Member), len(members), members)
+				// 	return
+				// }
 
-				if len(chatgroupMembers) > 0 {
-					o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
-				}
+				// var chatgroupMembers []*domains.ChatGroupMember
+				// for _, member := range members {
+				// 	chatgroupMembers = append(chatgroupMembers,
+				// 		o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
+				// }			
+
+				// if len(chatgroupMembers) > 0 {
+				// 	o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
+				// }
 
 				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
 			} else {
@@ -505,7 +525,66 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ctx.Info("groupId %s, retruned\n%v\n", groupId, localar.Result)
+			ctx.Info("groupId %s, returned\n%v\n", groupId, localar.Result)
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				return
+			}
+
+			groupInfo := WechatGroupInfo{}
+			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &groupInfo)
+			if o.Err != nil {
+				return
+			}
+
+			// 1. find group
+			chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupInfo.UserName)
+			if o.Err != nil {
+				return
+			} else if chatgroup == nil {
+				o.Err = fmt.Errorf("didn't find chat group %s", groupInfo.UserName)
+				return
+			}
+
+			// 2. update group members
+			memberNames := make([]domains.ChatUserName, 0, len(groupInfo.Member))
+			for _, member := range groupInfo.Member {
+				memberNames = append(memberNames, domains.ChatUserName{
+					UserName: member.UserName,
+					NickName: member.NickName,
+				})
+			}
+			
+			members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, memberNames)
+			if o.Err != nil {
+				return
+			} else if len(members) != len(memberNames) {
+				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(memberNames), len(members), members)
+				return
+			}
+			
+			memberMap := map[string]string{}
+			for _, member := range members {
+				memberMap[member.UserName] = member.ChatUserId
+			}
+			
+			var chatgroupMembers []*domains.ChatGroupMember
+			for _, member := range groupInfo.Member {
+				gm := o.NewChatGroupMember(chatgroup.ChatGroupId, memberMap[member.UserName], 1)
+				if member.InvitedBy != "" {
+					gm.SetInvitedBy(member.InvitedBy)
+				}
+				if member.ChatRoomNickName != "" {
+					gm.SetGroupNickName(member.ChatRoomNickName)
+				}
+				
+				chatgroupMembers = append(chatgroupMembers, gm)
+			}
+
+			if len(chatgroupMembers) > 0 {
+				o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
+			}
 		}
 
 		if o.Err != nil {
