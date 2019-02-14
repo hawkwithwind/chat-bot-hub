@@ -92,24 +92,31 @@ INSERT INTO chatusers
 VALUES
 (:chatuserid, :username, :type, :alias, :nickname, :avatar, :ext)
 ON DUPLICATE KEY UPDATE
-  alias=VALUES(alias),
-  nickname=VALUES(nickname),
-  avatar=VALUES(avatar),
-  ext=VALUES(ext)
+  nickname=IF(CHAR_LENGTH(VALUES(nickname)) > 0, VALUES(nickname), nickname),
+  alias=IF(CHAR_LENGTH(VALUES(alias)) > 0, VALUES(alias), alias),
+  avatar=IF(CHAR_LENGTH(VALUES(avatar)) > 0, VALUES(avatar), avatar),
+  ext=IF(CHAR_LENGTH(VALUES(ext)) > 0, VALUES(ext), ext)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
 
-func (o *ErrorHandler) SaveIgnoreChatUsers(q dbx.Queryable, chatusers []*ChatUser) {
+func (o *ErrorHandler) UpdateOrCreateChatUsers(q dbx.Queryable, chatusers []*ChatUser) {
 	if o.Err != nil {
 		return
 	}
 
-	query := `
-INSERT IGNORE INTO chatusers
+	const query string = `
+INSERT INTO chatusers
 (chatuserid, username, type, nickname, alias, avatar, ext)
-VALUES`
+VALUES
+%s
+ON DUPLICATE KEY UPDATE
+  nickname=IF(CHAR_LENGTH(VALUES(nickname)) > 0, VALUES(nickname), nickname),
+  alias=IF(CHAR_LENGTH(VALUES(alias)) > 0, VALUES(alias), alias),
+  avatar=IF(CHAR_LENGTH(VALUES(avatar)) > 0, VALUES(avatar), avatar),
+  ext=IF(CHAR_LENGTH(VALUES(ext)) > 0, VALUES(ext), ext)
+`
 
 	var valueStrings []string
 	var valueArgs []interface{}
@@ -143,7 +150,7 @@ VALUES`
 	}
 
 	ctx, _ := o.DefaultContext()
-	_, o.Err = q.ExecContext(ctx, fmt.Sprintf("%s %s", query, strings.Join(valueStrings, ",")),  valueArgs...)
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(query, strings.Join(valueStrings, ",")),  valueArgs...)
 }
 
 func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatusername string) *ChatUser {
@@ -201,7 +208,7 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 	}
 	
 	if len(nfUsers) > 0 {
-		o.SaveIgnoreChatUsers(q, nfUsers)
+		o.UpdateOrCreateChatUsers(q, nfUsers)
 	}
 
 	if o.Err != nil {

@@ -369,10 +369,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+			if len(info.UserName) == 0 {
+				ctx.Info("username not found, ignoring %s", bodystr)
+				return
+			}
+			
 			// insert or update contact for this contact
 			if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
 				// group
 				// find or create owner
+				if len(info.ChatRoomOwner) == 0 {
+					ctx.Info("group[%s] member count 0, ignore", info.UserName)
+					return
+				}
+				
 				owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.ChatRoomOwner)
 				if o.Err != nil {
 					return
@@ -380,7 +390,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.Err = fmt.Errorf("cannot find either create room owner %s", info.ChatRoomOwner)
 					return
 				}
-
+			
 				// create and save group
 				chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, owner.ChatUserId, info.MemberCount, info.MaxMemberCount)
 				chatgroup.SetAvatar(info.SmallHead)
@@ -390,26 +400,33 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
+				
+				memberNames := make([]domains.ChatUserName, 0, len(info.Member))
+				for _, member := range info.Member {
+					memberNames = append(memberNames, domains.ChatUserName{
+						UserName: member,
+						NickName: "",
+					})
+				}
 
-				// info.Member contains both wxid and alias, dont use those
-				// members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, info.Member)
-				// if o.Err != nil {
-				// 	return
-				// } else if len(members) != len(info.Member) {
-				// 	o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", info.UserName, len(info.Member), len(members), members)
-				// 	return
-				// }
+				members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, memberNames)
+				if o.Err != nil {
+					return
+				} else if len(members) != len(info.Member) {
+					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", info.UserName, len(info.Member), len(members), members)
+					return
+				}
 
-				// var chatgroupMembers []*domains.ChatGroupMember
-				// for _, member := range members {
-				// 	chatgroupMembers = append(chatgroupMembers,
-				// 		o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
-				// }			
+				var chatgroupMembers []*domains.ChatGroupMember
+				for _, member := range members {
+					chatgroupMembers = append(chatgroupMembers,
+						o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
+				}			
 
-				// if len(chatgroupMembers) > 0 {
-				// 	o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
-				// }
-
+				if len(chatgroupMembers) > 0 {
+					o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
+				}
+				
 				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
 			} else {
 				// user
@@ -583,7 +600,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if len(chatgroupMembers) > 0 {
-				o.SaveIgnoreGroupMembers(tx, chatgroupMembers)
+				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
 		}
 

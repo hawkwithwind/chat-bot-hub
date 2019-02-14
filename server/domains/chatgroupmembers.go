@@ -88,15 +88,21 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, chatGroupMember)
 }
 
-func (o *ErrorHandler) SaveIgnoreGroupMembers(q dbx.Queryable, chatGroupMembers []*ChatGroupMember) {
+func (o *ErrorHandler) UpdateOrCreateGroupMembers(q dbx.Queryable, chatGroupMembers []*ChatGroupMember) {
 	if o.Err != nil {
 		return
 	}
 
-	query := `
-INSERT IGNORE INTO chatgroupmembers
+	const query string = `
+INSERT INTO chatgroupmembers
 (chatgroupmemberid, chatgroupid, chatmemberid, attendance, invitedby, groupnickname)
-VALUES`
+VALUES
+%s
+ON DUPLICATE KEY UPDATE
+  attendance=VALUES(attendance),
+  invitedby=IF(CHAR_LENGTH(VALUES(invitedby))>0, VALUES(invitedby), invitedby),
+  groupnickname=IF(CHAR_LENGTH(VALUES(groupnickname))>0, VALUES(groupnickname), groupnickname)
+`
 
 	var valueStrings []string
 	var valueArgs []interface{}
@@ -124,7 +130,7 @@ VALUES`
 	}
 
 	ctx, _ := o.DefaultContext()
-	_, o.Err = q.ExecContext(ctx, fmt.Sprintf("%s %s", query, strings.Join(valueStrings, ",")), valueArgs...)
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(query, strings.Join(valueStrings, ",")), valueArgs...)
 }
 
 func (o *ErrorHandler) GetChatGroupMemberById(q dbx.Queryable, gmid string) *ChatGroupMember {

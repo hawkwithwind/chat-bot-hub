@@ -432,10 +432,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case CONTACTINFO:
 				if bot.ClientType == WECHATBOT {
-					hub.Info("contact info \n%s\n", in.Body)
+					//hub.Info("contact info \n%s\n", in.Body)
 
-					bodym := o.FromJson(in.Body)
-					hub.Info("contact info %v", bodym)
+					//bodym := o.FromJson(in.Body)
+					//hub.Info("contact info %v", bodym)
 
 					if o.Err == nil {
 						go func() {
@@ -451,8 +451,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					hub.Info("group info \n%s\n", in.Body)
 
-					bodym := o.FromJson(in.Body)
-					hub.Info("group info %v", bodym)
+					//bodym := o.FromJson(in.Body)
+					//hub.Info("group info %v", bodym)
 
 					if o.Err == nil {
 						go func() {
