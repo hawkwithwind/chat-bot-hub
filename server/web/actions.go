@@ -194,23 +194,22 @@ type WechatContactInfo struct {
 }
 
 type WechatGroupInfo struct {
-	ChatRoomId int `json:"chatroomId"`
-	Count int `json:"count"`
-	Member []WechatGroupMember `json:"member"`
-	Message string `json:"message"`
-	Status int `json:"status"`
-	UserName string `json:"userName"`
+	ChatRoomId int                 `json:"chatroomId"`
+	Count      int                 `json:"count"`
+	Member     []WechatGroupMember `json:"member"`
+	Message    string              `json:"message"`
+	Status     int                 `json:"status"`
+	UserName   string              `json:"userName"`
 }
 
 type WechatGroupMember struct {
-	BigHead string `json:"bigHead"`
+	BigHead          string `json:"bigHead"`
 	ChatRoomNickName string `json:"chatroomNickName"`
-	InvitedBy string `json:"invitedBy"`
-	NickName string `json:"nickName"`
-	SmallHead string `json:"smallHead"`
-	UserName string `json:"userName"`
+	InvitedBy        string `json:"invitedBy"`
+	NickName         string `json:"nickName"`
+	SmallHead        string `json:"smallHead"`
+	UserName         string `json:"userName"`
 }
-
 
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
@@ -373,7 +372,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				ctx.Info("username not found, ignoring %s", bodystr)
 				return
 			}
-			
+
 			// insert or update contact for this contact
 			if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
 				// group
@@ -382,7 +381,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					ctx.Info("group[%s] member count 0, ignore", info.UserName)
 					return
 				}
-				
+
 				owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.ChatRoomOwner)
 				if o.Err != nil {
 					return
@@ -390,7 +389,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.Err = fmt.Errorf("cannot find either create room owner %s", info.ChatRoomOwner)
 					return
 				}
-			
+
 				// create and save group
 				chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, owner.ChatUserId, info.MemberCount, info.MaxMemberCount)
 				chatgroup.SetAvatar(info.SmallHead)
@@ -404,7 +403,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.Err = fmt.Errorf("cannot find either create chatgroup %s", info.UserName)
 					return
 				}
-				
+
 				memberNames := make([]domains.ChatUserName, 0, len(info.Member))
 				for _, member := range info.Member {
 					memberNames = append(memberNames, domains.ChatUserName{
@@ -420,12 +419,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d", info.UserName, len(info.Member), len(members))
 					return
 				}
-				
+
 				var chatgroupMembers []*domains.ChatGroupMember
 				for _, member := range members {
 					chatgroupMembers = append(chatgroupMembers,
 						o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
-				}			
+				}
 
 				if len(chatgroupMembers) > 0 {
 					o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
@@ -433,7 +432,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 				if o.Err != nil {
 					return
-				}				
+				}
 				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
 			} else {
 				// user
@@ -578,7 +577,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					NickName: member.NickName,
 				})
 			}
-			
+
 			members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, memberNames)
 			if o.Err != nil {
 				return
@@ -586,12 +585,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(memberNames), len(members), members)
 				return
 			}
-			
+
 			memberMap := map[string]string{}
 			for _, member := range members {
 				memberMap[member.UserName] = member.ChatUserId
 			}
-			
+
 			var chatgroupMembers []*domains.ChatGroupMember
 			for _, member := range groupInfo.Member {
 				gm := o.NewChatGroupMember(chatgroup.ChatGroupId, memberMap[member.UserName], 1)
@@ -601,7 +600,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if member.ChatRoomNickName != "" {
 					gm.SetGroupNickName(member.ChatRoomNickName)
 				}
-				
+
 				chatgroupMembers = append(chatgroupMembers, gm)
 			}
 

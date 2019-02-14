@@ -24,8 +24,8 @@ type ActionRequest struct {
 }
 
 type ActionResult struct {
-	Data interface{} `json:"data"`
-	Success bool `json:"success"`
+	Data    interface{} `json:"data"`
+	Success bool        `json:"success"`
 }
 
 const (

@@ -122,14 +122,14 @@ ON DUPLICATE KEY UPDATE
 	var valueArgs []interface{}
 	for _, chatuser := range chatusers {
 		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
-		
+
 		valueArgs = append(valueArgs,
 			chatuser.ChatUserId,
 			chatuser.UserName,
 			chatuser.Type,
 			chatuser.NickName,
 		)
-		
+
 		if chatuser.Alias.Valid {
 			valueArgs = append(valueArgs, chatuser.Alias.String)
 		} else {
@@ -150,14 +150,14 @@ ON DUPLICATE KEY UPDATE
 	}
 
 	ctx, _ := o.DefaultContext()
-	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(query, strings.Join(valueStrings, ",")),  valueArgs...)
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(query, strings.Join(valueStrings, ",")), valueArgs...)
 }
 
 func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatusername string) *ChatUser {
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	chatuser := o.GetChatUserByName(q, ctype, chatusername)
 	if chatuser == nil {
 		chatuser = o.NewChatUser(chatusername, ctype, "")
@@ -185,19 +185,17 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 	for _, cun := range chatusernames {
 		uns = append(uns, cun.UserName)
 	}
-	
+
 	chatusers := o.GetChatUsersByNames(q, ctype, uns)
 	if o.Err != nil {
 		return []ChatUser{}
 	}
 
-	fmt.Printf("[DEBUG] ~~~ FOC chatusers FIND %d\n", len(chatusers))
-
 	notfound := make(map[string]ChatUserName)
-	for _, cun  := range chatusernames {
+	for _, cun := range chatusernames {
 		notfound[cun.UserName] = cun
 	}
-	
+
 	for _, chatuser := range chatusers {
 		delete(notfound, chatuser.UserName)
 	}
@@ -207,15 +205,15 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 		newuser := o.NewChatUser(nfname, ctype, cun.NickName)
 		nfUsers = append(nfUsers, newuser)
 	}
-	fmt.Printf("[DEBUG] ~~~ FOC chatusers Not FIND %d\n", len(nfUsers))
-	
+
 	if len(nfUsers) > 0 {
 		o.UpdateOrCreateChatUsers(q, nfUsers)
 	}
+	if o.Err != nil {
+		return []ChatUser{}
+	}
 
 	chatusers = o.GetChatUsersByNames(q, ctype, uns)
-	fmt.Printf("[DEBUG] ~~~ FOC finally find %d, from %d\n", len(chatusers), len(uns))
-	
 	if o.Err != nil {
 		return []ChatUser{}
 	} else {
