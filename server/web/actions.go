@@ -397,7 +397,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatgroup.SetExt(bodystr)
 
 				o.UpdateOrCreateChatGroup(tx, chatgroup)
+				chatgroup = o.GetChatGroupByName(tx, thebotinfo.ClientType, info.UserName)
 				if o.Err != nil {
+					return
+				} else if chatgroup == nil {
+					o.Err = fmt.Errorf("cannot find either create chatgroup %s", info.UserName)
 					return
 				}
 				

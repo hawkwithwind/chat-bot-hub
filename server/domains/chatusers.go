@@ -204,13 +204,13 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 	for nfname, cun := range notfound {
 		newuser := o.NewChatUser(nfname, ctype, cun.NickName)
 		nfUsers = append(nfUsers, newuser)
-		chatusers = append(chatusers, *newuser)
 	}
 	
 	if len(nfUsers) > 0 {
 		o.UpdateOrCreateChatUsers(q, nfUsers)
 	}
 
+	chatusers = o.GetChatUsersByNames(q, ctype, uns)
 	if o.Err != nil {
 		return []ChatUser{}
 	} else {
