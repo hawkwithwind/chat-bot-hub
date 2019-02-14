@@ -191,6 +191,8 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 		return []ChatUser{}
 	}
 
+	fmt.Printf("[DEBUG] ~~~ FOC chatusers FIND %d\n", len(chatusers))
+
 	notfound := make(map[string]ChatUserName)
 	for _, cun  := range chatusernames {
 		notfound[cun.UserName] = cun
@@ -205,12 +207,15 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chat
 		newuser := o.NewChatUser(nfname, ctype, cun.NickName)
 		nfUsers = append(nfUsers, newuser)
 	}
+	fmt.Printf("[DEBUG] ~~~ FOC chatusers Not FIND %d\n", len(nfUsers))
 	
 	if len(nfUsers) > 0 {
 		o.UpdateOrCreateChatUsers(q, nfUsers)
 	}
 
 	chatusers = o.GetChatUsersByNames(q, ctype, uns)
+	fmt.Printf("[DEBUG] ~~~ FOC finally find %d, from %d\n", len(chatusers), len(uns))
+	
 	if o.Err != nil {
 		return []ChatUser{}
 	} else {
