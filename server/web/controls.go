@@ -203,6 +203,11 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		UpdateAt   utils.JSONTime `json:"updateat"`
 	}
 
+	type ChatUserResponse struct {
+		Data []ChatUserVO `json:"data"`
+		Criteria domains.ChatUserCriteria `json:"criteria"`
+	}
+
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -226,12 +231,14 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
+	criteria := domains.ChatUserCriteria{
+		Type: utils.StringNull(ctype, ""),
+		UserName: utils.StringNull(username, ""),
+		NickName: utils.StringNull(nickname, ""),
+	}
+	
 	chatusers := o.GetChatUsers(tx,
-		domains.ChatUserCriteria{
-			Type: utils.StringNull(ctype, ""),
-			UserName: utils.StringNull(username, ""),
-			NickName: utils.StringNull(nickname, ""),
-		},
+		criteria,
 		domains.Paging {
 			Page: ipage,
 			PageSize: ipagesize,
@@ -261,11 +268,16 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		pagecount += 1
 	}
 
-	o.okWithPaging(w, "", chatuservos, domains.Paging{
-		Page:      ipage,
-		PageCount: pagecount,
-		PageSize:  ipagesize,
-	})
+	o.okWithPaging(w, "",
+		ChatUserResponse{
+			Data: chatuservos,
+			Criteria: criteria,
+		},		
+		domains.Paging{
+			Page:      ipage,
+			PageCount: pagecount,
+			PageSize:  ipagesize,
+		})
 }
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
