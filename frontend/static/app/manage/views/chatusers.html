@@ -30,7 +30,7 @@
 	<tr ng-repeat="row in body">
           <td style="text-align:center;width:120px">{{ consts.types[row.type] }}</td>
 	  <td style="text-align:center;width:120px">
-            <img src="{{ row.avatar }}" />
+            <img ng-src="{{row.avatar}}" width="32" height="32"/>
           </td>
 	  <td style="text-align:center;width:120px">{{ row.username }}</td>
 	  <td style="text-align:center;width:120px">{{ row.nickname}}</td>

@@ -299,7 +299,7 @@ func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable) int64 {
 	}
 
 	const query string = `
-SELECT count(*) from chatusers
+SELECT COUNT(*) from chatusers
 WHERE deleteat is NULL
 `
 	var count []int64
