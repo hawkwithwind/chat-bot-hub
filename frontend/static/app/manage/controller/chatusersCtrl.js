@@ -6,6 +6,18 @@
   function chatusersCtrl($scope, $modal, toastr,
 			 buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {}
+
+    function jump(i) {
+      buildPromise(
+        buildModel('chatusers'),
+        {
+          'page': i-1,
+          'pagesize': $scope.paging.pagesize ? $scope.paging.pagesize : 100,
+        })
+        .then((data) => {
+          $scope.initView(data)
+        })
+    }
     
     $scope.initView = (data) => {
       $scope.body = data.body
@@ -15,19 +27,10 @@
 	$scope.paging.pagerange.push(i+1)
       }
 
-      $scope.paging.jump = (i) => {
-        console.log('page jump %d', i)
-        buildPromise(
-          buildModel('chatusers'),
-          {
-            'page': i-1,
-            'pagesize': $scope.paging.pagesize ? $scope.paging.pagesize : 100,
-          })
-          .then((data) => {
-            $scope.initView(data)
-          })
-      }
+      $scope.paging.jump = jump
     }
+
+    $scope.paging.jump = jump
     
     $scope.refresh = () => {
       buildPromise(buildModel('consts'))
