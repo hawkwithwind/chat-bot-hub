@@ -2,6 +2,22 @@
 <h3 class="page-title">联系人列表</h3>
 
 <div class="row">
+  <div class="col-xs-12 col-md-12 form-group-padding">
+    <select id="select_type" name="select_type" ng-model="criteria.type">
+      <option value="">全部</option>
+      <option value="WECHATBOT">微信</option>
+    </select>
+    <label class="col-md-1 control-label" for="username">帐号</label>
+    <input ng-model="criteria.username" type="text" id="username" name="username"/>
+    <label class="col-md-1 control-label" for="nickname">昵称</label>
+    <input ng-model="criteria.nickname" type="text" id="nickname" name="nickname">
+    <div class="col-md-1">
+      <button class="btn green btn-block" ng-click="search()">查询</button>
+    </div>
+  </div>
+</div>
+
+<div class="row">
   <div class="col-xs-12 col-md-12">
     <div layout="row" layout-sm="column" layout-align="space-around">
       <ul class="pagination">
@@ -20,7 +36,7 @@
 	   style="padding:40px;margin:10px;width:auto">
       <th style="text-align:center">类型</th>
       <th style="text-align:center"></th>
-      <th style="text-align:center">UserName</th>
+      <th style="text-align:center">帐号</th>
       <th style="text-align:center">昵称</th>      
       <th style="text-align:center">创建时间</th>
       <th style="text-align:center">更新时间</th>

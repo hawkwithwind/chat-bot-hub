@@ -5,14 +5,30 @@
 		           "buildPromise", "tools", "buildModelResId"]
   function chatusersCtrl($scope, $modal, toastr,
 			 buildModel, buildPromise, tools, buildModelResId) {
-    $scope.body = {}
+    $scope.body = {
+      criteria: {},
+    }
     $scope.paging = {}
+    $scope.criteria = {
+      username: '',
+      nickanem: '',
+      type: '',
+    }
+
+    $scope.search = () => {
+      $scope.body.criteria = $scope.criteria
+      $scope.paging.page = 1
+      $scope.initView()
+    }
     
     $scope.initView = () => {
       $scope.paging.jump = (i) => {
         buildPromise(
           buildModel('chatusers'),
           {
+            'username': $scope.body.criteria.username,
+            'nickname': $scope.body.criteria.nickname,
+            'type': $scope.body.criteria.type,
             'page': i,
             'pagesize': $scope.paging.pagesize ? $scope.paging.pagesize : 100,
           })
