@@ -379,7 +379,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
 
 	// chatusers and more
-	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatusers)).Methods("GET")
+	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatUsers)).Methods("GET")
 
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
