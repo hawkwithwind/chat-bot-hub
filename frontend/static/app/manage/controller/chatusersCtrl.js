@@ -37,6 +37,7 @@
     }
 
     $scope.paging.jump = (i) => {
+      console.log('page jump %d', i)
       buildPromise(
         buildModel('chatusers'),
         {
