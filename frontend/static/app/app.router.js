@@ -81,7 +81,16 @@
 	  parent: 'app.manage'
 	}
       });
-      
+
+      $stateProvider.state('app.manage.chatusers', {
+	url: '/chatusers',
+	templateUrl: VIEW_PATH + 'manage/views/chatusers.html',
+	controller: 'chatusersCtrl',
+	ncyBreadcrumb: {
+	  label: '过滤器列表',
+	  parent: 'app.manage'
+	}
+      });
 
       // 异步加载需要的ctrl和UI组件
       function loadSequence() {
