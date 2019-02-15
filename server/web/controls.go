@@ -222,7 +222,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	chatusers := o.GetChatUsers(tx, ipage, ipagesize)
+	chatusers := o.GetChatUsers(tx, ipage-1, ipagesize)
 	if o.Err != nil {
 		return
 	}
@@ -247,7 +247,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.okWithPaging(w, "", chatuservos, ResponsePaging{
-		Page:      ipage+1,
+		Page:      ipage,
 		PageCount: pagecount,
 		PageSize:  ipagesize,
 	})

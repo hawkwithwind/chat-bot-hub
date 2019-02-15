@@ -13,7 +13,7 @@
         buildPromise(
           buildModel('chatusers'),
           {
-            'page': i-1,
+            'page': i,
             'pagesize': $scope.paging.pagesize ? $scope.paging.pagesize : 100,
           })
           .then((data) => {
