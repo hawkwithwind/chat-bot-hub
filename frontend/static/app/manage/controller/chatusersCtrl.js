@@ -6,6 +6,7 @@
   function chatusersCtrl($scope, $modal, toastr,
 			 buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {}
+    $scope.paging = {}
     
     $scope.initView = () => {
       $scope.paging.jump = (i) => {
