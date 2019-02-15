@@ -9,7 +9,7 @@
     $scope.paging = {}
     
     $scope.initView = () => {
-      $scope.paging.jump = function(i) {
+      $scope.paging.jump = (i) => {
         buildPromise(
           buildModel('chatusers'),
           {
@@ -18,7 +18,11 @@
           })
           .then((data) => {
             $scope.body = data.body
-            $scope.paging = data.paging
+            
+            $scope.paging.page = data.paging.page
+            $scope.paging.pagesize = data.paging.pagesize
+            $scope.paging.pagecount = data.paging.pagecount
+            
             $scope.paging.pagerange = []      
             for (var i=0;i<$scope.paging.pagecount;i++) {
 	      $scope.paging.pagerange.push(i+1)
