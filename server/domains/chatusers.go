@@ -274,3 +274,39 @@ WHERE type = "%s"
 
 	return chatusers
 }
+
+func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, ctype string, page int64, pagesize int64) []ChatUser {
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+
+	const query string = `
+SELECT * FROM chatusers
+WHERE type = ?
+  AND deleteat is NULL
+ORDER BY createat desc
+LIMIT ?, ?
+`
+	chatusers := []ChatUser{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatusers, query, ctype, page * pagesize, pagesize)
+
+	return chatusers
+}
+
+func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable, ctype string) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	const query string = `
+SELECT count(*) from chatusers
+WHERE type = ?
+  AND deleteat is NULL
+`
+	var count int64
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &count, query, ctype)
+	
+	return count
+}

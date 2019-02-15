@@ -190,6 +190,46 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "bot not found, or no access", BotsInfo{})
 }
 
+func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	page := o.getStringValueDefault(r.Form, "page", "0")
+	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
+	ctype := o.getStringValue(r.Form, "type")
+	if o.Err != nil {
+		return
+	}
+	
+	ipage := o.ParseInt(page, 0, 64)
+	ipagesize := o.ParseInt(pagesize, 0, 64)
+	if o.Err != nil {
+		o.Err = NewClientError(-1, o.Err)
+		return
+	}
+
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
+	chatusers := o.GetChatUsers(tx, ctype, ipage, ipagesize)
+	if o.Err != nil {
+		return
+	}
+
+	chatusercount := o.GetChatUserCount(tx, ctype)
+	pagecount := chatusercount / ipagesize
+	if chatusercount % ipagesize != 0 {
+		pagecount += 1
+	}
+	
+	o.okWithPaging(w, "", chatusers, ResponsePaging{
+		Page: ipage,
+		PageCount: pagecount,
+		PageSize: ipagesize,
+	})
+}
+
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo

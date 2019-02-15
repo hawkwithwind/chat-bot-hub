@@ -1,0 +1,43 @@
+<div ncy-breadcrumb></div>
+<h3 class="page-title">联系人列表</h3>
+
+<div class="row">
+  <div class="col-xs-12 col-md-12">
+    <div layout="row" layout-sm="column" layout-align="space-around">
+      <span>共{{paging.count}}条</span>
+      <ul class="pagination">	 
+	<li ng-repeat="i in paging.pagerange">
+	  <span ng-if=" i != paging.page ">
+	    <a href="javascript:;" ng-click="paging.jump(i)">{{i}}</a>
+	  </span>
+	  <span ng-if=" i == paging.page ">
+	    <b>{{i}}</b>
+	  </span>
+	</li>
+      </ul>
+    </div>
+    
+    <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
+	   style="padding:40px;margin:10px;width:auto">
+      <th style="text-align:center">类型</th>
+      <th style="text-align:center"></th>
+      <th style="text-align:center">UserName</th>
+      <th style="text-align:center">昵称</th>      
+      <th style="text-align:center">创建时间</th>
+      <th style="text-align:center">更新时间</th>
+      
+      <tbody>
+	<tr ng-repeat="row in body">
+          <td style="text-align:center;width:120px">{{ consts.types[row.type] }}</td>
+	  <td style="text-align:center;width:120px">
+            <img src="{{ row.avatar }}" />
+          </td>
+	  <td style="text-align:center;width:120px">{{ row.username }}</td>
+	  <td style="text-align:center;width:120px">{{ row.nickname}}</td>
+	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>
+	  <td style="text-align:center;width:160px">{{ tsToString(row.updateAt*1000) }}</td>
+	</tr>
+      </tbody>
+    </table>
+  </div>
+</div>

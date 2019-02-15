@@ -11,6 +11,7 @@
       'botaction': buildUrl('botaction'),
       'loginqq': buildUrl('loginqq'),
       'bots/id': buildUrl('bots/id'),
+      'chatusers': buildUrl('chatusers'),
     };
     return result;
     

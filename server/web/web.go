@@ -46,12 +46,19 @@ type WebConfig struct {
 	GithubOAuth  GithubOAuthConfig
 }
 
+type ResponsePaging struct {
+	Page int64 `json:"page,omitempty"`
+	PageCount int64 `json:"pagecount,omitempty"`
+	PageSize int64 `json:"pagesize,omitempty"`
+}
+
 type CommonResponse struct {
 	Code    int          `json:"code"`
 	Message string       `json:"message,omitempty"`
 	Ts      int64        `json:"ts"`
 	Error   ErrorMessage `json:"error,omitempty""`
 	Body    interface{}  `json:"body,omitempty""`
+	Paging  ResponsePaging `json:"paging,omitempty"`
 }
 
 type ErrorMessage struct {
@@ -142,6 +149,21 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 		Body:    body,
 	})
 }
+
+func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging ResponsePaging) {
+	if ctx.Err != nil {
+		return
+	}
+
+	json.NewEncoder(w).Encode(CommonResponse{
+		Code:    0,
+		Ts:      time.Now().Unix(),
+		Message: msg,
+		Body:    body,
+		Paging:  paging,
+	})
+}
+
 
 func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	// HTTP CODE 500
