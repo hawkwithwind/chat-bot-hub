@@ -4,8 +4,7 @@
 <div class="row">
   <div class="col-xs-12 col-md-12">
     <div layout="row" layout-sm="column" layout-align="space-around">
-      <span>共{{paging.count}}条</span>
-      <ul class="pagination">	 
+      <ul class="pagination">
 	<li ng-repeat="i in paging.pagerange">
 	  <span ng-if=" i != paging.page ">
 	    <a href="javascript:;" ng-click="paging.jump(i)">{{i}}</a>
