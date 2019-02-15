@@ -1,8 +1,8 @@
 (function() {
   "use strict"
-  app.controller("chatusersCtrl", chatusersCtrl);
+  app.controller("chatusersCtrl", chatusersCtrl)
   chatusersCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
-		           "buildPromise", "tools", "buildModelResId"];
+		           "buildPromise", "tools", "buildModelResId"]
   function chatusersCtrl($scope, $modal, toastr,
 			 buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {}

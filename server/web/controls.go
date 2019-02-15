@@ -191,6 +191,16 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
+	type ChatUserVO struct {
+		ChatUserId string         `json:"chatuserId"`
+		NickName   string         `json:"nickname"`
+		Type     string         `json:"type"`
+		Alias    string         `json:"alias"`
+		Avatar   string         `json:"avatar"`
+		CreateAt utils.JSONTime `json:"createat"`
+		UpdateAt utils.JSONTime `json:"upateat"`
+	}
+	
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -217,13 +227,26 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chatuservos := make([]ChatUserVO, 0, len(chatusers))
+	for _, chatuser := range chatusers {
+		chatuservos = append(chatuservos, ChatUserVO{
+			ChatUserId: chatuser.ChatUserId,
+			NickName: chatuser.NickName,
+			Type: chatuser.Type,
+			Alias: chatuser.Alias.String,
+			Avatar: chatuser.Avatar.String,
+			CreateAt: utils.JSONTime{chatuser.CreateAt.Time},
+			UpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
+		})
+	}
+
 	chatusercount := o.GetChatUserCount(tx)
 	pagecount := chatusercount / ipagesize
 	if chatusercount % ipagesize != 0 {
 		pagecount += 1
 	}
 	
-	o.okWithPaging(w, "", chatusers, ResponsePaging{
+	o.okWithPaging(w, "", chatuservos, ResponsePaging{
 		Page: ipage,
 		PageCount: pagecount,
 		PageSize: ipagesize,
