@@ -2,8 +2,8 @@
 <h3 class="page-title">联系人列表</h3>
 
 <div class="row">
-  <div class="col-xs-9 col-md-6 form-group-padding">
-    <div class="col-xs-2 col-md-1">
+  <div class="col-xs-9 col-md-7 form-group-padding">
+    <div class="col-xs-2 col-md-2">
       <label class="control-label" for="select_type">类型</label> 
       <select id="select_type" name="select_type" ng-model="criteria.type">
         <option value="">全部</option>
@@ -12,11 +12,11 @@
     </div>
     <div class="col-xs-3 col-md-2">
       <label class="control-label" for="username">帐号</label>
-      <input ng-model="criteria.username" type="text" id="username" name="username" />
+      <input ng-model="criteria.username" type="text" id="username" name="username" class="col-md-8" />
     </div>
     <div class="col-xs-3 col-md-2">
       <label class="control-label" for="nickname">昵称</label>
-      <input ng-model="criteria.nickname" type="text" id="nickname" name="nickname" >
+      <input ng-model="criteria.nickname" type="text" id="nickname" name="nickname" class="col-md-8">
     </div>
     <div class="col-xs-1 col-md-1">
       <button class="btn green btn-block" ng-click="search()">查询</button>
