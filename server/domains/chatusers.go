@@ -275,7 +275,13 @@ WHERE type = "%s"
 	return chatusers
 }
 
-func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, page int64, pagesize int64) []ChatUser {
+type ChatUserCriteria struct {
+	UserName sql.NullString
+	NickName sql.NullString
+	Type     sql.NullString
+}
+
+func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
 	if o.Err != nil {
 		return []ChatUser{}
 	}
@@ -283,12 +289,24 @@ func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, page int64, pagesize int64)
 	const query string = `
 SELECT * FROM chatusers
 WHERE deleteat is NULL
+%s /* username */
+%s /* nickname */
+%s /* type */
 ORDER BY createat desc
 LIMIT ?, ?
 `
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &chatusers, query, page*pagesize, pagesize)
+	o.Err = q.SelectContext(ctx, &chatusers,
+		fmt.Sprintf(query,
+			o.WhereClause("username", criteria.UserName),
+			o.WhereClause("nickname", criteria.NickName),
+			o.WhereClause("type", criteria.Type)),
+		criteria.UserName.String,
+		criteria.NickName.String,
+		criteria.Type.String,
+		(paging.Page-1) * paging.PageSize,
+		paging.PageSize)
 
 	return chatusers
 }

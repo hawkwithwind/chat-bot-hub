@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"reflect"
 	"time"
+	"database/sql"
 
 	mt "github.com/mitchellh/mapstructure"
 )
@@ -51,4 +52,18 @@ func DecodeMap(src interface{}, target interface{}) error {
 	}
 
 	return decoder.Decode(src)
+}
+
+func StringNull(str string, defaultValue string) sql.NullString {
+	if str == defaultValue {
+		return sql.NullString {
+			String: "",
+			Valid: false,
+		}
+	} else {
+		return sql.NullString {
+			String: str,
+			Valid: true,
+		}
+	}
 }

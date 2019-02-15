@@ -13,6 +13,7 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type GRPCWrapper struct {
@@ -208,7 +209,9 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	page := o.getStringValueDefault(r.Form, "page", "0")
 	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
-	//ctype := o.getStringValue(r.Form, "type")
+	ctype := o.getStringValueDefault(r.Form, "type", "")
+	username := o.getStringValueDefault(r.Form, "username", "")
+	nickname := o.getStringValueDefault(r.Form, "nickname", "")
 	if o.Err != nil {
 		return
 	}
@@ -223,7 +226,17 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	chatusers := o.GetChatUsers(tx, ipage-1, ipagesize)
+	chatusers := o.GetChatUsers(tx,
+		domains.ChatUserCriteria{
+			Type: utils.StringNull(ctype, ""),
+			UserName: utils.StringNull(username, ""),
+			NickName: utils.StringNull(nickname, ""),
+		},
+		domains.Paging {
+			Page: ipage,
+			PageSize: ipagesize,
+		})
+	
 	if o.Err != nil {
 		return
 	}
@@ -248,7 +261,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		pagecount += 1
 	}
 
-	o.okWithPaging(w, "", chatuservos, ResponsePaging{
+	o.okWithPaging(w, "", chatuservos, domains.Paging{
 		Page:      ipage,
 		PageCount: pagecount,
 		PageSize:  ipagesize,
