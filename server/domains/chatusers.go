@@ -288,7 +288,7 @@ LIMIT ?, ?
 `
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &chatusers, query, page * pagesize, pagesize)
+	o.Err = q.SelectContext(ctx, &chatusers, query, page*pagesize, pagesize)
 
 	return chatusers
 }
@@ -305,6 +305,6 @@ WHERE deleteat is NULL
 	var count []int64
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count, query)
-	
+
 	return count[0]
 }

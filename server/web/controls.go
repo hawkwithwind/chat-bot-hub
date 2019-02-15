@@ -194,13 +194,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	type ChatUserVO struct {
 		ChatUserId string         `json:"chatuserId"`
 		NickName   string         `json:"nickname"`
-		Type     string         `json:"type"`
-		Alias    string         `json:"alias"`
-		Avatar   string         `json:"avatar"`
-		CreateAt utils.JSONTime `json:"createat"`
-		UpdateAt utils.JSONTime `json:"upateat"`
+		Type       string         `json:"type"`
+		Alias      string         `json:"alias"`
+		Avatar     string         `json:"avatar"`
+		CreateAt   utils.JSONTime `json:"createat"`
+		UpdateAt   utils.JSONTime `json:"updateat"`
 	}
-	
+
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -211,7 +211,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	ipage := o.ParseInt(page, 0, 64)
 	ipagesize := o.ParseInt(pagesize, 0, 64)
 	if o.Err != nil {
@@ -231,25 +231,25 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	for _, chatuser := range chatusers {
 		chatuservos = append(chatuservos, ChatUserVO{
 			ChatUserId: chatuser.ChatUserId,
-			NickName: chatuser.NickName,
-			Type: chatuser.Type,
-			Alias: chatuser.Alias.String,
-			Avatar: chatuser.Avatar.String,
-			CreateAt: utils.JSONTime{chatuser.CreateAt.Time},
-			UpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
+			NickName:   chatuser.NickName,
+			Type:       chatuser.Type,
+			Alias:      chatuser.Alias.String,
+			Avatar:     chatuser.Avatar.String,
+			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
+			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
 
 	chatusercount := o.GetChatUserCount(tx)
 	pagecount := chatusercount / ipagesize
-	if chatusercount % ipagesize != 0 {
+	if chatusercount%ipagesize != 0 {
 		pagecount += 1
 	}
-	
+
 	o.okWithPaging(w, "", chatuservos, ResponsePaging{
-		Page: ipage,
+		Page:      ipage+1,
 		PageCount: pagecount,
-		PageSize: ipagesize,
+		PageSize:  ipagesize,
 	})
 }
 
