@@ -9,7 +9,7 @@
     $scope.paging = {}
     
     $scope.initView = () => {
-      $scope.paging.jump = (i) => {
+      $scope.paging.jump = function(i) {
         buildPromise(
           buildModel('chatusers'),
           {
