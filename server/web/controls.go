@@ -197,7 +197,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	page := o.getStringValueDefault(r.Form, "page", "0")
 	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
-	ctype := o.getStringValue(r.Form, "type")
+	//ctype := o.getStringValue(r.Form, "type")
 	if o.Err != nil {
 		return
 	}
@@ -212,12 +212,12 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	chatusers := o.GetChatUsers(tx, ctype, ipage, ipagesize)
+	chatusers := o.GetChatUsers(tx, ipage, ipagesize)
 	if o.Err != nil {
 		return
 	}
 
-	chatusercount := o.GetChatUserCount(tx, ctype)
+	chatusercount := o.GetChatUserCount(tx)
 	pagecount := chatusercount / ipagesize
 	if chatusercount % ipagesize != 0 {
 		pagecount += 1
