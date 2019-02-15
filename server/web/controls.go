@@ -193,6 +193,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	type ChatUserVO struct {
 		ChatUserId string         `json:"chatuserId"`
+		UserName   string         `json:"username"`
 		NickName   string         `json:"nickname"`
 		Type       string         `json:"type"`
 		Alias      string         `json:"alias"`
@@ -231,6 +232,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	for _, chatuser := range chatusers {
 		chatuservos = append(chatuservos, ChatUserVO{
 			ChatUserId: chatuser.ChatUserId,
+			UserName:   chatuser.UserName,
 			NickName:   chatuser.NickName,
 			Type:       chatuser.Type,
 			Alias:      chatuser.Alias.String,
