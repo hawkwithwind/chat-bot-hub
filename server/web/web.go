@@ -378,6 +378,9 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/filters/{filterId}/next", ctx.validate(ctx.updateFilterNext)).Methods("PUT")
 	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
 
+	// chatusers and more
+	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatusers)).Methods("GET")
+
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
