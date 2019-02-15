@@ -302,9 +302,9 @@ func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable) int64 {
 SELECT count(*) from chatusers
 WHERE deleteat is NULL
 `
-	var count int64
+	var count []int64
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count, query)
 	
-	return count
+	return count[0]
 }
