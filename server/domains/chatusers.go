@@ -344,5 +344,13 @@ WHERE deleteat is NULL
 		criteria.NickName.String,
 		criteria.Type.String)
 
+	fmt.Println(fmt.Sprintf(query,
+		o.AndEqual("username", criteria.UserName),
+		o.AndLike("nickname", sql.NullString{
+			String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
+			Valid: criteria.NickName.Valid,
+		}),
+		o.AndEqual("type", criteria.Type)))
+
 	return count[0]
 }
