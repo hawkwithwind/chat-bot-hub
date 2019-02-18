@@ -299,19 +299,26 @@ LIMIT ?, ?
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,
 		fmt.Sprintf(query,
-			o.WhereClause("username", criteria.UserName),
-			o.WhereClause("nickname", criteria.NickName),
-			o.WhereClause("type", criteria.Type)),
+			o.AndEqual("username", criteria.UserName),
+			o.AndLike("nickname", sql.NullString{
+				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
+				Valid: criteria.NickName.Valid,
+			}),
+			o.AndEqual("type", criteria.Type)),
 		criteria.UserName.String,
 		criteria.NickName.String,
 		criteria.Type.String,
 		(paging.Page-1) * paging.PageSize,
 		paging.PageSize)
 
-	return chatusers
+	if o.Err != nil {
+		return []ChatUser{}
+	} else {
+		return chatusers
+	}
 }
 
-func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable) int64 {
+func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable, criteria ChatUserCriteria) int64 {
 	if o.Err != nil {
 		return 0
 	}
@@ -319,10 +326,23 @@ func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable) int64 {
 	const query string = `
 SELECT COUNT(*) from chatusers
 WHERE deleteat is NULL
+%s /* username */
+%s /* nickname */
+%s /* type */
 `
 	var count []int64
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &count, query)
+	o.Err = q.SelectContext(ctx, &count,
+		fmt.Sprintf(query,
+			o.AndEqual("username", criteria.UserName),
+			o.AndLike("nickname", sql.NullString{
+				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
+				Valid: criteria.NickName.Valid,
+			}),
+			o.AndEqual("type", criteria.Type)),
+		criteria.UserName.String,
+		criteria.NickName.String,
+		criteria.Type.String)
 
 	return count[0]
 }

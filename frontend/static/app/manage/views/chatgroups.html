@@ -1,0 +1,65 @@
+<div ncy-breadcrumb></div>
+<h3 class="page-title">群列表</h3>
+
+<div class="row">
+  <div class="col-xs-12 col-md-6 form-group-padding">
+    <div class="col-xs-2 col-md-2">
+      <label class="control-label" for="select_type"  style="position:relative;top:8px">类型</label> 
+      <select id="select_type" name="select_type" ng-model="criteria.type"  style="position:relative;top:8px">
+        <option value="">全部</option>
+        <option value="WECHATBOT">微信</option>
+      </select>
+    </div>
+    <div class="col-xs-4 col-md-4" >
+      <label class="control-label" for="username"  style="position:relative;top:8px">群号</label>
+      <input ng-model="criteria.groupname" type="text" id="groupname" name="groupname" size="14"  style="position:relative;top:8px" />
+    </div>
+    <div class="col-xs-4 col-md-4" >
+      <label class="control-label" for="nickname"  style="position:relative;top:8px">群名称</label>
+      <input ng-model="criteria.nickname" type="text" id="nickname" name="nickname" size="14"  style="position:relative;top:8px"/>
+    </div>
+    <div class="col-xs-2 col-md-2">
+      <button class="btn green btn-block" ng-click="search()">查询</button>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-xs-10 col-md-10">
+    <div layout="row" layout-sm="column" layout-align="space-around">
+      <ul class="pagination">
+	<li ng-repeat="i in paging.pagerange">
+	  <span ng-if=" i != paging.page ">
+	    <a href="javascript:;" ng-click="paging.jump(i)">{{i}}</a>
+	  </span>
+	  <span ng-if=" i == paging.page ">
+	    <b>{{i}}</b>
+	  </span>
+	</li>
+      </ul>
+    </div>
+    
+    <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
+	   style="padding:40px;margin:10px;width:auto">
+      <th style="text-align:center">类型</th>
+      <th style="text-align:center"></th>
+      <th style="text-align:center">群号</th>
+      <th style="text-align:center">群名称</th>
+      <th style="text-align:center">创建时间</th>
+      <th style="text-align:center">更新时间</th>
+      
+      <tbody>
+	<tr ng-repeat="row in body.data">
+          <td style="text-align:center;width:120px">{{ consts.types[row.type] }}</td>
+	  <td style="text-align:center;width:60px">
+            <img ng-src="{{row.avatar}}" width="32" height="32"/>
+          </td>
+	  <td style="text-align:center;width:120px">{{ row.groupname }}</td>
+	  <td style="text-align:center;width:120px">{{ row.nickname}}</td>
+	  <td style="text-align:center;width:160px">{{ row.createat }}</td>
+	  <td style="text-align:center;width:160px">{{ row.updateat }}</td>
+	</tr>
+      </tbody>
+    </table>
+  </div>
+</div>

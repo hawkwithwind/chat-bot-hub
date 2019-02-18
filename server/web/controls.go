@@ -262,7 +262,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	chatusercount := o.GetChatUserCount(tx)
+	chatusercount := o.GetChatUserCount(tx, criteria)
 	pagecount := chatusercount / ipagesize
 	if chatusercount%ipagesize != 0 {
 		pagecount += 1
@@ -273,6 +273,95 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Data: chatuservos,
 			Criteria: criteria,
 		},		
+		domains.Paging{
+			Page:      ipage,
+			PageCount: pagecount,
+			PageSize:  ipagesize,
+		})
+}
+
+func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
+	type ChatGroupVO struct {
+		ChatGroupId string         `json:"chatgroupId"`
+		GroupName   string         `json:"groupname"`
+		NickName    string         `json:"nickname"`
+		Type        string         `json:"type"`
+		Alias       string         `json:"alias"`
+		Avatar      string         `json:"avatar"`
+		CreateAt    utils.JSONTime `json:"createat"`
+		UpdateAt    utils.JSONTime `json:"updateat"`
+	}
+
+	type ChatGroupResponse struct {
+		Data []ChatGroupVO `json:"data"`
+		Criteria domains.ChatGroupCriteria `json:"criteria"`
+	}
+
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	page := o.getStringValueDefault(r.Form, "page", "0")
+	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
+	ctype := o.getStringValueDefault(r.Form, "type", "")
+	groupname := o.getStringValueDefault(r.Form, "groupname", "")
+	nickname := o.getStringValueDefault(r.Form, "nickname", "")
+	if o.Err != nil {
+		return
+	}
+
+	ipage := o.ParseInt(page, 0, 64)
+	ipagesize := o.ParseInt(pagesize, 0, 64)
+	if o.Err != nil {
+		o.Err = NewClientError(-1, o.Err)
+		return
+	}
+
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
+	criteria := domains.ChatGroupCriteria{
+		Type: utils.StringNull(ctype, ""),
+		GroupName: utils.StringNull(groupname, ""),
+		NickName: utils.StringNull(nickname, ""),
+	}
+	
+	chatgroups := o.GetChatGroups(tx,
+		criteria,
+		domains.Paging {
+			Page: ipage,
+			PageSize: ipagesize,
+		})
+	
+	if o.Err != nil {
+		return
+	}
+
+	chatgroupvos := make([]ChatGroupVO, 0, len(chatgroups))
+	for _, chatgroup := range chatgroups {
+		chatgroupvos = append(chatgroupvos, ChatGroupVO{
+			ChatGroupId: chatgroup.ChatGroupId,
+			GroupName:   chatgroup.GroupName,
+			NickName:   chatgroup.NickName,
+			Type:       chatgroup.Type,
+			Alias:      chatgroup.Alias.String,
+			Avatar:     chatgroup.Avatar.String,
+			CreateAt:   utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt:   utils.JSONTime{chatgroup.UpdateAt.Time},
+		})
+	}
+
+	chatgroupcount := o.GetChatGroupCount(tx, criteria)
+	pagecount := chatgroupcount / ipagesize
+	if chatgroupcount % ipagesize != 0 {
+		pagecount += 1
+	}
+
+	o.okWithPaging(w, "",
+		ChatGroupResponse{
+			Data: chatgroupvos,
+			Criteria: criteria,
+		},
 		domains.Paging{
 			Page:      ipage,
 			PageCount: pagecount,

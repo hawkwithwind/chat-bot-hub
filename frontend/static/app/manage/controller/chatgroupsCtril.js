@@ -1,16 +1,16 @@
 (function() {
   "use strict"
-  app.controller("chatusersCtrl", chatusersCtrl)
-  chatusersCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
+  app.controller("chatgroupsCtrl", chatgroupsCtrl)
+  chatgroupsCtrl.$inject = ["$scope", "$modal", "toastr", "buildModel",
 		           "buildPromise", "tools", "buildModelResId"]
-  function chatusersCtrl($scope, $modal, toastr,
-			 buildModel, buildPromise, tools, buildModelResId) {
+  function chatgroupsCtrl($scope, $modal, toastr,
+			  buildModel, buildPromise, tools, buildModelResId) {
     $scope.body = {
       criteria: {},
     }
     $scope.paging = {}
     $scope.criteria = {
-      username: '',
+      groupname: '',
       nickname: '',
       type: '',
     }
@@ -24,9 +24,9 @@
     $scope.initView = () => {
       $scope.paging.jump = (i) => {
         buildPromise(
-          buildModel('chatusers'),
+          buildModel('chatgroups'),
           {
-            'username': $scope.body.criteria.username,
+            'groupname': $scope.body.criteria.groupname,
             'nickname': $scope.body.criteria.nickname,
             'type': $scope.body.criteria.type,
             'page': i,
@@ -54,7 +54,7 @@
     }
 
     $scope.initView()
-  }  
+  }
 })()
 
 

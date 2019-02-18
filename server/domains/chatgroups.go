@@ -144,3 +144,75 @@ WHERE groupname=?
 		return nil
 	}
 }
+
+type ChatGroupCriteria struct {
+	GroupName sql.NullString
+	NickName  sql.NullString
+	Type      sql.NullString
+}
+
+func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, criteria ChatGroupCriteria, paging Paging) []ChatGroup {
+	if o.Err != nil {
+		return []ChatGroup{}
+	}
+
+	const query string = `
+SELECT * FROM chatgroups
+WHERE deleteat is NULL
+%s /* groupname */
+%s /* nickname */
+%s /* type */
+ORDER BY createat desc
+LIMIT ?, ?
+`
+	chatgroups := []ChatGroup{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatgroups,
+		fmt.Sprintf(query,
+			o.AndEqual("groupname", criteria.GroupName),
+			o.AndLike("nickname", sql.NullString{
+				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
+				Valid: criteria.NickName.Valid,
+			}),
+			o.AndEqual("type", criteria.Type)),
+		criteria.GroupName.String,
+		criteria.NickName.String,
+		criteria.Type.String,
+		(paging.Page-1) * paging.PageSize,
+		paging.PageSize)
+
+	if o.Err != nil {
+		return []ChatGroup{}
+	} else {
+		return chatgroups
+	}
+}
+
+func (o *ErrorHandler) GetChatGroupCount(q dbx.Queryable, criteria ChatGroupCriteria) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	const query string = `
+SELECT COUNT(*) from chatgroups
+WHERE deleteat is NULL
+%s /* groupname */
+%s /* nickname */
+%s /* type */
+`
+	var count []int64
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &count,
+		fmt.Sprintf(query,
+			o.AndEqual("groupname", criteria.GroupName),
+			o.AndLike("nickname", sql.NullString{
+				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
+				Valid: criteria.NickName.Valid,
+			}),
+			o.AndEqual("type", criteria.Type)),
+		criteria.GroupName.String,
+		criteria.NickName.String,
+		criteria.Type.String)
+
+	return count[0]
+}

@@ -117,13 +117,25 @@ func (o *ErrorHandler) Head(s interface{}, msg string) interface{} {
 	}
 }
 
-func (o *ErrorHandler) WhereClause(fieldName string, field sql.NullString) string {
+func (o *ErrorHandler) AndEqual(fieldName string, field sql.NullString) string {
 	if o.Err != nil {
 		return ""
 	}
 
 	if field.Valid {
 		return fmt.Sprintf("  AND %s=?", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (%s=? OR 1=1)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndLike(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s like ? ", fieldName)
 	} else {
 		return fmt.Sprintf("  AND (%s=? OR 1=1)", fieldName)
 	}
