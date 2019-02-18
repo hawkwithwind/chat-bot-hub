@@ -300,13 +300,10 @@ LIMIT ?, ?
 	o.Err = q.SelectContext(ctx, &chatusers,
 		fmt.Sprintf(query,
 			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", sql.NullString{
-				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
-				Valid: criteria.NickName.Valid,
-			}),
+			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
 		criteria.UserName.String,
-		criteria.NickName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
 		(paging.Page-1) * paging.PageSize,
 		paging.PageSize)
@@ -335,22 +332,11 @@ WHERE deleteat is NULL
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
 			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", sql.NullString{
-				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
-				Valid: criteria.NickName.Valid,
-			}),
+			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
 		criteria.UserName.String,
-		criteria.NickName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)
-
-	fmt.Println(fmt.Sprintf(query,
-		o.AndEqual("username", criteria.UserName),
-		o.AndLike("nickname", sql.NullString{
-			String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
-			Valid: criteria.NickName.Valid,
-		}),
-		o.AndEqual("type", criteria.Type)))
 
 	return count[0]
 }

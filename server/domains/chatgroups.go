@@ -170,13 +170,10 @@ LIMIT ?, ?
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
 			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", sql.NullString{
-				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
-				Valid: criteria.NickName.Valid,
-			}),
+			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
 		criteria.GroupName.String,
-		criteria.NickName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
 		(paging.Page-1) * paging.PageSize,
 		paging.PageSize)
@@ -205,13 +202,10 @@ WHERE deleteat is NULL
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
 			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", sql.NullString{
-				String: fmt.Sprintf("%%%s%%", criteria.NickName.String),
-				Valid: criteria.NickName.Valid,
-			}),
+			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
 		criteria.GroupName.String,
-		criteria.NickName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)
 
 	return count[0]
