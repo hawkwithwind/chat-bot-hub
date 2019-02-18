@@ -12,6 +12,7 @@
       'loginqq': buildUrl('loginqq'),
       'bots/id': buildUrl('bots/id'),
       'chatusers': buildUrl('chatusers'),
+      'chatgroups': buildUrl('chatgroups'),
     };
     return result;
     
