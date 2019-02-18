@@ -87,7 +87,17 @@
 	templateUrl: VIEW_PATH + 'manage/views/chatusers.html',
 	controller: 'chatusersCtrl',
 	ncyBreadcrumb: {
-	  label: '过滤器列表',
+	  label: '联系人列表',
+	  parent: 'app.manage'
+	}
+      });
+
+      $stateProvider.state('app.manage.chatgroups', {
+	url: '/chatgroups',
+	templateUrl: VIEW_PATH + 'manage/views/chatgroups.html',
+	controller: 'chatgroupsCtrl',
+	ncyBreadcrumb: {
+	  label: '群列表',
 	  parent: 'app.manage'
 	}
       });
