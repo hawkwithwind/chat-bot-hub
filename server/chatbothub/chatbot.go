@@ -568,7 +568,28 @@ func (bot *ChatBot) GetRoomMembers(arId string, body string) error {
 }
 
 func (bot *ChatBot) AddContact(arId string, body string) error {
-	return nil
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		stranger := o.FromMapString("stranger", bodym, "actionbody", false, "")
+		ticket := o.FromMapString("ticket", bodym, "actionbody", false, "")
+		actype := o.FromMapString("actype", bodym, "actionbody", false, "")
+		content := o.FromMapString("content", bodym, "actionbody", true, "")
+		
+		bot.Info("add contact %s", stranger)
+
+		o.SendAction(bot, arId, AddContact, o.ToJson(map[string]interface{}{
+			"stranger": stranger,
+			"ticket": ticket,
+			"type": actype,
+			"content": content,
+		}))
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddContact)
+	}
+
+	return o.Err
 }
 
 type WechatMsg struct {
