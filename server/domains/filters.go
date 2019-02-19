@@ -105,7 +105,8 @@ func (o *ErrorHandler) GetFilterByAccountId(q dbx.Queryable, accountid string) [
 SELECT *
 FROM filters
 WHERE accountid=?
-  AND deleteat is NULL`, accountid)
+  AND deleteat is NULL
+ORDER BY createat desc`, accountid)
 
 	return filters
 }
