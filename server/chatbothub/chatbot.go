@@ -574,7 +574,7 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 		bodym := o.FromJson(body)
 		stranger := o.FromMapString("stranger", bodym, "actionbody", false, "")
 		ticket := o.FromMapString("ticket", bodym, "actionbody", false, "")
-		actype := o.FromMapString("actype", bodym, "actionbody", false, "")
+		actype := o.FromMapString("type", bodym, "actionbody", false, "")
 		content := o.FromMapString("content", bodym, "actionbody", true, "")
 		
 		bot.Info("add contact %s", stranger)
