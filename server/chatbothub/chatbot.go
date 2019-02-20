@@ -576,14 +576,14 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 		ticket := o.FromMapString("ticket", bodym, "actionbody", false, "")
 		actype := int(o.FromMapFloat("type", bodym, "actionbody", false, 0.0))
 		content := o.FromMapString("content", bodym, "actionbody", true, "")
-		
+
 		bot.Info("add contact %s", stranger)
 
 		o.SendAction(bot, arId, AddContact, o.ToJson(map[string]interface{}{
 			"stranger": stranger,
-			"ticket": ticket,
-			"type": actype,
-			"content": content,
+			"ticket":   ticket,
+			"type":     actype,
+			"content":  content,
 		}))
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddContact)

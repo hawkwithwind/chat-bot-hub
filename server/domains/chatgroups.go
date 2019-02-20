@@ -175,7 +175,7 @@ LIMIT ?, ?
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
-		(paging.Page-1) * paging.PageSize,
+		(paging.Page-1)*paging.PageSize,
 		paging.PageSize)
 
 	if o.Err != nil {

@@ -2,10 +2,10 @@ package utils
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"reflect"
 	"time"
-	"database/sql"
 
 	mt "github.com/mitchellh/mapstructure"
 )
@@ -56,14 +56,14 @@ func DecodeMap(src interface{}, target interface{}) error {
 
 func StringNull(str string, defaultValue string) sql.NullString {
 	if str == defaultValue {
-		return sql.NullString {
+		return sql.NullString{
 			String: "",
-			Valid: false,
+			Valid:  false,
 		}
 	} else {
-		return sql.NullString {
+		return sql.NullString{
 			String: str,
-			Valid: true,
+			Valid:  true,
 		}
 	}
 }

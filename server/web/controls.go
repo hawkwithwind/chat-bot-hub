@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type GRPCWrapper struct {
@@ -204,7 +204,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ChatUserResponse struct {
-		Data []ChatUserVO `json:"data"`
+		Data     []ChatUserVO             `json:"data"`
 		Criteria domains.ChatUserCriteria `json:"criteria"`
 	}
 
@@ -232,18 +232,18 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	defer o.CommitOrRollback(tx)
 
 	criteria := domains.ChatUserCriteria{
-		Type: utils.StringNull(ctype, ""),
+		Type:     utils.StringNull(ctype, ""),
 		UserName: utils.StringNull(username, ""),
 		NickName: utils.StringNull(nickname, ""),
 	}
-	
+
 	chatusers := o.GetChatUsers(tx,
 		criteria,
-		domains.Paging {
-			Page: ipage,
+		domains.Paging{
+			Page:     ipage,
 			PageSize: ipagesize,
 		})
-	
+
 	if o.Err != nil {
 		return
 	}
@@ -270,9 +270,9 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	o.okWithPaging(w, "",
 		ChatUserResponse{
-			Data: chatuservos,
+			Data:     chatuservos,
 			Criteria: criteria,
-		},		
+		},
 		domains.Paging{
 			Page:      ipage,
 			PageCount: pagecount,
@@ -293,7 +293,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ChatGroupResponse struct {
-		Data []ChatGroupVO `json:"data"`
+		Data     []ChatGroupVO             `json:"data"`
 		Criteria domains.ChatGroupCriteria `json:"criteria"`
 	}
 
@@ -321,18 +321,18 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	defer o.CommitOrRollback(tx)
 
 	criteria := domains.ChatGroupCriteria{
-		Type: utils.StringNull(ctype, ""),
+		Type:      utils.StringNull(ctype, ""),
 		GroupName: utils.StringNull(groupname, ""),
-		NickName: utils.StringNull(nickname, ""),
+		NickName:  utils.StringNull(nickname, ""),
 	}
-	
+
 	chatgroups := o.GetChatGroups(tx,
 		criteria,
-		domains.Paging {
-			Page: ipage,
+		domains.Paging{
+			Page:     ipage,
 			PageSize: ipagesize,
 		})
-	
+
 	if o.Err != nil {
 		return
 	}
@@ -342,24 +342,24 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		chatgroupvos = append(chatgroupvos, ChatGroupVO{
 			ChatGroupId: chatgroup.ChatGroupId,
 			GroupName:   chatgroup.GroupName,
-			NickName:   chatgroup.NickName,
-			Type:       chatgroup.Type,
-			Alias:      chatgroup.Alias.String,
-			Avatar:     chatgroup.Avatar.String,
-			CreateAt:   utils.JSONTime{chatgroup.CreateAt.Time},
-			UpdateAt:   utils.JSONTime{chatgroup.UpdateAt.Time},
+			NickName:    chatgroup.NickName,
+			Type:        chatgroup.Type,
+			Alias:       chatgroup.Alias.String,
+			Avatar:      chatgroup.Avatar.String,
+			CreateAt:    utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt:    utils.JSONTime{chatgroup.UpdateAt.Time},
 		})
 	}
 
 	chatgroupcount := o.GetChatGroupCount(tx, criteria)
 	pagecount := chatgroupcount / ipagesize
-	if chatgroupcount % ipagesize != 0 {
+	if chatgroupcount%ipagesize != 0 {
 		pagecount += 1
 	}
 
 	o.okWithPaging(w, "",
 		ChatGroupResponse{
-			Data: chatgroupvos,
+			Data:     chatgroupvos,
 			Criteria: criteria,
 		},
 		domains.Paging{
