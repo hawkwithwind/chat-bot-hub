@@ -70,17 +70,7 @@
 	  label: '机器人列表',
           parent:'app.manage'
         }
-      });
-
-      $stateProvider.state('app.manage.filterslist', {
-	url: '/filterslist',
-	templateUrl: VIEW_PATH + 'manage/views/filterslist.html',
-	controller: 'filterslistCtrl',
-	ncyBreadcrumb: {
-	  label: '过滤器列表',
-	  parent: 'app.manage'
-	}
-      });
+      });     
 
       $stateProvider.state('app.manage.chatusers', {
 	url: '/chatusers',
@@ -101,6 +91,36 @@
 	  parent: 'app.manage'
 	}
       });
+
+      $stateProvider.state('app.filters', {
+        url: '/filters',
+        template: '<div ui-view class="fade-in-up" style="height: 100%;overflow-x: hidden;overflow-y: auto;"></div>',
+        title: '过滤器管理',
+        ncyBreadcrumb: {
+          label: '过滤器管理',
+          parent:'app'
+        }
+      });
+
+      $stateProvider.state('app.filters.filterslist', {
+	url: '/filterslist',
+	templateUrl: VIEW_PATH + 'manage/views/filterslist.html',
+	controller: 'filterslistCtrl',
+	ncyBreadcrumb: {
+	  label: '过滤器列表',
+	  parent: 'app.filters'
+	}
+      });
+
+      $stateProvider.state('app.filters.filtertemplatesuites', {
+        url: '/filtertemplatesuites',
+        template: VIEW_PATH + 'filters/views/filtertemplatesuites.html',
+        controller: 'filtertemplatesuitesCtrl',
+        ncyBreadcrumb: {
+          label: '过滤器套件模板',
+          parent:'app.filters'
+        }
+      });      
 
       // 异步加载需要的ctrl和UI组件
       function loadSequence() {

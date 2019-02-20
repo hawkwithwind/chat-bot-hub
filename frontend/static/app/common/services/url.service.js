@@ -13,6 +13,7 @@
       'bots/id': buildUrl('bots/id'),
       'chatusers': buildUrl('chatusers'),
       'chatgroups': buildUrl('chatgroups'),
+      'filtertemplatesuites': buildUrl('filtertemplatesuites')
     };
     return result;
     

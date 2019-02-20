@@ -54,3 +54,5 @@ VALUES
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, ftsuite)
 }
+
+
