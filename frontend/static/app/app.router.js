@@ -114,7 +114,7 @@
 
       $stateProvider.state('app.filters.filtertemplatesuites', {
         url: '/filtertemplatesuites',
-        template: VIEW_PATH + 'filters/views/filtertemplatesuites.html',
+        templateUrl: VIEW_PATH + 'filters/views/filtertemplatesuites.html',
         controller: 'filtertemplatesuitesCtrl',
         ncyBreadcrumb: {
           label: '过滤器套件模板',
