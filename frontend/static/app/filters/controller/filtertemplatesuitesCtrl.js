@@ -22,7 +22,7 @@
 
     $scope.refresh()
 
-    $scope.createFilter = (row) => {
+    $scope.createFTSuite = (row) => {
       $modal.open({
 	templateUrl: 'createFilterTSTemplate',
 	controller: createFilterTSCtrl,
@@ -31,7 +31,7 @@
       })
     }
 
-    $scope.editFilter = (row) => {
+    $scope.editFTSuite = (row) => {
       $modal.open({
 	templateUrl: 'editFilterTSTemplate',
 	controller: editFilterTSCtrl,
