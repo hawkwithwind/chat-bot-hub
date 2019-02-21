@@ -24,8 +24,8 @@
 
     $scope.createFTSuite = (row) => {
       $modal.open({
-	templateUrl: 'createFilterTSTemplate',
-	controller: createFilterTSCtrl,
+	templateUrl: 'createFTSuiteTemplate',
+	controller: createFTSuiteCtrl,
       }).then(() => {
 	$scope.refresh()
       })
@@ -33,11 +33,11 @@
 
     $scope.editFTSuite = (row) => {
       $modal.open({
-	templateUrl: 'editFilterTSTemplate',
-	controller: editFilterTSCtrl,
+	templateUrl: 'editFTSuiteTemplate',
+	controller: editFTSuiteCtrl,
 	resolve: {
 	  name: () => row.name,
-	  filterTemplateSuiteId: () => row.id
+	  id: () => row.id
 	}
       }).then(() => {
 	$scope.refresh()
@@ -83,7 +83,7 @@
       $uibModalInstance.dismiss()
     }
 
-    let url = "/filtertemplatesuites/" + $scope.data.filterTemplateSuiteId
+    let url = "/filtertemplatesuites/" + $scope.data.id
     $scope.saveFTSuite = (data) => {
       $http({
 	method: 'PUT',
