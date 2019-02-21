@@ -103,7 +103,11 @@
       $http({
         method: 'POST',
         url: addfturl,
-        data: data,
+        data: {
+          index: data.tempIndex,
+          type: data.tempType,
+          name: data.tempName,
+        },
       }).then((success) => {
         toastr.success(success, '插入成功')
       }, (error) => {

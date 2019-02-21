@@ -123,7 +123,7 @@ FROM filtertemplatesuites as fts
 LEFT JOIN accounts as a on fts.accountid = a.accountid
 WHERE a.accountname=? 
   AND fts.filtertemplatesuiteid=?
-  AND fts.delateat is NULL
+  AND fts.deleteat is NULL
   AND a.deleteat is NULL`, accountName, suiteId)
 
 	return nil != o.Head(fts, fmt.Sprintf("Filter %s more than one instance", suiteId))

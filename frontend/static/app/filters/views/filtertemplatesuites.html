@@ -60,7 +60,7 @@
   <div class="modal-body form-group-padding" id="editFilterTSBody">
     <div class="row form-group-padding">
       <div class="col-md-6">
-	<label for="text_filterTSName" class="col-md-3 control-label">名称</label>
+	<label for="text_filterTSName" class="col-md-3 control-label">套件模板名称</label>
 	<input id="text_filterTSName" name="text_filterTSName" type="text" class="col-md-9" ng-model="data.name" />
       </div>      
     </div>
@@ -69,7 +69,18 @@
 
     <div class="row form-group-padding">
       <div class="col-md-3">
-	<button class="btn green" ng-click="addFilterTemplate()">插入过滤器模板</button>
+        <input id="text_templateIndex" name="text_templateIndex" type="text" ng-model="data.tempIndex" placeholder="序号"/>
+      </div>
+      <div class="col-md-3">
+        <input id="text_templateName" name="text_templateName" type="text" ng-model="data.tempName" placeholder="名称"/>
+      </div>
+      <div class="col-md-3">
+        <select name="select_templateType" ng-model="data.tempType">
+          <option name="op1" value="一"/>
+        </select>
+      </div>
+      <div class="col-md-2">
+	<button class="btn green" ng-click="addFilterTemplate(data)">插入</button>
       </div>
     </div>
     
