@@ -37,7 +37,7 @@
 	controller: editFilterTSCtrl,
 	resolve: {
 	  name: () => row.name,
-	  filterTemplateSuiteId: () => row.filterTemplateSuiteId
+	  filterTemplateSuiteId: () => row.id
 	}
       }).then(() => {
 	$scope.refresh()
@@ -72,10 +72,10 @@
   }
 
   app.controller('editFilterTSCtrl', editFilterTSCtrl)
-  editFilterTSCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "name", "filterTemplateSuiteId"]
-  function editFilterTSCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, filterTemplateSuiteId) {
+  editFilterTSCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "name", "id"]
+  function editFilterTSCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, id) {
     $scope.data = {
-      filterId: filterId,
+      id: id,
       name: name,
     }
 
