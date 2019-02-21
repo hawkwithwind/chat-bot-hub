@@ -56,7 +56,7 @@
     }
 
     let url = "/filtertemplatesuites"
-    $scope.createFilterTS = (data) => {
+    $scope.newFTSuite = (data) => {
       $http({
 	method: 'POST',
 	url: url,
@@ -71,9 +71,9 @@
     }
   }
 
-  app.controller('editFilterTSCtrl', editFilterTSCtrl)
-  editFilterTSCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "name", "id"]
-  function editFilterTSCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, id) {
+  app.controller('editFTSuiteCtrl', editFTSuiteCtrl)
+  editFTSuiteCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "name", "id"]
+  function editFTSuiteCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, name, id) {
     $scope.data = {
       id: id,
       name: name,
@@ -84,7 +84,7 @@
     }
 
     let url = "/filtertemplatesuites/" + $scope.data.filterTemplateSuiteId
-    $scope.saveFilterTS = (data) => {
+    $scope.saveFTSuite = (data) => {
       $http({
 	method: 'PUT',
 	url: url,
