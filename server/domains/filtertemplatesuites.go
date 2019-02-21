@@ -1,7 +1,7 @@
 package domains
 
 import (
-	//"fmt"
+	"fmt"
 	//"time"
 	//"database/sql"
 	//"strings"
@@ -53,6 +53,80 @@ VALUES
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, ftsuite)
+}
+
+func (o *ErrorHandler) GetFilterTemplateSuitesByAccountName(q dbx.Queryable, accountname string) []FilterTemplateSuite {
+	if o.Err != nil {
+		return nil
+	}
+
+	fts := []FilterTemplateSuite{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &fts,
+		`
+SELECT fts.*
+FROM filtertemplatesuites as fts
+LEFT JOIN accounts as a on fts.accountid = a.accountid
+WHERE a.accountname=? 
+  AND a.deleteat is NULL
+  AND fts.deleteat is NULL`, accountname)
+
+	return fts
+}
+
+func (o *ErrorHandler) GetFilterTemplateSuiteById(q dbx.Queryable, suiteId string) *FilterTemplateSuite {
+	if o.Err != nil {
+		return nil
+	}
+
+	fts := []FilterTemplateSuite{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &fts,
+		`
+SELECT *
+FROM filtertemplatesuites
+WHERE filtertemplatesuiteid=? 
+  AND deleteat is NULL`, suiteId)
+
+	if suite := o.Head(fts, fmt.Sprintf("FilterTemplateSuite %s more than one instance", suiteId)); suite != nil {
+		return suite.(*FilterTemplateSuite)
+	} else {
+		return nil
+	}
+}
+
+func (o *ErrorHandler) UpdateFilterTemplateSuite(q dbx.Queryable, suite *FilterTemplateSuite) {
+	if o.Err != nil {
+		return
+	}
+
+	const query string = `
+UPDATE filtertemplatesuites
+SET filtertemplatesuitename = :filtertemplatesuite
+WHERE filtertemplatesuiteid = :filtertemplatesuiteid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, suite)
+}
+
+func (o *ErrorHandler) CheckFilterTemplateSuiteOwner(q dbx.Queryable, suiteId string, accountName string) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	fts := []FilterTemplateSuite{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &fts,
+		`
+SELECT fts.*
+FROM filtertemplatesuites as fts 
+LEFT JOIN accounts as a on fts.accountid = a.accountid
+WHERE a.accountname=? 
+  AND fts.filtertemplatesuiteid=?
+  AND fts.delateat is NULL
+  AND a.deleteat is NULL`, accountName, suiteId)
+
+	return nil != o.Head(fts, fmt.Sprintf("Filter %s more than one instance", suiteId))
 }
 
 

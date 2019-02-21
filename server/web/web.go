@@ -371,7 +371,15 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/filters/{filterId}/next", ctx.validate(ctx.updateFilterNext)).Methods("PUT")
 	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
 
-	// chatusers and more
+	// filter templates and generators (filtermanage.go)
+	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.getFilterTemplateSuites)).Methods("GET")
+	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.createFilterTemplateSuite)).Methods("POST")
+	r.HandleFunc("/filtertemplatesuites/{suiteId}", ctx.validate(ctx.updateFilterTemplateSuite)).Methods("PUT")
+	r.HandleFunc("/filtertemplates", ctx.validate(ctx.createFilterTemplate)).Methods("POST")
+	r.HandleFunc("/filtertemplates/{templateId}", ctx.validate(ctx.updateFilterTemplate)).Methods("PUT")
+	r.HandleFunc("/filtertemplates/{templateId}", ctx.validate(ctx.deleteFilterTemplate)).Methods("DELETE")
+
+	// chatusers and more (controls.go)
 	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatUsers)).Methods("GET")
 	r.HandleFunc("/chatgroups", ctx.validate(ctx.getChatGroups)).Methods("GET")
 

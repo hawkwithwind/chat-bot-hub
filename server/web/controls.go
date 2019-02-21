@@ -671,7 +671,10 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 	filtertype := o.getStringValue(r.Form, "type")
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
 	accountName := o.getAccountName(r)
+	
 	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+	
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
 		return
@@ -685,7 +688,7 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 		filter.Body = sql.NullString{String: filterbody, Valid: true}
 	}
 	o.SaveFilter(tx, filter)
-	o.CommitOrRollback(tx)
+	
 
 	o.ok(w, "success", filter)
 }
