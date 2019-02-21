@@ -96,7 +96,20 @@
       })
 
       $scope.close()
-    }    
+    }
+
+    let addfturl = "/filtertemplates"
+    $scope.addFilterTemplate = (data) => {
+      $http({
+        method: 'POST',
+        url: addfturl,
+        data: data,
+      }).then((success) => {
+        toastr.success(success, '插入成功')
+      }, (error) => {
+        toastr.error(error, '插入失败')
+      })
+    }
   }
   
   
