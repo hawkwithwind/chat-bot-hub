@@ -400,7 +400,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					bodym := o.FromJson(in.Body)
 					o.FromMapString("imageId", bodym, "actionBody", false, "")
 
-					if o.Err == nil {
+					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}
 				} else {
