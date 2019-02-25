@@ -288,6 +288,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		Type        string         `json:"type"`
 		Alias       string         `json:"alias"`
 		Avatar      string         `json:"avatar"`
+		MemberCount int            `json:"membercount"`
 		CreateAt    utils.JSONTime `json:"createat"`
 		UpdateAt    utils.JSONTime `json:"updateat"`
 	}
@@ -342,12 +343,13 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		chatgroupvos = append(chatgroupvos, ChatGroupVO{
 			ChatGroupId: chatgroup.ChatGroupId,
 			GroupName:   chatgroup.GroupName,
-			NickName:    chatgroup.NickName,
-			Type:        chatgroup.Type,
-			Alias:       chatgroup.Alias.String,
-			Avatar:      chatgroup.Avatar.String,
-			CreateAt:    utils.JSONTime{chatgroup.CreateAt.Time},
-			UpdateAt:    utils.JSONTime{chatgroup.UpdateAt.Time},
+			NickName:   chatgroup.NickName,
+			Type:       chatgroup.Type,
+			Alias:      chatgroup.Alias.String,
+			Avatar:     chatgroup.Avatar.String,
+			MemberCount: chatgroup.MemberCount,
+			CreateAt:   utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt:   utils.JSONTime{chatgroup.UpdateAt.Time},
 		})
 	}
 
