@@ -404,15 +404,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				memberNames := make([]domains.ChatUserName, 0, len(info.Member))
+				chatusers := make([]*domains.ChatUser, 0, len(info.Member))
 				for _, member := range info.Member {
-					memberNames = append(memberNames, domains.ChatUserName{
-						UserName: member,
-						NickName: "",
-					})
+					chatusers = append(chatusers, o.NewChatUser(member, thebotinfo.ClientType, ""))
 				}
 
-				members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, memberNames)
+				members := o.FindOrCreateChatUsers(tx, chatusers)
 				if o.Err != nil {
 					return
 				} else if len(members) != len(info.Member) {
@@ -454,7 +451,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
 
 		if thebotinfo.ClientType == "WECHATBOT" {
-
+			
 		}
 
 	case chatbothub.ACTIONREPLY:
@@ -570,19 +567,17 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// 2. update group members
-			memberNames := make([]domains.ChatUserName, 0, len(groupInfo.Member))
+			users := make([]*domains.ChatUser, 0, len(groupInfo.Member))
 			for _, member := range groupInfo.Member {
-				memberNames = append(memberNames, domains.ChatUserName{
-					UserName: member.UserName,
-					NickName: member.NickName,
-				})
+				users = append(users,
+					o.NewChatUser(member.UserName, thebotinfo.ClientType, member.NickName))
 			}
 
-			members := o.FindOrCreateChatUsers(tx, thebotinfo.ClientType, memberNames)
+			members := o.FindOrCreateChatUsers(tx, users)
 			if o.Err != nil {
 				return
-			} else if len(members) != len(memberNames) {
-				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(memberNames), len(members), members)
+			} else if len(members) != len(users) {
+				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(users), len(members), members)
 				return
 			}
 
@@ -604,6 +599,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatgroupMembers = append(chatgroupMembers, gm)
 			}
 
+			ctx.Info("chagroupmembers %d", len(chatgroupMembers))
 			if len(chatgroupMembers) > 0 {
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
