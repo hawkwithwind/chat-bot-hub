@@ -171,53 +171,30 @@ func (o *ErrorHandler) FindOrCreateChatUser(q dbx.Queryable, ctype string, chatu
 	}
 }
 
-type ChatUserName struct {
-	UserName string
-	NickName string
-}
-
-func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, ctype string, chatusernames []ChatUserName) []ChatUser {
+func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, chatusers []*ChatUser) []ChatUser {
 	if o.Err != nil {
 		return []ChatUser{}
 	}
 
-	uns := make([]string, 0, len(chatusernames))
-	for _, cun := range chatusernames {
+	if len(chatusers) == 0 {
+		return []ChatUser{}
+	}
+
+	o.UpdateOrCreateChatUsers(q, chatusers)
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+
+	uns := make([]string, 0, len(chatusers))
+	for _, cun := range chatusers {
 		uns = append(uns, cun.UserName)
 	}
 
-	chatusers := o.GetChatUsersByNames(q, ctype, uns)
-	if o.Err != nil {
-		return []ChatUser{}
-	}
-
-	notfound := make(map[string]ChatUserName)
-	for _, cun := range chatusernames {
-		notfound[cun.UserName] = cun
-	}
-
-	for _, chatuser := range chatusers {
-		delete(notfound, chatuser.UserName)
-	}
-
-	nfUsers := make([]*ChatUser, 0, len(notfound))
-	for nfname, cun := range notfound {
-		newuser := o.NewChatUser(nfname, ctype, cun.NickName)
-		nfUsers = append(nfUsers, newuser)
-	}
-
-	if len(nfUsers) > 0 {
-		o.UpdateOrCreateChatUsers(q, nfUsers)
-	}
-	if o.Err != nil {
-		return []ChatUser{}
-	}
-
-	chatusers = o.GetChatUsersByNames(q, ctype, uns)
+	ret := o.GetChatUsersByNames(q, chatusers[0].Type, uns)
 	if o.Err != nil {
 		return []ChatUser{}
 	} else {
-		return chatusers
+		return ret
 	}
 }
 
