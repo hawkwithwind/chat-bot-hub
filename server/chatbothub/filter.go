@@ -177,7 +177,7 @@ func (f *PlainFilter) Fill(msg string) error {
 				f.logger.Printf("%s[%s](%d) %s->%s (%d) emoji: <%s>%s",
 					f.Name, f.Type, mtype, fromUser, toUser, status, msg.Emoji.Attributions.Type, msg.Emoji.Attributions.ProductId)
 			}
-			
+
 		default:
 			f.logger.Printf("%s[%s](%d) %s->%s (%d) %T %v",
 				f.Name, f.Type, mtype, fromUser, toUser, status, content, content)
