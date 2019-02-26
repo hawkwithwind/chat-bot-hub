@@ -168,21 +168,16 @@ func (f *PlainFilter) Fill(msg string) error {
 			}
 
 		case map[string]interface{}:
-			switch msg := content["msg"].(type) {
-			case map[string]interface{}:
-				switch appmsg := msg["appmsg"].(type) {
-				case map[string]interface{}:
-					f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: <%s>%s",
-						f.Name, f.Type, mtype, fromUser, toUser, status, appmsg["sourcedisplayname"], appmsg["title"])
-				default:
-					f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
-						f.Name, f.Type, mtype, fromUser, toUser, status, appmsg)
-				}
-			default:
-				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: %v",
-					f.Name, f.Type, mtype, fromUser, toUser, status, msg)
+			var msg WechatMsg
+			o.Err = json.Unmarshal([]byte(o.ToJson(content["msg"])), &msg)
+			if len(msg.AppMsg.Title) > 0 {
+				f.logger.Printf("%s[%s](%d) %s->%s (%d) appmsg: <%s>%s",
+					f.Name, f.Type, mtype, fromUser, toUser, status, msg.AppMsg.SourceDisplayName, msg.AppMsg.Title)
+			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
+				f.logger.Printf("%s[%s](%d) %s->%s (%d) emoji: <%s>%s",
+					f.Name, f.Type, mtype, fromUser, toUser, status, msg.Emoji.Attributions.Type, status.Emoji.Attributions.IdBuffer)
 			}
-
+			
 		default:
 			f.logger.Printf("%s[%s](%d) %s->%s (%d) %T %v",
 				f.Name, f.Type, mtype, fromUser, toUser, status, content, content)
