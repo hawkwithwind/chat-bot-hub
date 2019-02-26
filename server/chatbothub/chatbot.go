@@ -874,8 +874,8 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				}
 			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
 				emoji := msg.Emoji
-				bot.Info("emoji %v", emoji)
-				emojiattr := emoji.Attributions
+				bot.Info("send emoji NOT SUPPORT %v", emoji)
+				//emojiattr := emoji.Attributions
 
 				// xml = fmt.Sprintf(WeEmojiXmlTemp,
 				// 	bot.Login,
