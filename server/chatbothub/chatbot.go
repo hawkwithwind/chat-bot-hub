@@ -909,8 +909,9 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 				xml = strings.Replace(xml, "\n", " ", -1)
 				bot.Info("emoji xml\n%s\n", xml)
+				xml = ""
 			}
-
+			
 			if len(xml) > 0 {
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
