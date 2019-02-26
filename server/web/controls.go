@@ -343,13 +343,13 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		chatgroupvos = append(chatgroupvos, ChatGroupVO{
 			ChatGroupId: chatgroup.ChatGroupId,
 			GroupName:   chatgroup.GroupName,
-			NickName:   chatgroup.NickName,
-			Type:       chatgroup.Type,
-			Alias:      chatgroup.Alias.String,
-			Avatar:     chatgroup.Avatar.String,
+			NickName:    chatgroup.NickName,
+			Type:        chatgroup.Type,
+			Alias:       chatgroup.Alias.String,
+			Avatar:      chatgroup.Avatar.String,
 			MemberCount: chatgroup.MemberCount,
-			CreateAt:   utils.JSONTime{chatgroup.CreateAt.Time},
-			UpdateAt:   utils.JSONTime{chatgroup.UpdateAt.Time},
+			CreateAt:    utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt:    utils.JSONTime{chatgroup.UpdateAt.Time},
 		})
 	}
 
@@ -673,10 +673,10 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 	filtertype := o.getStringValue(r.Form, "type")
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
 		return
@@ -690,7 +690,6 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 		filter.Body = sql.NullString{String: filterbody, Valid: true}
 	}
 	o.SaveFilter(tx, filter)
-	
 
 	o.ok(w, "success", filter)
 }

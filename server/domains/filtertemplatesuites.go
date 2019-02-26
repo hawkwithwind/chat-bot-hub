@@ -128,5 +128,3 @@ WHERE a.accountname=?
 
 	return nil != o.Head(fts, fmt.Sprintf("Filter %s more than one instance", suiteId))
 }
-
-

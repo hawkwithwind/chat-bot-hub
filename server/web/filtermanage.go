@@ -12,23 +12,22 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
-
 type FilterTemplate struct {
-	Id string `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Index int `json:"index"`
-	DefaultNext int `json:"defaultNext"`
-	CreateAt utils.JSONTime `json:"createAt"`
-	UpdateAt utils.JSONTime `json:"updateAt"`
+	Id          string         `json:"id"`
+	Name        string         `json:"name"`
+	Type        string         `json:"type"`
+	Index       int            `json:"index"`
+	DefaultNext int            `json:"defaultNext"`
+	CreateAt    utils.JSONTime `json:"createAt"`
+	UpdateAt    utils.JSONTime `json:"updateAt"`
 }
 
 type FilterTemplateSuite struct {
-	Id string `json:"id"`
-	Name string `json:"name"`
+	Id              string           `json:"id"`
+	Name            string           `json:"name"`
 	FilterTemplates []FilterTemplate `json:"filterTemplates"`
-	CreateAt utils.JSONTime `json:"createAt"`
-	UpdateAt utils.JSONTime `json:"updateAt"`
+	CreateAt        utils.JSONTime   `json:"createAt"`
+	UpdateAt        utils.JSONTime   `json:"updateAt"`
 }
 
 func (web *WebServer) getFilterTemplateSuites(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +39,7 @@ func (web *WebServer) getFilterTemplateSuites(w http.ResponseWriter, r *http.Req
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	filtertslist := o.GetFilterTemplateSuitesByAccountName(tx, accountName)
 
 	var resdata []FilterTemplateSuite
@@ -49,22 +48,22 @@ func (web *WebServer) getFilterTemplateSuites(w http.ResponseWriter, r *http.Req
 		ftlist := o.GetFilterTemplatesBySuiteId(tx, fts.FilterTemplateSuiteId)
 		for _, ft := range ftlist {
 			resft = append(resft, FilterTemplate{
-				Id: ft.FilterTemplateId,
-				Name: ft.FilterTemplateName,
-				Type: ft.Type,
-				Index: ft.Index,
+				Id:          ft.FilterTemplateId,
+				Name:        ft.FilterTemplateName,
+				Type:        ft.Type,
+				Index:       ft.Index,
 				DefaultNext: ft.DefaultNext,
-				CreateAt: utils.JSONTime{ft.CreateAt.Time},
-				UpdateAt: utils.JSONTime{ft.UpdateAt.Time},
+				CreateAt:    utils.JSONTime{ft.CreateAt.Time},
+				UpdateAt:    utils.JSONTime{ft.UpdateAt.Time},
 			})
 		}
-		
+
 		resdata = append(resdata, FilterTemplateSuite{
-			Id: fts.FilterTemplateSuiteId,
-			Name: fts.FilterTemplateSuiteName,
+			Id:              fts.FilterTemplateSuiteId,
+			Name:            fts.FilterTemplateSuiteName,
 			FilterTemplates: resft,
-			CreateAt: utils.JSONTime{fts.CreateAt.Time},
-			UpdateAt: utils.JSONTime{fts.UpdateAt.Time},
+			CreateAt:        utils.JSONTime{fts.CreateAt.Time},
+			UpdateAt:        utils.JSONTime{fts.UpdateAt.Time},
 		})
 	}
 
@@ -81,7 +80,7 @@ func (web *WebServer) createFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
 		return
@@ -93,7 +92,7 @@ func (web *WebServer) createFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	suite := o.NewFilterTemplateSuite(account.AccountId, suiteName)
 	o.SaveFilterTemplateSuite(tx, suite)
-	
+
 	o.ok(w, "success", suite)
 }
 
@@ -110,7 +109,7 @@ func (web *WebServer) updateFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	if !o.CheckFilterTemplateSuiteOwner(tx, suiteId, accountName) {
 		if o.Err == nil {
 			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器模板套件%s", suiteId))
@@ -147,16 +146,16 @@ func (web *WebServer) createFilterTemplate(w http.ResponseWriter, r *http.Reques
 	suiteId := o.getStringValue(r.Form, "suiteId")
 	indexstr := o.getStringValue(r.Form, "index")
 	index := int(o.ParseInt(indexstr, 10, 64))
-	
+
 	tempType := o.getStringValue(r.Form, "type")
 	defaultNextstr := o.getStringValue(r.Form, "next")
 	defaultNext := int(o.ParseInt(defaultNextstr, 10, 64))
-	
+
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
 		return
@@ -168,7 +167,7 @@ func (web *WebServer) createFilterTemplate(w http.ResponseWriter, r *http.Reques
 
 	template := o.NewFilterTemplate(account.AccountId, tempName, suiteId, index, tempType, defaultNext)
 	o.SaveFilterTemplate(tx, template)
-	
+
 	o.ok(w, "success", template)
 }
 
@@ -180,16 +179,16 @@ func (web *WebServer) updateFilterTemplate(w http.ResponseWriter, r *http.Reques
 	templateId := vars["templateId"]
 
 	r.ParseForm()
-	tempName := o.getStringValueDefault(r.Form, "name","")
-	
+	tempName := o.getStringValueDefault(r.Form, "name", "")
+
 	indexstr := o.getStringValue(r.Form, "index")
 	index := int(o.ParseInt(indexstr, 10, 64))
-	
+
 	defaultNextstr := o.getStringValue(r.Form, "next")
 	defaultNext := int(o.ParseInt(defaultNextstr, 10, 64))
 
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 

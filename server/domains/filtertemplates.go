@@ -60,10 +60,10 @@ INSERT INTO filtertemplates
 filtertemplateid, 
 accountid, 
 filtertemplatename, 
-filtertemplatesuiteid,`+
-	"`index`, "+
-	"`type`, " + 
-	`defaultnext
+filtertemplatesuiteid,` +
+		"`index`, " +
+		"`type`, " +
+		`defaultnext
 ) VALUES
 (:filtertemplateid, :accountid, :filtertemplatename, :filtertemplatesuiteid, :index, :type, :defaultnext)
 `
@@ -139,9 +139,9 @@ func (o *ErrorHandler) UpdateFilterTemplate(q dbx.Queryable, template *FilterTem
 	const query string = `
 UPDATE filtertemplates
 SET filtertemplatename = :filtertemplatename,` +
-	"`index` = :index, " +
-	"`type` = :type " +
-	`WHERE filtertemplateid = :filtertemplateid`
+		"`index` = :index, " +
+		"`type` = :type " +
+		`WHERE filtertemplateid = :filtertemplateid`
 
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, template)

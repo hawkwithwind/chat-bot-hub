@@ -595,6 +595,7 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 type WechatMsg struct {
 	AppInfo      WechatAppInfo `json:"appinfo"`
 	AppMsg       WechatAppMsg  `json:"appmsg"`
+	Emoji        WechatEmoji   `json:"emoji"`
 	FromUserName string        `json:"fromusername"`
 	Scene        string        `json:"scene"`
 	CommentUrl   string        `json:"commenturl"`
@@ -664,6 +665,40 @@ type WechatAppAttach struct {
 	FileKey        string `json:"filekey"`
 }
 
+type WechatEmoji struct {
+	Attributions WechatEmojiAttributions `json:"$"`
+}
+
+type WechatEmojiAttributions struct {
+	FromUserName      string `json:"fromusername"`
+	ToUserName        string `json:"tousername"`
+	Type              string `json:"type"`
+	IdBuffer          string `json:"idbuffer"`
+	Md5               string `json:"md5"`
+	Len               string `json:"len"`
+	ProductId         string `json:"productid"`
+	AndroidMd5        string `json:"androidmd5"`
+	AndroidLen        string `json:"androidlen"`
+	S60V3Md5          string `json:"s60v3md5"`
+	S60V3Len          string `json:"s60v3len"`
+	S60v5Md5          string `json:"s60v5md5"`
+	S60v5Len          string `json:"s60v5len"`
+	CdnUrl            string `json:"cdnurl"`
+	DesignerId        string `json:"designerid"`
+	ThumbUrl          string `json:"thumburl"`
+	EncryptUrl        string `json:"encrypturl"`
+	AesKey            string `json:"aeskey"`
+	ExternUrl         string `json:"externurl"`
+	ExternMd5         string `json:"externmd5"`
+	Width             string `json:"width"`
+	Height            string `json:"height"`
+	TpUrl             string `json:"tpurl"`
+	TpAuthKey         string `json:"tpauthkey"`
+	AttachedText      string `json:"attachedtext"`
+	AttachedTextColor string `json:"attachedtextcolor"`
+	LenSid            string `json:"lensid"`
+}
+
 const WeAppXmlTemp string = `<appmsg appid="%s" sdkver="%s">
 <title>%s</title>
 <des>%s</des>
@@ -713,6 +748,36 @@ const WeAppXmlTemp string = `<appmsg appid="%s" sdkver="%s">
 </weappinfo>
 </appmsg>`
 
+const WeEmojiXmlTemp string = `<emoji 
+fromusername="%s" 
+tousername="%s" 
+type="%s" 
+idbuffer="%s" 
+md5="%s" 
+len="%s" 
+productid="%s" 
+androidmd5="%s" 
+androidlen="%s" 
+s60v3md5="%s" 
+s60v3len="%s" 
+s60v5md5="%s" 
+s60v5len="%s" 
+cdnurl="%s" 
+designerid="" 
+thumburl="" 
+encrypturl="%s" 
+aeskey="%s" 
+externurl="%s" 
+externmd5="%s" 
+width="%s" 
+height="%s" 
+tpurl="%s" 
+tpauthkey="%s" 
+attachedtext="%s" 
+attachedtextcolor="%s" 
+lensid="%s" 
+/>`
+
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
 
@@ -744,68 +809,108 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				return o.Err
 			}
 
-			appmsg := msg.AppMsg
-			bot.Info("appmsg %v", appmsg)
+			var xml string
+			if len(msg.AppMsg.Title) > 0 {
+				appmsg := msg.AppMsg
+				bot.Info("appmsg %v", appmsg)
 
-			if appmsg.Type == "5" {
-				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-					"toUserName": toUserName,
-					"object": map[string]interface{}{
-						"appid":    appmsg.Attributions.Appid,
-						"sdkver":   appmsg.Attributions.Sdkver,
-						"title":    appmsg.Title,
-						"des":      appmsg.Des,
-						"url":      appmsg.Url,
-						"thumburl": appmsg.ThumbUrl,
-					},
-				}))
-			} else if appmsg.Type == "33" || appmsg.Type == "36" {
-				xml := fmt.Sprintf(WeAppXmlTemp,
-					appmsg.Attributions.Appid,
-					appmsg.Attributions.Sdkver,
-					appmsg.Title,
-					appmsg.Des,
-					appmsg.Action,
-					appmsg.Type,
-					appmsg.ShowType,
-					appmsg.SoundType,
-					appmsg.MediaTagName,
-					appmsg.MessageExt,
-					appmsg.MessageAction,
-					appmsg.Content,
-					appmsg.ContentAttr,
-					appmsg.Url,
-					appmsg.LowUrl,
-					appmsg.DataUrl,
-					appmsg.LowDataUrl,
-					appmsg.AppAttach.TotalLen,
-					appmsg.AppAttach.CdnThumbUrl,
-					appmsg.AppAttach.CdnThumbMd5,
-					appmsg.AppAttach.CdnThumbLength,
-					appmsg.AppAttach.CdnThumbWidth,
-					appmsg.AppAttach.CdnThumbHeight,
-					appmsg.AppAttach.CdnThumbAeskey,
-					appmsg.AppAttach.Aeskey,
-					appmsg.AppAttach.EncryVer,
-					appmsg.AppAttach.FileKey,
-					appmsg.ExtInfo,
-					appmsg.SourceUserName,
-					appmsg.SourceDisplayName,
-					appmsg.ThumbUrl,
-					appmsg.Md5,
-					appmsg.StatExtStr,
-					appmsg.WeAppInfo.UserName,
-					appmsg.WeAppInfo.AppId,
-					appmsg.WeAppInfo.Type,
-					appmsg.WeAppInfo.Version,
-					appmsg.WeAppInfo.WeAppIconUrl,
-					appmsg.WeAppInfo.PagePath,
-					appmsg.WeAppInfo.ShareId,
-					appmsg.WeAppInfo.AppServiceType)
+				if appmsg.Type == "5" {
+					o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
+						"toUserName": toUserName,
+						"object": map[string]interface{}{
+							"appid":    appmsg.Attributions.Appid,
+							"sdkver":   appmsg.Attributions.Sdkver,
+							"title":    appmsg.Title,
+							"des":      appmsg.Des,
+							"url":      appmsg.Url,
+							"thumburl": appmsg.ThumbUrl,
+						},
+					}))
+				} else if appmsg.Type == "33" || appmsg.Type == "36" {
+					xml = fmt.Sprintf(WeAppXmlTemp,
+						appmsg.Attributions.Appid,
+						appmsg.Attributions.Sdkver,
+						appmsg.Title,
+						appmsg.Des,
+						appmsg.Action,
+						appmsg.Type,
+						appmsg.ShowType,
+						appmsg.SoundType,
+						appmsg.MediaTagName,
+						appmsg.MessageExt,
+						appmsg.MessageAction,
+						appmsg.Content,
+						appmsg.ContentAttr,
+						appmsg.Url,
+						appmsg.LowUrl,
+						appmsg.DataUrl,
+						appmsg.LowDataUrl,
+						appmsg.AppAttach.TotalLen,
+						appmsg.AppAttach.CdnThumbUrl,
+						appmsg.AppAttach.CdnThumbMd5,
+						appmsg.AppAttach.CdnThumbLength,
+						appmsg.AppAttach.CdnThumbWidth,
+						appmsg.AppAttach.CdnThumbHeight,
+						appmsg.AppAttach.CdnThumbAeskey,
+						appmsg.AppAttach.Aeskey,
+						appmsg.AppAttach.EncryVer,
+						appmsg.AppAttach.FileKey,
+						appmsg.ExtInfo,
+						appmsg.SourceUserName,
+						appmsg.SourceDisplayName,
+						appmsg.ThumbUrl,
+						appmsg.Md5,
+						appmsg.StatExtStr,
+						appmsg.WeAppInfo.UserName,
+						appmsg.WeAppInfo.AppId,
+						appmsg.WeAppInfo.Type,
+						appmsg.WeAppInfo.Version,
+						appmsg.WeAppInfo.WeAppIconUrl,
+						appmsg.WeAppInfo.PagePath,
+						appmsg.WeAppInfo.ShareId,
+						appmsg.WeAppInfo.AppServiceType)
 
-				xml = strings.Replace(xml, "\n", "", -1)
-				//bot.Info("xml\n%s\n", xml)
+					xml = strings.Replace(xml, "\n", "", -1)
+					//bot.Info("xml\n%s\n", xml)
+				}
+			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
+				emoji := msg.Emoji
+				bot.Info("emoji %v", emoji)
+				emojiattr := emoji.Attributions
 
+				xml = fmt.Sprintf(WeEmojiXmlTemp,
+					emojiattr.FromUserName,
+					emojiattr.ToUserName,
+					emojiattr.Type,
+					emojiattr.IdBuffer,
+					emojiattr.Md5,
+					emojiattr.Len,
+					emojiattr.ProductId,
+					emojiattr.AndroidMd5,
+					emojiattr.AndroidLen,
+					emojiattr.S60V3Md5,
+					emojiattr.S60V3Len,
+					emojiattr.S60v5Md5,
+					emojiattr.S60v5Len,
+					emojiattr.CdnUrl,
+					emojiattr.DesignerId,
+					emojiattr.ThumbUrl,
+					emojiattr.EncryptUrl,
+					emojiattr.AesKey,
+					emojiattr.ExternUrl,
+					emojiattr.ExternMd5,
+					emojiattr.Width,
+					emojiattr.Height,
+					emojiattr.TpUrl,
+					emojiattr.TpAuthKey,
+					emojiattr.AttachedText,
+					emojiattr.AttachedTextColor,
+					emojiattr.LenSid)
+				xml = strings.Replace(xml, "\n", " ", -1)
+				bot.Info("emoji xml\n%s\n", xml)
+			}
+
+			if len(xml) > 0 {
 				o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 					"toUserName": toUserName,
 					"xml":        xml,

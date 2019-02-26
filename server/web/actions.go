@@ -451,7 +451,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
 
 		if thebotinfo.ClientType == "WECHATBOT" {
-			
+
 		}
 
 	case chatbothub.ACTIONREPLY:
