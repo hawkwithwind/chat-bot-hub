@@ -763,8 +763,8 @@ s60v3len="%s"
 s60v5md5="%s" 
 s60v5len="%s" 
 cdnurl="%s" 
-designerid="" 
-thumburl="" 
+designerid="%s" 
+thumburl="%s" 
 encrypturl="%s" 
 aeskey="%s" 
 externurl="%s" 
@@ -879,8 +879,8 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				emojiattr := emoji.Attributions
 
 				xml = fmt.Sprintf(WeEmojiXmlTemp,
-					emojiattr.FromUserName,
-					emojiattr.ToUserName,
+					bot.Login,
+					toUserName,
 					emojiattr.Type,
 					emojiattr.IdBuffer,
 					emojiattr.Md5,
@@ -906,6 +906,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					emojiattr.AttachedText,
 					emojiattr.AttachedTextColor,
 					emojiattr.LenSid)
+
 				xml = strings.Replace(xml, "\n", " ", -1)
 				bot.Info("emoji xml\n%s\n", xml)
 			}

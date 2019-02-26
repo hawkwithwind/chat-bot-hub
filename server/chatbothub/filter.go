@@ -175,7 +175,7 @@ func (f *PlainFilter) Fill(msg string) error {
 					f.Name, f.Type, mtype, fromUser, toUser, status, msg.AppMsg.SourceDisplayName, msg.AppMsg.Title)
 			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
 				f.logger.Printf("%s[%s](%d) %s->%s (%d) emoji: <%s>%s",
-					f.Name, f.Type, mtype, fromUser, toUser, status, msg.Emoji.Attributions.Type, msg.Emoji.Attributions.IdBuffer)
+					f.Name, f.Type, mtype, fromUser, toUser, status, msg.Emoji.Attributions.Type, msg.Emoji.Attributions.ProductId)
 			}
 			
 		default:
