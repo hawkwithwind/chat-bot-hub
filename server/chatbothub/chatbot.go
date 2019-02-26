@@ -775,8 +775,7 @@ tpurl="%s"
 tpauthkey="%s" 
 attachedtext="%s" 
 attachedtextcolor="%s" 
-lensid="%s" 
-/>`
+lensid="%s"></emoji>`
 
 func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 	o := &ErrorHandler{}
@@ -909,7 +908,6 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 				xml = strings.Replace(xml, "\n", " ", -1)
 				bot.Info("emoji xml\n%s\n", xml)
-				xml = ""
 			}
 			
 			if len(xml) > 0 {
