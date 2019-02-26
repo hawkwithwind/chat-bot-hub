@@ -101,6 +101,7 @@ const (
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	IMAGEMESSAGE  string = "IMAGEMESSAGE"
+	EMOJIMESSAGE  string = "EMOJIMESSAGE"
 	STATUSMESSAGE string = "STATUSMESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
 	CONTACTINFO   string = "CONTACTINFO"
@@ -399,6 +400,18 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
 					o.FromMapString("imageId", bodym, "actionBody", false, "")
+
+					if o.Err == nil && bot.filter != nil {
+						o.Err = bot.filter.Fill(o.ToJson(bodym))
+					}
+				} else {
+					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+				}
+
+			case EMOJIMESSAGE:
+				if bot.ClientType == WECHATBOT {
+					bodym := o.FromJson(in.Body)
+					o.FromMapString("emojiId", bodym, "actionBody", false, "")
 
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))

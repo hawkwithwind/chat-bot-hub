@@ -877,37 +877,36 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 				bot.Info("emoji %v", emoji)
 				emojiattr := emoji.Attributions
 
-				xml = fmt.Sprintf(WeEmojiXmlTemp,
-					bot.Login,
-					toUserName,
-					emojiattr.Type,
-					emojiattr.IdBuffer,
-					emojiattr.Md5,
-					emojiattr.Len,
-					emojiattr.ProductId,
-					emojiattr.AndroidMd5,
-					emojiattr.AndroidLen,
-					emojiattr.S60V3Md5,
-					emojiattr.S60V3Len,
-					emojiattr.S60v5Md5,
-					emojiattr.S60v5Len,
-					emojiattr.CdnUrl,
-					emojiattr.DesignerId,
-					emojiattr.ThumbUrl,
-					emojiattr.EncryptUrl,
-					emojiattr.AesKey,
-					emojiattr.ExternUrl,
-					emojiattr.ExternMd5,
-					emojiattr.Width,
-					emojiattr.Height,
-					emojiattr.TpUrl,
-					emojiattr.TpAuthKey,
-					emojiattr.AttachedText,
-					emojiattr.AttachedTextColor,
-					emojiattr.LenSid)
-
-				xml = strings.Replace(xml, "\n", " ", -1)
-				bot.Info("emoji xml\n%s\n", xml)
+				// xml = fmt.Sprintf(WeEmojiXmlTemp,
+				// 	bot.Login,
+				// 	toUserName,
+				// 	emojiattr.Type,
+				// 	emojiattr.IdBuffer,
+				// 	emojiattr.Md5,
+				// 	emojiattr.Len,
+				// 	emojiattr.ProductId,
+				// 	emojiattr.AndroidMd5,
+				// 	emojiattr.AndroidLen,
+				// 	emojiattr.S60V3Md5,
+				// 	emojiattr.S60V3Len,
+				// 	emojiattr.S60v5Md5,
+				// 	emojiattr.S60v5Len,
+				// 	emojiattr.CdnUrl,
+				// 	emojiattr.DesignerId,
+				// 	emojiattr.ThumbUrl,
+				// 	emojiattr.EncryptUrl,
+				// 	emojiattr.AesKey,
+				// 	emojiattr.ExternUrl,
+				// 	emojiattr.ExternMd5,
+				// 	emojiattr.Width,
+				// 	emojiattr.Height,
+				// 	emojiattr.TpUrl,
+				// 	emojiattr.TpAuthKey,
+				// 	emojiattr.AttachedText,
+				// 	emojiattr.AttachedTextColor,
+				// 	emojiattr.LenSid)
+				// xml = strings.Replace(xml, "\n", " ", -1)
+				// bot.Info("emoji xml\n%s\n", xml)
 			}
 			
 			if len(xml) > 0 {
