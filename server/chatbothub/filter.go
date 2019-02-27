@@ -397,7 +397,10 @@ func (f *KVRouter) Fill(msg string) error {
 	fillOnce := false
 
 	for k, vmaps := range f.NextFilter {
+		fmt.Printf("KVRouter body \n%s\n", body)
 		if value := findByJsonPath(body, k); value != nil {
+			fmt.Printf("KVRouter %s -> %v\n", k, value)
+			
 			var s string
 			if reflect.TypeOf(value) == reflect.TypeOf(s) {
 				if filter, found := vmaps[value.(string)]; found {
@@ -411,6 +414,8 @@ func (f *KVRouter) Fill(msg string) error {
 			} else {
 				errlist = append(errlist, fmt.Errorf("key[%s] = %v; type string expected", k, value))
 			}
+		} else {
+			fmt.Printf("KVRouter key %s not found\n", k)
 		}
 	}
 
