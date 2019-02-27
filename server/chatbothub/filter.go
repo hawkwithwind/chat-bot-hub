@@ -295,7 +295,6 @@ func (f *RegexRouter) Fill(msg string) error {
 
 	for k, v := range f.NextFilter {
 		if cr, found := f.compiledRegexp[k]; found {
-			fmt.Printf("match %s -> %s %v\n", k, msg, cr.MatchString(msg))
 			if cr.MatchString(msg) {
 				if v != nil {
 					return v.Fill(msg)
