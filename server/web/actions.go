@@ -426,7 +426,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if len(chatgroupMembers) > 0 {
 					o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 				}
-
+				if o.Err != nil {
+					return
+				}
+				o.SaveChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 				if o.Err != nil {
 					return
 				}
@@ -439,6 +442,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatuser.SetExt(bodystr)
 
 				o.UpdateOrCreateChatUser(tx, chatuser)
+				theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
+				if o.Err != nil {
+					return
+				} else if theuser == nil {
+					o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
+					return
+				}
+				o.SaveChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
 				if o.Err != nil {
 					return
 				}
@@ -563,6 +574,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				return
 			} else if chatgroup == nil {
 				o.Err = fmt.Errorf("didn't find chat group %s", groupInfo.UserName)
+				return
+			}
+
+			// 1.1 save botId contact groupId, if not exist
+			o.SaveChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
+			if o.Err != nil {
 				return
 			}
 
