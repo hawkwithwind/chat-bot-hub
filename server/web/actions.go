@@ -429,7 +429,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
-				o.SaveChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
+				o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 				if o.Err != nil {
 					return
 				}
@@ -449,7 +449,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
 					return
 				}
-				o.SaveChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
+				o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
 				if o.Err != nil {
 					return
 				}
