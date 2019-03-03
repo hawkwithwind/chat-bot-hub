@@ -546,6 +546,21 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					// dont break, update all fr for the same rlogin
 				}
 			}
+		case chatbothub.DeleteContact:
+			bodym := o.FromJson(localar.ActionBody)
+			userId := o.FromMapString("userId", bodym, "actionBody", false, "")
+
+			if o.Err != nil {
+				return
+			}
+
+			ctx.Info("delete contact %s from %s", userId, bot.Login)
+
+			o.DeleteChatContact(tx, bot.BotId, userId)
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
 		case chatbothub.GetRoomMembers:
 			bodym := o.FromJson(localar.ActionBody)
