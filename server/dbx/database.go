@@ -125,7 +125,7 @@ func (o *ErrorHandler) AndEqual(fieldName string, field sql.NullString) string {
 	if field.Valid {
 		return fmt.Sprintf("  AND %s=?", fieldName)
 	} else {
-		return fmt.Sprintf("  AND (%s=? OR 1=1)", fieldName)
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
 	}
 }
 
@@ -137,6 +137,6 @@ func (o *ErrorHandler) AndLike(fieldName string, field sql.NullString) string {
 	if field.Valid {
 		return fmt.Sprintf("  AND %s like ? ", fieldName)
 	} else {
-		return fmt.Sprintf("  AND (%s=? OR 1=1)", fieldName)
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
 	}
 }

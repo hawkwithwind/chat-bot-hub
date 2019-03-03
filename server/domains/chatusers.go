@@ -256,6 +256,7 @@ type ChatUserCriteria struct {
 	UserName sql.NullString
 	NickName sql.NullString
 	Type     sql.NullString
+	BotId    sql.NullString
 }
 
 func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
@@ -264,11 +265,12 @@ func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, 
 	}
 
 	const query string = `
-SELECT * FROM chatusers
+SELECT * 
+FROM chatusers
 WHERE deleteat is NULL
-%s /* username */
-%s /* nickname */
-%s /* type */
+  %s /* username */
+  %s /* nickname */
+  %s /* type */
 ORDER BY createat desc
 LIMIT ?, ?
 `
@@ -311,6 +313,86 @@ WHERE deleteat is NULL
 			o.AndEqual("username", criteria.UserName),
 			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
+		criteria.UserName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
+		criteria.Type.String)
+
+	return count[0]
+}
+
+func (o *ErrorHandler) GetChatUsersWithBotId(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
+	if o.Err != nil {
+		return []ChatUser{}
+	}
+
+	if criteria.BotId.Valid == false {
+		o.Err = fmt.Errorf("GetChatUsersWithBotId must set param botId")
+		return []ChatUser{}
+	}
+
+	const query string = `
+SELECT u.* 
+FROM chatusers as u
+LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
+WHERE u.deleteat is NULL
+  AND c.deleteat is NULL
+  AND c.botid = ?
+  %s /* username */
+  %s /* nickname */
+  %s /* type */
+ORDER BY createat desc
+LIMIT ?, ?
+`
+	chatusers := []ChatUser{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatusers,
+		fmt.Sprintf(query,
+			o.AndEqual("username", criteria.UserName),
+			o.AndLike("nickname", criteria.NickName),
+			o.AndEqual("type", criteria.Type)),
+		criteria.BotId.String,
+		criteria.UserName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
+		criteria.Type.String,
+		(paging.Page-1)*paging.PageSize,
+		paging.PageSize)
+
+	if o.Err != nil {
+		return []ChatUser{}
+	} else {
+		return chatusers
+	}
+}
+
+func (o *ErrorHandler) GetChatUserCountWithBotId(q dbx.Queryable, criteria ChatUserCriteria) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	if criteria.BotId.Valid == false {
+		o.Err = fmt.Errorf("GetChatUsersWithBotId must set param botId")
+		return 0
+	}
+
+	const query string = `
+SELECT COUNT(*)
+FROM chatusers as u
+LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
+WHERE u.deleteat is NULL
+  AND c.deleteat is NULL
+  AND c.botid = ?
+  %s /* username */
+  %s /* nickname */
+  %s /* type */
+`
+	var count []int64
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &count,
+		fmt.Sprintf(query,
+			o.AndEqual("username", criteria.UserName),
+			o.AndLike("nickname", criteria.NickName),
+			o.AndEqual("type", criteria.Type)),
+		criteria.BotId.String,
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)

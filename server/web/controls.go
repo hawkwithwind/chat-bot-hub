@@ -217,6 +217,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	ctype := o.getStringValueDefault(r.Form, "type", "")
 	username := o.getStringValueDefault(r.Form, "username", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
+	botid := o.getStringValueDefault(r.Form, "botid", "")
 	if o.Err != nil {
 		return
 	}
@@ -235,17 +236,35 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		Type:     utils.StringNull(ctype, ""),
 		UserName: utils.StringNull(username, ""),
 		NickName: utils.StringNull(nickname, ""),
+		BotId:    utils.StringNull(botid, ""),
 	}
 
-	chatusers := o.GetChatUsers(tx,
-		criteria,
-		domains.Paging{
-			Page:     ipage,
-			PageSize: ipagesize,
-		})
-
+	var chatusers []domains.ChatUser
+	if criteria.BotId.Valid {
+		chatusers = o.GetChatUsersWithBotId(tx,
+			criteria,
+			domains.Paging{
+				Page:     ipage,
+				PageSize: ipagesize,
+			})
+	} else {
+		chatusers = o.GetChatUsers(tx,
+			criteria,
+			domains.Paging{
+				Page:     ipage,
+				PageSize: ipagesize,
+			})
+	}
+	
 	if o.Err != nil {
 		return
+	}
+
+	var chatusercount int64
+	if criteria.BotId.Valid {
+		chatusercount = o.GetChatUserCountWithBotId(tx, criteria)
+	} else {
+		chatusercount = o.GetChatUserCount(tx, criteria)
 	}
 
 	chatuservos := make([]ChatUserVO, 0, len(chatusers))
@@ -261,8 +280,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
-
-	chatusercount := o.GetChatUserCount(tx, criteria)
+	
 	pagecount := chatusercount / ipagesize
 	if chatusercount%ipagesize != 0 {
 		pagecount += 1

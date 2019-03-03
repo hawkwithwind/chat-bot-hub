@@ -13,6 +13,7 @@
       username: '',
       nickname: '',
       type: '',
+      botid: '',
     }
 
     $scope.search = () => {
@@ -29,6 +30,7 @@
             'username': $scope.body.criteria.username,
             'nickname': $scope.body.criteria.nickname,
             'type': $scope.body.criteria.type,
+            'botid': $scope.body.criteria.botid,
             'page': i,
             'pagesize': $scope.paging.pagesize ? $scope.paging.pagesize : 100,
           })
