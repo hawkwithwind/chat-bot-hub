@@ -65,6 +65,7 @@ type ChatBot struct {
 
 const (
 	AddContact               string = "AddContact"
+	DeleteContact            string = "DeleteContact"
 	AcceptUser               string = "AcceptUser"
 	SendTextMessage          string = "SendTextMessage"
 	SendAppMessage           string = "SendAppMessage"
@@ -273,6 +274,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 
 	actionMap := map[string]func(*ChatBot, string, string) error{
 		AddContact:               (*ChatBot).AddContact,
+		DeleteContact:            (*ChatBot).DeleteContact,
 		AcceptUser:               (*ChatBot).AcceptUser,
 		SendTextMessage:          (*ChatBot).SendTextMessage,
 		SendAppMessage:           (*ChatBot).SendAppMessage,
@@ -316,6 +318,21 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+func (bot *ChatBot) DeleteContact(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bot.Info("DeleteContact")
+		bodym := o.FromJson(body)
+		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
+		o.SendAction(bot, arId, DeleteContact, userId)
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, DeleteContact)
+	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) SyncContact(arId string, body string) error {
