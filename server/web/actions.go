@@ -578,7 +578,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// 1.1 save botId contact groupId, if not exist
-			o.SaveChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
+			o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 			if o.Err != nil {
 				return
 			}
