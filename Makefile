@@ -20,9 +20,6 @@ build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) build-nodejs-image
 	$(RUNTIME_IMAGE):build-nodejs npm install && \
 	docker run --rm \
 	-v $(shell pwd)/frontend:/home/work \
-	$(RUNTIME_IMAGE):build-nodejs npm audit fix && \
-	docker run --rm \
-	-v $(shell pwd)/frontend:/home/work \
 	-v $(shell pwd)/$(RUNTIME_PATH)/static:/home/build/static \
 	$(RUNTIME_IMAGE):build-nodejs gulp build && \
 	cp -R frontend/static/img $(RUNTIME_PATH)/static/ && \
@@ -83,6 +80,11 @@ test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/ && go test -v ./..."
 
 cgo: $(RUNTIME_PATH)/$(EXECUTABLE)
+
+npm-audit-fix: build-nodejs-image
+	docker run --rm \
+	-v $(shell pwd)/frontend:/home/work \
+	$(RUNTIME_IMAGE):build-nodejs npm audit fix
 
 .PHONY: gen cgo
 
