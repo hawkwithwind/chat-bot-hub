@@ -554,6 +554,27 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				return
+			}
+			
+			if acresult.Success == false {
+				ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
+				return
+			}
+			switch resdata := acresult.Data.(type) {
+			case map[string]interface{}:
+				switch restatus := resdata["status"].(type) {
+				case float64:
+					if restatus != 0 {
+						ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
+						return
+					}
+				}
+			}
+						
 			ctx.Info("delete contact %s from %s", userId, bot.Login)
 
 			o.DeleteChatContact(tx, bot.BotId, userId)
@@ -565,7 +586,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		case chatbothub.GetRoomMembers:
 			bodym := o.FromJson(localar.ActionBody)
 			groupId := o.FromMapString("groupId", bodym, "actionBody", false, "")
-
 			if o.Err != nil {
 				return
 			}
@@ -593,7 +613,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// 1.1 save botId contact groupId, if not exist
-			o.SaveChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
+			o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 			if o.Err != nil {
 				return
 			}
