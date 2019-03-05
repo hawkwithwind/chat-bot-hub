@@ -226,7 +226,7 @@ func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGrou
 SELECT g.* 
 FROM chatgroups as g
 LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
-WHERE u.deleteat is NULL
+WHERE g.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
   %s /* groupname */
