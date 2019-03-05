@@ -211,13 +211,15 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
-	r.ParseForm()
+	r.ParseForm()	
 	page := o.getStringValueDefault(r.Form, "page", "0")
 	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
 	ctype := o.getStringValueDefault(r.Form, "type", "")
 	username := o.getStringValueDefault(r.Form, "username", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
-	botid := o.getStringValueDefault(r.Form, "botid", "")
+	botlogin := o.getStringValueDefault(r.Form, "botlogin", "")
+
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
 		return
 	}
@@ -231,6 +233,26 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
+
+	botid := ""
+	if botlogin != "" {
+		thebot := o.GetBotByLogin(tx, botlogin)
+		if thebot != nil {
+			botid = thebot.BotId
+		} else {
+			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found"))
+			return
+		}
+
+		if !o.CheckBotOwner(tx, botlogin, accountName) {
+			if o.Err == nil {
+				o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName)
+				return
+			} else {
+				return
+			}
+		}
+	}
 
 	criteria := domains.ChatUserCriteria{
 		Type:     utils.StringNull(ctype, ""),

@@ -297,6 +297,7 @@ func (f *RegexRouter) Fill(msg string) error {
 		if cr, found := f.compiledRegexp[k]; found {
 			if cr.MatchString(msg) {
 				if v != nil {
+					fmt.Printf("[FILTER DEBUG][%s][%s] filled\n", f.Name, k)
 					return v.Fill(msg)
 				}
 			}
@@ -304,6 +305,7 @@ func (f *RegexRouter) Fill(msg string) error {
 	}
 
 	if f.DefaultNextFilter != nil {
+		fmt.Printf("[FILTER DEBUG][%s][default] filled\n", f.Name)
 		return f.DefaultNextFilter.Fill(msg)
 	}
 
@@ -404,12 +406,14 @@ func (f *KVRouter) Fill(msg string) error {
 		default:
 			valuestring = ""
 		}
-
+		
 		if filter, found := vmaps[valuestring]; found {
 			fillOnce = true
 			if filter != nil {
 				if err := filter.Fill(msg); err != nil {
 					errlist = append(errlist, err)
+				} else {
+					fmt.Printf("[FILTER DEBUG][%s][%s:%s] filled\n", f.Name, k, valuestring)
 				}
 			}
 		}
@@ -417,6 +421,7 @@ func (f *KVRouter) Fill(msg string) error {
 
 	if !fillOnce {
 		if f.DefaultNextFilter != nil {
+			fmt.Printf("[FILTER DEBUG][%s][default] filled\n", f.Name)
 			return f.DefaultNextFilter.Fill(msg)
 		} else {
 			return nil
