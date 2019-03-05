@@ -340,7 +340,7 @@ WHERE u.deleteat is NULL
   %s /* username */
   %s /* nickname */
   %s /* type */
-ORDER BY createat desc
+ORDER BY u.createat desc
 LIMIT ?, ?
 `
 	chatusers := []ChatUser{}

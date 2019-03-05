@@ -347,6 +347,9 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	ctype := o.getStringValueDefault(r.Form, "type", "")
 	groupname := o.getStringValueDefault(r.Form, "groupname", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
+	botlogin := o.getStringValueDefault(r.Form, "botlogin", "")
+
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
 		return
 	}
@@ -361,18 +364,49 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
+	botid := ""
+	if botlogin != "" {
+		thebot := o.GetBotByLogin(tx, botlogin)
+		if thebot != nil {
+			botid = thebot.BotId
+		} else {
+			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found"))
+			return
+		}
+
+		if !o.CheckBotOwner(tx, botlogin, accountName) {
+			if o.Err == nil {
+				o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName)
+				return
+			} else {
+				return
+			}
+		}
+	}
+
 	criteria := domains.ChatGroupCriteria{
 		Type:      utils.StringNull(ctype, ""),
 		GroupName: utils.StringNull(groupname, ""),
 		NickName:  utils.StringNull(nickname, ""),
+		BotId:     utils.StringNull(botid, ""),
 	}
 
-	chatgroups := o.GetChatGroups(tx,
-		criteria,
-		domains.Paging{
-			Page:     ipage,
-			PageSize: ipagesize,
-		})
+	var chatgroups []domains.ChatGroup
+	if criteria.BotId.Valid {
+		chatgroups = o.GetChatGroupsWithBotId(tx,
+			criteria,
+			domains.Paging{
+				Page:     ipage,
+				PageSize: ipagesize,
+			})
+	} else {
+		chatgroups = o.GetChatGroups(tx,
+			criteria,
+			domains.Paging{
+				Page:     ipage,
+				PageSize: ipagesize,
+			})
+	}
 
 	if o.Err != nil {
 		return
@@ -393,7 +427,13 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	chatgroupcount := o.GetChatGroupCount(tx, criteria)
+	var chatgroupcount int64
+	if criteria.BotId.Valid {
+		chatgroupcount = o.GetChatGroupCountWithBotId(tx, criteria)
+	} else {
+		chatgroupcount = o.GetChatGroupCount(tx, criteria)
+	}
+	
 	pagecount := chatgroupcount / ipagesize
 	if chatgroupcount%ipagesize != 0 {
 		pagecount += 1

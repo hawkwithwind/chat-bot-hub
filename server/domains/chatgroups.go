@@ -149,6 +149,7 @@ type ChatGroupCriteria struct {
 	GroupName sql.NullString
 	NickName  sql.NullString
 	Type      sql.NullString
+	BotId     sql.NullString
 }
 
 func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, criteria ChatGroupCriteria, paging Paging) []ChatGroup {
@@ -204,6 +205,86 @@ WHERE deleteat is NULL
 			o.AndEqual("groupname", criteria.GroupName),
 			o.AndLike("nickname", criteria.NickName),
 			o.AndEqual("type", criteria.Type)),
+		criteria.GroupName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
+		criteria.Type.String)
+
+	return count[0]
+}
+
+func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGroupCriteria, paging Paging) []ChatGroup {
+	if o.Err != nil {
+		return []ChatGroup{}
+	}
+
+	if criteria.BotId.Valid == false {
+		o.Err = fmt.Errorf("GetChatGroupsWithBotId must set param botId")
+		return []ChatGroup{}
+	}
+
+	const query string = `
+SELECT g.* 
+FROM chatgroups as g
+LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
+WHERE u.deleteat is NULL
+  AND c.deleteat is NULL
+  AND c.botid = ?
+  %s /* groupname */
+  %s /* nickname */
+  %s /* type */
+ORDER BY g.createat desc
+LIMIT ?, ?
+`
+	chatgroups := []ChatGroup{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatgroups,
+		fmt.Sprintf(query,
+			o.AndEqual("groupname", criteria.GroupName),
+			o.AndLike("nickname", criteria.NickName),
+			o.AndEqual("type", criteria.Type)),
+		criteria.BotId.String,
+		criteria.GroupName.String,
+		fmt.Sprintf("%%%s%%", criteria.NickName.String),
+		criteria.Type.String,
+		(paging.Page-1)*paging.PageSize,
+		paging.PageSize)
+
+	if o.Err != nil {
+		return []ChatGroup{}
+	} else {
+		return chatgroups
+	}
+}
+
+func (o *ErrorHandler) GetChatGroupCountWithBotId(q dbx.Queryable, criteria ChatGroupCriteria) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	if criteria.BotId.Valid == false {
+		o.Err = fmt.Errorf("GetChatGroupsWithBotId must set param botId")
+		return 0
+	}
+	
+	const query string = `
+SELECT COUNT(*) 
+FROM chatgroups as g
+LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
+WHERE g.deleteat is NULL
+  AND c.deleteat is NULL
+  AND c.botid = ?
+  %s /* groupname */
+  %s /* nickname */
+  %s /* type */
+`
+	var count []int64
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &count,
+		fmt.Sprintf(query,
+			o.AndEqual("groupname", criteria.GroupName),
+			o.AndLike("nickname", criteria.NickName),
+			o.AndEqual("type", criteria.Type)),
+		criteria.BotId.String,
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)
