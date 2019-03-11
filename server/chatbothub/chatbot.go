@@ -734,9 +734,9 @@ const WeAppXmlTemp string = `<appmsg appid="%s" sdkver="%s">
 <lowdataurl>%s</lowdataurl>
 <appattach>
 <totallen>%s</totallen>
-<attachid />
-<emoticonmd5 />
-<fileext />
+<attachid></attachid>
+<emoticonmd5></emoticonmd5>
+<fileext></fileext>
 <cdnthumburl>%s</cdnthumburl>
 <cdnthumbmd5>%s</cdnthumbmd5>
 <cdnthumblength>%s</cdnthumblength>

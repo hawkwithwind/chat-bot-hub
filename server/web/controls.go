@@ -457,6 +457,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		BotId    string `json:"botId"`
 		BotName  string `json:"botName"`
 		FilterId string `json:"filterId"`
+		WxaappId string `json:"wxaappId"`
 		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
 	}
@@ -488,6 +489,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotId:    b.BotId,
 					BotName:  b.BotName,
 					FilterId: b.FilterId.String,
+					WxaappId: b.WxaappId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -501,6 +503,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotId:    b.BotId,
 					BotName:  b.BotName,
 					FilterId: b.FilterId.String,
+					WxaappId: b.WxaappId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
 				})
@@ -604,6 +607,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	callback := o.getStringValueDefault(r.Form, "callback", "")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 	filterid := o.getStringValueDefault(r.Form, "filterId", "")
+	wxaappid := o.getStringValueDefault(r.Form, "wxaappId", "")
 
 	accountName := o.getAccountName(r)
 
@@ -628,6 +632,9 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	}
 	if loginInfo != "" {
 		bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
+	}
+	if wxaappid != "" {
+		bot.WxaappId = sql.NullString{String: wxaappid, Valid: true}
 	}
 	if filterid != "" {
 		filter := o.GetFilterById(tx, filterid)

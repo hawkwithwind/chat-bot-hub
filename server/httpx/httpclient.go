@@ -147,8 +147,11 @@ func NewHttpClient() *http.Client {
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout: 30 * time.Second,
+			KeepAlive: 10 * 60 * time.Second,
 		}).Dial,
 		TLSHandshakeTimeout: 5 * time.Second,
+		MaxIdleConns: 100,
+		MaxIdleConnsPerHost: 100,
 	}
 
 	return &http.Client{
@@ -202,13 +205,18 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 			nreq.Header.Set(k, v)
 		}
 
-		if nresp, err = client.Do(nreq); err != nil {
+		nresp, err = client.Do(nreq)
+		if nresp != nil {
+			defer nresp.Body.Close()
+		}
+		
+		if err != nil {
 			return nil, err
 		}
-		defer nresp.Body.Close()
+		
 		// TODO: deal with redirect
 		// TODO: deal with cookies
-
+		
 		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
 			return nil, err
 		}

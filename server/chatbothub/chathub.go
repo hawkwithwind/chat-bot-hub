@@ -665,7 +665,7 @@ func (hub *ChatHub) FilterCreate(
 			hub.Info("cannot parse body %s", req.Body)
 		}
 	}
-
+	
 	hub.SetFilter(req.FilterId, filter)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }

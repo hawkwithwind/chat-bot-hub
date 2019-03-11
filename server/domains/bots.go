@@ -21,6 +21,7 @@ type Bot struct {
 	LoginInfo   sql.NullString `db:"logininfo"`
 	Callback    sql.NullString `db:"callback"`
 	FilterId    sql.NullString `db:"filterid"`
+	WxaappId    sql.NullString `db:"wxaappid"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
 	DeleteAt    mysql.NullTime `db:"deleteat"`
@@ -52,9 +53,9 @@ func (o *ErrorHandler) SaveBot(q dbx.Queryable, bot *Bot) {
 
 	query := `
 INSERT INTO bots
-(botid, botname, accountid, login, chatbottype, callback, logininfo)
+(botid, botname, accountid, login, chatbottype, callback, logininfo, wxaappid)
 VALUES
-(:botid, :botname, :accountid, :login, :chatbottype, :callback, :logininfo)
+(:botid, :botname, :accountid, :login, :chatbottype, :callback, :logininfo, :wxaappid)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
@@ -99,6 +100,7 @@ SET logininfo = :logininfo
 , botname = :botname
 , callback = :callback
 , logininfo = :logininfo
+, wxaappid = :wxaappid
 WHERE botid = :botid
 `
 	ctx, _ := o.DefaultContext()

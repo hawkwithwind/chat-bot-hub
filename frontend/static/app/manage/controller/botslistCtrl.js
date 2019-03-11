@@ -72,7 +72,8 @@
 	  botName: () => row.botName,
 	  login: () => row.login,
 	  filterId: () => row.filterId,
-	  callback: () => row.callback,	  
+	  callback: () => row.callback,
+          wxaappId: () => row.wxaappId,
 	}
       }).then(() => {
 	$scope.refresh()
@@ -214,8 +215,8 @@
   }
 
   app.controller('editBotCtrl', editBotCtrl)
-  editBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "filterId", "callback"]
-  function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, filterId, callback) {
+  editBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "filterId", "callback", "wxaappId"]
+  function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, filterId, callback, wxaappId) {
     $scope.data = {
       clientId: clientId,
       clientType: clientType,
@@ -223,6 +224,7 @@
       filterId: filterId,
       botName: botName,
       callback: callback,
+      wxaappId: wxaappId,
     }
 
     $scope.close =  () => {
