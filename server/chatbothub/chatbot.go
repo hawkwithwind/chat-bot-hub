@@ -252,9 +252,10 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 			var msg WechatFriendRequest
 			o.FromXML(content.(string), &msg)
 			msgstr := o.ToJson(&msg)
-			return msgstr, o.Err
+			return msgstr, o.Err			
 		} else {
-			return "", fmt.Errorf("c[%s] request should have xml content", bot.ClientType)
+			bot.Info("[FRIENDREQUEST] %s", body)
+			return body, nil
 		}
 	} else {
 		return "", fmt.Errorf("c[%s] not support friend request", bot.ClientType)
@@ -413,11 +414,16 @@ func (bot *ChatBot) AcceptUser(arId string, body string) error {
 	if bot.ClientType == WECHATBOT {
 		var msg WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
-		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
-		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
-			"stranger": msg.EncryptUserName,
-			"ticket":   msg.Ticket,
-		}))
+		if len(msg.EncryptUserName) > 0 {
+			bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
+			o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
+				"stranger": msg.EncryptUserName,
+				"ticket":   msg.Ticket,
+			}))
+		} else {
+			bot.Info("Action AcceptUser %s", body)
+			o.SendAction(bot, arId, AcceptUser, body)
+		}
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AcceptUser)
 	}

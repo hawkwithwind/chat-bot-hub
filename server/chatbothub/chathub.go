@@ -105,6 +105,8 @@ const (
 	STATUSMESSAGE string = "STATUSMESSAGE"
 	FRIENDREQUEST string = "FRIENDREQUEST"
 	CONTACTINFO   string = "CONTACTINFO"
+	CONTACTLIST   string = "CONTACTLIST"
+	GROUPLIST     string = "GROUPLIST"
 	GROUPINFO     string = "GROUPINFO"
 	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
@@ -123,6 +125,10 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
+
+	for _, v := range hub.bots {
+		hub.Info("%v", v)
+	}
 
 	for _, v := range hub.bots {
 		if v.ClientType == bottype && v.Status == BeginRegistered {
@@ -196,6 +202,7 @@ func (hub *ChatHub) GetFilter(filterId string) Filter {
 	return nil
 }
 
+     
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
@@ -260,7 +267,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			o := ErrorHandler{}
 			var thebot *ChatBot
-
+			
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
 				if bot.ClientType == WECHATBOT {
@@ -349,51 +356,61 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				thebot, o.Err = bot.logoutDone(in.Body)
 
 			case ACTIONREPLY:
-				hub.Info("ACTIONREPLY %s", in.Body[:120])
+				hub.Info("ACTIONREPLY %s", in.Body)
 
-				if bot.ClientType == WECHATBOT {
-					body := o.FromJson(in.Body)
-					var actionBody map[string]interface{}
-					var result map[string]interface{}
-					var actionRequestId string
+				body := o.FromJson(in.Body)
+				var actionBody map[string]interface{}
+				var result map[string]interface{}
+				var actionRequestId string
 
-					if body != nil {
-						if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
-							actionBody = abptr.(map[string]interface{})
-						}
-						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
-							result = rptr.(map[string]interface{})
-						}
-
-						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+				if body != nil {
+					if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
+						switch abody := abptr.(type) {
+						case string:
+							actionBody = o.FromJson(abody)
+						case map[string]interface{}:
+							actionBody = abody
+						}						
+					}
+					if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
+						result = rptr.(map[string]interface{})
 					}
 
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(
-								bot.WebNotifyRequest(
-									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
-										ActionRequestId: actionRequestId,
-										Result:          o.ToJson(result),
-										ReplyAt:         utils.JSONTime{Time: time.Now()},
-									})), 5, 1)
-						}()
-					}
+					actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+				}
+
+				if o.Err == nil {
+					go func() {
+						httpx.RestfulCallRetry(
+							bot.WebNotifyRequest(
+								hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+									ActionRequestId: actionRequestId,
+									Result:          o.ToJson(result),
+									ReplyAt:         utils.JSONTime{Time: time.Now()},
+								})), 5, 1)
+					}()
 				}
 
 			case MESSAGE:
-				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
-					var msg string
-					o.Err = json.Unmarshal([]byte(in.Body), &msg)
-					if o.Err != nil {
-						hub.Error(o.Err, "cannot parse %s", in.Body)
-					}
+				var msg string
+				hub.Info("in.Body %v", in.Body)
+				//o.Err = json.Unmarshal([]byte(in.Body), &msg)
+				var bodym interface{}
+				o.Err = json.Unmarshal([]byte(in.Body), &bodym)
 
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(msg)
+				if o.Err == nil {
+					switch bodymap := bodym.(type) {
+					case string:
+						msg = bodymap
+					case map[string]interface{}:
+						msg = o.ToJson(bodymap)
+					default:
+						o.Err = fmt.Errorf("unexpected bodym %T %v", bodym, bodym)
 					}
-				} else {
-					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
+				}
+				
+				if o.Err == nil && bot.filter != nil {
+					o.Err = bot.filter.Fill(msg)
 				}
 
 			case IMAGEMESSAGE:
@@ -471,10 +488,46 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify group info failed\n")
-							}
+									hub.Error(err, "webnotify group info failed\n")
+								}
 						}()
 					}
+				}
+				
+			case CONTACTLIST:
+				if bot.ClientType == WECHATBOT {
+					var contacts []interface{}
+					o.Err = json.Unmarshal([]byte(in.Body), &contacts)
+
+					if o.Err == nil {
+						for _, v := range contacts {							
+							go func(v interface{}) {
+								if _, err := httpx.RestfulCallRetry(
+									bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTLIST, o.ToJson(v)), 3, 1); err != nil {
+										hub.Error(err, "webnotify contact info failed")
+									}
+							}(v)
+						}
+					}
+				}
+
+			case GROUPLIST:
+				if bot.ClientType == WECHATBOT {
+					var groups []interface{}
+					o.Err = json.Unmarshal([]byte(in.Body), &groups)
+
+					if o.Err == nil {
+						for _, v := range groups {
+							go func(v interface{}) {
+								hub.Info("group %v", v)
+								if _, err := httpx.RestfulCallRetry(
+									bot.WebNotifyRequest(hub.WebBaseUrl, GROUPLIST, o.ToJson(v)), 3, 1); err != nil {
+										hub.Error(err, "webnotify contact info failed")
+									}								
+							}(v)
+						}
+					}
+					
 				}
 
 			default:
@@ -567,13 +620,15 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		if o.Err == nil {
 			bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 		}
-
+		
 		body := o.ToJson(LoginBody{
 			BotId:     req.BotId,
 			Login:     req.Login,
 			Password:  req.Password,
 			LoginInfo: req.LoginInfo,
 		})
+
+		hub.Info("[BOTLOGIN] body %s", body)
 
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  LOGIN,

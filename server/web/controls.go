@@ -681,6 +681,10 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		} else {
 			logininfo = ""
 		}
+
+		if len(login) == 0 {
+			login = bot.Login
+		}
 	}
 
 	if o.Err != nil {

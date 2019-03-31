@@ -193,6 +193,26 @@ type WechatContactInfo struct {
 	MemberCount     int      `json:"memberCount"`
 }
 
+type WechatContactListItem struct {
+	Alias string `json:"alias"`
+	Avatar string `json:"avatar"`
+	City string `json:"city"`
+	Genter int `json:genter`
+	Id string `json:"id"`
+	Name string `json:"name"`
+	Province string `json:"province"`
+	Signature string `json:"signature"`
+	Type int `json:"type"`
+	Friend bool `json:"friend"`
+}
+
+type WechatGroupListItem struct {
+	GroupId string `json:"id"`
+	GroupName string `json:"topic"`
+	OwnerId string `json:"ownerId"`
+	MemberIdList []string `json:"memberIdList"`
+}
+
 type WechatGroupInfo struct {
 	ChatRoomId int                 `json:"chatroomId"`
 	Count      int                 `json:"count"`
@@ -324,15 +344,36 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
 			reqm := o.FromJson(reqstr)
+			
 			if funptr := o.FromMap("fromUserName", reqm,
-				"friendRequest.fromUserName", nil); funptr != nil {
+				"friendRequest.fromUserName", ""); funptr != nil {
 				rlogin = funptr.(string)
+				}
+			
+			if len(rlogin) == 0 {
+				if funptr := o.FromMap("contactId", reqm,
+					"friendRequest.fromUserName", ""); funptr != nil {
+						rlogin = funptr.(string)
+					}				
 			}
+			
 			ctx.Info("%v\n%s", reqm, rlogin)
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
+
+		if o.Err != nil {
+			ctx.Error(o.Err, "[FRIENDREQUEST] failed")
+			return
+		}
+		
 		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, reqstr, "NEW")
+		
+		if fr == nil {
+			ctx.Info("NewFriendRequest returned nil")
+			return
+		}
+		
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -357,6 +398,120 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}()
+
+	case chatbothub.CONTACTLIST:
+		bodystr := o.getStringValue(r.Form, "body")
+		if thebotinfo.ClientType == "WECHATBOT" {
+			info := WechatContactListItem{}
+			o.Err = json.Unmarshal([]byte(bodystr), &info)
+			if o.Err != nil {
+				return
+			}
+
+			ctx.Info("contact [%s - %s]", info.Id, info.Name)
+			if len(info.Id) == 0 {
+				ctx.Info("user wxid not found, ignoring %s", bodystr)
+				return
+			}
+
+			chatuser := o.NewChatUser(info.Id, thebotinfo.ClientType, info.Name)
+			chatuser.SetAvatar(info.Avatar)
+			chatuser.SetExt(bodystr)
+
+			o.UpdateOrCreateChatUser(tx, chatuser)
+			theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
+			if o.Err != nil {
+				return
+			} else if theuser == nil {
+				o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
+				return
+			}
+			o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("save user info [%s]%s done", info.Id, info.Name)
+		}
+
+	case chatbothub.GROUPLIST:
+		bodystr := o.getStringValue(r.Form, "body")
+		if thebotinfo.ClientType == "WECHATBOT" {
+			info := WechatGroupListItem{}
+
+			// type WechatGroupListItem struct {
+			// 	GroupId string `json:"id"`
+			// 	GroupName string `json:"topic"`
+			// 	OwnerId string `json:"ownerId"`
+			// 	MemberIdList []string `json:"memberIdList"`
+			// }
+
+			o.Err = json.Unmarshal([]byte(bodystr), &info)
+			if o.Err != nil {
+				return
+			}
+
+			// group
+			// find or create owner
+			if len(info.OwnerId) == 0 {
+				ctx.Info("group[%s] no owner, ignore", info.GroupId)
+				return
+			}
+
+			owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.OwnerId)
+			if o.Err != nil {
+				return
+			} else if owner == nil {
+				o.Err = fmt.Errorf("cannot find either create room owner %s", info.OwnerId)
+				return
+			}
+
+			// create and save group
+			chatgroup := o.NewChatGroup(info.GroupId, thebotinfo.ClientType, info.GroupName, owner.ChatUserId, len(info.MemberIdList), 500)
+			//chatgroup.SetAvatar(info.SmallHead)
+			chatgroup.SetExt(bodystr)
+
+			o.UpdateOrCreateChatGroup(tx, chatgroup)
+			chatgroup = o.GetChatGroupByName(tx, thebotinfo.ClientType, info.GroupId)
+			if o.Err != nil {
+				return
+			} else if chatgroup == nil {
+				o.Err = fmt.Errorf("cannot find either create chatgroup %s", info.GroupId)
+				return
+			}
+
+			chatusers := make([]*domains.ChatUser, 0, len(info.MemberIdList))
+			for _, member := range info.MemberIdList {
+				chatusers = append(chatusers, o.NewChatUser(member, thebotinfo.ClientType, ""))
+			}
+
+			members := o.FindOrCreateChatUsers(tx, chatusers)
+			if o.Err != nil {
+				return
+			} else if len(members) != len(info.MemberIdList) {
+				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d", info.GroupId, len(info.MemberIdList), len(members))
+				return
+			}
+
+			var chatgroupMembers []*domains.ChatGroupMember
+			for _, member := range members {
+				chatgroupMembers = append(chatgroupMembers,
+					o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
+			}
+
+			if len(chatgroupMembers) > 0 {
+				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
+			}
+			if o.Err != nil {
+				return
+			}
+			o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("save group info [%s]%s done", info.GroupId, info.GroupName)
+			
+			
+		}
 
 	case chatbothub.CONTACTINFO:
 		bodystr := o.getStringValue(r.Form, "body")
@@ -489,28 +644,33 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		localar.Result = awayar.Result
 
 		result := o.FromJson(awayar.Result)
+		ctx.Info("[ACTIONREPLY] result %v", result)
+		
 		success := false
 		if result != nil {
 			if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
 				success = scsptr.(bool)
 				if o.Err == nil && success {
-					localar.Status = "Failed"
+					if _, found := result["data"]; !found {
+						localar.Status = "Done"
+					} else {
+						localar.Status = "Failed"
+						if rdataptr := o.FromMap(
+							"data", result, "actionReply.result", nil); rdataptr != nil {
+								switch rdata := rdataptr.(type) {
+								case map[string]interface{}:
+									status := int(o.FromMapFloat(
+										"status", rdata, "actionReply.result.data", false, 0))
 
-					if rdataptr := o.FromMap(
-						"data", result, "actionReply.result", nil); rdataptr != nil {
-						switch rdata := rdataptr.(type) {
-						case map[string]interface{}:
-							status := int(o.FromMapFloat(
-								"status", rdata, "actionReply.result.data", false, 0))
-
-							if status == 0 {
-								localar.Status = "Done"
+									if status == 0 {
+										localar.Status = "Done"
+									}
+								default:
+									if o.Err == nil {
+										o.Err = fmt.Errorf("actionReply.result.data not map")
+									}
+								}
 							}
-						default:
-							if o.Err == nil {
-								o.Err = fmt.Errorf("actionReply.result.data not map")
-							}
-						}
 					}
 				} else {
 					localar.Status = "Failed"
@@ -530,7 +690,15 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
 			bodym := o.FromJson(localar.ActionBody)
-			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			var rlogin string
+			
+			if _, found := bodym["fromUserName"]; found {
+				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			} else if _, found := bodym["contactId"]; found {
+				rlogin = o.FromMapString("contactId", bodym, "actionBody", false, "")
+			} else {
+				o.Err = fmt.Errorf("didn't found fromUserName or contactId from %s", localar.ActionBody)
+			}
 
 			if o.Err != nil {
 				return
