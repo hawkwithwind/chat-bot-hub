@@ -240,7 +240,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
-			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found"))
+			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found", botlogin))
 			return
 		}
 
@@ -370,7 +370,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
-			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found"))
+			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found", botlogin))
 			return
 		}
 
