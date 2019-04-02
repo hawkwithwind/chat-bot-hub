@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"fmt"
+	//"fmt"
 	"os"
 	"testing"
 
@@ -148,52 +148,52 @@ func TestBot(t *testing.T) {
 	}
 }
 
-func TestChatGroupMembers(t *testing.T) {
-	o := &domains.ErrorHandler{}
+// func TestChatGroupMembers(t *testing.T) {
+// 	o := &domains.ErrorHandler{}
 
-	db := &dbx.Database{}
-	o.Connect(db, "mysql", dbpath)
+// 	db := &dbx.Database{}
+// 	o.Connect(db, "mysql", dbpath)
 
-	tx := o.Begin(db)
-	if tx == nil {
-		if o.Err != nil {
-			t.Errorf(o.Err.Error())
-		} else {
-			t.Errorf("tx is null from o.Begin(db), but err is nil")
-		}
-	}
-	defer o.Rollback(tx)
+// 	tx := o.Begin(db)
+// 	if tx == nil {
+// 		if o.Err != nil {
+// 			t.Errorf(o.Err.Error())
+// 		} else {
+// 			t.Errorf("tx is null from o.Begin(db), but err is nil")
+// 		}
+// 	}
+// 	defer o.Rollback(tx)
 
-	var cgms []*domains.ChatGroupMember
-	cgm1 := o.NewChatGroupMember("g1", "u1", 1)
-	cgm2 := o.NewChatGroupMember("g1", "u2", 1)
-	cgm3 := o.NewChatGroupMember("g1", "u3", 1)
-	cgms = append(cgms, cgm1, cgm2, cgm3)
+// 	var cgms []*domains.ChatGroupMember
+// 	cgm1 := o.NewChatGroupMember("g1", "u1", 1)
+// 	cgm2 := o.NewChatGroupMember("g1", "u2", 1)
+// 	cgm3 := o.NewChatGroupMember("g1", "u3", 1)
+// 	cgms = append(cgms, cgm1, cgm2, cgm3)
 
-	o.SaveIgnoreGroupMembers(tx, cgms)
-	if o.Err == nil {
-		got := []domains.ChatGroupMember{}
-		query := `SELECT * FROM chatgroupmembers WHERE chatgroupid=?`
-		o.Err = tx.Select(&got, query, "g1")
+// 	o.SaveIgnoreGroupMembers(tx, cgms)
+// 	if o.Err == nil {
+// 		got := []domains.ChatGroupMember{}
+// 		query := `SELECT * FROM chatgroupmembers WHERE chatgroupid=?`
+// 		o.Err = tx.Select(&got, query, "g1")
 
-		if o.Err == nil {
-			if len(got) != 3 {
-				t.Errorf("insert 3 chatgroupmembers but got %d", len(got))
-			}
+// 		if o.Err == nil {
+// 			if len(got) != 3 {
+// 				t.Errorf("insert 3 chatgroupmembers but got %d", len(got))
+// 			}
 
-			for i, cgm := range got {
-				if cgm.ChatGroupId != "g1" {
-					t.Errorf("expect groupname g1 %v", cgm)
-				}
+// 			for i, cgm := range got {
+// 				if cgm.ChatGroupId != "g1" {
+// 					t.Errorf("expect groupname g1 %v", cgm)
+// 				}
 
-				if cgm.ChatMemberId != fmt.Sprintf("u%d", i+1) {
-					t.Errorf("expect username u%d %v", i+1, cgm)
-				}
-			}
-		}
-	}
+// 				if cgm.ChatMemberId != fmt.Sprintf("u%d", i+1) {
+// 					t.Errorf("expect username u%d %v", i+1, cgm)
+// 				}
+// 			}
+// 		}
+// 	}
 
-	if o.Err != nil {
-		t.Errorf(o.Err.Error())
-	}
-}
+// 	if o.Err != nil {
+// 		t.Errorf(o.Err.Error())
+// 	}
+// }

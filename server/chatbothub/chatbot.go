@@ -280,6 +280,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SendTextMessage:          (*ChatBot).SendTextMessage,
 		SendAppMessage:           (*ChatBot).SendAppMessage,
 		SendImageResourceMessage: (*ChatBot).SendImageResourceMessage,
+		SendImageMessage:         (*ChatBot).SendImageMessage,
 		CreateRoom:               (*ChatBot).CreateRoom,
 		AddRoomMember:            (*ChatBot).AddRoomMember,
 		InviteRoomMember:         (*ChatBot).InviteRoomMember,
@@ -964,6 +965,27 @@ func (bot *ChatBot) SendImageResourceMessage(arId string, body string) error {
 		o.SendAction(bot, arId, SendImageResourceMessage, body)
 	} else {
 		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageResourceMessage)
+	}
+
+	return o.Err
+}
+
+func (bot *ChatBot) SendImageMessage(arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		
+		o.FromMapString("toUserName", bodym, "actionbody", false, "")
+		o.FromMapString("payload", bodym, "actionbody", false, "")
+		
+		if o.Err != nil {
+			return o.Err
+		}
+
+		o.SendAction(bot, arId, SendImageMessage, body)
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageMessage)
 	}
 
 	return o.Err
