@@ -88,16 +88,17 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 
 	fmt.Printf("[WEBTRIGGER_COOKIE] saving %s %v\n", domain, cookies)
 
-	o.RedisSend(conn, "MULTI")
+	//o.RedisSend(conn, "MULTI")
 	for _, cookie := range cookies {
 		rk := header.redisKey(domain, cookie.Name)
 		fmt.Printf("[WEBTRIGGER_COOKIE] set %s %s\n", rk, cookie.String())
-		o.RedisSend(conn, "SET", rk, cookie.String())
+		//o.RedisSend(conn, "SET", rk, cookie.String())
+		ret := o.RedisDo(conn, timeout, "SET", rk, cookie.String(), cookie.MaxAge)
+		if o.Err != nil {
+			fmt.Printf("[WEBTRIGGER_COOKIE] error %s", o.Err)
+		} else {
+			fmt.Printf("[WEBTRIGGER_COOKIE] ret %v", ret)
+		}
 	}
-	ret := o.RedisDo(conn, timeout, "EXEC")
-	if o.Err != nil {
-		fmt.Printf("[WEBTRIGGER_COOKIE] error %s", o.Err)
-	} else {
-		fmt.Printf("[WEBTRIGGER_COOKIE] ret %v", ret)
-	}
+	//ret := o.RedisDo(conn, timeout, "EXEC")
 }
