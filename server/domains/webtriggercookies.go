@@ -97,7 +97,7 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 		rk := header.redisKey(domain, cookie.Name)
 		fmt.Printf("[WEBTRIGGER_COOKIE] set %s %s\n", rk, cookie.String())
 		//o.RedisSend(conn, "SET", rk, cookie.String())
-		o.RedisDo(conn, timeout,"SET",rk,fmt.Sprintf(`"%s"`,cookie.String()),cookie.MaxAge)
+		o.RedisDo(conn, timeout,"SET", rk, fmt.Sprintf(`"%s"`,cookie.String()))
 		
 		if o.Err != nil {
 			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
