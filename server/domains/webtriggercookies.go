@@ -53,8 +53,11 @@ func (o *ErrorHandler) LoadCookiesFromString(cookiestrings []string) []*http.Coo
 	resp, o.Err = http.ReadResponse(bufio.NewReader(strings.NewReader(rawResponse)), nil)
 
 	if o.Err != nil {
+		fmt.Printf("[WEBTRIGGER_COOKIE] err %v\n", o.Err)
 		return []*http.Cookie{}
 	}
+
+	fmt.Printf("[WEBTRIGGER_COOKIE] load from string %v\n", resp.Cookies())
 
 	return resp.Cookies()
 }
@@ -68,12 +71,21 @@ func (o *ErrorHandler) LoadWebTriggerCookies(pool *redis.Pool, header ChatMessag
 	defer conn.Close()
 
 	cstrings := []string{}
+	fmt.Printf("[WEBTRIGGER_COOKIE] load %s\n", header.redisKeyPattern(domain))
+	
 	for _, c := range o.RedisMatch(conn, header.redisKeyPattern(domain)) {
 		switch cookievalue := c.(type) {
 		case string:
 			cstrings = append(cstrings, cookievalue)
+		default:
+			fmt.Printf("[WEBTRIGGER_COOKIE] unexpected cookie type %T %v\n", cookievalue, cookievalue)
 		}
 	}
+
+	if o.Err != nil {
+		fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
+	}
+	
 	return o.LoadCookiesFromString(cstrings)
 }
 
@@ -85,7 +97,7 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 
 	conn := pool.Get()
 	defer conn.Close()
-
+	
 	o.RedisSend(conn, "MULTI")
 	for _, cookie := range cookies {
 		rk := header.redisKey(domain, cookie.Name)
