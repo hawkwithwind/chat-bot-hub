@@ -174,13 +174,13 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	return count
 }
 
-func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []interface{} {
+func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	if o.Err != nil {
-		return []interface{}{}
+		return []string{}
 	}
 
 	key := "0"
-	results := []interface{}{}
+	results := []string{}
 
 	for true {
 		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
