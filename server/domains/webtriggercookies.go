@@ -71,16 +71,10 @@ func (o *ErrorHandler) LoadWebTriggerCookies(pool *redis.Pool, header ChatMessag
 	defer conn.Close()
 
 	cstrings := []string{}
-	fmt.Printf("[WEBTRIGGER_COOKIE] load %s\n", header.redisKeyPattern(domain))
-	
 	for _, c := range o.RedisMatch(conn, header.redisKeyPattern(domain)) {
-		fmt.Printf("[WEBTRIGGER_COOKIE] %v\n", c)
-		
-		switch cookievalue := c.(type) {
-		case string:
-			cstrings = append(cstrings, cookievalue)
-		default:
-			fmt.Printf("[WEBTRIGGER_COOKIE] unexpected cookie type %T %v\n", cookievalue, cookievalue)
+		cstrings = append(cstrings, o.RedisString(c))
+		if o.Err != nil {
+			fmt.Printf("[WEBTRIGGER_COOKIE] err %s\n", o.Err)
 		}
 	}
 
