@@ -98,10 +98,10 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
 		}
 		//o.RedisSend(conn, "EXPIRE", rk, cookie.MaxAge)
-		o.RedisDo(conn, timeout, "EXPIRE", rk, cookie.MaxAge)
-		if o.Err != nil {
-			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
-		}	
+		// o.RedisDo(conn, timeout, "EXPIRE", rk, cookie.MaxAge)
+		// if o.Err != nil {
+		// 	fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
+		// }
 	}
 	// ret := o.RedisDo(conn, timeout, "EXEC")
 	// if o.Err != nil {
