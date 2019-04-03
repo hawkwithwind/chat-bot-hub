@@ -184,6 +184,10 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []interfac
 
 	for true {
 		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err != nil {
+			fmt.Printf("[REDISMATCH] err %s\n", o.Err)
+		}
+		
 		if o.Err == nil {
 			if len(ret) != 2 {
 				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
@@ -194,6 +198,8 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []interfac
 		resultlist := o.RedisValue(ret[1])
 
 		results = append(results, resultlist...)
+
+		fmt.Printf("[REDISMATCH] %s %v\n", key, resultlist)
 
 		if key == "0" {
 			break
