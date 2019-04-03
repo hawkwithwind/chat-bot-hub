@@ -195,7 +195,7 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 			}
 		}
 		key = o.RedisString(ret[0])
-		for v := range o.RedisValue(ret[1]) {
+		for _, v := range o.RedisValue(ret[1]) {
 			results = append(results, o.RedisString(v))
 		}
 		
