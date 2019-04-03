@@ -86,22 +86,27 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 	conn := pool.Get()
 	defer conn.Close()
 
-	o.RedisSend(conn, "MULTI")
-	if o.Err != nil {
-		fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
-	}
+	// o.RedisSend(conn, "MULTI")
+	// if o.Err != nil {
+	// 	fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
+	// }
 	for _, cookie := range cookies {
 		rk := header.redisKey(domain, cookie.Name)
-		o.RedisSend(conn, "SET", rk, fmt.Sprintf(`"%s"`,cookie.String()))
-		o.RedisSend(conn, "EXPIRE", rk, cookie.MaxAge)
+		//o.RedisSend(conn, "SET", rk, fmt.Sprintf(`"%s"`,cookie.String()))
+		o.RedisDo(conn, timeout, "SET", rk, fmt.Sprintf(`"%s"`,cookie.String()))
+		if o.Err != nil {
+			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
+		}
+		//o.RedisSend(conn, "EXPIRE", rk, cookie.MaxAge)
+		o.RedisDo(conn, timeout, "EXPIRE", rk, cookie.MaxAge)
 		if o.Err != nil {
 			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
 		}	
 	}
-	ret := o.RedisDo(conn, timeout, "EXEC")
-	if o.Err != nil {
-		fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
-	} else {
-		fmt.Printf("[WEBTRIGGER_COOKIE] ret %v\n", ret)
-	}
+	// ret := o.RedisDo(conn, timeout, "EXEC")
+	// if o.Err != nil {
+	// 	fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
+	// } else {
+	// 	fmt.Printf("[WEBTRIGGER_COOKIE] ret %v\n", ret)
+	// }
 }
