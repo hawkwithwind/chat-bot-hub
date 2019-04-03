@@ -148,11 +148,11 @@ func (req *RestfulRequest) SetBody(body interface{}, ctype string, charset strin
 func NewHttpClient() *http.Client {
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
 			KeepAlive: 10 * 60 * time.Second,
 		}).Dial,
 		TLSHandshakeTimeout: 5 * time.Second,
-		MaxIdleConns: 100,
+		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 100,
 	}
 
@@ -212,16 +212,18 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		if nresp != nil {
 			defer nresp.Body.Close()
 		}
-		
+
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// TODO: deal with redirect
 
 		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
 			return nil, err
 		}
+
+		fmt.Printf("[HTTPX RESPONSE]COOKIES %v\n", nresp.Cookies())
 
 		return &RestfulResponse{
 			Body:       string(body),

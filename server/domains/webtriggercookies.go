@@ -1,18 +1,18 @@
 package domains
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"bufio"
-	"strings"
 	"github.com/gomodule/redigo/redis"
+	"net/http"
+	"strings"
 )
 
 type ChatMessageHeader struct {
-	FromUser string  `json:"fromUser"`
-	ToUser   string  `json:"toUser"`
-	GroupId  string  `json:"groupId"`
+	FromUser string `json:"fromUser"`
+	ToUser   string `json:"toUser"`
+	GroupId  string `json:"groupId"`
 }
 
 func (header ChatMessageHeader) redisKey(domain string, name string) string {
@@ -29,7 +29,7 @@ func (o *ErrorHandler) ChatMessageHeaderFromMessage(msg string) ChatMessageHeade
 	if o.Err != nil {
 		return ChatMessageHeader{}
 	}
-	
+
 	var header ChatMessageHeader
 	o.Err = json.Unmarshal([]byte(msg), &header)
 	if o.Err != nil {
@@ -51,7 +51,7 @@ func (o *ErrorHandler) LoadCookiesFromString(cookiestrings []string) []*http.Coo
 
 	var resp *http.Response
 	resp, o.Err = http.ReadResponse(bufio.NewReader(strings.NewReader(rawResponse)), nil)
-	
+
 	if o.Err != nil {
 		return []*http.Cookie{}
 	}
@@ -86,9 +86,12 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 	conn := pool.Get()
 	defer conn.Close()
 
+	fmt.Printf("[WEBTRIGGER_COOKIE] saving %s %v", domain, cookies)
+
 	o.RedisSend(conn, "MULTI")
 	for _, cookie := range cookies {
 		rk := header.redisKey(domain, cookie.Name)
+		fmt.Printf("[WEBTRIGGER_COOKIE] set %s %s\n", rk, cookie.String())
 		o.RedisSend(conn, "SET", rk, cookie.String())
 	}
 	o.RedisDo(conn, timeout, "EXEC")

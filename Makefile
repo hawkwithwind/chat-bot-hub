@@ -64,8 +64,7 @@ clean:
 fmt:
 	docker run --rm \
 	-v $(shell pwd):/go/src/$(PACKAGE) \
-	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/" && gofmt -l -w $(SOURCES)
-
+	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/ && gofmt -l -w $(SOURCES)"
 
 test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	docker run --rm \

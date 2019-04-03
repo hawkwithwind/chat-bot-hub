@@ -969,10 +969,10 @@ func (bot *ChatBot) SendImageMessage(arId string, body string) error {
 
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
-		
+
 		o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		o.FromMapString("payload", bodym, "actionbody", false, "")
-		
+
 		if o.Err != nil {
 			return o.Err
 		}

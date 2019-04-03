@@ -1,16 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"testing"
 	"bufio"
-	"strings"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
+	"strings"
+	"testing"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
-
 
 func TestHttpRequestCookie(t *testing.T) {
 	jar, err := cookiejar.New(nil)
@@ -20,15 +19,15 @@ func TestHttpRequestCookie(t *testing.T) {
 	}
 
 	urlstring := "https://www.baidu.com"
-		
+
 	rr := httpx.NewRestfulRequest("GET", urlstring)
 	rr.CookieJar = jar
-	var resp *httpx.RestfulResponse	
+	var resp *httpx.RestfulResponse
 	if resp, err = httpx.RestfulCallRetry(rr, 5, 1); err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-		
+
 	// for k, v := range *resp.Header {
 	// 	fmt.Printf("==> %s\n%s\n", k, v)
 	// }
@@ -53,12 +52,12 @@ func TestHttpRequestCookie(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	
+
 	for _, v := range resp2.Cookies() {
 		fmt.Printf("=> %v\n", v)
 		fmt.Printf("=> %s %s %s %d\n", v.Name, v.Value, v.Expires, v.MaxAge)
 	}
-	
+
 	if err != nil {
 		t.Errorf(err.Error())
 	}

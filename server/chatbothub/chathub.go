@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	
+
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -678,7 +678,7 @@ func (hub *ChatHub) FilterCreate(
 			hub.Info("cannot parse body %s", req.Body)
 		}
 	}
-	
+
 	hub.SetFilter(req.FilterId, filter)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }

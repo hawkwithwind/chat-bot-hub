@@ -34,7 +34,7 @@ type WebConfig struct {
 	Port         string
 	Baseurl      string
 	Redis        utils.RedisConfig
-	SecretPhrase string	
+	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
@@ -57,7 +57,7 @@ type ErrorMessage struct {
 type WebServer struct {
 	Config    WebConfig
 	Hubport   string
-	Hubhost   string	
+	Hubhost   string
 	logger    *log.Logger
 	redispool *redis.Pool
 	db        *dbx.Database

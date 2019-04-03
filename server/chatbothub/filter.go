@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http/cookiejar"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
-	"net/http/cookiejar"
-	"net/url"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type Filter interface {
@@ -297,7 +297,7 @@ func (f *RegexRouter) Fill(msg string) error {
 	}
 
 	fmt.Printf("[FILTER DEBUG] matching %s\n", msg)
-	
+
 	for k, v := range f.NextFilter {
 		if cr, found := f.compiledRegexp[k]; found {
 			if cr.MatchString(msg) {
@@ -411,7 +411,7 @@ func (f *KVRouter) Fill(msg string) error {
 		default:
 			valuestring = ""
 		}
-		
+
 		if filter, found := vmaps[valuestring]; found {
 			fillOnce = true
 			if filter != nil {
@@ -460,11 +460,10 @@ func NewWebTrigger(filterId string, filterName string) *WebTrigger {
 	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
 }
 
-
-func (f *WebTrigger) Fill(msg string) error {	
+func (f *WebTrigger) Fill(msg string) error {
 	go func() {
 		o := domains.ErrorHandler{}
-		
+
 		jar, err := cookiejar.New(nil)
 		if err != nil {
 			return
@@ -477,24 +476,27 @@ func (f *WebTrigger) Fill(msg string) error {
 			return
 		}
 		domain := strings.Split(u.Host, ":")[0]
-		
+
 		// parse fromUser toUser groupId from msg, and init cookie struct
 		header := o.ChatMessageHeaderFromMessage(msg)
-		
-		// load cookies		
+
+		// load cookies
 		cookies := o.LoadWebTriggerCookies(chathub.redispool, header, domain)
-		
+
 		jar.SetCookies(u, cookies)
-		
+
 		rr := httpx.NewRestfulRequest(f.Action.Method, f.Action.Url)
 		rr.Params["msg"] = msg
 		rr.CookieJar = jar
-		
+
 		if resp, err := httpx.RestfulCallRetry(rr, 5, 1); err != nil {
 			fmt.Printf("[WebTrigger] failed %s\n%v\n", err, resp)
 		} else {
 			//save cookies
 			o.SaveWebTriggerCookies(chathub.redispool, header, domain, resp.Cookies)
+			if o.Err != nil {
+				fmt.Printf("[WebTrigger] save cookie failed %s\n", o.Err)
+			}
 		}
 	}()
 

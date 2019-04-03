@@ -12,13 +12,13 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/web"
 )
 
 type MainConfig struct {
-	Hub chatbothub.ChatHubConfig
-	Web web.WebConfig
+	Hub   chatbothub.ChatHubConfig
+	Web   web.WebConfig
 	Redis utils.RedisConfig
 }
 

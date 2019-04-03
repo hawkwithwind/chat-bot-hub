@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"time"
 	"github.com/gomodule/redigo/redis"
+	"time"
 )
 
 type RedisConfig struct {
@@ -39,4 +39,3 @@ func NewRedisPool(server string, db string, password string) *redis.Pool {
 		},
 	}
 }
-

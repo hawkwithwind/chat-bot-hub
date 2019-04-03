@@ -559,7 +559,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if o.Err != nil {
 				return
 			}
-			
+
 			if acresult.Success == false {
 				ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
 				return
@@ -574,7 +574,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-						
+
 			ctx.Info("delete contact %s from %s", userId, bot.Login)
 
 			o.DeleteChatContact(tx, bot.BotId, userId)

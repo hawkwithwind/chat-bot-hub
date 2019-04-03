@@ -211,7 +211,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
-	r.ParseForm()	
+	r.ParseForm()
 	page := o.getStringValueDefault(r.Form, "page", "0")
 	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
 	ctype := o.getStringValueDefault(r.Form, "type", "")
@@ -277,7 +277,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 				PageSize: ipagesize,
 			})
 	}
-	
+
 	if o.Err != nil {
 		return
 	}
@@ -302,7 +302,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
-	
+
 	pagecount := chatusercount / ipagesize
 	if chatusercount%ipagesize != 0 {
 		pagecount += 1
@@ -433,7 +433,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	} else {
 		chatgroupcount = o.GetChatGroupCount(tx, criteria)
 	}
-	
+
 	pagecount := chatgroupcount / ipagesize
 	if chatgroupcount%ipagesize != 0 {
 		pagecount += 1

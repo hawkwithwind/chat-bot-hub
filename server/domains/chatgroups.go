@@ -265,7 +265,7 @@ func (o *ErrorHandler) GetChatGroupCountWithBotId(q dbx.Queryable, criteria Chat
 		o.Err = fmt.Errorf("GetChatGroupsWithBotId must set param botId")
 		return 0
 	}
-	
+
 	const query string = `
 SELECT COUNT(*) 
 FROM chatgroups as g
