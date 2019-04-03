@@ -12,11 +12,12 @@ import (
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
+	
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -36,7 +37,12 @@ type ChatHubConfig struct {
 	Host   string
 	Port   string
 	Fluent FluentConfig
+	Redis  utils.RedisConfig
 }
+
+var (
+	chathub *ChatHub
+)
 
 func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
@@ -51,6 +57,12 @@ func (hub *ChatHub) init() {
 	}
 	hub.bots = make(map[string]*ChatBot)
 	hub.filters = make(map[string]Filter)
+	hub.redispool = utils.NewRedisPool(
+		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
+		hub.Config.Redis.Db, hub.Config.Redis.Password)
+
+	// set global variable chathub
+	chathub = hub
 }
 
 type ChatHub struct {
@@ -64,6 +76,7 @@ type ChatHub struct {
 	bots         map[string]*ChatBot
 	muxFilters   sync.Mutex
 	filters      map[string]Filter
+	redispool    *redis.Pool
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {

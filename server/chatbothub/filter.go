@@ -7,10 +7,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"net/http/cookiejar"
+	"net/url"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type Filter interface {
@@ -293,6 +296,8 @@ func (f *RegexRouter) Fill(msg string) error {
 		return nil
 	}
 
+	fmt.Printf("[FILTER DEBUG] matching %s\n", msg)
+	
 	for k, v := range f.NextFilter {
 		if cr, found := f.compiledRegexp[k]; found {
 			if cr.MatchString(msg) {
@@ -455,12 +460,41 @@ func NewWebTrigger(filterId string, filterName string) *WebTrigger {
 	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
 }
 
-func (f *WebTrigger) Fill(msg string) error {
+
+func (f *WebTrigger) Fill(msg string) error {	
 	go func() {
+		o := domains.ErrorHandler{}
+		
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			return
+		}
+
+		var u *url.URL
+		u, err = url.Parse(f.Action.Url)
+		if err != nil {
+			fmt.Printf("[WebTrigger] failed parse url %s\n%s\n", f.Action.Url, err)
+			return
+		}
+		domain := strings.Split(u.Host, ":")[0]
+		
+		// parse fromUser toUser groupId from msg, and init cookie struct
+		header := o.ChatMessageHeaderFromMessage(msg)
+		
+		// load cookies		
+		cookies := o.LoadWebTriggerCookies(chathub.redispool, header, domain)
+		
+		jar.SetCookies(u, cookies)
+		
 		rr := httpx.NewRestfulRequest(f.Action.Method, f.Action.Url)
 		rr.Params["msg"] = msg
+		rr.CookieJar = jar
+		
 		if resp, err := httpx.RestfulCallRetry(rr, 5, 1); err != nil {
 			fmt.Printf("[WebTrigger] failed %s\n%v\n", err, resp)
+		} else {
+			//save cookies
+			o.SaveWebTriggerCookies(chathub.redispool, header, domain, resp.Cookies)
 		}
 	}()
 

@@ -13,11 +13,13 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type MainConfig struct {
 	Hub chatbothub.ChatHubConfig
 	Web web.WebConfig
+	Redis utils.RedisConfig
 }
 
 var (
@@ -76,7 +78,7 @@ func main() {
 		go func() {
 			wg.Add(1)
 			defer wg.Done()
-
+			config.Web.Redis = config.Redis
 			webserver := web.WebServer{Config: config.Web, Hubhost: "hub", Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
@@ -88,6 +90,7 @@ func main() {
 			defer wg.Done()
 
 			raven.CapturePanicAndWait(func() {
+				config.Hub.Redis = config.Redis
 				hub := chatbothub.ChatHub{Config: config.Hub, Webhost: "web", Webport: config.Web.Port, WebBaseUrl: config.Web.Baseurl}
 				hub.Serve()
 			}, nil)

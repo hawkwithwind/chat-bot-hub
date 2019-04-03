@@ -174,6 +174,35 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	return count
 }
 
+func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []interface{} {
+	if o.Err != nil {
+		return []interface{}{}
+	}
+
+	key := "0"
+	results := []interface{}{}
+	
+	for true {
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err == nil {
+			if len(ret) != 2 {
+				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
+				return results
+			}
+		}
+		key = o.RedisString(ret[0])
+		resultlist := o.RedisValue(ret[1])
+
+		results = append(results, resultlist...)
+
+		if key == "0" {
+			break
+		}
+	}
+
+	return results
+}
+
 func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, int, int) {
 	if o.Err != nil {
 		return 0, 0, 0

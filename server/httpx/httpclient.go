@@ -23,11 +23,13 @@ type RestfulRequest struct {
 	Uri             string
 	ContentTypeFlag bool
 	AcceptFlag      bool
+	CookieJar       http.CookieJar
 }
 
 type RestfulResponse struct {
 	Body       string
 	Header     *http.Header
+	Cookies    []*http.Cookie
 	StatusCode int
 }
 
@@ -162,6 +164,7 @@ func NewHttpClient() *http.Client {
 
 func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	client := NewHttpClient()
+	client.Jar = req.CookieJar
 
 	requestBody := url.Values{}
 	for k, v := range req.Params {
@@ -215,8 +218,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		}
 		
 		// TODO: deal with redirect
-		// TODO: deal with cookies
-		
+
 		if body, err = ioutil.ReadAll(nresp.Body); err != nil {
 			return nil, err
 		}
@@ -224,6 +226,7 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 		return &RestfulResponse{
 			Body:       string(body),
 			Header:     &nresp.Header,
+			Cookies:    nresp.Cookies(),
 			StatusCode: nresp.StatusCode,
 		}, nil
 	} else {
