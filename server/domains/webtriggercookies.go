@@ -97,12 +97,14 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 		rk := header.redisKey(domain, cookie.Name)
 		fmt.Printf("[WEBTRIGGER_COOKIE] set %s %s\n", rk, cookie.String())
 		//o.RedisSend(conn, "SET", rk, cookie.String())
-		ret := o.RedisDo(conn, timeout,"SET", rk, fmt.Sprintf(`"%s"`,cookie.String()))
+		ret := o.RedisDo(conn, timeout,"SET",
+			fmt.Sprintf(`"%s"`, rk),
+			fmt.Sprintf(`"%s"`,cookie.String()))
 		
 		if o.Err != nil {
 			fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
 		} else {
-			fmt.Printf("[WEBTRIGGER_COOKIE] error %v\n", ret)
+			fmt.Printf("[WEBTRIGGER_COOKIE] ret %v\n", ret)
 		}
 	}
 	//ret := o.RedisDo(conn, timeout, "EXEC")
