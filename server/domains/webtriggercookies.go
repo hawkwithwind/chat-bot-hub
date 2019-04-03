@@ -70,9 +70,11 @@ func (o *ErrorHandler) LoadWebTriggerCookies(pool *redis.Pool, header ChatMessag
 	conn := pool.Get()
 	defer conn.Close()
 
-	cstrings := o.RedisMatch(conn, header.redisKeyPattern(domain)) 
-	fmt.Printf("[WEBTRIGGER_COOKIE] cstrings %v\n", cstrings)
-
+	var cstrings []string
+	for _, key := range o.RedisMatch(conn, header.redisKeyPattern(domain)) {
+		cstrings = append(cstrings, o.RedisString(o.RedisDo(conn, timeout, "GET", key)))
+	}
+	
 	if o.Err != nil {
 		fmt.Printf("[WEBTRIGGER_COOKIE] error %s\n", o.Err)
 	}
