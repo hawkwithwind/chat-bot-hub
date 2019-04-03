@@ -86,7 +86,7 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 	conn := pool.Get()
 	defer conn.Close()
 
-	fmt.Printf("[WEBTRIGGER_COOKIE] saving %s %v", domain, cookies)
+	fmt.Printf("[WEBTRIGGER_COOKIE] saving %s %v\n", domain, cookies)
 
 	o.RedisSend(conn, "MULTI")
 	for _, cookie := range cookies {
@@ -94,5 +94,10 @@ func (o *ErrorHandler) SaveWebTriggerCookies(
 		fmt.Printf("[WEBTRIGGER_COOKIE] set %s %s\n", rk, cookie.String())
 		o.RedisSend(conn, "SET", rk, cookie.String())
 	}
-	o.RedisDo(conn, timeout, "EXEC")
+	ret := o.RedisDo(conn, timeout, "EXEC")
+	if o.Err != nil {
+		fmt.Printf("[WEBTRIGGER_COOKIE] error %s", o.Err)
+	} else {
+		fmt.Printf("[WEBTRIGGER_COOKIE] ret %v", ret)
+	}
 }
