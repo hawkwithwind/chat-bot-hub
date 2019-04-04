@@ -343,6 +343,8 @@ WHERE u.deleteat is NULL
 ORDER BY u.createat desc
 LIMIT ?, ?
 `
+	fmt.Printf("%s\n", criteria.BotId.String)
+	
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,

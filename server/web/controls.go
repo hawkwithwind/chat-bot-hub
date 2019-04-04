@@ -254,6 +254,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	fmt.Printf("%s %s\n", botlogin, botid)
+
 	criteria := domains.ChatUserCriteria{
 		Type:     utils.StringNull(ctype, ""),
 		UserName: utils.StringNull(username, ""),
@@ -281,6 +283,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
+
+	fmt.Printf("%v\n", criteria.BotId)
 
 	var chatusercount int64
 	if criteria.BotId.Valid {

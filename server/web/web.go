@@ -18,7 +18,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/rs/cors"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -315,9 +314,9 @@ func (ctx *WebServer) Serve() {
 		return
 	}
 
-	// nextRequestID := func() string {
-	// 	return fmt.Sprintf("%d", time.Now().UnixNano())
-	// }
+	nextRequestID := func() string {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
 
 	r := mux.NewRouter()
 	r.Handle("/healthz", healthz())
@@ -363,27 +362,18 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	
+	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"localhost:8080"},
-		AllowCredentials: true,
-		// Enable Debugging for testing, consider disabling in production
-		Debug: true,
-	})
-
-	//handler := http.HandlerFunc(c.Handler(r).ServeHTTP)
-	
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      c.Handler(r), //tracing(nextRequestID)(logging(ctx.logger)(handler)),
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  60 * time.Second,
-	}	
+	}
 
 	done := make(chan bool)
 	quit := make(chan os.Signal, 1)
