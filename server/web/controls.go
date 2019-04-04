@@ -254,8 +254,6 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Printf("%s %s\n", botlogin, botid)
-
 	criteria := domains.ChatUserCriteria{
 		Type:     utils.StringNull(ctype, ""),
 		UserName: utils.StringNull(username, ""),
@@ -265,8 +263,6 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	var chatusers []domains.ChatUser
 	if criteria.BotId.Valid {
-		fmt.Printf("GetChatUserWithBotId %v\n", criteria.BotId)
-		
 		chatusers = o.GetChatUsersWithBotId(tx,
 			criteria,
 			domains.Paging{
@@ -274,8 +270,6 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 				PageSize: ipagesize,
 			})
 	} else {
-		fmt.Printf("GetChatUsers %v\n", criteria.BotId)
-		
 		chatusers = o.GetChatUsers(tx,
 			criteria,
 			domains.Paging{
@@ -285,11 +279,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
-		fmt.Printf("o.Err %s\n", o.Err)
 		return
 	}
-
-	fmt.Printf("%v\n", criteria.BotId)
 
 	var chatusercount int64
 	if criteria.BotId.Valid {
@@ -297,8 +288,6 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	} else {
 		chatusercount = o.GetChatUserCount(tx, criteria)
 	}
-
-	fmt.Printf("chatusercount %d\n", chatusercount)
 
 	chatuservos := make([]ChatUserVO, 0, len(chatusers))
 	for _, chatuser := range chatusers {
