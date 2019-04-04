@@ -16,7 +16,7 @@ import (
 
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	"github.com/gorilla/mux"
+	"github.com/hawkwithwind/mux"
 	"github.com/gorilla/sessions"
 	"github.com/gorilla/handlers"
 
@@ -372,10 +372,10 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.CORS(
+		Handler:      mux.CORSMethodMiddleware(r)(handlers.CORS(
 			handlers.AllowCredentials(),
 			handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
-			handlers.AllowedOrigins(ctx.Config.AllowOrigin))(r),
+			handlers.AllowedOrigins(ctx.Config.AllowOrigin))(r)),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
