@@ -370,8 +370,10 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.CORS(handlers.AllowedOrigins(ctx.Config.AllowOrigin))(
-			tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
+		Handler:      handlers.CORS(
+			handlers.AllowedOrigins(ctx.Config.AllowOrigin),
+			handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}))(
+				tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,

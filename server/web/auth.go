@@ -108,6 +108,8 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
+	
+
 	var session *sessions.Session
 	session, o.Err = ctx.store.Get(req, "chatbothub")
 
