@@ -372,7 +372,7 @@ func (ctx *WebServer) Serve() {
 		Addr:         addr,
 		Handler:      handlers.CORS(
 			handlers.AllowedOrigins(ctx.Config.AllowOrigin),
-			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}),
+			handlers.AllowedMethods([]string{"POST"}),
 			handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}))(
 				tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
 		ErrorLog:     ctx.logger,
