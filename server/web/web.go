@@ -369,7 +369,7 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handlers.CORS(handlers.AllowedOrigins([]string{"/localhost/"}))(sentryContext(handler)))),
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handlers.CORS(handlers.AllowedOrigins([]string{"http://localhost"}))(sentryContext(handler)))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
