@@ -321,7 +321,11 @@ WHERE deleteat is NULL
 }
 
 func (o *ErrorHandler) GetChatUsersWithBotId(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
+
+	fmt.Printf("GetChatUserWithBotId %v\n", criteria.BotId)
+	
 	if o.Err != nil {
+		fmt.Printf("GetChatUserWithBotId %v\n", o.Err)
 		return []ChatUser{}
 	}
 
@@ -343,7 +347,7 @@ WHERE u.deleteat is NULL
 ORDER BY u.createat desc
 LIMIT ?, ?
 `
-	fmt.Printf("%s\n", criteria.BotId.String)
+	fmt.Printf("GetChatUserWithBotId search %s\n", criteria.BotId.String)
 	
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()

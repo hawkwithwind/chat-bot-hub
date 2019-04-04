@@ -265,6 +265,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	var chatusers []domains.ChatUser
 	if criteria.BotId.Valid {
+		fmt.Printf("GetChatUserWithBotId %v\n", criteria.BotId)
+		
 		chatusers = o.GetChatUsersWithBotId(tx,
 			criteria,
 			domains.Paging{
@@ -272,6 +274,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 				PageSize: ipagesize,
 			})
 	} else {
+		fmt.Printf("GetChatUsers %v\n", criteria.BotId)
+		
 		chatusers = o.GetChatUsers(tx,
 			criteria,
 			domains.Paging{
@@ -281,6 +285,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
+		fmt.Printf("o.Err %s\n", o.Err)
 		return
 	}
 
