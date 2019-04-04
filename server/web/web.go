@@ -18,7 +18,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/gorilla/handlers"
+	"github.com/rs/cors"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -363,8 +363,17 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	handler := http.HandlerFunc(raven.RecoveryHandler(handlers.CORS(handlers.AllowedOrigins([]string{"http://localhost:8080"}))(r).ServeHTTP))
 	
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"localhost:8080"},
+		AllowCredentials: true,
+		// Enable Debugging for testing, consider disabling in production
+		Debug: true,
+	})
+
+	handler := http.HandlerFunc(raven.RecoveryHandler(c.Handler(r).ServeHTTP))
+
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
