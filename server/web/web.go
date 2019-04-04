@@ -321,6 +321,7 @@ func (ctx *WebServer) Serve() {
 	}
 
 	r := mux.NewRouter()
+	
 	r.Handle("/healthz", healthz())
 	r.HandleFunc("/echo", ctx.echo).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
@@ -364,6 +365,8 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
+	r.Use(mux.CORSMethodMiddleware(r))
+	
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
