@@ -364,8 +364,10 @@ LIMIT ?, ?
 		paging.PageSize)
 
 	if o.Err != nil {
+		fmt.Printf("query err %s\n", o.Err)
 		return []ChatUser{}
 	} else {
+		fmt.Printf("query %v\n", chatusers)
 		return chatusers
 	}
 }

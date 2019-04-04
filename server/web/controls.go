@@ -298,6 +298,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		chatusercount = o.GetChatUserCount(tx, criteria)
 	}
 
+	fmt.Printf("chatusercount %d\n", chatusercount)
+
 	chatuservos := make([]ChatUserVO, 0, len(chatusers))
 	for _, chatuser := range chatusers {
 		chatuservos = append(chatuservos, ChatUserVO{
