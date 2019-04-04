@@ -18,6 +18,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/gorilla/handlers"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -363,12 +364,12 @@ func (ctx *WebServer) Serve() {
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
-
+	
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handlers.CORS(handlers.AllowedOrigins([]string{"/localhost/"}))(sentryContext(handler)))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
