@@ -39,6 +39,7 @@ type WebConfig struct {
 	Database     DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
+	AllowOrigin  []string
 }
 
 type CommonResponse struct {
@@ -369,7 +370,7 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.CORS(handlers.AllowedOrigins([]string{"http://localhost:8080"}))(
+		Handler:      handlers.CORS(handlers.AllowedOrigins(ctx.Config.AllowOrigin))(
 			tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
