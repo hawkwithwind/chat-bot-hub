@@ -365,7 +365,6 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	r.Use(mux.CORSMethodMiddleware(r))
 	
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
@@ -378,7 +377,7 @@ func (ctx *WebServer) Serve() {
 			handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
 			handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"}),
 			handlers.AllowedOrigins(ctx.Config.AllowOrigin))(
-				tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
+				mux.CORSMethodMiddleware(r)(tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
