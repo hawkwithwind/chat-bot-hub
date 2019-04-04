@@ -363,13 +363,13 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+	handler := http.HandlerFunc(raven.RecoveryHandler(handlers.CORS(handlers.AllowedOrigins([]string{"http://localhost:8080"}))(r).ServeHTTP))
 	
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.CORS(handlers.AllowedOrigins([]string{"http://localhost:8080"}))(tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler)))),
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
