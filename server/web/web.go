@@ -315,9 +315,9 @@ func (ctx *WebServer) Serve() {
 		return
 	}
 
-	nextRequestID := func() string {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
+	// nextRequestID := func() string {
+	// 	return fmt.Sprintf("%d", time.Now().UnixNano())
+	// }
 
 	r := mux.NewRouter()
 	r.Handle("/healthz", healthz())
@@ -372,18 +372,18 @@ func (ctx *WebServer) Serve() {
 		Debug: true,
 	})
 
-	handler := http.HandlerFunc(c.Handler(r).ServeHTTP)
+	//handler := http.HandlerFunc(c.Handler(r).ServeHTTP)
 	
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      tracing(nextRequestID)(logging(ctx.logger)(handler)),
+		Handler:      c.Handler(r), //tracing(nextRequestID)(logging(ctx.logger)(handler)),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  60 * time.Second,
-	}
+	}	
 
 	done := make(chan bool)
 	quit := make(chan os.Signal, 1)
