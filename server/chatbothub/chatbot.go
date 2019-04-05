@@ -356,7 +356,7 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 		bot.Info("action %s", actionType)
 		bodym := o.FromJson(body)
 
-		var parammap map[string]interface{}
+		parammap := make(map[string]interface{})
 		for _, p := range params {
 			paramvalue := o.FromMapString(p.Name, bodym, "actionbody", p.HasDefault, p.DefaultValue)
 			if o.Err != nil {
