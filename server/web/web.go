@@ -371,9 +371,9 @@ func (ctx *WebServer) Serve() {
 		handlers.AllowCredentials(),
 		handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
 		handlers.AllowedOrigins(ctx.Config.AllowOrigin)))
-	r.Use(logging(ctx.logger))
 	r.Use(tracing(nextRequestID))
-
+	r.Use(logging(ctx.logger))
+	
 	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
