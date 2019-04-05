@@ -223,8 +223,6 @@ func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 			return nil, err
 		}
 
-		fmt.Printf("[HTTPX RESPONSE]COOKIES %v\n", nresp.Cookies())
-
 		return &RestfulResponse{
 			Body:       string(body),
 			Header:     &nresp.Header,
