@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/gorilla/context"
-	"github.com/gorilla/mux"
+	"github.com/hawkwithwind/mux"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"

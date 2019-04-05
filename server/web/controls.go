@@ -7,7 +7,7 @@ import (
 	"time"
 
 	grctx "github.com/gorilla/context"
-	"github.com/gorilla/mux"
+	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
