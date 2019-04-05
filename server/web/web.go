@@ -316,9 +316,9 @@ func (ctx *WebServer) Serve() {
 		return
 	}
 
-	// nextRequestID := func() string {
-	// 	return fmt.Sprintf("%d", time.Now().UnixNano())
-	// }
+	nextRequestID := func() string {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
 
 	r := mux.NewRouter()
 	
@@ -366,13 +366,13 @@ func (ctx *WebServer) Serve() {
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 	
-	//handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      r,
+		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
