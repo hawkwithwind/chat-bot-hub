@@ -219,6 +219,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
+	ctx.Info("botNotify %s", botId)
+
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
@@ -244,6 +246,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
+		return
+	}
+
+	if botsreply == nil {
+		o.Err = fmt.Errorf("cannot find bots %s", botId)
 		return
 	}
 
