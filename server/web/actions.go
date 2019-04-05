@@ -211,6 +211,22 @@ type WechatGroupMember struct {
 	UserName         string `json:"userName"`
 }
 
+type WechatSnsMoment struct {
+	CreateTime int `json:"createTime"`
+	Description string `json:"description"`
+	MomentId string `json:"id"`
+	NickName string `json:"nickName"`
+	UserName string `json:"userName"`
+}
+
+type WechatSnsTimeline struct {
+	Data []WechatSnsMoment `json:"data"`
+	Count int `json:"count"`
+	Message string `json:"message"`
+	Page string `json:"page"`
+	Status int `json:"status"`
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -536,9 +552,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			ctx.Info("result is %s", result)
 			return
-		}
-
-		ctx.Info("action reply %s\n", o.ToJson(localar))
+		}	
 
 		switch localar.ActionType {
 		case chatbothub.AcceptUser:
@@ -670,6 +684,32 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if len(chatgroupMembers) > 0 {
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
+			
+		case chatbothub.SnsTimeline:
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
+				return
+			}
+
+			if thebotinfo.ClientType == "WECHATBOT" {
+				wetimeline := WechatSnsTimeline{}
+				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
+				if o.Err != nil {
+					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
+					return
+				}
+
+				ctx.Info("Wechat Sns Timeline")
+				for _, m := range wetimeline.Data {
+					ctx.Info("---\n%s at %s from %s %s\n%s",
+						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
+				}
+			}
+
+		default:
+			ctx.Info("action reply %s\n", o.ToJson(localar))
 		}
 
 		if o.Err != nil {
