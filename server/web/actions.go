@@ -223,6 +223,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	defer o.CommitOrRollback(tx)
 
 	bot := o.GetBotById(tx, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if bot == nil {
+		o.Err = fmt.Errorf("bot %s not found", botId)
+		return
+	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
