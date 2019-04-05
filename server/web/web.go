@@ -18,7 +18,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/hawkwithwind/mux"
 	"github.com/gorilla/sessions"
-	"github.com/gorilla/handlers"
+	//"github.com/gorilla/handlers"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -372,10 +372,7 @@ func (ctx *WebServer) Serve() {
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.CORS(
-			handlers.AllowCredentials(),
-			handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
-			handlers.AllowedOrigins(ctx.Config.AllowOrigin))(r),
+		Handler:      r,
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
