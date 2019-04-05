@@ -16,7 +16,7 @@ import (
 
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	"github.com/hawkwithwind/mux"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	//"github.com/gorilla/handlers"
 
