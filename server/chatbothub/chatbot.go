@@ -82,6 +82,14 @@ const (
 	GetContactQRCode         string = "GetContactQRCode"
 	SearchContact            string = "SearchContact"
 	SyncContact              string = "SyncContact"
+	SnsTimeline              string = "SnsTimeline"
+	SnsUserPage              string = "SnsUserPage"
+	SnsGetObject             string = "SnsGetObject"
+	SnsComment               string = "SnsComment"
+	SnsLike                  string = "SnsLike"
+	SnsUpload                string = "SnsUpload"
+	SnsobjectOP              string = "SnsobjectOP"
+	SnsSendMoment            string = "SnsSendMoment"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -291,6 +299,14 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
 		SearchContact:            (*ChatBot).SearchContact,
 		SyncContact:              (*ChatBot).SyncContact,
+		SnsTimeline:              (*ChatBot).SnsTimeline,
+		SnsUserPage:              (*ChatBot).SnsUserPage,
+		SnsGetObject:             (*ChatBot).SnsGetObject,
+		SnsComment:               (*ChatBot).SnsComment,
+		SnsLike:                  (*ChatBot).SnsLike,
+		SnsUpload:                (*ChatBot).SnsUpload,
+		SnsobjectOP:              (*ChatBot).SnsobjectOP,
+		SnsSendMoment:            (*ChatBot).SnsSendMoment,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -319,6 +335,128 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 		ClientId:   bot.ClientId,
 		Body:       o.ToJson(actionm),
 	})
+}
+
+type ActionParam struct {
+	Name         string
+	HasDefault   bool
+	DefaultValue string
+}
+
+func NewActionParam(name string, hasdefault bool, defaultvalue string) ActionParam {
+	return ActionParam{
+		Name:         name,
+		HasDefault:   hasdefault,
+		DefaultValue: defaultvalue,
+	}
+}
+
+func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body string, actionType string, params []ActionParam) {
+	if bot.ClientType == WECHATBOT {
+		bot.Info("action %s", actionType)
+		bodym := o.FromJson(body)
+
+		var parammap map[string]interface{}
+		for _, p := range params {
+			paramvalue := o.FromMapString(p.Name, bodym, "actionbody", p.HasDefault, p.DefaultValue)
+			if o.Err != nil {
+				return
+			}
+			parammap[p.Name] = paramvalue
+		}
+
+		o.SendAction(bot, arId, actionType, o.ToJson(parammap))
+	} else {
+		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType)
+	}
+}
+
+func (bot *ChatBot) SnsTimeline(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsTimeline
+	params := []ActionParam{
+		NewActionParam("momentId", true, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsUserPage(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsUserPage
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+		NewActionParam("momentId", true, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsGetObject(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsGetObject
+	params := []ActionParam{
+		NewActionParam("momentId", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsComment(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsComment
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+		NewActionParam("momentId", false, ""),
+		NewActionParam("content", false, ""),
+	}
+
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsLike(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsLike
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+		NewActionParam("momentId", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsUpload(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsUpload
+	params := []ActionParam{
+		NewActionParam("file", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsobjectOP(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsobjectOP
+	params := []ActionParam{
+		NewActionParam("momentId", false, ""),
+		NewActionParam("type", false, ""),
+		NewActionParam("commentId", false, ""),
+		NewActionParam("commentType", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) SnsSendMoment(arId string, body string) error {
+	o := &ErrorHandler{}
+	const actionType string = SnsSendMoment
+	params := []ActionParam{
+		NewActionParam("content", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
 }
 
 func (bot *ChatBot) DeleteContact(arId string, body string) error {

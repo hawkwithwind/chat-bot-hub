@@ -187,7 +187,7 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 		if o.Err != nil {
 			return results
 		}
-		
+
 		if o.Err == nil {
 			if len(ret) != 2 {
 				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
@@ -198,7 +198,7 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 		for _, v := range o.RedisValue(ret[1]) {
 			results = append(results, o.RedisString(v))
 		}
-		
+
 		if key == "0" {
 			break
 		}
