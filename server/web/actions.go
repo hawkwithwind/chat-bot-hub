@@ -538,7 +538,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ctx.Info("action reply %v\n", localar)
+		ctx.Info("action reply %s\n", o.ToJson(localar))
 
 		switch localar.ActionType {
 		case chatbothub.AcceptUser:
