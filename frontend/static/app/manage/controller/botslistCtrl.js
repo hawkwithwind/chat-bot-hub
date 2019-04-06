@@ -203,7 +203,7 @@
       "content" : {
         "name": "content",
         "display": "内容",
-        "type": "string",
+        "type": "longstring",
         "required": true,
       },
       "userId": {
@@ -280,7 +280,7 @@
         {
           "name": "object",
           "display": "消息体",
-          "type": "string",
+          "type": "longstring",
           "required": true,
           "comment": "json结构的消息体",
         }
@@ -310,7 +310,7 @@
         {
           "name": "userList",
           "display": "用户列表",
-          "type": "string",
+          "type": "longstring",
           "required": true,
           "comment": "必须是好友才能加群",
         },
@@ -367,7 +367,7 @@
         {
           "name": "file",
           "display": "文件",
-          "type": "string",
+          "type": "longstring",
           "required": true,
           "comment":"上传图片的base64串，此接口仅上传，不会发送到朋友圈"
         }
@@ -397,6 +397,8 @@
     let url = "/botaction/" + $scope.data.login
     
     $scope.sendAction = (data) => {
+      data.actionBody = JSON.stringify(data.actionBody)
+      
       $http({
 	method: 'POST',
 	url: url,
