@@ -98,7 +98,7 @@
     $scope.actions = {
       "SendTextMessage": [
         commonParams.toUserName,
-        commomParams.content,
+        commonParams.content,
         {
           "name": "atList",
           "display": "点名列表",
