@@ -26,14 +26,14 @@
     const commonParams = {
       "toUserName" : {
         "name": "toUserName",
-        "display": "收件人"
+        "display": "收件人",
         "type": "string",
         "required": true,
         "comment": "收件人的wxid或者groupid",
       },
       "content" : {
         "name": "content",
-        "display": "内容"
+        "display": "内容",
         "type": "string",
         "required": true,
       },
