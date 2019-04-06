@@ -23,6 +23,204 @@
 	hours.substr(-2)+':'+minutes.substr(-2)+':'+seconds.substr(-2);
     }
 
+    const commonParams = {
+      "toUserName" : {
+        "name": "toUserName",
+        "display": "收件人"
+        "type": "string",
+        "required": true,
+        "comment": "收件人的wxid或者groupid",
+      },
+      "content" : {
+        "name": "content",
+        "display": "内容"
+        "type": "string",
+        "required": true,
+      },
+      "userId": {
+        "name": "userId",
+        "display": "联系人ID",
+        "type": "string",
+        "required": true,
+        "comment": "联系人的wxid",
+      },
+      "stranger": {
+        "name": "stranger",
+        "display": "stranger",
+        "type": "string",
+        "required": true,
+      },
+      "ticket": {
+        "name": "ticket",
+        "display": "ticket",
+        "type": "string",
+        "required": true,
+      },
+      "type": {
+        "name": "type",
+        "display": "type",
+        "type": "int",
+        "required": true,
+      },
+      "verifyMessage": {
+        "name": "content",
+        "display": "content",
+        "type": "string",
+        "required": true,
+        "comment": "验证信息",
+      },
+      "groupId": {
+        "name": "groupId",
+        "display": "群ID",
+        "type": "string",
+        "required": true,
+      },
+      "memberId": {
+        "name": "memberId",
+        "display": "群成员ID",
+        "type": "string",
+        "required": true,
+      },
+      "momentId": {
+        "name": "momentId",
+        "display": "动态ID",
+        "type": "string",
+        "required": true,
+      },
+      "momentIdOptional": {
+        "name": "momentId",
+        "display": "动态ID",
+        "type": "string",
+        "required": false,
+      },
+    }
+
+    $scope.actions = {
+      "SendTextMessage": [
+        commonParams.toUserName,
+        commomParams.content,
+        {
+          "name": "atList",
+          "display": "点名列表",
+          "type": "string",
+          "required": false,
+        }
+      ],
+      "SendAppMessage" : [
+        commonParams.toUserName,
+        {
+          "name": "object",
+          "display": "消息体",
+          "type": "string",
+          "required": true,
+          "comment": "json结构的消息体",
+        }
+      ],
+      "SearchContact": [
+        commonParams.userId,
+      ],
+      "AddContact" : [
+        commonParams.stranger,
+        commonParams.ticket,
+        
+      ],
+      "AcceptUser": [
+        commonParams.stranger,
+        commonParams.ticket,
+        commonParams.verifyMessage,
+      ],
+      "SayHello": [
+        commonParams.stranger,
+        commonParams.ticket,
+        commonParams.verifyMessage,
+      ],
+      "DeleteContact": [
+        commonParams.userId,
+      ],
+      "CreateRoom": [
+        {
+          "name": "userList",
+          "display": "用户列表",
+          "type": "string",
+          "required": true,
+          "comment": "必须是好友才能加群",
+        },
+      ],
+      "GetRoomMembers": [
+        commonParams.groupId,
+      ],
+      "AddRoomMember": [
+        commonParams.groupId,
+        commonParams.memberId,
+      ],
+      "InviteRoomMember": [
+        commonParams.groupId,
+        commonParams.memberId,
+      ],
+      "DeleteRoomMember": [
+        commomParams.groupId,
+        commonParams.memberId,
+      ],
+      "SetRoomName": [
+        commonParams.groupId,
+        commonParams.content,
+      ],
+      "GetRoomQRCode": [
+        commonParams.groupId,
+      ],
+      "SetRoomAnnouncement": [
+        commonParams.groupId,
+        commonParams.content,
+      ],
+      "SnsSendMoment": [
+        commonParams.content,
+      ],
+      "SnsTimeline": [
+        commonParams.momentIdOptional,
+      ],
+      "SnsUserPage": [
+        commonParams.userId,
+        commonParams.momentIdOptional,
+      ],
+      "SnsGetObject": [
+        commonParams.momentId,
+      ],
+      "SnsComment": [
+        commonParams.userId,
+        commonParams.momentId,
+        commonParams.content,
+      ],
+      "SnsLike": [
+        commonParams.userId,
+        commonParams.momentId,
+      ],
+      "SnsUpload": [
+        {
+          "name": "file",
+          "display": "文件",
+          "type": "string",
+          "required": true,
+          "comment":"上传图片的base64串，此接口仅上传，不会发送到朋友圈"
+        }
+      ],
+      "SnsobjectOP": [
+        commonParams.momentId,
+        commonParams.type,
+        {
+          "name": "commentId",
+          "display": "评论ID",
+          "type": "string",
+          "required": true,
+        },
+        {
+          "name": "commentType",
+          "display": "评论类型",
+          "type": "int",
+          "required": true,
+        },
+      ],      
+    }
+
     $scope.initView = (data) => {
       $scope.body = data.body
     }

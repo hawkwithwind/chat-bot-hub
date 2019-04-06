@@ -686,6 +686,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 			
 		case chatbothub.SnsTimeline:
+			ctx.Info("snstimeline")
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
@@ -706,6 +707,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					ctx.Info("---\n%s at %s from %s %s\n%s",
 						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
 				}
+			} else {
+				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)
 			}
 
 		default:

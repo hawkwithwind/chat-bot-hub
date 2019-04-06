@@ -163,13 +163,21 @@
           <option value="SnsComment">评论朋友圈</option>
           <option value="SnsLike">朋友圈点赞</option>
           <option value="SnsUpload">上传图片到朋友圈</option>
-          <option value="SnsobjectOP">操作朋友圈</option>          
+          <option value="SnsobjectOP">操作朋友圈</option>
 	</select>
       </div>
     </div>
+    
     <div class="row form-group-padding">
       <div class="col-md-12">
-	<textarea id="textarea_body" name="textarea_body" class="col-md-12" ng-model="data.actionBody" />
+        <div ng-repeat="act in actions[data.actionType]">
+          <label for="{{act.name}}">{{act.display}}</label>
+          <span style="color:red" ng-show="act.required" >*</span>
+          <input ng-model="data.actionBody[act.name]" id="{{act.name}}" ng-required="act.required" />
+          <span style="color:grey">
+            {{act.comment}}
+          </span>
+        </div>
       </div>
     </div>
 
