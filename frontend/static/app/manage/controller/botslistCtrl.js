@@ -158,7 +158,7 @@
         commonParams.memberId,
       ],
       "DeleteRoomMember": [
-        commomParams.groupId,
+        commonParams.groupId,
         commonParams.memberId,
       ],
       "SetRoomName": [
