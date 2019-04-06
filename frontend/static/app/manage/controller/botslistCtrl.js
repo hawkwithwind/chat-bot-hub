@@ -23,6 +23,175 @@
 	hours.substr(-2)+':'+minutes.substr(-2)+':'+seconds.substr(-2);
     }
 
+    $scope.initView = (data) => {
+      $scope.body = data.body
+    }
+
+    $scope.refresh = () => {
+      buildPromise(buildModel('consts'))
+	.then((data) => {
+	  $scope.consts = data.body
+	
+	  buildPromise(buildModel('bots'))
+	    .then((data) => {
+	      $scope.initView(data);
+	    })
+	})
+    }
+
+    $scope.refresh()
+
+    $scope.createBot = (row) => {
+      $modal.open({
+	templateUrl: 'createBotTemplate',
+	controller: createBotCtrl,	
+      }).then(() => {
+	$scope.refresh()
+      })
+    }
+
+    $scope.scanWechatBot = () => {
+      $modal.open({
+	templateUrl: 'scanWechatBotTemplate',
+	controller: scanWechatBotCtrl,
+	resolve: {
+	  clientType: () => 'WECHATBOT'
+	}
+      }).then(() => {
+	$scope.refresh()
+      })
+    }
+
+    $scope.editBot = (row) => {
+      $modal.open({
+	templateUrl: 'editBotTemplate',
+	controller: editBotCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  clientType: () => row.clientType,
+	  botName: () => row.botName,
+	  login: () => row.login,
+	  filterId: () => row.filterId,
+	  callback: () => row.callback,
+          wxaappId: () => row.wxaappId,
+	}
+      }).then(() => {
+	$scope.refresh()
+      })
+    }
+    
+    $scope.showQQLogin = (row) => {
+      $modal.open({
+	templateUrl: 'loginQQTemplate',
+	controller: qqLoginCtrl,
+	resolve: {
+	  clientId: () => row.clientId
+	}
+      }).then(() => {
+	$scope.refresh()
+      })
+    }
+
+    $scope.showWechatLogin = (row) => {
+      $modal.open({
+	templateUrl: 'loginWechatTemplate',
+	controller: wechatLoginCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  botId: () => row.botId,
+	}
+      }).then(() => {
+	$scope.refresh()
+      })
+    }
+
+    $scope.wechatLogin = (row) => {
+      buildModel('botlogin', {
+	clientId: row.clientId,
+	clientType: row.clientType,
+	botId: row.botId
+      }).post((data) => {
+	toastr.success(data, '登录成功')
+      })
+    }
+
+    $scope.botAction = (row) => {
+      $modal.open({
+	templateUrl: 'botActionTemplate',
+	controller: botActionCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  login: () => row.login,
+	}
+      })
+    }
+
+    $scope.showScanUrl = (row) => {
+      $modal.open({
+	templateUrl: 'scanUrlTemplate',
+	controller: scanUrlCtrl,
+	resolve: {
+	  clientId: () => row.clientId,
+	  login: () => row.login,
+	  botId: () => row.botId,
+	}
+      })
+    }
+  }
+
+  app.controller("qqLoginCtrl", qqLoginCtrl)
+  qqLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"];
+  function qqLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
+    $scope.clientId = clientId;
+    $scope.data = {};
+    $scope.data.clientId = clientId;
+    $scope.data.clientId = botId;
+    
+    $scope.close = function() {
+      $uibModalInstance.dismiss();
+    }
+
+    $scope.login = function(data) {
+      buildModel('botlogin', data).post((data) => {
+	toastr.info(data, '信息')
+      })
+
+      $scope.close()
+    }
+  }
+
+  app.controller("wechatLoginCtrl", wechatLoginCtrl)
+  wechatLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"]
+  function wechatLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
+    $scope.clientId = clientId
+    $scope.data = {}
+    $scope.data.clientId = clientId
+    $scope.data.botId = botId
+    $scope.data.clientType = "WECHATBOT"
+    
+    $scope.close = () => {
+      $uibModalInstance.dismiss()
+    }
+
+    $scope.login = (data) => {
+      buildModel('botlogin', data).post((data) => {
+	toastr.info(data, '信息')
+      }, (error) => {
+	toastr.error(error, '登录失败')
+      })
+
+      $scope.close()
+    }
+  }
+
+  app.controller("botActionCtrl", botActionCtrl)
+  botActionCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "login"]
+  function botActionCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, login) {
+    $scope.clientId = clientId
+    $scope.data = {}
+    $scope.data.clientId = clientId
+    $scope.data.login = login
+
     const commonParams = {
       "toUserName" : {
         "name": "toUserName",
@@ -220,175 +389,6 @@
         },
       ],      
     }
-
-    $scope.initView = (data) => {
-      $scope.body = data.body
-    }
-
-    $scope.refresh = () => {
-      buildPromise(buildModel('consts'))
-	.then((data) => {
-	  $scope.consts = data.body
-	
-	  buildPromise(buildModel('bots'))
-	    .then((data) => {
-	      $scope.initView(data);
-	    })
-	})
-    }
-
-    $scope.refresh()
-
-    $scope.createBot = (row) => {
-      $modal.open({
-	templateUrl: 'createBotTemplate',
-	controller: createBotCtrl,	
-      }).then(() => {
-	$scope.refresh()
-      })
-    }
-
-    $scope.scanWechatBot = () => {
-      $modal.open({
-	templateUrl: 'scanWechatBotTemplate',
-	controller: scanWechatBotCtrl,
-	resolve: {
-	  clientType: () => 'WECHATBOT'
-	}
-      }).then(() => {
-	$scope.refresh()
-      })
-    }
-
-    $scope.editBot = (row) => {
-      $modal.open({
-	templateUrl: 'editBotTemplate',
-	controller: editBotCtrl,
-	resolve: {
-	  clientId: () => row.clientId,
-	  clientType: () => row.clientType,
-	  botName: () => row.botName,
-	  login: () => row.login,
-	  filterId: () => row.filterId,
-	  callback: () => row.callback,
-          wxaappId: () => row.wxaappId,
-	}
-      }).then(() => {
-	$scope.refresh()
-      })
-    }
-    
-    $scope.showQQLogin = (row) => {
-      $modal.open({
-	templateUrl: 'loginQQTemplate',
-	controller: qqLoginCtrl,
-	resolve: {
-	  clientId: () => row.clientId
-	}
-      }).then(() => {
-	$scope.refresh()
-      })
-    }
-
-    $scope.showWechatLogin = (row) => {
-      $modal.open({
-	templateUrl: 'loginWechatTemplate',
-	controller: wechatLoginCtrl,
-	resolve: {
-	  clientId: () => row.clientId,
-	  botId: () => row.botId,
-	}
-      }).then(() => {
-	$scope.refresh()
-      })
-    }
-
-    $scope.wechatLogin = (row) => {
-      buildModel('botlogin', {
-	clientId: row.clientId,
-	clientType: row.clientType,
-	botId: row.botId
-      }).post((data) => {
-	toastr.success(data, '登录成功')
-      })
-    }
-
-    $scope.botAction = (row) => {
-      $modal.open({
-	templateUrl: 'botActionTemplate',
-	controller: botActionCtrl,
-	resolve: {
-	  clientId: () => row.clientId,
-	  login: () => row.login,
-	}
-      })
-    }
-
-    $scope.showScanUrl = (row) => {
-      $modal.open({
-	templateUrl: 'scanUrlTemplate',
-	controller: scanUrlCtrl,
-	resolve: {
-	  clientId: () => row.clientId,
-	  login: () => row.login,
-	  botId: () => row.botId,
-	}
-      })
-    }
-  }
-
-  app.controller("qqLoginCtrl", qqLoginCtrl)
-  qqLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"];
-  function qqLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
-    $scope.clientId = clientId;
-    $scope.data = {};
-    $scope.data.clientId = clientId;
-    $scope.data.clientId = botId;
-    
-    $scope.close = function() {
-      $uibModalInstance.dismiss();
-    }
-
-    $scope.login = function(data) {
-      buildModel('botlogin', data).post((data) => {
-	toastr.info(data, '信息')
-      })
-
-      $scope.close()
-    }
-  }
-
-  app.controller("wechatLoginCtrl", wechatLoginCtrl)
-  wechatLoginCtrl.$inject = ["$scope", "$uibModalInstance", "toastr", "buildModel", "buildPromise", "tools", "clientId", "botId"]
-  function wechatLoginCtrl($scope, $uibModalInstance, toastr, buildModel, buildPromise, tools, clientId, botId) {
-    $scope.clientId = clientId
-    $scope.data = {}
-    $scope.data.clientId = clientId
-    $scope.data.botId = botId
-    $scope.data.clientType = "WECHATBOT"
-    
-    $scope.close = () => {
-      $uibModalInstance.dismiss()
-    }
-
-    $scope.login = (data) => {
-      buildModel('botlogin', data).post((data) => {
-	toastr.info(data, '信息')
-      }, (error) => {
-	toastr.error(error, '登录失败')
-      })
-
-      $scope.close()
-    }
-  }
-
-  app.controller("botActionCtrl", botActionCtrl)
-  botActionCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "login"]
-  function botActionCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, login) {
-    $scope.clientId = clientId
-    $scope.data = {}
-    $scope.data.clientId = clientId
-    $scope.data.login = login
 
     $scope.close = () => {
       $uibModalInstance.dismiss();
