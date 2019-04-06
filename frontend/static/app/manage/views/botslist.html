@@ -180,7 +180,6 @@
           <textarea ng-if="act.type == 'longstring'" class="col-md-5"
                     ng-model="data.actionBody[act.name]" rows="6" 
                     id="{{act.name}}" ng-required="act.required" />
-          <br ng-if="act.type == 'longstring'" />
           <span class="col-md-4" style="color:grey">
             {{act.comment}}
           </span>
