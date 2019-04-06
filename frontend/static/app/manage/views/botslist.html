@@ -169,7 +169,7 @@
     </div>
     
     <div class="row form-group-padding">
-      <div class="col-md-12">
+      <div class="col-md-6">
         <div class="row form-group-padding" ng-repeat="act in actions[data.actionType]">
           <label for="{{act.name}}" class="col-md-3 control-label">{{act.display}}
             <span style="color:red" ng-show="act.required" >*</span>
@@ -178,7 +178,7 @@
                  ng-model="data.actionBody[act.name]"
                  id="{{act.name}}" ng-required="act.required" />
           <textarea ng-if="act.type == 'longstring'" class="col-md-6"
-                    ng-model="data.actionBody[act.name]"
+                    ng-model="data.actionBody[act.name]" rows="6" 
                     id="{{act.name}}" ng-required="act.required" />
           <br ng-if="act.type == 'longstring'" />
           <span class="col-md-3" style="color:grey">
