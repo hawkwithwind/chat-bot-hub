@@ -32,7 +32,9 @@ func (tasks *Tasks) init() {
 	tasks.cron = cron.New()
 }
 
-func (tasks *Tasks) Serve() error {	
+func (tasks *Tasks) Serve() error {
+	tasks.init()
+	
 	tasks.cron.AddFunc("0 */10 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
 	tasks.cron.AddFunc("0 * * * * *", func() { tasks.Info("tasks running ...") })
 	
