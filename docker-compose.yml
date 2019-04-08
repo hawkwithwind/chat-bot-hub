@@ -46,6 +46,13 @@ services:
     ports:
       - '13142:13142'
 
+  tasks:
+    <<: *defaults
+    command: ./app/server -s tasks
+    env_file:
+      - ./mysql.env
+      
+
 volumes:
   chatbothub-mysql:
     external: true
