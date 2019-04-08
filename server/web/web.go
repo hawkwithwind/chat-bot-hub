@@ -83,6 +83,7 @@ func (ctx *WebServer) init() error {
 		FluentHost:   ctx.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
+	
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
 	}
@@ -370,6 +371,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
+	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("Post")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
 
 	// account login and auth (auth.go)

@@ -227,6 +227,28 @@ type WechatSnsTimeline struct {
 	Status int `json:"status"`
 }
 
+func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
+	if o.Err == nil {
+		if len(botsreply.BotsInfo) == 0 {
+			o.Err = fmt.Errorf("bot {%s} not activated", botId)
+		} else if len(botsreply.BotsInfo) > 1 {
+			o.Err = fmt.Errorf("bot {%s} multiple instance", botId)
+		}
+	}
+
+	if o.Err != nil {
+		return nil
+	}
+
+	if botsreply == nil || len(botsreply.BotsInfo) == 0 {
+		o.Err = fmt.Errorf("cannot find bots %s", botId)
+		return nil
+	}
+	
+	return botsreply.BotsInfo[0]
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -252,25 +274,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
-	if o.Err == nil {
-		if len(botsreply.BotsInfo) == 0 {
-			o.Err = fmt.Errorf("bot {%s} not activated", botId)
-		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot {%s} multiple instance", botId)
-		}
-	}
-
+	
+	thebotinfo := o.getTheBot(wrapper, botId)
 	if o.Err != nil {
 		return
 	}
-
-	if botsreply == nil {
-		o.Err = fmt.Errorf("cannot find bots %s", botId)
-		return
-	}
-
-	thebotinfo := botsreply.BotsInfo[0]
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
 
 	r.ParseForm()
@@ -784,34 +792,48 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	var bodym map[string]interface{}
 	o.Err = decoder.Decode(&bodym)
 
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 
-	dayCount, hourCount, minuteCount := o.ActionCount(ctx.redispool, ar)
-	ctx.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
-
-	daylimit, hourlimit, minutelimit := o.GetRateLimit(actionType)
-	if dayCount > daylimit {
-		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", login, actionType, daylimit)
+	actionReply := o.CreateAndRunAction(ctx, ar)
+	if o.Err != nil {
 		return
+	}
+	
+	o.ok(w, "", actionReply)
+}
+
+
+func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
+	
+	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
+	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
+
+	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
+	if dayCount > daylimit {
+		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit)
+		return nil
 	}
 
 	if hourCount > hourlimit {
-		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", login, actionType, hourlimit)
-		return
+		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit)
+		return nil
 	}
 
 	if minuteCount > minutelimit {
-		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", login, actionType, minutelimit)
-		return
+		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit)
+		return nil
 	}
-
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
-	o.SaveActionRequest(ctx.redispool, ar)
+	o.SaveActionRequest(web.redispool, ar)
 
-	o.ok(w, "", actionReply)
+	return actionReply
 }

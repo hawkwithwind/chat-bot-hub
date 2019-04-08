@@ -14,6 +14,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
+	"github.com/hawkwithwind/chat-bot-hub/server/tasks"
 )
 
 type MainConfig struct {
@@ -107,6 +108,24 @@ func main() {
 		}()
 	}
 
+	if *startcmd == "task" {
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+
+			tasks := tasks.Tasks{
+				Webhost: "web",
+				Webport: config.Web.Port,
+				WebBaseUrl: config.Web.Baseurl,
+			}
+			
+			err := tasks.Serve()
+			if err != nil {
+				log.Printf("task start failed %s\n", err)
+			}
+		}()
+	}
+	
 	time.Sleep(5 * time.Second)
 	wg.Wait()
 	log.Printf("server ends.")
