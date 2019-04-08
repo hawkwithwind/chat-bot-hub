@@ -46,7 +46,7 @@ func (o *ErrorHandler) SaveMoment(q dbx.Queryable, moment *Moment) {
 		return
 	}
 
-	query := "INSERT INTO moments " +
+	query := "INSERT IGNORE INTO moments " +
 		"(`momentid`, `botid`, `momentcode`, `sendat`, `chatuserid`)" +
 		"VALUES " +
 		"(:momentid, :botid, :momentcode, :sendat, :chatuserid)"

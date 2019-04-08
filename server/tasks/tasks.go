@@ -44,7 +44,13 @@ func (tasks *Tasks) Serve() error {
 func (tasks Tasks) NotifyWechatBotsCrawlTimeline() {
 	baseurl := tasks.WebBaseUrl
 	notifypath := "/bots/wechatbots/notify/crawltimeline"
-	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath))
-	tasks.Info("call %s returned %v", fmt.Sprintf("%s%s", baseurl, notifypath), rr)
+	
+	if ret, err := httpx.RestfulCallRetry(
+		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
+		3, 1); err != nil {
+			tasks.Error(err, "call crawltimeline failed")
+		} else {	
+			tasks.Info("call returned %s", o.ToJson(ret))
+		}
 }
 
