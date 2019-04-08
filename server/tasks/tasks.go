@@ -51,7 +51,8 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimeline() {
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
 			tasks.Error(err, "call crawltimeline failed")
-		} else {	
+		} else {
+			o := &ErrorHandler{}
 			tasks.Info("call returned %s", o.ToJson(ret))
 		}
 }
