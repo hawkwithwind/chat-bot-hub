@@ -111,7 +111,7 @@ func main() {
 	if *startcmd == "task" {
 		go func() {
 			wg.Add(1)
-			defer wg.Done()
+			//defer wg.Done()
 
 			tasks := tasks.Tasks{
 				Webhost: "web",
@@ -121,6 +121,7 @@ func main() {
 			
 			err := tasks.Serve()
 			if err != nil {
+				wg.Done()
 				log.Printf("task start failed %s\n", err)
 			}
 		}()
