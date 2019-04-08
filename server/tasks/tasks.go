@@ -35,8 +35,8 @@ func (tasks *Tasks) init() {
 func (tasks *Tasks) Serve() error {
 	tasks.init()
 	
-	tasks.cron.AddFunc("0 * * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
-		
+	tasks.cron.AddFunc("0 0 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
+	
 	tasks.cron.Start()
 	return nil
 }
@@ -44,6 +44,8 @@ func (tasks *Tasks) Serve() error {
 func (tasks Tasks) NotifyWechatBotsCrawlTimeline() {
 	baseurl := tasks.WebBaseUrl
 	notifypath := "/bots/wechatbots/notify/crawltimeline"
+
+	tasks.Info("trigger crawl timeline ...")
 	
 	if ret, err := httpx.RestfulCallRetry(
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
