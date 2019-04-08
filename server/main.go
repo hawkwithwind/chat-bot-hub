@@ -108,7 +108,7 @@ func main() {
 		}()
 	}
 
-	if *startcmd == "task" {
+	if *startcmd == "tasks" {
 		go func() {
 			wg.Add(1)
 			//defer wg.Done()
