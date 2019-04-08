@@ -113,13 +113,13 @@ func main() {
 			wg.Add(1)
 			//defer wg.Done()
 
-			tasks := tasks.Tasks{
+			task := tasks.Tasks{
 				Webhost: "web",
 				Webport: config.Web.Port,
 				WebBaseUrl: config.Web.Baseurl,
 			}
 			
-			err := tasks.Serve()
+			err := task.Serve()
 			if err != nil {
 				wg.Done()
 				log.Printf("task start failed %s\n", err)
