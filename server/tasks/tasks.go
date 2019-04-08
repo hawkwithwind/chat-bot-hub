@@ -11,6 +11,10 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
+type ErrorHandler struct {
+	utils.ErrorHandler
+}
+
 type Tasks struct {
 	cron *cron.Cron
 	Webhost string
