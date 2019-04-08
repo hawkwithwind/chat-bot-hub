@@ -174,14 +174,17 @@
           <label for="{{act.name}}" class="col-md-2 control-label">{{act.display}}
             <span style="color:red" ng-show="act.required" >*</span>
           </label>
-          <input ng-if="act.type == 'string'" class="col-md-5"
+          <input ng-if="act.type == 'string'" class="col-md-4"
                  ng-model="data.actionBody[act.name]"
                  id="{{act.name}}" ng-required="act.required" />
-          <textarea ng-if="act.type == 'longstring'" class="col-md-5"
+          <textarea ng-if="act.type == 'longstring'" class="col-md-4"
                     ng-model="data.actionBody[act.name]" rows="6" 
                     id="{{act.name}}" ng-required="act.required" />
-          <span class="col-md-5" style="color:grey">
-            {{act.name}} {{act.comment}}
+          <span class="col-md-2" style="color:grey">
+            {{act.name}} 
+          </span>
+          <span class="col-md-4" style="color:grey">
+            {{act.comment}}
           </span>
         </div>
       </div>
