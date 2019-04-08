@@ -27,16 +27,10 @@ type ErrorHandler struct {
 	utils.ErrorHandler
 }
 
-type FluentConfig struct {
-	Host string
-	Port int
-	Tag  string
-}
-
 type ChatHubConfig struct {
 	Host   string
 	Port   string
-	Fluent FluentConfig
+	Fluent utils.FluentConfig
 	Redis  utils.RedisConfig
 }
 
@@ -633,7 +627,11 @@ func (hub *ChatHub) CreateFilterByType(
 	case PLAINFILTER:
 		filter = NewPlainFilter(filterId, filterName, hub.logger)
 	case FLUENTFILTER:
-		filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, hub.Config.Fluent.Tag)
+		if tag, ok := hub.Config.Fluent.Tags["msg"]; ok {
+			filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, tag)
+		} else {
+			return filter, fmt.Errorf("config.fluent.tags.msg not found")
+		}
 	case WEBTRIGGER:
 		filter = NewWebTrigger(filterId, filterName)
 	case KVROUTER:

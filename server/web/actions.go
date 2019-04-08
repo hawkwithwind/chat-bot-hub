@@ -704,8 +704,28 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 				ctx.Info("Wechat Sns Timeline")
 				for _, m := range wetimeline.Data {
-					ctx.Info("---\n%s at %s from %s %s\n%s",
+					ctx.Info("---\n%s at %d from %s %s\n%s",
 						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
+
+					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
+					if o.Err != nil || chatuser == nil {
+						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
+						return
+					}
+
+					// if this is first time get this specific momentid
+					// push it to fluentd, it will be saved
+					foundms := o.GetMomentByCode(tx, m.MomentId)
+					if len(foundms) == 0 {
+						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+							ctx.fluentLogger.Post(tag, o.ToJson(wetimeline))
+						} else {
+							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
+						}
+					}
+					
+					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
+					o.SaveMoment(tx, moment)
 				}
 			} else {
 				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)

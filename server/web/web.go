@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
 	"github.com/hawkwithwind/mux"
+	"github.com/fluent/fluent-logger-golang/fluent"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -35,6 +36,7 @@ type WebConfig struct {
 	Port         string
 	Baseurl      string
 	Redis        utils.RedisConfig
+	Fluent       utils.FluentConfig
 	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
@@ -61,6 +63,7 @@ type WebServer struct {
 	Hubport   string
 	Hubhost   string
 	logger    *log.Logger
+	fluentLogger *fluent.Fluent
 	redispool *redis.Pool
 	db        *dbx.Database
 	store     *sessions.CookieStore
@@ -73,6 +76,17 @@ func (ctx *WebServer) init() error {
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
+
+	var err error
+	ctx.fluentLogger, err = fluent.New(fluent.Config{
+		FluentPort:   ctx.Config.Fluent.Port,
+		FluentHost:   ctx.Config.Fluent.Host,
+		WriteTimeout: 60 * time.Second,
+	})
+	if err != nil {
+		ctx.Error(err, "create fluentlogger failed")
+	}
+	
 	retryTimes := 7
 	gap := 2
 	for i := 0; i < retryTimes+1; i++ {

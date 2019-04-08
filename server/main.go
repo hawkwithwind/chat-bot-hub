@@ -20,6 +20,7 @@ type MainConfig struct {
 	Hub   chatbothub.ChatHubConfig
 	Web   web.WebConfig
 	Redis utils.RedisConfig
+	Fluent utils.FluentConfig
 }
 
 var (
@@ -79,7 +80,11 @@ func main() {
 			wg.Add(1)
 			defer wg.Done()
 			config.Web.Redis = config.Redis
-			webserver := web.WebServer{Config: config.Web, Hubhost: "hub", Hubport: config.Hub.Port}
+			config.Web.Fluent = config.Fluent
+			webserver := web.WebServer{
+				Config: config.Web,
+				Hubhost: "hub",
+				Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
 	}
@@ -91,7 +96,12 @@ func main() {
 
 			raven.CapturePanicAndWait(func() {
 				config.Hub.Redis = config.Redis
-				hub := chatbothub.ChatHub{Config: config.Hub, Webhost: "web", Webport: config.Web.Port, WebBaseUrl: config.Web.Baseurl}
+				config.Hub.Fluent = config.Fluent
+				hub := chatbothub.ChatHub{
+					Config: config.Hub,
+					Webhost: "web",
+					Webport: config.Web.Port,
+					WebBaseUrl: config.Web.Baseurl}
 				hub.Serve()
 			}, nil)
 		}()
