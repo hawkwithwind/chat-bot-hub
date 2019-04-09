@@ -685,7 +685,6 @@ func (hub *ChatHub) FilterCreate(
 
 func (hub *ChatHub) FilterFill(
 	ctx context.Context, req *pb.FilterFillRequest) (*pb.FilterFillReply, error) {
-	fmt.Printf("[FILTERFILL DEBUG] req %v\n", req)
 	
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
@@ -699,12 +698,8 @@ func (hub *ChatHub) FilterFill(
 			err = bot.filter.Fill(req.Body)
 		}
 	} else if req.Source == "MOMENT" {
-		fmt.Printf("[FILTERFILL DEBUG] moment\n")
 		if bot.momentFilter != nil {
-			fmt.Printf("[FILTERFILL DEBUG] filling momentFilter %v\n%s\n", bot.momentFilter, req.Body)
 			err = bot.momentFilter.Fill(req.Body)
-		} else {
-			fmt.Printf("[FILTERFILL DEBUG] momentFilter is null \n")
 		}
 	} else {
 		return nil, fmt.Errorf("not support filter source %s", req.Source)
