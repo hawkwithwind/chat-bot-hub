@@ -46,22 +46,22 @@ type LoginInfo struct {
 }
 
 type ChatBot struct {
-	ClientId   string        `json:"clientId"`
-	ClientType string        `json:"clientType"`
-	Name       string        `json:"name"`
-	StartAt    int64         `json:"startAt"`
-	LastPing   int64         `json:"lastPing"`
-	Login      string        `json:"login"`
-	NotifyUrl  string        `json:"notifyurl"`
-	LoginInfo  LoginInfo     `json:"loginInfo"`
-	Status     ChatBotStatus `json:"status"`
-	BotId      string        `json:"botId"`
-	ScanUrl    string        `json:"scanUrl"`
-	tunnel     pb.ChatBotHub_EventTunnelServer
-	errmsg     string
-	filter     Filter
+	ClientId     string        `json:"clientId"`
+	ClientType   string        `json:"clientType"`
+	Name         string        `json:"name"`
+	StartAt      int64         `json:"startAt"`
+	LastPing     int64         `json:"lastPing"`
+	Login        string        `json:"login"`
+	NotifyUrl    string        `json:"notifyurl"`
+	LoginInfo    LoginInfo     `json:"loginInfo"`
+	Status       ChatBotStatus `json:"status"`
+	BotId        string        `json:"botId"`
+	ScanUrl      string        `json:"scanUrl"`
+	tunnel       pb.ChatBotHub_EventTunnelServer
+	errmsg       string
+	filter       Filter
 	momentFilter Filter
-	logger     *log.Logger
+	logger       *log.Logger
 }
 
 const (

@@ -12,15 +12,15 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/tasks"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
-	"github.com/hawkwithwind/chat-bot-hub/server/tasks"
 )
 
 type MainConfig struct {
-	Hub   chatbothub.ChatHubConfig
-	Web   web.WebConfig
-	Redis utils.RedisConfig
+	Hub    chatbothub.ChatHubConfig
+	Web    web.WebConfig
+	Redis  utils.RedisConfig
 	Fluent utils.FluentConfig
 }
 
@@ -83,7 +83,7 @@ func main() {
 			config.Web.Redis = config.Redis
 			config.Web.Fluent = config.Fluent
 			webserver := web.WebServer{
-				Config: config.Web,
+				Config:  config.Web,
 				Hubhost: "hub",
 				Hubport: config.Hub.Port}
 			webserver.Serve()
@@ -99,9 +99,9 @@ func main() {
 				config.Hub.Redis = config.Redis
 				config.Hub.Fluent = config.Fluent
 				hub := chatbothub.ChatHub{
-					Config: config.Hub,
-					Webhost: "web",
-					Webport: config.Web.Port,
+					Config:     config.Hub,
+					Webhost:    "web",
+					Webport:    config.Web.Port,
 					WebBaseUrl: config.Web.Baseurl}
 				hub.Serve()
 			}, nil)
@@ -114,11 +114,11 @@ func main() {
 			//defer wg.Done()
 
 			task := tasks.Tasks{
-				Webhost: "web",
-				Webport: config.Web.Port,
+				Webhost:    "web",
+				Webport:    config.Web.Port,
 				WebBaseUrl: config.Web.Baseurl,
 			}
-			
+
 			err := task.Serve()
 			if err != nil {
 				wg.Done()
@@ -126,7 +126,7 @@ func main() {
 			}
 		}()
 	}
-	
+
 	time.Sleep(5 * time.Second)
 	wg.Wait()
 	log.Printf("server ends.")

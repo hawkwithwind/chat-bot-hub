@@ -1,12 +1,12 @@
 package tasks
 
 import (
+	"fmt"
 	"log"
 	"os"
-	"fmt"
-	
+
 	"github.com/robfig/cron"
-	
+
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
@@ -16,11 +16,11 @@ type ErrorHandler struct {
 }
 
 type Tasks struct {
-	cron *cron.Cron
-	Webhost string
-	Webport string
+	cron       *cron.Cron
+	Webhost    string
+	Webport    string
 	WebBaseUrl string
-	logger    *log.Logger
+	logger     *log.Logger
 }
 
 func (ctx *Tasks) Info(msg string, v ...interface{}) {
@@ -39,9 +39,9 @@ func (tasks *Tasks) init() {
 
 func (tasks *Tasks) Serve() error {
 	tasks.init()
-	
+
 	tasks.cron.AddFunc("0 0 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
-	
+
 	tasks.cron.Start()
 	return nil
 }
@@ -51,14 +51,13 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimeline() {
 	notifypath := "/bots/wechatbots/notify/crawltimeline"
 
 	tasks.Info("trigger crawl timeline ...")
-	
+
 	if ret, err := httpx.RestfulCallRetry(
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
-			tasks.Error(err, "call crawltimeline failed")
-		} else {
-			o := &ErrorHandler{}
-			tasks.Info("call returned %s", o.ToJson(ret))
-		}
+		tasks.Error(err, "call crawltimeline failed")
+	} else {
+		o := &ErrorHandler{}
+		tasks.Info("call returned %s", o.ToJson(ret))
+	}
 }
-

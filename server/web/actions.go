@@ -212,19 +212,19 @@ type WechatGroupMember struct {
 }
 
 type WechatSnsMoment struct {
-	CreateTime int `json:"createTime"`
+	CreateTime  int    `json:"createTime"`
 	Description string `json:"description"`
-	MomentId string `json:"id"`
-	NickName string `json:"nickName"`
-	UserName string `json:"userName"`
+	MomentId    string `json:"id"`
+	NickName    string `json:"nickName"`
+	UserName    string `json:"userName"`
 }
 
 type WechatSnsTimeline struct {
-	Data []WechatSnsMoment `json:"data"`
-	Count int `json:"count"`
-	Message string `json:"message"`
-	Page string `json:"page"`
-	Status int `json:"status"`
+	Data    []WechatSnsMoment `json:"data"`
+	Count   int               `json:"count"`
+	Message string            `json:"message"`
+	Page    string            `json:"page"`
+	Status  int               `json:"status"`
 }
 
 func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
@@ -245,7 +245,7 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 		o.Err = fmt.Errorf("cannot find bots %s", botId)
 		return nil
 	}
-	
+
 	return botsreply.BotsInfo[0]
 }
 
@@ -274,7 +274,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
-	
+
 	thebotinfo := o.getTheBot(wrapper, botId)
 	if o.Err != nil {
 		return
@@ -350,7 +350,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ctx.Info("b[%s] initializing filters done", bot.BotId)
-		
+
 		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
@@ -362,12 +362,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ctx.Info("b[%s] initializing moment filters done", bot.BotId)
-		
+
 		_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})
-		
+
 		return
 
 	case chatbothub.FRIENDREQUEST:
@@ -573,7 +573,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			ctx.Info("result is %s", result)
 			return
-		}	
+		}
 
 		switch localar.ActionType {
 		case chatbothub.AcceptUser:
@@ -705,7 +705,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if len(chatgroupMembers) > 0 {
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
-			
+
 		case chatbothub.SnsTimeline:
 			ctx.Info("snstimeline")
 			acresult := domains.ActionResult{}
@@ -744,7 +744,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 						}
 					}
-					
+
+					if o.Err != nil {
+						return
+					}
+
+					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm != nil {
+						// fill moment filter
+						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
+							BotId:  bot.BotId,
+							Source: "MOMENT",
+							Body:   o.ToJson(m),
+						})
+					}
+					if o.Err != nil {
+						return
+					}
+
 					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
 					o.SaveMoment(tx, moment)
 				}
@@ -816,13 +832,12 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	o.ok(w, "", actionReply)
 }
 
-
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
-	
+
 	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
 
@@ -841,7 +856,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit)
 		return nil
 	}
-	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 

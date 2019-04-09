@@ -38,13 +38,13 @@ type BaseFilter struct {
 }
 
 const (
-	WECHATBASEFILTER string = "WechatBaseFilter"
+	WECHATBASEFILTER   string = "WechatBaseFilter"
 	WECHATMOMENTFILTER string = "WechatMomentFilter"
-	PLAINFILTER      string = "PlainFilter"
-	FLUENTFILTER     string = "FluentFilter"
-	REGEXROUTER      string = "RegexRouter"
-	KVROUTER         string = "KVRouter"
-	WEBTRIGGER       string = "WebTrigger"
+	PLAINFILTER        string = "PlainFilter"
+	FLUENTFILTER       string = "FluentFilter"
+	REGEXROUTER        string = "RegexRouter"
+	KVROUTER           string = "KVRouter"
+	WEBTRIGGER         string = "WebTrigger"
 )
 
 func NewBaseFilter(filterId string, filterName string, filterType string) BaseFilter {

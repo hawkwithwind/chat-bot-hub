@@ -77,18 +77,18 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	o := &ErrorHandler{}
 
 	return &pb.BotsInfo{
-		ClientId:   bot.ClientId,
-		ClientType: bot.ClientType,
-		Name:       bot.Name,
-		StartAt:    bot.StartAt,
-		LastPing:   bot.LastPing,
-		Login:      bot.Login,
-		LoginInfo:  o.ToJson(bot.LoginInfo),
-		Status:     int32(bot.Status),
-		FilterInfo: o.ToJson(bot.filter),
+		ClientId:         bot.ClientId,
+		ClientType:       bot.ClientType,
+		Name:             bot.Name,
+		StartAt:          bot.StartAt,
+		LastPing:         bot.LastPing,
+		Login:            bot.Login,
+		LoginInfo:        o.ToJson(bot.LoginInfo),
+		Status:           int32(bot.Status),
+		FilterInfo:       o.ToJson(bot.filter),
 		MomentFilterInfo: o.ToJson(bot.momentFilter),
-		BotId:      bot.BotId,
-		ScanUrl:    bot.ScanUrl,
+		BotId:            bot.BotId,
+		ScanUrl:          bot.ScanUrl,
 	}
 }
 
@@ -678,9 +678,33 @@ func (hub *ChatHub) FilterCreate(
 			hub.Info("cannot parse body %s", req.Body)
 		}
 	}
-	
+
 	hub.SetFilter(req.FilterId, filter)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
+func (hub *ChatHub) FilterFill(
+	ctx context.Context, req *pb.FilterFillRequest) (*pb.FilterFillReply, error) {
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+	}
+
+	var err error
+
+	if req.Source == "MSG" {
+		if bot.filter != nil {
+			err = bot.filter.Fill(req.Body)
+		}
+	} else if req.Source == "MOMENT" {
+		if bot.momentFilter != nil {
+			err = bot.momentFilter.Fill(req.Body)
+		}
+	} else {
+		return nil, fmt.Errorf("not support filter source %s", req.Source)
+	}
+
+	return &pb.FilterFillReply{Success: true}, err
 }
 
 func (hub *ChatHub) FilterNext(

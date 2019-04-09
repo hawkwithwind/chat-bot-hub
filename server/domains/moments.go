@@ -11,12 +11,12 @@ import (
 )
 
 type Moment struct {
-	MomentId string `db:"momentid"`
-	BotId    string `db:"botid"`
-	MomentCode string `db:"momentcode"`
-	SendAt mysql.NullTime `db:"sendat"`
-	ChatUserId string `db:"chatuserid"`
-	CreateAt mysql.NullTime `db:"createat"`	
+	MomentId   string         `db:"momentid"`
+	BotId      string         `db:"botid"`
+	MomentCode string         `db:"momentcode"`
+	SendAt     mysql.NullTime `db:"sendat"`
+	ChatUserId string         `db:"chatuserid"`
+	CreateAt   mysql.NullTime `db:"createat"`
 }
 
 func (o *ErrorHandler) NewMoment(
@@ -31,10 +31,10 @@ func (o *ErrorHandler) NewMoment(
 		return nil
 	} else {
 		return &Moment{
-			MomentId: rid.String(),
-			BotId: botId,
+			MomentId:   rid.String(),
+			BotId:      botId,
 			MomentCode: momentCode,
-			SendAt: mysql.NullTime{Time: time.Unix(int64(sendAt), 0), Valid: true},
+			SendAt:     mysql.NullTime{Time: time.Unix(int64(sendAt), 0), Valid: true},
 			ChatUserId: chatUserId,
 		}
 	}
@@ -65,7 +65,7 @@ FROM moments
 WHERE botid=?
   AND momentcode=?
 `
-	moments := []Moment{}	
+	moments := []Moment{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &moments, query, botId, momentCode)
 	if moment := o.Head(moments, fmt.Sprintf("Moment %s more than one instance", momentCode)); moment != nil {
@@ -85,9 +85,8 @@ SELECT *
 FROM moments
 WHERE momentcode=?
 `
-	moments := []Moment{}	
+	moments := []Moment{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &moments, query, momentCode)
 	return moments
 }
-

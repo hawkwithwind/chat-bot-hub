@@ -13,19 +13,19 @@ import (
 )
 
 type Bot struct {
-	BotId       string         `db:"botid"`
-	AccountId   string         `db:"accountid"`
-	BotName     string         `db:"botname"`
-	Login       string         `db:"login"`
-	ChatbotType string         `db:"chatbottype"`
-	LoginInfo   sql.NullString `db:"logininfo"`
-	Callback    sql.NullString `db:"callback"`
-	FilterId    sql.NullString `db:"filterid"`
+	BotId          string         `db:"botid"`
+	AccountId      string         `db:"accountid"`
+	BotName        string         `db:"botname"`
+	Login          string         `db:"login"`
+	ChatbotType    string         `db:"chatbottype"`
+	LoginInfo      sql.NullString `db:"logininfo"`
+	Callback       sql.NullString `db:"callback"`
+	FilterId       sql.NullString `db:"filterid"`
 	MomentFilterId sql.NullString `db:"momentfilterid"`
-	WxaappId    sql.NullString `db:"wxaappid"`
-	CreateAt    mysql.NullTime `db:"createat"`
-	UpdateAt    mysql.NullTime `db:"updateat"`
-	DeleteAt    mysql.NullTime `db:"deleteat"`
+	WxaappId       sql.NullString `db:"wxaappid"`
+	CreateAt       mysql.NullTime `db:"createat"`
+	UpdateAt       mysql.NullTime `db:"updateat"`
+	DeleteAt       mysql.NullTime `db:"deleteat"`
 }
 
 func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {
@@ -202,4 +202,3 @@ WHERE a.accountname=?
 
 	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
 }
-

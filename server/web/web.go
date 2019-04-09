@@ -14,12 +14,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
 	"github.com/hawkwithwind/mux"
-	"github.com/fluent/fluent-logger-golang/fluent"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -59,14 +59,14 @@ type ErrorMessage struct {
 }
 
 type WebServer struct {
-	Config    WebConfig
-	Hubport   string
-	Hubhost   string
-	logger    *log.Logger
+	Config       WebConfig
+	Hubport      string
+	Hubhost      string
+	logger       *log.Logger
 	fluentLogger *fluent.Fluent
-	redispool *redis.Pool
-	db        *dbx.Database
-	store     *sessions.CookieStore
+	redispool    *redis.Pool
+	db           *dbx.Database
+	store        *sessions.CookieStore
 }
 
 func (ctx *WebServer) init() error {
@@ -83,11 +83,11 @@ func (ctx *WebServer) init() error {
 		FluentHost:   ctx.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
-	
+
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
 	}
-	
+
 	retryTimes := 7
 	gap := 2
 	for i := 0; i < retryTimes+1; i++ {

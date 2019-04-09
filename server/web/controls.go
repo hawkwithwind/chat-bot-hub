@@ -454,13 +454,13 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
-		BotId    string `json:"botId"`
-		BotName  string `json:"botName"`
-		FilterId string `json:"filterId"`
+		BotId          string `json:"botId"`
+		BotName        string `json:"botName"`
+		FilterId       string `json:"filterId"`
 		MomentFilterId string `json:"momentFilterId"`
-		WxaappId string `json:"wxaappId"`
-		Callback string `json:"callback"`
-		CreateAt int64  `json:"createAt"`
+		WxaappId       string `json:"wxaappId"`
+		Callback       string `json:"callback"`
+		CreateAt       int64  `json:"createAt"`
 	}
 
 	o := ErrorHandler{}
@@ -486,14 +486,14 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		for _, b := range bots {
 			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
 				bs = append(bs, BotsInfo{
-					BotsInfo: *info,
-					BotId:    b.BotId,
-					BotName:  b.BotName,
-					FilterId: b.FilterId.String,
+					BotsInfo:       *info,
+					BotId:          b.BotId,
+					BotName:        b.BotName,
+					FilterId:       b.FilterId.String,
 					MomentFilterId: b.MomentFilterId.String,
-					WxaappId: b.WxaappId.String,
-					Callback: b.Callback.String,
-					CreateAt: b.CreateAt.Time.Unix(),
+					WxaappId:       b.WxaappId.String,
+					Callback:       b.Callback.String,
+					CreateAt:       b.CreateAt.Time.Unix(),
 				})
 			} else {
 				bs = append(bs, BotsInfo{
@@ -502,13 +502,13 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 						Login:      b.Login,
 						Status:     0,
 					},
-					BotId:    b.BotId,
-					BotName:  b.BotName,
-					FilterId: b.FilterId.String,
+					BotId:          b.BotId,
+					BotName:        b.BotName,
+					FilterId:       b.FilterId.String,
 					MomentFilterId: b.MomentFilterId.String,
-					WxaappId: b.WxaappId.String,
-					Callback: b.Callback.String,
-					CreateAt: b.CreateAt.Time.Unix(),
+					WxaappId:       b.WxaappId.String,
+					Callback:       b.Callback.String,
+					CreateAt:       b.CreateAt.Time.Unix(),
 				})
 			}
 		}
@@ -672,7 +672,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
 		o.UpdateBotMomentFilterId(tx, bot)
 	}
-	
+
 	o.UpdateBot(tx, bot)
 	o.ok(w, "", nil)
 }

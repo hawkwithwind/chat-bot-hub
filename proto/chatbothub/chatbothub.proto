@@ -33,6 +33,7 @@ service ChatBotHub {
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
+  rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
 }
 
 message OperationReply {
@@ -132,4 +133,14 @@ message BotActionReply {
   bool   success = 2;
   string msg = 3;
   string body = 4;
+}
+
+message FilterFillRequest {
+  string botId  = 1;
+  string source = 2;
+  string body   = 3;
+}
+
+message FilterFillReply {
+  bool   success = 1;
 }

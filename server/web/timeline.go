@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"	
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
 func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +15,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 	web.Info("notify crawl timeline")
 
 	actionReplys := []pb.BotActionReply{}
-	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
@@ -27,18 +27,18 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 		o.Err = fmt.Errorf("get bots failed")
 		return
 	}
-	
+
 	for _, bot := range botsreply.BotsInfo {
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return
 		}
-		
+
 		ar := o.NewActionRequest(botinfo.Login, "SnsTimeline", "{}", "NEW")
 		if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 			actionReplys = append(actionReplys, *actionReply)
 		}
-		
+
 		if o.Err != nil {
 			return
 		}
