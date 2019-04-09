@@ -29,10 +29,10 @@
             
       <tbody>
 	<tr ng-repeat="row in body">
-	  <td style="text-align:center;width:160px">
+	  <td style="text-align:center;width:120px">
 	    <a href="javascript:;" ng-click="editBot(row)">{{ row.botName }}</a>
 	  </td>
-          <td style="width:160px">
+          <td style="width:200px">
 	    <span ng-if="row.status!=200">
 	      <span ng-if="row.clientType == 'QQBOT'">
 		<a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>

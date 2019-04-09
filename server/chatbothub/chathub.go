@@ -624,6 +624,8 @@ func (hub *ChatHub) CreateFilterByType(
 	switch filterType {
 	case WECHATBASEFILTER:
 		filter = NewWechatBaseFilter(filterId, filterName)
+	case WECHATMOMENTFILTER:
+		filter = NewWechatMomentFilter(filterId, filterName)
 	case PLAINFILTER:
 		filter = NewPlainFilter(filterId, filterName, hub.logger)
 	case FLUENTFILTER:
@@ -676,7 +678,7 @@ func (hub *ChatHub) FilterCreate(
 			hub.Info("cannot parse body %s", req.Body)
 		}
 	}
-
+	
 	hub.SetFilter(req.FilterId, filter)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }

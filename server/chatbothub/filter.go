@@ -39,6 +39,7 @@ type BaseFilter struct {
 
 const (
 	WECHATBASEFILTER string = "WechatBaseFilter"
+	WECHATMOMENTFILTER string = "WechatMomentFilter"
 	PLAINFILTER      string = "PlainFilter"
 	FLUENTFILTER     string = "FluentFilter"
 	REGEXROUTER      string = "RegexRouter"
@@ -65,7 +66,7 @@ type WechatBaseFilter struct {
 }
 
 func NewWechatBaseFilter(filterId string, filterName string) *WechatBaseFilter {
-	return &WechatBaseFilter{BaseFilter: NewBaseFilter(filterId, filterName, "源:微信")}
+	return &WechatBaseFilter{BaseFilter: NewBaseFilter(filterId, filterName, "消息源:微信")}
 }
 
 func (f *WechatBaseFilter) String() string {
@@ -84,6 +85,40 @@ func (f *WechatBaseFilter) Next(filter Filter) error {
 func (f *WechatBaseFilter) Fill(msg string) error {
 	if f == nil {
 		return fmt.Errorf("call on empty *WechatBaseFilter")
+	}
+
+	if f.NextFilter != nil {
+		return f.NextFilter.Fill(msg)
+	}
+
+	return nil
+}
+
+type WechatMomentFilter struct {
+	BaseFilter
+	NextFilter Filter `json:"next"`
+}
+
+func NewWechatMomentFilter(filterId string, filterName string) *WechatMomentFilter {
+	return &WechatMomentFilter{BaseFilter: NewBaseFilter(filterId, filterName, "动态源:微信")}
+}
+
+func (f *WechatMomentFilter) String() string {
+	jsonstr, _ := json.Marshal(f)
+	return string(jsonstr)
+}
+
+func (f *WechatMomentFilter) Next(filter Filter) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *WechatMomentFilter")
+	}
+	f.NextFilter = filter
+	return nil
+}
+
+func (f *WechatMomentFilter) Fill(msg string) error {
+	if f == nil {
+		return fmt.Errorf("call on empty *WechatMomentFilter")
 	}
 
 	if f.NextFilter != nil {
