@@ -776,19 +776,18 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 
 				// all items new, means there are more to pull, save earliest momentId
-				
-				var minItem WechatSnsMoment
-				for i, d := range wetimeline.Data {
-					if i==0 || d.CreateTime < minItem.CreateTime {
-						minItem = d
+				if len(wetimeline.Data) > 0 {
+					var minItem WechatSnsMoment
+					for i, d := range wetimeline.Data {
+						if i==0 || d.CreateTime < minItem.CreateTime {
+							minItem = d
+						}
+					}
+					if _, ok := newMomentIds[minItem.MomentId]; ok {
+						ctx.Info("saving new moment tail b[%s] %s", thebotinfo.Login, minItem.MomentId)
+						o.SaveMomentCrawlTail(ctx.redispool, thebotinfo.BotId, minItem.MomentId)
 					}
 				}
-
-				if _, ok := newMomentIds[minItem.MomentId]; ok {
-					ctx.Info("saving new moment tail b[%s] %s", thebotinfo.Login, minItem.MomentId)
-					o.SaveMomentCrawlTail(ctx.redispool, thebotinfo.BotId, minItem.MomentId)
-				}
-				
 			} else {
 				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)
 			}
