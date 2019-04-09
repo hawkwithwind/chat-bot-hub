@@ -350,11 +350,24 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ctx.Info("b[%s] initializing filters done", bot.BotId)
-
+		
 		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
+
+		ctx.Info("b[%s] initializing moment filters ...", bot.BotId)
+		o.CreateFilterChain(ctx, tx, wrapper, bot.MomentFilterId.String)
+		if o.Err != nil {
+			return
+		}
+		ctx.Info("b[%s] initializing moment filters done", bot.BotId)
+		
+		_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
+			BotId:    bot.BotId,
+			FilterId: bot.MomentFilterId.String,
+		})
+		
 		return
 
 	case chatbothub.FRIENDREQUEST:

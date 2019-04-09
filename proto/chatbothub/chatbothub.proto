@@ -29,6 +29,7 @@ service ChatBotHub {
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
+  rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
@@ -100,8 +101,9 @@ message BotsInfo {
   string loginInfo = 7;
   int32 status = 8;
   string filterInfo = 9;
-  string botId = 10;
-  string scanUrl = 11;
+  string momentFilterInfo = 10;
+  string botId = 11;
+  string scanUrl = 12;
 }
 
 message BotLoginRequest {

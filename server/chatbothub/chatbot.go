@@ -60,6 +60,7 @@ type ChatBot struct {
 	tunnel     pb.ChatBotHub_EventTunnelServer
 	errmsg     string
 	filter     Filter
+	momentFilter Filter
 	logger     *log.Logger
 }
 

@@ -86,6 +86,7 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 		LoginInfo:  o.ToJson(bot.LoginInfo),
 		Status:     int32(bot.Status),
 		FilterInfo: o.ToJson(bot.filter),
+		MomentFilterInfo: o.ToJson(bot.momentFilter),
 		BotId:      bot.BotId,
 		ScanUrl:    bot.ScanUrl,
 	}
@@ -189,7 +190,6 @@ func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
 	defer hub.muxFilters.Unlock()
 
 	hub.filters[filterId] = thefilter
-
 }
 
 func (hub *ChatHub) GetFilter(filterId string) Filter {
@@ -744,6 +744,25 @@ func (hub *ChatHub) BotFilter(
 	}
 
 	thebot.filter = thefilter
+
+	hub.SetBot(thebot.ClientId, thebot)
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
+func (hub *ChatHub) BotMomentFilter(
+	ctx context.Context, req *pb.BotFilterRequest) (*pb.OperationReply, error) {
+
+	thebot := hub.GetBotById(req.BotId)
+	if thebot == nil {
+		return nil, fmt.Errorf("bot %s not found", req.BotId)
+	}
+
+	thefilter := hub.GetFilter(req.FilterId)
+	if thefilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+	}
+
+	thebot.momentFilter = thefilter
 
 	hub.SetBot(thebot.ClientId, thebot)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
