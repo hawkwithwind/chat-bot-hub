@@ -457,6 +457,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		BotId    string `json:"botId"`
 		BotName  string `json:"botName"`
 		FilterId string `json:"filterId"`
+		MomentFilterId string `json:"momentFilterId"`
 		WxaappId string `json:"wxaappId"`
 		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
@@ -489,6 +490,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotId:    b.BotId,
 					BotName:  b.BotName,
 					FilterId: b.FilterId.String,
+					MomentFilterId: b.MomentFilterId.String,
 					WxaappId: b.WxaappId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
@@ -503,6 +505,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					BotId:    b.BotId,
 					BotName:  b.BotName,
 					FilterId: b.FilterId.String,
+					MomentFilterId: b.MomentFilterId.String,
 					WxaappId: b.WxaappId.String,
 					Callback: b.Callback.String,
 					CreateAt: b.CreateAt.Time.Unix(),
