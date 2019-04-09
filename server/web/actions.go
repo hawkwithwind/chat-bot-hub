@@ -751,7 +751,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
-						ctx.Info("fill moment b[%s] %s", thebotinfo.Login, m.MomentId)
+						ctx.Info("fill moment b[%s] %s\n%s\n", thebotinfo.Login, m.MomentId, o.ToJson(m))
 						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
 							BotId:  bot.BotId,
 							Source: "MOMENT",

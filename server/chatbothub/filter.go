@@ -122,7 +122,10 @@ func (f *WechatMomentFilter) Fill(msg string) error {
 	}
 
 	if f.NextFilter != nil {
+		fmt.Printf("moment filter next %v\n", f.NextFilter)
 		return f.NextFilter.Fill(msg)
+	} else {
+		fmt.Printf("moment filter next is null\n")
 	}
 
 	return nil
@@ -464,6 +467,7 @@ func (f *KVRouter) Fill(msg string) error {
 			fmt.Printf("[FILTER DEBUG][%s][default] filled\n", f.Name)
 			return f.DefaultNextFilter.Fill(msg)
 		} else {
+			fmt.Printf("[FILTER DEBUG][%s][default] is null\n", f.Name)
 			return nil
 		}
 	}
