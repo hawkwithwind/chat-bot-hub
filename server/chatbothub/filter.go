@@ -532,6 +532,8 @@ func (f *WebTrigger) Fill(msg string) error {
 			if o.Err != nil {
 				fmt.Printf("[WebTrigger] save cookie failed %s\n", o.Err)
 			}
+
+			fmt.Printf("[WebTrigger DEBUG] trigger %s returned\n%s\n", f.Action.Url, o.ToJson(resp))
 		}
 	}()
 
