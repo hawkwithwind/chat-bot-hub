@@ -607,6 +607,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	callback := o.getStringValueDefault(r.Form, "callback", "")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 	filterid := o.getStringValueDefault(r.Form, "filterId", "")
+	momentfilterid := o.getStringValueDefault(r.Form, "momentFilterId", "")
 	wxaappid := o.getStringValueDefault(r.Form, "wxaappId", "")
 
 	accountName := o.getAccountName(r)
@@ -652,7 +653,23 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
 		o.UpdateBotFilterId(tx, bot)
 	}
-
+	if momentfilterid != "" {
+		momentfilter := o.GetFilterById(tx, momentfilterid)
+		if o.Err != nil {
+			return
+		}
+		if momentfilter == nil {
+			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			return
+		}
+		if !o.CheckFilterOwner(tx, momentfilterid, accountName) {
+			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			return
+		}
+		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
+		o.UpdateBotMomentFilterId(tx, bot)
+	}
+	
 	o.UpdateBot(tx, bot)
 	o.ok(w, "", nil)
 }

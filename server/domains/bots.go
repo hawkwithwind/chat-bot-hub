@@ -21,6 +21,7 @@ type Bot struct {
 	LoginInfo   sql.NullString `db:"logininfo"`
 	Callback    sql.NullString `db:"callback"`
 	FilterId    sql.NullString `db:"filterid"`
+	MomentFilterId sql.NullString `db:"momentfilterid"`
 	WxaappId    sql.NullString `db:"wxaappid"`
 	CreateAt    mysql.NullTime `db:"createat"`
 	UpdateAt    mysql.NullTime `db:"updateat"`
@@ -83,6 +84,20 @@ func (o *ErrorHandler) UpdateBotFilterId(q dbx.Queryable, bot *Bot) {
 	query := `
 UPDATE bots
 SET filterid = :filterid
+WHERE botid = :botid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, bot)
+}
+
+func (o *ErrorHandler) UpdateBotMomentFilterId(q dbx.Queryable, bot *Bot) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE bots
+SET momentfilterid = :momentfilterid
 WHERE botid = :botid
 `
 	ctx, _ := o.DefaultContext()
@@ -187,3 +202,4 @@ WHERE a.accountname=?
 
 	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
 }
+
