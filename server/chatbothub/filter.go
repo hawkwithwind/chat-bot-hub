@@ -464,7 +464,7 @@ func (f *KVRouter) Fill(msg string) error {
 			fmt.Printf("[FILTER DEBUG][%s][default] filled\n", f.Name)
 			return f.DefaultNextFilter.Fill(msg)
 		} else {
-			fmt.Printf("[FILTER DEBUG][%s][default] is null\n%s\n", f.Name, msg)
+			fmt.Printf("[FILTER DEBUG][%s][default] is null\n", f.Name)
 			return nil
 		}
 	}
