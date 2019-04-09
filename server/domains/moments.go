@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"github.com/gomodule/redigo/redis"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
@@ -17,6 +18,24 @@ type Moment struct {
 	SendAt     mysql.NullTime `db:"sendat"`
 	ChatUserId string         `db:"chatuserid"`
 	CreateAt   mysql.NullTime `db:"createat"`
+}
+
+func (o *ErrorHandler) MomentCrawlRedisKey(botId string) string {
+	return fmt.Sprintf("Moment:Crawl:%s", botId)
+}
+
+func (o *ErrorHandler) SaveMomentCrawlTail(pool *redis.Pool, botId string, momentCode string) {
+	conn := pool.Get()
+	defer conn.Close()
+	
+	o.RedisDo(conn, timeout, "SADD", o.MomentCrawlRedisKey(botId), momentCode)
+}
+
+func (o *ErrorHandler) SpopMomentCrawlTail(pool *redis.Pool, botId string) string {
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisString(o.RedisDo(conn, timeout, "SPOP", o.MomentCrawlRedisKey(botId)))
 }
 
 func (o *ErrorHandler) NewMoment(
