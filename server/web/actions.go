@@ -748,9 +748,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					if o.Err != nil {
 						return
 					}
-
-					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm != nil {
-						// fill moment filter
+					
+					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
+						// fill moment filter only if botId + moment not found (new moment)
 						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
 							BotId:  bot.BotId,
 							Source: "MOMENT",
