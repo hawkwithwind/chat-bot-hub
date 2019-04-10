@@ -146,7 +146,7 @@ VALUES
 (:chatuserid, :username, :type, :alias, :nickname, :avatar, 
 :sex, :country, :province, :city, :signature, :remark, :label, :ext)
 ON DUPLICATE KEY UPDATE
-sex=IF(VALUES(sex)=0,sex,VALUES(sex))
+sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
 	for _, field := range []string{
 		"nickname",
@@ -180,7 +180,7 @@ sex, country, province, city, signature, remark, label, ext)
 VALUES
 %s
 ON DUPLICATE KEY UPDATE
-sex=IF(VALUES(sex)=0,sex,VALUES(sex))
+sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
 	vls := []string{}
 	
