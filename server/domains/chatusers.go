@@ -148,6 +148,7 @@ VALUES
 ON DUPLICATE KEY UPDATE
 sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
+	vls := []string{}
 	for _, field := range []string{
 		"nickname",
 		"alias",
@@ -160,9 +161,11 @@ sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 		"label",
 		"ext",
 	} {
-		query += fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s),\n",
-			field, field, field, field)
+		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
 	}
+
+	query += strings.Join(vls, ",\n")
 	
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
