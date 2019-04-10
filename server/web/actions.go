@@ -738,9 +738,15 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
 					foundms := o.GetMomentByCode(tx, m.MomentId)
+					if o.Err != nil {
+						return
+					}
+					
 					if len(foundms) == 0 {
 						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-							ctx.fluentLogger.Post(tag, o.ToJson(wetimeline))
+							if err := ctx.fluentLogger.Post(tag, o.ToJson(wetimeline)); err != nil {
+								ctx.Error(err, "push moment to fluentd failed")
+							}
 						} else {
 							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 						}
