@@ -864,6 +864,9 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
+	if o.Err != nil {
+		return nil
+	}
 
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 	if dayCount > daylimit {

@@ -9,7 +9,7 @@ import (
 
 func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
-	defer o.WebError(w)
+	//defer o.WebError(w)
 	defer o.BackEndError(web)
 
 	web.Info("notify crawl timeline")
@@ -49,7 +49,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 
 func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
-	defer o.WebError(w)
+	//defer o.WebError(w)
 	defer o.BackEndError(web)
 
 	web.Info("notify crawl timeline tail")
