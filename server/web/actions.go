@@ -490,7 +490,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				// user
 				// create or update user
 				chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
+				chatuser.Sex = info.Sex
 				chatuser.SetAvatar(info.SmallHead)
+				chatuser.SetCountry(info.Country)
+				chatuser.SetProvince(info.Provincia)
+				chatuser.SetCity(info.City)
+				chatuser.SetSignature(info.Signature)
+				chatuser.SetRemark(info.Remark)
+				chatuser.SetLabel(info.Label)
 				chatuser.SetExt(bodystr)
 
 				o.UpdateOrCreateChatUser(tx, chatuser)
