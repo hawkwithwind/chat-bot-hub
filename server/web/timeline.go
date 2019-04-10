@@ -75,16 +75,26 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		}
 
 		momentCode := o.SpopMomentCrawlTail(web.redispool, botinfo.BotId)
+		if o.Err != nil {
+			return
+		}
+		
 		ar := o.NewActionRequest(
 			botinfo.Login, "SnsTimeline", o.ToJson(map[string]interface{} {
 				"momentId": momentCode,
 			}), "NEW")
+		if o.Err != nil {
+			return
+		}
 		
 		if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 			actionReplys = append(actionReplys, *actionReply)
 		}
 
 		if o.Err != nil {
+			// if failed, save the tail back, so that it will run again
+			otemp := &ErrorHandler{}
+			otemp.SaveMomentCrawlTail(web.redispool, botinfo.BotId, momentCode)
 			return
 		}
 	}
