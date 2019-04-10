@@ -377,6 +377,7 @@ func (ctx *WebServer) Serve() {
 
 	// account login and auth (auth.go)
 	r.HandleFunc("/login", ctx.login).Methods("POST")
+	r.HandleFunc("/refreshtoken", ctx.refreshToken).Methods("Post")
 	r.HandleFunc("/sdktoken", ctx.validate(ctx.sdkToken)).Methods("Post")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
