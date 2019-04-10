@@ -840,7 +840,7 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bot := o.GetBotByLogin(tx, login)
-
+	
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
 	o.Err = decoder.Decode(&bodym)

@@ -391,14 +391,13 @@ func (ctx *WebServer) Serve() {
 		handlers.AllowedOrigins(ctx.Config.AllowOrigin)))
 	r.Use(tracing(nextRequestID))
 	r.Use(logging(ctx.logger))
-
-	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+	r.Use(sentryContext)
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      sentryContext(handler),
+		Handler:      r,
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
