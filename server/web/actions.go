@@ -212,11 +212,11 @@ type WechatGroupMember struct {
 }
 
 type WechatSnsMoment struct {
-	CreateTime  int    `json:"createTime"`
-	Description string `json:"description"`
-	MomentId    string `json:"id"`
-	NickName    string `json:"nickName"`
-	UserName    string `json:"userName"`
+	CreateTime  int    `json:"createTime" msg:"createTime"`
+	Description string `json:"description" msg:"description"`
+	MomentId    string `json:"id" msg:"id"`
+	NickName    string `json:"nickName" msg:"nickName"`
+	UserName    string `json:"userName" msg:"userName"`
 }
 
 type WechatSnsTimeline struct {
@@ -728,7 +728,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				for _, m := range wetimeline.Data {
 					ctx.Info("---\n%s at %d from %s %s\n%s",
 						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
-
+					
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
@@ -744,7 +744,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					
 					if len(foundms) == 0 {
 						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-							if err := ctx.fluentLogger.Post(tag, o.ToJson(wetimeline)); err != nil {
+							if err := ctx.fluentLogger.Post(tag, m); err != nil {
 								ctx.Error(err, "push moment to fluentd failed")
 							}
 						} else {
