@@ -954,3 +954,24 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 
 	o.ok(w, "success", filtervos)
 }
+
+func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	filterId := vars["filterId"]
+	
+	accountName := o.getAccountName(r)
+	
+	tx := o.Begin(web.db)
+	if !o.CheckFilterOwner(tx, filterId, accountName) {
+		if o.Err == nil {
+			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+		}
+		return
+	}
+
+	o.DeleteFilter(tx, filterId)
+	o.ok(w, "success", filterId)
+}

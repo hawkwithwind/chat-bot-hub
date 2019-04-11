@@ -140,3 +140,64 @@ func (o *ErrorHandler) AndLike(fieldName string, field sql.NullString) string {
 		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
 	}
 }
+
+func (o *ErrorHandler) AndGreaterThan(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s > ? ", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndGreaterThanEqual(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s >= ? ", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndLessThan(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s < ? ", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndLessThanEqual(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s <= ? ", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndIsIn(fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND %s in (?) ", fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+	
+}
