@@ -383,6 +383,8 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
+	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
+	
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 
 	r.Use(mux.CORSMethodMiddleware(r))

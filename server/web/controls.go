@@ -977,3 +977,24 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	o.DeleteFilter(tx, filterId)
 	o.ok(w, "success", filterId)
 }
+
+func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	domain := vars["domain"]
+
+	r.ParseForm()
+	query := o.getStringValue(r.Form, "q")
+
+	//accountName := o.getAccountName(r)
+	
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	rows := o.SelectByCriteria(tx, query, domain)
+	
+	o.ok(w, "success", rows)
+}
+
