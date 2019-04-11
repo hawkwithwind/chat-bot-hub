@@ -133,7 +133,7 @@ func (o *ErrorHandler) RedisString(reply interface{}) string {
 	case string:
 		return reply
 	case nil:
-		o.Err = fmt.Errorf("redis nil returned")
+		//o.Err = fmt.Errorf("redis nil returned")
 		return ""
 	case redis.Error:
 		o.Err = reply

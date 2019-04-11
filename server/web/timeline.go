@@ -78,6 +78,9 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		if o.Err != nil {
 			return
 		}
+		if momentCode == "" {
+			return
+		}
 
 		ar := o.NewActionRequest(
 			botinfo.Login, "SnsTimeline", o.ToJson(map[string]interface{}{

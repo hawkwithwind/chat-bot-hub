@@ -34,7 +34,7 @@ func (o *ErrorHandler) SaveMomentCrawlTail(pool *redis.Pool, botId string, momen
 func (o *ErrorHandler) SpopMomentCrawlTail(pool *redis.Pool, botId string) string {
 	conn := pool.Get()
 	defer conn.Close()
-
+	
 	return o.RedisString(o.RedisDo(conn, timeout, "SPOP", o.MomentCrawlRedisKey(botId)))
 }
 
