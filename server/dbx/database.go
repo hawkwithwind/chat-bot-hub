@@ -23,6 +23,7 @@ type ErrorHandler struct {
 
 type Queryable interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
@@ -200,5 +201,5 @@ func (o *ErrorHandler) AndIsIn(fieldName string, field sql.NullString) string {
 	} else {
 		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
 	}
-	
+
 }

@@ -1,46 +1,47 @@
 package domains
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"database/sql"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/jmoiron/sqlx"
 	"strings"
 )
 
 var (
-	searchableDomains = map[string]interface{} {
+	searchableDomains = map[string]interface{}{
 		"chatusers": ChatUser{},
 	}
 
-	searchableOPS = map[string]func(*ErrorHandler, string, sql.NullString) string {
+	searchableOPS = map[string]func(*ErrorHandler, string, sql.NullString) string{
 		//"in": (*ErrorHandler).AndIsIn,
 		"equals": (*ErrorHandler).AndEqual,
-		"gt": (*ErrorHandler).AndGreaterThan,
-		"gte": (*ErrorHandler).AndGreaterThanEqual,
-		"lt": (*ErrorHandler).AndLessThan,
-		"lte": (*ErrorHandler).AndLessThanEqual,
-		"like": (*ErrorHandler).AndLike,
+		"gt":     (*ErrorHandler).AndGreaterThan,
+		"gte":    (*ErrorHandler).AndGreaterThanEqual,
+		"lt":     (*ErrorHandler).AndLessThan,
+		"lte":    (*ErrorHandler).AndLessThanEqual,
+		"like":   (*ErrorHandler).AndLike,
 	}
 
 	placeHolder = sql.NullString{String: "", Valid: true}
 
-	sortOrders = map[string]int {
+	sortOrders = map[string]int{
 		"asc":  1,
 		"desc": 1,
 	}
 )
 
-func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain string) []interface{} {
+func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) []interface{} {
 	if o.Err != nil {
 		return []interface{}{}
 	}
-	
+
 	if _, ok := searchableDomains[domain]; !ok {
 		o.Err = fmt.Errorf("domain %s not found, or not searchable", domain)
 		return []interface{}{}
 	}
-	
+
 	whereclause := []string{}
 	orderclause := []string{}
 
@@ -54,7 +55,7 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 	whereparams := []interface{}{}
 
 	switch finds := findm.(type) {
-	case map[string]interface{} :
+	case map[string]interface{}:
 		for fieldName, v := range finds {
 			switch criteriaItem := v.(type) {
 			case map[string]interface{}:
@@ -64,7 +65,7 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 						whereparams = append(whereparams, rhs)
 					}
 				}
-				
+
 			default:
 				o.Err = fmt.Errorf("query.find.%s %T %v not support", fieldName, v, v)
 				return []interface{}{}
@@ -83,8 +84,8 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 	if o.Err != nil {
 		return []interface{}{}
 	}
-	
-	switch sorts := sortm.(type) {		
+
+	switch sorts := sortm.(type) {
 	case map[string]string:
 		for fieldname, order := range sorts {
 			//checkfield
@@ -92,10 +93,10 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 				o.Err = fmt.Errorf("sort order %s not support", order)
 				return []interface{}{}
 			}
-			
+
 			orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
 		}
-		
+
 	default:
 		o.Err = fmt.Errorf("query.sort should be map{string: string}")
 		return []interface{}{}
@@ -103,10 +104,10 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 
 	pagingraw := o.FromMap("paging", criteria, "query",
 		map[string]int64{
-			"page": 1,
+			"page":     1,
 			"pagesize": 100,
 		})
-	
+
 	if o.Err != nil {
 		return []interface{}{}
 	}
@@ -130,8 +131,8 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 	orderclauseString := ""
 	if len(orderclause) > 0 {
 		orderclauseString = "\nORDER BY " + strings.Join(orderclause, ", ")
-	}	
-	
+	}
+
 	sqlquery := fmt.Sprintf("SELECT * FROM `%s` %s %s %s", domain,
 		whereclauseString,
 		orderclauseString,
@@ -144,38 +145,19 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 	ctx, _ := o.DefaultContext()
 	//o.Err = q.SelectContext(ctx, &rows, sqlquery, whereparams...)
 
-	var rows *sql.Rows
-	var cols []string
-	rows, o.Err = q.QueryContext(ctx, sqlquery, whereparams...)
-	if o.Err != nil {
-		return []interface{}{}
-	}
-	
-	cols, o.Err = rows.Columns()
+	var rows *sqlx.Rows
+	rows, o.Err = q.QueryxContext(ctx, sqlquery, whereparams...)
 	if o.Err != nil {
 		return []interface{}{}
 	}
 
 	var results []interface{}
-	
-	for rows.Next() {
-		columns := make([]interface{}, len(cols))
-		columnPointers := make([]interface{}, len(cols))
-		for i, _ := range columns {
-			columnPointers[i] = &columns[i]
-		}
 
-		if err := rows.Scan(columnPointers...); err != nil {
+	for rows.Next() {
+		m := make(map[string]interface{})
+		if err := rows.MapScan(m); err != nil {
 			o.Err = err
 			return []interface{}{}
-		}
-
-		m := make(map[string]interface{})
-		for i, colName := range cols {
-			val := columnPointers[i].(*interface{})
-			m[colName] = *val
-
-			fmt.Printf("[SEARCH CRITERIA DEBUG] %s %v\n", colName, *val)
 		}
 
 		results = append(results, m)

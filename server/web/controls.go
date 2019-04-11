@@ -961,12 +961,12 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	filterId := vars["filterId"]
-	
+
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
 			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
@@ -989,12 +989,11 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	query := o.getStringValue(r.Form, "q")
 
 	//accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
 	rows := o.SelectByCriteria(tx, query, domain)
-	
+
 	o.ok(w, "success", rows)
 }
-
