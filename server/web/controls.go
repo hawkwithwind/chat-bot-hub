@@ -995,7 +995,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	rows := o.SelectByCriteria(tx, query, domain)
+	rows, paging := o.SelectByCriteria(tx, query, domain)
 
 	if o.Err != nil {
 		return
@@ -1027,5 +1027,5 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
-	o.ok(w, "success", chatuservos)
+	o.okWithPaging(w, "success", chatuservos, paging)
 }

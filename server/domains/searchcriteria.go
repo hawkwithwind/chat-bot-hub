@@ -34,14 +34,14 @@ var (
 	}
 )
 
-func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) []interface{} {
+func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) ([]interface{}, Paging) {
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	if _, ok := searchableDomains[domain]; !ok {
 		o.Err = fmt.Errorf("domain %s not found, or not searchable", domain)
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	whereclause := []string{}
@@ -51,7 +51,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 
 	findm := o.FromMap("find", criteria, "query", map[string]interface{}{})
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	whereparams := []interface{}{}
@@ -70,21 +70,21 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 
 			default:
 				o.Err = fmt.Errorf("query.find.%s %T %v not support", fieldName, v, v)
-				return []interface{}{}
+				return []interface{}{}, Paging{}
 			}
 		}
 	default:
 		o.Err = fmt.Errorf("query.find should be map{string: anything }")
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	sortm := o.FromMap("sort", criteria, "query", map[string]string{})
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	switch sorts := sortm.(type) {
@@ -93,7 +93,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 			//checkfield
 			if _, ok := sortOrders[order]; !ok {
 				o.Err = fmt.Errorf("sort order %s not support", order)
-				return []interface{}{}
+				return []interface{}{}, Paging{}
 			}
 
 			orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
@@ -101,7 +101,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 
 	default:
 		o.Err = fmt.Errorf("query.sort should be map{string: string}")
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	pagingraw := o.FromMap("paging", criteria, "query",
@@ -111,13 +111,13 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		})
 
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 	paging := Paging{}
 	o.Err = json.Unmarshal([]byte(o.ToJson(pagingraw)), &paging)
 
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	limitclause := fmt.Sprintf("LIMIT %d,%d",
@@ -141,14 +141,27 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		limitclause,
 	)
 
+	sqlcountquery := fmt.Sprintf("SELECT COUNT(*) FROM `%s` %s", domain,
+		whereclauseString,
+	)
+
 	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
-	ctx, _ := o.DefaultContext()
 
+	var counts []int64
+	ctxcc, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)
+	if o.Err != nil {
+		return []interface{}{}, Paging{}
+	}
+	
+	count := counts[0]
+	
+	ctx, _ := o.DefaultContext()
 	var rows *sqlx.Rows
 	rows, o.Err = q.QueryxContext(ctx, sqlquery, whereparams...)
 	if o.Err != nil {
-		return []interface{}{}
+		return []interface{}{}, Paging{}
 	}
 
 	var results []interface{}
@@ -157,11 +170,20 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		m := searchableDomains[domain](o)
 		if err := rows.StructScan(m); err != nil {
 			o.Err = err
-			return []interface{}{}
+			return []interface{}{}, Paging{}
 		}
 
 		results = append(results, m)
 	}
+
+	pagecount := count / paging.PageSize
+	if count % paging.PageSize != 0 {
+		pagecount += 1
+	}
 	
-	return results
+	return results, Paging{
+		Page: paging.Page,
+		PageCount: pagecount,
+		PageSize: paging.PageSize,
+	}
 }
