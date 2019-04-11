@@ -63,7 +63,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 			case map[string]interface{}:
 				for op, rhs := range criteriaItem {
 					if clauseGener, ok := searchableOPS[op]; ok {
-						whereclause = append(whereclause, clauseGener(o, fieldName, placeHolder))
+						whereclause = append(whereclause, clauseGener(o, fieldName, rhs))
 						switch righthandside := rhs.(type) {
 						case []interface{}:
 							whereparams = append(whereparams, righthandside...)
