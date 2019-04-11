@@ -97,6 +97,10 @@ func (chatuser *ChatUser) SetExt(ext string) {
 	}
 }
 
+func (o *ErrorHandler) NewDefaultChatUser() interface{} {
+	return &ChatUser{}
+}
+
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {
 	if ctx.Err != nil {
 		return nil

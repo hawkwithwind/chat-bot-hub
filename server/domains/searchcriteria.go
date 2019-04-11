@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	searchableDomains = map[string]interface{}{
-		"chatusers": ChatUser{},
+	searchableDomains = map[string]func(*ErrorHandler) interface{} {
+		"chatusers": (*ErrorHandler).NewDefaultChatUser,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, sql.NullString) string{
@@ -139,11 +139,9 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		limitclause,
 	)
 
-	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v", sqlquery, whereparams)
+	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
-	//rows := []interface{}{}
 	ctx, _ := o.DefaultContext()
-	//o.Err = q.SelectContext(ctx, &rows, sqlquery, whereparams...)
 
 	var rows *sqlx.Rows
 	rows, o.Err = q.QueryxContext(ctx, sqlquery, whereparams...)
@@ -154,8 +152,8 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	var results []interface{}
 
 	for rows.Next() {
-		m := make(map[string]interface{})
-		if err := rows.MapScan(m); err != nil {
+		m := searchableDomains[domain](o)
+		if err := rows.StructScan(m); err != nil {
 			o.Err = err
 			return []interface{}{}
 		}
