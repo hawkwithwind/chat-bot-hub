@@ -1,2 +1,2 @@
 ALTER TABLE `filters` DROP INDEX `accountid`;
-ALTER TABLE `filters` ADD INDEX `accountid_filtername_deleteat` (`accountid`, `filtername`, `deleteat`);
+ALTER TABLE `filters` ADD CONSTRAINT `accountid_filtername_deleteat` UNIQUE (`accountid`, `filtername`, `deleteat`);
