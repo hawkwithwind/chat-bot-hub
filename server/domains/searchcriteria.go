@@ -103,7 +103,7 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 
 	pagingraw := o.FromMap("paging", criteria, "query",
 		map[string]int64{
-			"page": 0,
+			"page": 1,
 			"pagesize": 100,
 		})
 	
@@ -124,7 +124,7 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 
 	whereclauseString := ""
 	if len(whereclause) > 0 {
-		whereclauseString = "\nWHERE " + strings.Join(whereclause, "\n")
+		whereclauseString = "\nWHERE 1=1 " + strings.Join(whereclause, "\n")
 	}
 
 	orderclauseString := ""
