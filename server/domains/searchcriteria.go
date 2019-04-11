@@ -87,7 +87,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		return []interface{}{}, Paging{}
 	}
 
-	sortm := o.FromMap("sort", criteria, "query", map[string]string{})
+	sortm := o.FromMap("sort", criteria, "query", map[string]interface{})
 	if o.Err != nil {
 		return []interface{}{}, Paging{}
 	}
