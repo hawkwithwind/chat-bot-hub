@@ -49,7 +49,7 @@ func (o *ErrorHandler) DeleteFilter(q dbx.Queryable, filterId string) {
 		return
 	}
 
-	query := `UPDATE filters SET deleteat=CURRENT_TIME_STAMP WHERE filterid = ?`
+	query := `UPDATE filters SET deleteat=CURRENT_TIMESTAMP WHERE filterid = ?`
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.ExecContext(ctx, query, filterId)
 }
