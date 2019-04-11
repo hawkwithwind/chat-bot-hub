@@ -1001,7 +1001,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var chatusers []ChatUserVO
-	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatusers)
-	o.ok(w, "success", chatusers)
+	// var chatusersDomains []ChatUserVO
+	// o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatusers)
+	o.ok(w, "success", rows)
 }
