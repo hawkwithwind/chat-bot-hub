@@ -33,7 +33,7 @@
 </div>
 
 <div class="row">
-  <div class="col-xs-10 col-md-10">
+  <div class="col-xs-12 col-md-12">
     <div layout="row" layout-sm="column" layout-align="space-around">
       <ul class="pagination">
 	<li ng-repeat="i in paging.pagerange">
@@ -65,7 +65,7 @@
       
       <tbody>
 	<tr ng-repeat="row in body.data">
-          <td style="text-align:center;width:120px">{{ consts.types[row.type] }}</td>
+          <td style="text-align:center;width:60px">{{ consts.types[row.type] }}</td>
 	  <td style="text-align:center;width:60px">
             <img ng-src="{{row.avatar}}" width="32" height="32"/>
           </td>
@@ -82,8 +82,8 @@
           <td style="text-align:center;width:120px">{{ row.signature }}</td>
           <td style="text-align:center;width:120px">{{ row.remark }}</td>
           <td style="text-align:center;width:120px">{{ row.label }}</td>
-	  <td style="text-align:center;width:160px">{{ row.createat }}</td>
-	  <td style="text-align:center;width:160px">{{ row.updateat }}</td>
+	  <td style="text-align:center;width:120px">{{ row.createat }}</td>
+	  <td style="text-align:center;width:120px">{{ row.updateat }}</td>
 	</tr>
       </tbody>
     </table>
