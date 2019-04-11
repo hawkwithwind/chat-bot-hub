@@ -16,8 +16,8 @@ var (
 		"chatusers": (*ErrorHandler).NewDefaultChatUser,
 	}
 
-	searchableOPS = map[string]func(*ErrorHandler, string, sql.NullString) string{
-		//"in": (*ErrorHandler).AndIsIn,
+	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
+		"in":     (*ErrorHandler).AndIsIn,
 		"equals": (*ErrorHandler).AndEqual,
 		"gt":     (*ErrorHandler).AndGreaterThan,
 		"gte":    (*ErrorHandler).AndGreaterThanEqual,
@@ -64,7 +64,12 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 				for op, rhs := range criteriaItem {
 					if clauseGener, ok := searchableOPS[op]; ok {
 						whereclause = append(whereclause, clauseGener(o, fieldName, placeHolder))
-						whereparams = append(whereparams, rhs)
+						switch righthandside := rhs.(type) {
+						case []interface{}:
+							whereparams = append(whereparams, righthandside...)
+						default:
+							whereparams = append(whereparams, rhs)
+						}
 					}
 				}
 
