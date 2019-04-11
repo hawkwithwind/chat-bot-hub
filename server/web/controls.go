@@ -956,7 +956,7 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
