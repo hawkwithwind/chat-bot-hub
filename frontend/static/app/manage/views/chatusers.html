@@ -52,7 +52,14 @@
       <th style="text-align:center">类型</th>
       <th style="text-align:center"></th>
       <th style="text-align:center">帐号</th>
-      <th style="text-align:center">昵称</th>      
+      <th style="text-align:center">昵称</th>
+      <th style="text-align:center">性别</th>
+      <th style="text-align:center">国家</th>
+      <th style="text-align:center">省</th>
+      <th style="text-align:center">市</th>
+      <th style="text-align:center">签名</th>
+      <th style="text-align:center">备注</th>
+      <th style="text-align:center">标签</th>
       <th style="text-align:center">创建时间</th>
       <th style="text-align:center">更新时间</th>
       
@@ -64,6 +71,17 @@
           </td>
 	  <td style="text-align:center;width:120px">{{ row.username }}</td>
 	  <td style="text-align:center;width:120px">{{ row.nickname}}</td>
+          <td style="text-align:center;width:60px">
+            <span ng-if="row.sex==0">-</span>
+	    <span ng-if="row.sex==1">男</span>
+            <span ng-if="row.sex==2">女</span>
+          </td>
+          <td style="text-align:center;width:60px">{{ row.country }}</td>
+          <td style="text-align:center;width:120px">{{ row.province }}</td>
+          <td style="text-align:center;width:120px">{{ row.city }}</td>
+          <td style="text-align:center;width:120px">{{ row.signature }}</td>
+          <td style="text-align:center;width:120px">{{ row.remark }}</td>
+          <td style="text-align:center;width:120px">{{ row.label }}</td>
 	  <td style="text-align:center;width:160px">{{ row.createat }}</td>
 	  <td style="text-align:center;width:160px">{{ row.updateat }}</td>
 	</tr>
