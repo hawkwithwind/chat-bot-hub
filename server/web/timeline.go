@@ -78,15 +78,15 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		if o.Err != nil {
 			return
 		}
-		
+
 		ar := o.NewActionRequest(
-			botinfo.Login, "SnsTimeline", o.ToJson(map[string]interface{} {
+			botinfo.Login, "SnsTimeline", o.ToJson(map[string]interface{}{
 				"momentId": momentCode,
 			}), "NEW")
 		if o.Err != nil {
 			return
 		}
-		
+
 		if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 			actionReplys = append(actionReplys, *actionReply)
 		}

@@ -27,7 +27,7 @@ type ChatUser struct {
 	City       sql.NullString `db:"city"`
 	Signature  sql.NullString `db:"signature"`
 	Remark     sql.NullString `db:"remark"`
-	Label      sql.NullString `db:"label"`	
+	Label      sql.NullString `db:"label"`
 	Ext        sql.NullString `db:"ext"`
 	CreateAt   mysql.NullTime `db:"createat"`
 	UpdateAt   mysql.NullTime `db:"updateat"`
@@ -97,7 +97,6 @@ func (chatuser *ChatUser) SetExt(ext string) {
 	}
 }
 
-
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {
 	if ctx.Err != nil {
 		return nil
@@ -166,7 +165,7 @@ sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 	}
 
 	query += strings.Join(vls, ",\n")
-	
+
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
@@ -186,8 +185,8 @@ ON DUPLICATE KEY UPDATE
 sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
 	vls := []string{}
-	
-	for _, field := range []string {
+
+	for _, field := range []string{
 		"nickname",
 		"alias",
 		"avatar",
@@ -202,9 +201,9 @@ sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
 			field, field, field, field))
 	}
-	
+
 	query += strings.Join(vls, ",\n")
-	
+
 	var valueStrings []string
 	var valueArgs []interface{}
 	for _, chatuser := range chatusers {

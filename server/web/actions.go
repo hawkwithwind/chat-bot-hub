@@ -735,7 +735,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				for _, m := range wetimeline.Data {
 					ctx.Info("---\n%s at %d from %s %s\n%s",
 						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
-					
+
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
@@ -748,7 +748,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					if o.Err != nil {
 						return
 					}
-					
+
 					if len(foundms) == 0 {
 						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
 							if err := ctx.fluentLogger.Post(tag, m); err != nil {
@@ -762,7 +762,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					if o.Err != nil {
 						return
 					}
-					
+
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
@@ -775,7 +775,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					} else {
 						ctx.Info("ignore fill moment b[%s] %s", thebotinfo.Login, m.MomentId)
 					}
-					
+
 					if o.Err != nil {
 						return
 					}
@@ -792,7 +792,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if len(wetimeline.Data) > 0 {
 					var minItem WechatSnsMoment
 					for i, d := range wetimeline.Data {
-						if i==0 || d.CreateTime < minItem.CreateTime {
+						if i == 0 || d.CreateTime < minItem.CreateTime {
 							minItem = d
 						}
 					}
@@ -853,7 +853,7 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bot := o.GetBotByLogin(tx, login)
-	
+
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
 	o.Err = decoder.Decode(&bodym)

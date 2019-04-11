@@ -685,12 +685,12 @@ func (hub *ChatHub) FilterCreate(
 
 func (hub *ChatHub) FilterFill(
 	ctx context.Context, req *pb.FilterFillRequest) (*pb.FilterFillReply, error) {
-	
+
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
 		return nil, fmt.Errorf("b[%s] not found", req.BotId)
 	}
-	
+
 	var err error
 
 	if req.Source == "MSG" {

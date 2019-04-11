@@ -199,6 +199,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		Type       string         `json:"type"`
 		Alias      string         `json:"alias"`
 		Avatar     string         `json:"avatar"`
+		Sex        int            `json:"sex"`
+		Country    string         `json:"country"`
+		Province   string         `json:"province"`
+		City       string         `json:"city"`
+		Signature  string         `json:"signature"`
+		Remark     string         `json:"remark"`
+		Label      string         `json:"label"`
 		CreateAt   utils.JSONTime `json:"createat"`
 		UpdateAt   utils.JSONTime `json:"updateat"`
 	}
@@ -298,6 +305,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Type:       chatuser.Type,
 			Alias:      chatuser.Alias.String,
 			Avatar:     chatuser.Avatar.String,
+			Sex:        chatuser.Sex,
+			Country:    chatuser.Country.String,
+			Province:   chatuser.Province.String,
+			City:       chatuser.City.String,
+			Signature:  chatuser.Signature.String,
+			Remark:     chatuser.Remark.String,
+			Label:      chatuser.Label.String,
 			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
 			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})

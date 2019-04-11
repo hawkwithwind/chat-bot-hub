@@ -42,7 +42,7 @@ func (tasks *Tasks) Serve() error {
 
 	tasks.cron.AddFunc("0 0 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
 	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWechatBotsCrawlTimelineTail() })
-	
+
 	tasks.cron.Start()
 	return nil
 }
@@ -78,4 +78,3 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimelineTail() {
 		tasks.Info("call returned %s", o.ToJson(ret))
 	}
 }
-

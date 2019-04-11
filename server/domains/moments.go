@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
 	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
@@ -27,7 +27,7 @@ func (o *ErrorHandler) MomentCrawlRedisKey(botId string) string {
 func (o *ErrorHandler) SaveMomentCrawlTail(pool *redis.Pool, botId string, momentCode string) {
 	conn := pool.Get()
 	defer conn.Close()
-	
+
 	o.RedisDo(conn, timeout, "SADD", o.MomentCrawlRedisKey(botId), momentCode)
 }
 

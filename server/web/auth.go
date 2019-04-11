@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	SDK     string = "SDK"
-	USER    string = "USER"
-	SDKCODE string = "sdkbearer"
+	SDK         string = "SDK"
+	USER        string = "USER"
+	SDKCODE     string = "sdkbearer"
 	REFRESHCODE string = "refresh"
 )
 
@@ -87,7 +87,7 @@ func (o *ErrorHandler) authorize(s string, name string, secret string) string {
 func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires time.Duration, refreshExpires time.Duration) map[string]interface{} {
 	expireAt := time.Now().Add(expires)
 	refreshExpireAt := time.Now().Add(refreshExpires)
-	
+
 	account := o.GetAccountByName(web.db.Conn, accountName)
 	if o.Err != nil {
 		return map[string]interface{}{}
@@ -96,19 +96,19 @@ func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires t
 		o.Err = fmt.Errorf("account %s not found", accountName)
 		return map[string]interface{}{}
 	}
-	
+
 	tokenString := o.generateToken(web.Config.SecretPhrase, account.AccountName, SDKCODE, account.Secret, expireAt)
 	refreshToken := o.generateToken(web.Config.SecretPhrase, account.AccountName, REFRESHCODE, account.Secret, refreshExpireAt)
 
 	if o.Err != nil {
 		return map[string]interface{}{}
 	}
-	
+
 	return map[string]interface{}{
-		"sdkName": SDKCODE,
-		"token":   tokenString,
+		"sdkName":      SDKCODE,
+		"token":        tokenString,
 		"refreshToken": refreshToken,
-		"expireAt": utils.JSONTime{Time: expireAt},
+		"expireAt":     utils.JSONTime{Time: expireAt},
 	}
 }
 
