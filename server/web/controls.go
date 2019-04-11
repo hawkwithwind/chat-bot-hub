@@ -965,6 +965,8 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	accountName := o.getAccountName(r)
 	
 	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+	
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
 			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
