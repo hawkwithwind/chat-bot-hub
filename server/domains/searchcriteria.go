@@ -93,15 +93,21 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	}
 
 	switch sorts := sortm.(type) {
-	case map[string]string:
-		for fieldname, order := range sorts {
+	case map[string]interface{}:
+		for fieldname, orderv := range sorts {
 			//checkfield
-			if _, ok := sortOrders[order]; !ok {
-				o.Err = fmt.Errorf("sort order %s not support", order)
+			switch order := orderv.(type) {
+			case string:
+				if _, ok := sortOrders[order]; !ok {
+					o.Err = fmt.Errorf("sort order %s not support", order)
+					return []interface{}{}, Paging{}
+				}
+
+				orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
+			default:
+				o.Err = fmt.Errorf("query.sort should be map{string: string}")
 				return []interface{}{}, Paging{}
 			}
-
-			orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
 		}
 
 	default:
