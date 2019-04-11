@@ -1,12 +1,14 @@
 package domains
 
 import (
+	"fmt"
+	"strings"
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+
 	"github.com/jmoiron/sqlx"
-	"strings"
+	
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
 var (
@@ -160,5 +162,6 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 
 		results = append(results, m)
 	}
+	
 	return results
 }

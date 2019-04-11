@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"encoding/json"
 
 	grctx "github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-
+	
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -191,24 +192,25 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "bot not found, or no access", BotsInfo{})
 }
 
+type ChatUserVO struct {
+	ChatUserId string         `json:"chatuserId"`
+	UserName   string         `json:"username"`
+	NickName   string         `json:"nickname"`
+	Type       string         `json:"type"`
+	Alias      string         `json:"alias"`
+	Avatar     string         `json:"avatar"`
+	Sex        int            `json:"sex"`
+	Country    string         `json:"country"`
+	Province   string         `json:"province"`
+	City       string         `json:"city"`
+	Signature  string         `json:"signature"`
+	Remark     string         `json:"remark"`
+	Label      string         `json:"label"`
+	CreateAt   utils.JSONTime `json:"createat"`
+	UpdateAt   utils.JSONTime `json:"updateat"`
+}
+
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
-	type ChatUserVO struct {
-		ChatUserId string         `json:"chatuserId"`
-		UserName   string         `json:"username"`
-		NickName   string         `json:"nickname"`
-		Type       string         `json:"type"`
-		Alias      string         `json:"alias"`
-		Avatar     string         `json:"avatar"`
-		Sex        int            `json:"sex"`
-		Country    string         `json:"country"`
-		Province   string         `json:"province"`
-		City       string         `json:"city"`
-		Signature  string         `json:"signature"`
-		Remark     string         `json:"remark"`
-		Label      string         `json:"label"`
-		CreateAt   utils.JSONTime `json:"createat"`
-		UpdateAt   utils.JSONTime `json:"updateat"`
-	}
 
 	type ChatUserResponse struct {
 		Data     []ChatUserVO             `json:"data"`
@@ -995,5 +997,11 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 
 	rows := o.SelectByCriteria(tx, query, domain)
 
-	o.ok(w, "success", rows)
+	if o.Err != nil {
+		return
+	}
+	
+	var chatusers []ChatUserVO
+	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatusers)
+	o.ok(w, "success", chatusers)
 }
