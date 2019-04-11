@@ -174,10 +174,11 @@ func (o *ErrorHandler) SelectByCriteria (q dbx.Queryable, query string, domain s
 		for i, colName := range cols {
 			val := columnPointers[i].(*interface{})
 			m[colName] = *val
+
+			fmt.Printf("[SEARCH CRITERIA DEBUG] %s %v\n", colName, *val)
 		}
 
 		results = append(results, m)
 	}
-		
 	return results
 }
