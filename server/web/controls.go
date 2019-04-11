@@ -1001,7 +1001,31 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// var chatusersDomains []ChatUserVO
-	// o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatusers)
-	o.ok(w, "success", rows)
+	var chatuserDomains []domains.ChatUser
+	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatuserDomains)
+	if o.Err != nil {
+		return
+	}
+
+	var chatuservos []ChatUserVO
+	for _, chatuser := range chatuserDomains {
+		chatuservos = append(chatuservos, ChatUserVO{
+			ChatUserId: chatuser.ChatUserId,
+			UserName:   chatuser.UserName,
+			NickName:   chatuser.NickName,
+			Type:       chatuser.Type,
+			Alias:      chatuser.Alias.String,
+			Avatar:     chatuser.Avatar.String,
+			Sex:        chatuser.Sex,
+			Country:    chatuser.Country.String,
+			Province:   chatuser.Province.String,
+			City:       chatuser.City.String,
+			Signature:  chatuser.Signature.String,
+			Remark:     chatuser.Remark.String,
+			Label:      chatuser.Label.String,
+			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
+			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+		})
+	}
+	o.ok(w, "success", chatuservos)
 }
