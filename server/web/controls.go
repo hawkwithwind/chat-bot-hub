@@ -563,7 +563,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	clientType := o.getStringValue(r.Form, "clientType")
 	login := o.getStringValue(r.Form, "login")
 	callback := o.getStringValue(r.Form, "callback")
-	loginInfo := o.getStringValue(r.Form, "loginInfo")
+	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 
 	if o.Err != nil {
 		return
