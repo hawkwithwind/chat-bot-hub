@@ -357,7 +357,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				thebot, o.Err = bot.logoutDone(in.Body)
 
 			case ACTIONREPLY:
-				hub.Info("ACTIONREPLY %s", in.Body[:120])
+				hub.Info("ACTIONREPLY %s", in.Body[:240])
 
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
@@ -366,11 +366,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var actionRequestId string
 
 					if body != nil {
-						if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
-							actionBody = abptr.(map[string]interface{})
+						switch ab := o.FromMap("body", body, "eventRequest.body", nil).(type) {
+						case map[string]interface{}:
+							actionBody = ab
 						}
-						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
-							result = rptr.(map[string]interface{})
+						switch ares := o.FromMap("result", body, "eventRequest.body", nil).(type) {
+						case map[string]interface{}:
+							result = ares
 						}
 
 						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
