@@ -359,6 +359,11 @@
     <h3 class="modal-title">获取二维码</h3>
   </div>
   <div class="modal-body" id="scanUrlBody">
-    <img ng-src="{{data.scanUrl}}" width="480" height="480" />
+    <div ng-if="data.scanUrl!='CONFIRM_ON_PHONE'">
+      <img ng-src="{{data.scanUrl}}" width="480" height="480" />
+    </div>
+    <div ng-if="data.scanUrl=='CONFIRM_ON_PHONE'">
+      <span>请在手机上确认登录iPad</span>
+    </div>
   </div> 
 </script>

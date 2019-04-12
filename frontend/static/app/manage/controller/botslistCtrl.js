@@ -524,6 +524,7 @@
 	  let bot = data.body
 	  if(bot.scanUrl !== undefined) {
 	    $scope.data.scanUrl = bot.scanUrl
+            $scope.flag = false
 	  } else {
 	    if ($scope.flag) {
 	      setTimeout(() => {
