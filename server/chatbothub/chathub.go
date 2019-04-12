@@ -292,14 +292,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						findbot := hub.GetBotById(botId)						
-						if findbot != nil && findbot.ClientId !=  bot.ClientId {
+						findbot := hub.GetBotById(botId)
+						if findbot != nil && findbot.ClientId != bot.ClientId {
 							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
 							hub.Error(o.Err, "FATAL error, stop")
 							continue
 						}
 					}
-					
+
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
@@ -380,9 +380,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// think abount recycle the memory of thebot
 				// after drop the bot, it wont have any reference to it
 				// so that it should be recycled by then
-				
+
 				hub.DropBot(thebot.ClientId)
-				
+
 			case ACTIONREPLY:
 				hub.Info("ACTIONREPLY %s", in.Body[:240])
 
@@ -546,12 +546,8 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
-	hub.Info("get bots %v", req)
-
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
-		hub.Info("[LIST BOTS] %v", v)
-		
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
 				bots = append(bots, NewBotsInfo(v))
@@ -605,7 +601,7 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 

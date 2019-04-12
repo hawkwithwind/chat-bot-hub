@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/jmoiron/sqlx"
@@ -160,7 +160,6 @@ func (o *ErrorHandler) AndLike(fieldName string, _ interface{}) string {
 	return fmt.Sprintf(" AND %s like ?", fieldName)
 }
 
-
 func (o *ErrorHandler) AndGreaterThan(fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
@@ -204,11 +203,10 @@ func (o *ErrorHandler) AndIsIn(fieldName string, rhs interface{}) string {
 		for _, _ = range list {
 			placeholders = append(placeholders, "?")
 		}
-		
+
 		return fmt.Sprintf("  AND %s in (%s) ", fieldName, strings.Join(placeholders, ","))
 	default:
 		o.Err = fmt.Errorf("where clause operator IN not support rhs type %T, should be list", rhs)
 		return ""
 	}
 }
-

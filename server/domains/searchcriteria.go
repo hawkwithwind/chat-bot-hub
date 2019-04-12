@@ -1,18 +1,18 @@
 package domains
 
 import (
-	"fmt"
-	"strings"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
-	
+
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 )
 
 var (
-	searchableDomains = map[string]func(*ErrorHandler) interface{} {
+	searchableDomains = map[string]func(*ErrorHandler) interface{}{
 		"chatusers": (*ErrorHandler).NewDefaultChatUser,
 	}
 
@@ -158,16 +158,15 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 
 	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
-
 	var counts []int64
 	ctxcc, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)
 	if o.Err != nil {
 		return []interface{}{}, Paging{}
 	}
-	
+
 	count := counts[0]
-	
+
 	ctx, _ := o.DefaultContext()
 	var rows *sqlx.Rows
 	rows, o.Err = q.QueryxContext(ctx, sqlquery, whereparams...)
@@ -188,13 +187,13 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	}
 
 	pagecount := count / paging.PageSize
-	if count % paging.PageSize != 0 {
+	if count%paging.PageSize != 0 {
 		pagecount += 1
 	}
-	
+
 	return results, Paging{
-		Page: paging.Page,
+		Page:      paging.Page,
 		PageCount: pagecount,
-		PageSize: paging.PageSize,
+		PageSize:  paging.PageSize,
 	}
 }

@@ -2,16 +2,16 @@ package web
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
-	"encoding/json"
 
 	grctx "github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -103,7 +103,6 @@ func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb
 		return opreply
 	}
 }
-
 
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
@@ -582,7 +581,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	bot := o.NewBot(botName, clientType, account.AccountId, login)
 	if o.Err != nil {
 		return
@@ -592,7 +591,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("new bot failed")
 		return
 	}
-	
+
 	bot.Callback = sql.NullString{String: callback, Valid: true}
 	bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 
@@ -656,7 +655,7 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	botId := vars["botId"]
 
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -688,7 +687,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 	botId := vars["botId"]
 
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -709,7 +708,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
-	
+
 	vars := mux.Vars(r)
 	login := vars["login"]
 
@@ -722,7 +721,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	wxaappid := o.getStringValueDefault(r.Form, "wxaappId", "")
 
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
@@ -1092,7 +1091,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	var chatuserDomains []domains.ChatUser
 	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatuserDomains)
 	if o.Err != nil {

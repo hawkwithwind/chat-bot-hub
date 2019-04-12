@@ -148,18 +148,18 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 
 func (bot *ChatBot) logout() (*ChatBot, error) {
 	o := &ErrorHandler{}
-	
+
 	if bot.Status != WorkingLoggedIn {
 		return bot, fmt.Errorf("bot status %s cannot logout", bot.Status)
 	}
 
 	o.sendEvent(bot.tunnel, &pb.EventReply{
-		EventType: LOGOUT,
+		EventType:  LOGOUT,
 		ClientType: bot.ClientType,
-		ClientId: bot.ClientId,
-		Body: "{}",
+		ClientId:   bot.ClientId,
+		Body:       "{}",
 	})
-	
+
 	return bot, nil
 }
 
@@ -222,7 +222,7 @@ func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} logoutDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	bot.Status = BeginRegistered
-	
+
 	return bot, nil
 }
 
