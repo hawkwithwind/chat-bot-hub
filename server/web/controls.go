@@ -120,9 +120,9 @@ func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb
 	}
 }
 
-func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
+func findDevice(bots []*pb.BotsInfo, botId string) *pb.BotsInfo {
 	for _, bot := range bots {
-		if bot.Login == login {
+		if bot.BotId == botId {
 			return bot
 		}
 	}
@@ -516,7 +516,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{}}); botsreply != nil {
 		for _, b := range bots {
-			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
+			if info := findDevice(botsreply.BotsInfo, b.BotId); info != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo:       *info,
 					BotId:          b.BotId,
