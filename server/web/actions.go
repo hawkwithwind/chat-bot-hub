@@ -341,32 +341,34 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		if !bot.FilterId.Valid {
 			ctx.Info("b[%s] does not have filters", bot.BotId)
-			return
+		} else {
+			ctx.Info("b[%s] initializing filters ...", bot.BotId)
+			o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("b[%s] initializing filters done", bot.BotId)
+			_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
+				BotId:    bot.BotId,
+				FilterId: bot.FilterId.String,
+			})
 		}
 
-		ctx.Info("b[%s] initializing filters ...", bot.BotId)
-		o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
-		if o.Err != nil {
-			return
+		if !bot.MomentFilterId.Valid {
+			ctx.Info("b[%s] does not have moment filters", bot.BotId)
+		} else {
+			ctx.Info("b[%s] initializing moment filters ...", bot.BotId)
+			o.CreateFilterChain(ctx, tx, wrapper, bot.MomentFilterId.String)
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("b[%s] initializing moment filters done", bot.BotId)
+
+			_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
+				BotId:    bot.BotId,
+				FilterId: bot.MomentFilterId.String,
+			})
 		}
-		ctx.Info("b[%s] initializing filters done", bot.BotId)
-
-		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
-			BotId:    bot.BotId,
-			FilterId: bot.FilterId.String,
-		})
-
-		ctx.Info("b[%s] initializing moment filters ...", bot.BotId)
-		o.CreateFilterChain(ctx, tx, wrapper, bot.MomentFilterId.String)
-		if o.Err != nil {
-			return
-		}
-		ctx.Info("b[%s] initializing moment filters done", bot.BotId)
-
-		_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
-			BotId:    bot.BotId,
-			FilterId: bot.MomentFilterId.String,
-		})
 
 		return
 
