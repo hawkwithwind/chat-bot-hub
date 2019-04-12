@@ -573,9 +573,21 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 		accountName = accountNameptr.(string)
 	}
 
+	ctx.Info("o %v", o)
+
 	tx := o.Begin(ctx.db)
 	account := o.GetAccountByName(tx, accountName)
 	bot := o.NewBot(botName, clientType, account.AccountId, login)
+
+	if o.Err != nil {
+		return
+	}
+
+	if bot == nil {
+		o.Err = fmt.Errorf("new bot failed")
+		return
+	}
+	
 	bot.Callback = sql.NullString{String: callback, Valid: true}
 	bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 
