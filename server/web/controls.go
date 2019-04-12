@@ -565,6 +565,10 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	callback := o.getStringValue(r.Form, "callback")
 	loginInfo := o.getStringValue(r.Form, "loginInfo")
 
+	if o.Err != nil {
+		return
+	}
+
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
 		o.Err = fmt.Errorf("context.login is null")
@@ -573,12 +577,13 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 		accountName = accountNameptr.(string)
 	}
 
-	ctx.Info("o %v", o)
-
 	tx := o.Begin(ctx.db)
 	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+	
 	bot := o.NewBot(botName, clientType, account.AccountId, login)
-
 	if o.Err != nil {
 		return
 	}
