@@ -102,6 +102,7 @@ const (
 	PONG          string = "PONG"
 	REGISTER      string = "REGISTER"
 	LOGIN         string = "LOGIN"
+	LOGOUT        string = "LOGOUT"
 	LOGINSCAN     string = "LOGINSCAN"
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
@@ -557,6 +558,25 @@ type LoginBody struct {
 	Login     string `json:"login"`
 	Password  string `json:"password"`
 	LoginInfo string `json:"loginInfo"`
+}
+
+func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
+	hub.Info("recieve logout bot cmd from web %s", req.BotId)
+	o := &ErrorHandler{}
+
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+	}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType: LOGOUT,
+		ClientType: bot.ClientType,
+		ClientId: bot.ClientId,
+		Body: "{}",
+	})
+
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
