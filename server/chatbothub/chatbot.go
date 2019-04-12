@@ -146,6 +146,23 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	return bot, nil
 }
 
+func (bot *ChatBot) logout() (*ChatBot, error) {
+	o := &ErrorHandler{}
+	
+	if bot.Status != WorkingLoggedIn {
+		return bot, fmt.Errorf("bot status %s cannot logout", bot.Status)
+	}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType: LOGOUT,
+		ClientType: bot.ClientType,
+		ClientId: bot.ClientId,
+		Body: "{}",
+	})
+	
+	return bot, nil
+}
+
 func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	bot.ScanUrl = url
 	return bot, nil

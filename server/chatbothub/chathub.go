@@ -562,20 +562,17 @@ type LoginBody struct {
 
 func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve logout bot cmd from web %s", req.BotId)
-	o := &ErrorHandler{}
 
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
 		return nil, fmt.Errorf("b[%s] not found", req.BotId)
 	}
 
-	o.sendEvent(bot.tunnel, &pb.EventReply{
-		EventType: LOGOUT,
-		ClientType: bot.ClientType,
-		ClientId: bot.ClientId,
-		Body: "{}",
-	})
-
+	_, err := bot.logout()
+	if err != nil {
+		return nil, err
+	}
+	
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
