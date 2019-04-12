@@ -37,7 +37,7 @@ type WebConfig struct {
 	Baseurl      string
 	Redis        utils.RedisConfig
 	Fluent       utils.FluentConfig
-	//Mongo        utils.MongoConfig
+	Mongo        utils.MongoConfig
 	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
@@ -89,19 +89,19 @@ func (ctx *WebServer) init() error {
 		ctx.Error(err, "create fluentlogger failed")
 	}
 
-	// o := &ErrorHandler{}
-	// client := o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
-	// if o.Err != nil {
-	// 	ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
-	// } else {
-	// 	if client != nil {
-	// 		contx, _ := context.WithTimeout(context.Background(), 10 * time.Second)
-	// 		o.Err = client.Disconnect(contx)
-	// 		if o.Err != nil {
-	// 			ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
-	// 		}
-	// 	}
-	// }
+	o := &ErrorHandler{}
+	client := o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	if o.Err != nil {
+		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
+	} else {
+		if client != nil {
+			contx, _ := context.WithTimeout(context.Background(), 10 * time.Second)
+			o.Err = client.Disconnect(contx)
+			if o.Err != nil {
+				ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
+			}
+		}
+	}
 	
 	retryTimes := 7
 	gap := 2
