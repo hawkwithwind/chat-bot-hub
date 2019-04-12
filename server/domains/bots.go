@@ -122,6 +122,16 @@ WHERE botid = :botid
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
 }
 
+func (o *ErrorHandler) DeleteBot(q dbx.Queryable, botId string) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `UPDATE bots SET deleteat = CURRENT_TIMESTAMP WHERE botId = ?`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, query, botId)
+}
+
 func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string) []Bot {
 	if o.Err != nil {
 		return nil
@@ -201,4 +211,24 @@ WHERE a.accountname=?
   AND b.deleteat is NULL`, accountName, login)
 
 	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
+}
+
+func (o *ErrorHandler) CheckBotOwnerById(q dbx.Queryable, botId string, accountName string) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT b.*
+FROM bots as b 
+LEFT JOIN accounts as a on b.accountid = a.accountid
+WHERE a.accountname=? 
+  AND b.botid=?
+  AND a.deleteat is NULL
+  AND b.deleteat is NULL`, accountName, botId)
+
+	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botId))
 }

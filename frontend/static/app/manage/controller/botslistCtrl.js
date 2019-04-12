@@ -127,6 +127,12 @@
       })
     }
 
+    $scope.botLogout = (row) => {
+      buildPromise(buildModelResId('botlogout', row.botId).remove((data) => {
+        toastr.success(data, '登出成功')
+      }))
+    }
+
     $scope.showScanUrl = (row) => {
       $modal.open({
 	templateUrl: 'scanUrlTemplate',
@@ -513,7 +519,7 @@
     }
 
     $scope.refresh = () => {
-      buildPromise(buildModelResId('bots/id', $scope.botId)).then((data) => {
+      buildPromise(buildModelResId('bots', $scope.botId)).then((data) => {
 	if(data.body !== undefined) {
 	  let bot = data.body
 	  if(bot.scanUrl !== undefined) {

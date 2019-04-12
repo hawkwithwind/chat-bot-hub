@@ -1,4 +1,4 @@
-<div ncy-breadcrumb></div>
+x<div ncy-breadcrumb></div>
 <h3 class="page-title">机器人列表</h3>
 
 <div class="row">
@@ -45,6 +45,7 @@
 	    </span>
 	    <span ng-if="row.status==200">
 	      <a href="javascript:;" ng-click="botAction(row)">发消息</a>
+              <a href="javascript:;" ng-click="botLogout(row)">登出</a>
 	    </span>
 	  </td>
 	  <td style="text-align:center;width:120px">{{ consts.types[row.clientType] }}</td>

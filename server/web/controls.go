@@ -88,6 +88,23 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 	}
 }
 
+func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if opreply, err := w.client.BotLogout(w.context, req); err != nil {
+		ctx.Err = err
+		return nil
+	} else if opreply == nil {
+		ctx.Err = fmt.Errorf("logoutreply is nil")
+		return nil
+	} else {
+		return opreply
+	}
+}
+
+
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
@@ -614,10 +631,68 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", loginreply)
 }
 
-func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
+func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	accountName := o.getAccountName(r)
+	
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		if o.Err == nil {
+			o.Err = fmt.Errorf(
+				"bot %s not exists, or account %s don't have access", botId, accountName)
+			return
+		} else {
+			return
+		}
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
+		BotId: botId,
+	})
+
+	o.ok(w, "", opreply)
+}
+
+func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	accountName := o.getAccountName(r)
+	
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		if o.Err == nil {
+			o.Err = fmt.Errorf(
+				"bot %s not exists, or account %s don't have access", botId, accountName)
+			return
+		} else {
+			return
+		}
+	}
+
+	o.DeleteBot(tx, botId)
+	o.ok(w, "", nil)
+}
+
+func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	
 	vars := mux.Vars(r)
 	login := vars["login"]
 
@@ -630,7 +705,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	wxaappid := o.getStringValueDefault(r.Form, "wxaappId", "")
 
 	accountName := o.getAccountName(r)
-
+	
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 

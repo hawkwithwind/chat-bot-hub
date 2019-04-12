@@ -344,7 +344,8 @@ func (ctx *WebServer) Serve() {
 	// bot CURD (controls.go)
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
-	r.HandleFunc("/bots/id/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.deleteBot)).Methods("DELETE")
 	r.HandleFunc("/bots/{login}", ctx.validate(ctx.updateBot)).Methods("PUT")
 	r.HandleFunc("/bots", ctx.validate(ctx.createBot)).Methods("POST")
 	r.HandleFunc("/bots/scancreate", ctx.validate(ctx.scanCreateBot)).Methods("POST")
@@ -370,6 +371,7 @@ func (ctx *WebServer) Serve() {
 
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/logout", ctx.validate(ctx.botLogout)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
