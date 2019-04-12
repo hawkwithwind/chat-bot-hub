@@ -186,6 +186,13 @@ func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.bots[clientid] = thebot
 }
 
+func (hub *ChatHub) DropBot(clientid string) {
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
+
+	delete(hub.bots, clientid)
+}
+
 func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
 	hub.muxFilters.Lock()
 	defer hub.muxFilters.Unlock()
@@ -283,6 +290,16 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
+
+					if o.Err == nil {
+						findbot := hub.GetBotById(botId)						
+						if findbot.ClientId !=  bot.ClientId {
+							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
+							hub.Error(o.Err, "FATAL error, stop")
+							continue
+						}
+					}
+					
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
@@ -355,7 +372,17 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE c[%s]", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
+				// think abount closing the connection
+				// grpc connection can't close from server side, but it's ok
+				// client side will process.exit(0) receiving logout
+				// so that the connection should be recycled by the system
 
+				// think abount recycle the memory of thebot
+				// after drop the bot, it wont have any reference to it
+				// so that it should be recycled by then
+				
+				hub.DropBot(thebot.ClientId)
+				
 			case ACTIONREPLY:
 				hub.Info("ACTIONREPLY %s", in.Body[:240])
 
@@ -519,8 +546,12 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
+	hub.Info("get bots %v", req)
+
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range hub.bots {
+		hub.Info("[LIST BOTS] %v", v)
+		
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
 				bots = append(bots, NewBotsInfo(v))

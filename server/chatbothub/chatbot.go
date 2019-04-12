@@ -222,6 +222,7 @@ func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} logoutDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	bot.Status = BeginRegistered
+	
 	return bot, nil
 }
 
