@@ -384,7 +384,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.DropBot(thebot.ClientId)
 
 			case ACTIONREPLY:
-				hub.Info("ACTIONREPLY %s", in.Body[:240])
+				if len(in.Body) > 240{
+					hub.Info("ACTIONREPLY %s", in.Body[:240])
+				} else {
+					hub.Info("ACTIONREPLY %s", in.Body)
+				}
 
 				if bot.ClientType == WECHATBOT {
 					body := o.FromJson(in.Body)
