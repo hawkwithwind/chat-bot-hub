@@ -234,7 +234,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		Criteria domains.ChatUserCriteria `json:"criteria"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -371,7 +371,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		Criteria domains.ChatGroupCriteria `json:"criteria"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -496,7 +496,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		CreateAt       int64  `json:"createAt"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	var login string
@@ -555,7 +555,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -586,7 +586,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -632,7 +632,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -664,7 +664,7 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -690,7 +690,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 	
 	vars := mux.Vars(r)
@@ -769,7 +769,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -816,7 +816,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -842,7 +842,7 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 }
 
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	o.ok(w, "", map[string]interface{}{
@@ -863,7 +863,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -893,7 +893,7 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -949,7 +949,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -998,7 +998,7 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 		CreateAt utils.JSONTime `json:"createAt"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	accountName := o.getAccountName(r)
