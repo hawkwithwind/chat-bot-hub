@@ -37,7 +37,7 @@ type WebConfig struct {
 	Baseurl      string
 	Redis        utils.RedisConfig
 	Fluent       utils.FluentConfig
-	Mongo        utils.MongoConfig
+	//Mongo        utils.MongoConfig
 	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
