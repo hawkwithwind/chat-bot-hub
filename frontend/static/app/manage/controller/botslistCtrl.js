@@ -128,7 +128,7 @@
     }
 
     $scope.botLogout = (row) => {
-      buildPromise(buildModelResId('bots', row.botId + "/logout").post((data) => {
+      buildPromise(buildModelResId('bots', row.botId + "/logout").update((data) => {
         toastr.success(data, '登出成功')
       }))
     }
