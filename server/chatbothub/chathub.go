@@ -293,7 +293,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						findbot := hub.GetBotById(botId)						
-						if findbot.ClientId !=  bot.ClientId {
+						if findbot != nil && findbot.ClientId !=  bot.ClientId {
 							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
 							hub.Error(o.Err, "FATAL error, stop")
 							continue
