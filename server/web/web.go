@@ -147,11 +147,11 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 	})
 }
 
-func (ctx *ErrorHandler) complain(w http.ResponseWriter, code int, msg string) {
+func (ctx *ErrorHandler) complain(w http.ResponseWriter, code utils.ClientErrorCode, msg string) {
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(CommonResponse{
-		Code:  code,
+		Code:  int(code),
 		Ts:    time.Now().Unix(),
 		Error: ErrorMessage{Message: msg},
 	})
@@ -196,23 +196,6 @@ func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	})
 }
 
-type ClientError struct {
-	err       error
-	errorCode int
-}
-
-func NewClientError(code int, err error) error {
-	return &ClientError{err: err, errorCode: code}
-}
-
-func (err *ClientError) ErrorCode() int {
-	return err.errorCode
-}
-
-func (err *ClientError) Error() string {
-	return err.err.Error()
-}
-
 type ErrorHandler struct {
 	domains.ErrorHandler
 }
@@ -220,8 +203,8 @@ type ErrorHandler struct {
 func (ctx *ErrorHandler) WebError(w http.ResponseWriter) {
 	if ctx.Err != nil {
 		v := reflect.ValueOf(ctx.Err)
-		if v.Type() == reflect.TypeOf((*ClientError)(nil)) {
-			c := v.Interface().(*ClientError)
+		if v.Type() == reflect.TypeOf((*utils.ClientError)(nil)) {
+			c := v.Interface().(*utils.ClientError)
 			ctx.complain(w, c.ErrorCode(), c.Error())
 		} else {
 			ctx.fail(w, "")
@@ -237,7 +220,7 @@ func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
 	if len(form[name]) > 0 {
 		return form[name]
 	} else {
-		ctx.Err = NewClientError(-1, fmt.Errorf("参数 %s 不应为空", name))
+		ctx.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("参数 %s 不应为空", name))
 		return nil
 	}
 }
