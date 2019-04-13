@@ -76,6 +76,11 @@ func (web *WebServer) createFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	r.ParseForm()
 	suiteName := o.getStringValue(r.Form, "name")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
+	
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -105,6 +110,11 @@ func (web *WebServer) updateFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	r.ParseForm()
 	suiteName := o.getStringValue(r.Form, "name")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
+	
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -112,7 +122,8 @@ func (web *WebServer) updateFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	if !o.CheckFilterTemplateSuiteOwner(tx, suiteId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器模板套件%s", suiteId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器模板套件%s", suiteId))
+			return
 		}
 	}
 
@@ -122,7 +133,8 @@ func (web *WebServer) updateFilterTemplateSuite(w http.ResponseWriter, r *http.R
 
 	suite := o.GetFilterTemplateSuiteById(tx, suiteId)
 	if o.Err == nil && suite == nil {
-		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器套件%s", suiteId))
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("找不到过滤器套件%s", suiteId))
+		return
 	}
 
 	if o.Err != nil {
@@ -145,11 +157,19 @@ func (web *WebServer) createFilterTemplate(w http.ResponseWriter, r *http.Reques
 	tempName := o.getStringValue(r.Form, "name")
 	suiteId := o.getStringValue(r.Form, "suiteId")
 	indexstr := o.getStringValue(r.Form, "index")
-	index := int(o.ParseInt(indexstr, 10, 64))
-
 	tempType := o.getStringValue(r.Form, "type")
 	defaultNextstr := o.getStringValue(r.Form, "next")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
+
+	index := int(o.ParseInt(indexstr, 10, 64))
 	defaultNext := int(o.ParseInt(defaultNextstr, 10, 64))
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return
+	}
 
 	accountName := o.getAccountName(r)
 
@@ -182,11 +202,19 @@ func (web *WebServer) updateFilterTemplate(w http.ResponseWriter, r *http.Reques
 	tempName := o.getStringValueDefault(r.Form, "name", "")
 
 	indexstr := o.getStringValue(r.Form, "index")
-	index := int(o.ParseInt(indexstr, 10, 64))
-
 	defaultNextstr := o.getStringValue(r.Form, "next")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
+	
+	index := int(o.ParseInt(indexstr, 10, 64))
 	defaultNext := int(o.ParseInt(defaultNextstr, 10, 64))
-
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return
+	}
+	
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -194,7 +222,7 @@ func (web *WebServer) updateFilterTemplate(w http.ResponseWriter, r *http.Reques
 
 	if !o.CheckFilterTemplateOwner(tx, templateId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器模板%s", templateId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器模板%s", templateId))
 		}
 	}
 
@@ -204,7 +232,8 @@ func (web *WebServer) updateFilterTemplate(w http.ResponseWriter, r *http.Reques
 
 	template := o.GetFilterTemplateById(tx, templateId)
 	if o.Err == nil && template == nil {
-		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", templateId))
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("找不到过滤器%s", templateId))
+		return
 	}
 
 	if o.Err != nil {
@@ -229,13 +258,13 @@ func (web *WebServer) deleteFilterTemplate(w http.ResponseWriter, r *http.Reques
 	vars := mux.Vars(r)
 	templateId := vars["templateId"]
 	accountName := o.getAccountName(r)
-
+	
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
 	if !o.CheckFilterTemplateOwner(tx, templateId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器模板%s", templateId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器模板%s", templateId))
 		}
 	}
 

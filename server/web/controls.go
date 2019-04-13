@@ -246,13 +246,14 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	ipage := o.ParseInt(page, 0, 64)
 	ipagesize := o.ParseInt(pagesize, 0, 64)
 	if o.Err != nil {
-		o.Err = NewClientError(-1, o.Err)
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
@@ -265,13 +266,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
-			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found", botlogin))
+			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botlogin %s not found", botlogin))
 			return
 		}
 
 		if !o.CheckBotOwner(tx, botlogin, accountName) {
 			if o.Err == nil {
-				o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName)
+				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
 				return
 			} else {
 				return
@@ -380,6 +381,10 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	groupname := o.getStringValueDefault(r.Form, "groupname", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
 	botlogin := o.getStringValueDefault(r.Form, "botlogin", "")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
 
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
@@ -389,7 +394,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	ipage := o.ParseInt(page, 0, 64)
 	ipagesize := o.ParseInt(pagesize, 0, 64)
 	if o.Err != nil {
-		o.Err = NewClientError(-1, o.Err)
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		return
 	}
 
@@ -402,13 +407,13 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
-			o.Err = NewClientError(-1, fmt.Errorf("botlogin %s not found", botlogin))
+			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botlogin %s not found", botlogin))
 			return
 		}
 
 		if !o.CheckBotOwner(tx, botlogin, accountName) {
 			if o.Err == nil {
-				o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName)
+				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
 				return
 			} else {
 				return
@@ -565,12 +570,13 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 
 	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("context.login is null"))
 		return
 	} else {
 		accountName = accountNameptr.(string)
@@ -579,6 +585,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	account := o.GetAccountByName(tx, accountName)
 	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, o.Err)
 		return
 	}
 
@@ -608,9 +615,13 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	botName := o.getStringValue(r.Form, "botName")
 	clientType := o.getStringValue(r.Form, "clientType")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
 
 	if clientType != "WECHATBOT" {
-		o.Err = fmt.Errorf("scan create bot %s not supported", clientType)
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("scan create bot %s not supported", clientType))
 		return
 	}
 
@@ -631,6 +642,10 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
+
+	if o.Err != nil {
+		return
+	}
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
@@ -753,11 +768,11 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if filter == nil {
-			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
 		if !o.CheckFilterOwner(tx, filterid, accountName) {
-			o.Err = NewClientError(-4, fmt.Errorf("filter %s not exists, or no permission", filterid))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
@@ -769,11 +784,11 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if momentfilter == nil {
-			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
 			return
 		}
 		if !o.CheckFilterOwner(tx, momentfilterid, accountName) {
-			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
 			return
 		}
 		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
@@ -795,12 +810,21 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	clientId := o.getStringValueDefault(r.Form, "clientId", "")
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return
+	}
 
 	bot := o.GetBotById(ctx.db.Conn, botId)
-	logininfo := ""
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, o.Err)
+		return
+	}
+	
 	if bot == nil {
 		if o.Err == nil {
-			o.Err = fmt.Errorf("botid %s not found", botId)
+			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botid %s not found", botId))
+			return
 		}
 	} else {
 		if bot.LoginInfo.Valid {
@@ -814,8 +838,11 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if o.Err != nil {
-		return
+	logininfo := ""
+	if bot.LoginInfo.Valid {
+		logininfo = bot.LoginInfo.String
+	} else {
+		logininfo = ""
 	}
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
@@ -832,6 +859,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  logininfo,
 		BotId:      botId,
 	})
+	
 	o.ok(w, "", loginreply)
 }
 
@@ -934,7 +962,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
 		}
 	}
 
@@ -944,7 +972,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 
 	filter := o.GetFilterById(tx, filterId)
 	if o.Err == nil && filter == nil {
-		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -981,21 +1009,21 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
 		}
 		return
 	}
 
 	if !o.CheckFilterOwner(tx, nextFilterId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问下一级过滤器%s", filterId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问下一级过滤器%s", filterId))
 		}
 		return
 	}
 
 	filter := o.GetFilterById(tx, filterId)
 	if o.Err == nil && filter == nil {
-		o.Err = NewClientError(-4, fmt.Errorf("找不到过滤器%s", filterId))
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -1032,7 +1060,7 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if account == nil {
-		o.Err = fmt.Errorf("account %s not found", accountName)
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("account %s not found", accountName))
 		return
 	}
 
@@ -1066,7 +1094,7 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 
 	if !o.CheckFilterOwner(tx, filterId, accountName) {
 		if o.Err == nil {
-			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
 		}
 		return
 	}
