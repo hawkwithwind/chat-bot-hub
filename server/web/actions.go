@@ -197,7 +197,7 @@ type WechatContactListItem struct {
 	Alias string `json:"alias"`
 	Avatar string `json:"avatar"`
 	City string `json:"city"`
-	Genter int `json:genter`
+	Gender int `json:gender`
 	Id string `json:"id"`
 	Name string `json:"name"`
 	Province string `json:"province"`
@@ -470,6 +470,16 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			chatuser := o.NewChatUser(info.Id, thebotinfo.ClientType, info.Name)
 			chatuser.SetAvatar(info.Avatar)
+			
+			chatuser.Sex = info.Gender
+			chatuser.SetAlias(info.Alias)
+			//chatuser.SetCountry(info.Country)
+			chatuser.SetProvince(info.Province)
+			chatuser.SetCity(info.City)
+			chatuser.SetSignature(info.Signature)
+			//chatuser.SetRemark(info.Remark)
+			//chatuser.SetLabel(info.Label)
+			
 			chatuser.SetExt(bodystr)
 
 			o.UpdateOrCreateChatUser(tx, chatuser)
@@ -491,14 +501,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
 			info := WechatGroupListItem{}
-
-			// type WechatGroupListItem struct {
-			// 	GroupId string `json:"id"`
-			// 	GroupName string `json:"topic"`
-			// 	OwnerId string `json:"ownerId"`
-			// 	MemberIdList []string `json:"memberIdList"`
-			// }
-
+			
 			o.Err = json.Unmarshal([]byte(bodystr), &info)
 			if o.Err != nil {
 				return

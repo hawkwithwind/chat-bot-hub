@@ -412,35 +412,37 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						case map[string]interface{}:
 							result = ares
 						}
-
-				if body != nil {
-					if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
-						switch abody := abptr.(type) {
-						case string:
-							actionBody = o.FromJson(abody)
-						case map[string]interface{}:
-							actionBody = abody
-						}						
-					}
-					if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
-						result = rptr.(map[string]interface{})
 					}
 
-					actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
-				}
+					if body != nil {
+						if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
+							switch abody := abptr.(type) {
+							case string:
+								actionBody = o.FromJson(abody)
+							case map[string]interface{}:
+								actionBody = abody
+							}						
+						}
+						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
+							result = rptr.(map[string]interface{})
+						}
 
-				if o.Err == nil {
-					go func() {
-						httpx.RestfulCallRetry(
-							bot.WebNotifyRequest(
-								hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
-									ActionRequestId: actionRequestId,
-									Result:          o.ToJson(result),
-									ReplyAt:         utils.JSONTime{Time: time.Now()},
-								})), 5, 1)
-					}()
-				}
+						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
+					}
 
+					if o.Err == nil {
+						go func() {
+							httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(
+									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+										ActionRequestId: actionRequestId,
+										Result:          o.ToJson(result),
+										ReplyAt:         utils.JSONTime{Time: time.Now()},
+									})), 5, 1)
+						}()
+					}
+				}
+				
 			case MESSAGE:
 				var msg string
 				hub.Info("in.Body %v", in.Body)
