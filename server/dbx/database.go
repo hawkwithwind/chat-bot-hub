@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -22,6 +23,8 @@ type ErrorHandler struct {
 }
 
 type Queryable interface {
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
@@ -117,7 +120,7 @@ func (o *ErrorHandler) Head(s interface{}, msg string) interface{} {
 	}
 }
 
-func (o *ErrorHandler) AndEqual(fieldName string, field sql.NullString) string {
+func (o *ErrorHandler) AndEqualString(fieldName string, field sql.NullString) string {
 	if o.Err != nil {
 		return ""
 	}
@@ -129,7 +132,7 @@ func (o *ErrorHandler) AndEqual(fieldName string, field sql.NullString) string {
 	}
 }
 
-func (o *ErrorHandler) AndLike(fieldName string, field sql.NullString) string {
+func (o *ErrorHandler) AndLikeString(fieldName string, field sql.NullString) string {
 	if o.Err != nil {
 		return ""
 	}
@@ -138,5 +141,72 @@ func (o *ErrorHandler) AndLike(fieldName string, field sql.NullString) string {
 		return fmt.Sprintf("  AND %s like ? ", fieldName)
 	} else {
 		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+	}
+}
+
+func (o *ErrorHandler) AndEqual(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf(" AND %s = ?", fieldName)
+}
+
+func (o *ErrorHandler) AndLike(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf(" AND %s like ?", fieldName)
+}
+
+func (o *ErrorHandler) AndGreaterThan(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("  AND %s > ? ", fieldName)
+}
+
+func (o *ErrorHandler) AndGreaterThanEqual(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("  AND %s >= ? ", fieldName)
+}
+
+func (o *ErrorHandler) AndLessThan(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("  AND %s < ? ", fieldName)
+}
+
+func (o *ErrorHandler) AndLessThanEqual(fieldName string, _ interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("  AND %s <= ? ", fieldName)
+}
+
+func (o *ErrorHandler) AndIsIn(fieldName string, rhs interface{}) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	switch list := rhs.(type) {
+	case []interface{}:
+		var placeholders []string
+		for _, _ = range list {
+			placeholders = append(placeholders, "?")
+		}
+
+		return fmt.Sprintf("  AND %s in (%s) ", fieldName, strings.Join(placeholders, ","))
+	default:
+		o.Err = fmt.Errorf("where clause operator IN not support rhs type %T, should be list", rhs)
+		return ""
 	}
 }

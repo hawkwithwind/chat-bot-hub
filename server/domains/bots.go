@@ -13,18 +13,19 @@ import (
 )
 
 type Bot struct {
-	BotId       string         `db:"botid"`
-	AccountId   string         `db:"accountid"`
-	BotName     string         `db:"botname"`
-	Login       string         `db:"login"`
-	ChatbotType string         `db:"chatbottype"`
-	LoginInfo   sql.NullString `db:"logininfo"`
-	Callback    sql.NullString `db:"callback"`
-	FilterId    sql.NullString `db:"filterid"`
-	WxaappId    sql.NullString `db:"wxaappid"`
-	CreateAt    mysql.NullTime `db:"createat"`
-	UpdateAt    mysql.NullTime `db:"updateat"`
-	DeleteAt    mysql.NullTime `db:"deleteat"`
+	BotId          string         `db:"botid"`
+	AccountId      string         `db:"accountid"`
+	BotName        string         `db:"botname"`
+	Login          string         `db:"login"`
+	ChatbotType    string         `db:"chatbottype"`
+	LoginInfo      sql.NullString `db:"logininfo"`
+	Callback       sql.NullString `db:"callback"`
+	FilterId       sql.NullString `db:"filterid"`
+	MomentFilterId sql.NullString `db:"momentfilterid"`
+	WxaappId       sql.NullString `db:"wxaappid"`
+	CreateAt       mysql.NullTime `db:"createat"`
+	UpdateAt       mysql.NullTime `db:"updateat"`
+	DeleteAt       mysql.NullTime `db:"deleteat"`
 }
 
 func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {
@@ -89,6 +90,20 @@ WHERE botid = :botid
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
 }
 
+func (o *ErrorHandler) UpdateBotMomentFilterId(q dbx.Queryable, bot *Bot) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE bots
+SET momentfilterid = :momentfilterid
+WHERE botid = :botid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, bot)
+}
+
 func (o *ErrorHandler) UpdateBot(q dbx.Queryable, bot *Bot) {
 	if o.Err != nil {
 		return
@@ -105,6 +120,16 @@ WHERE botid = :botid
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, bot)
+}
+
+func (o *ErrorHandler) DeleteBot(q dbx.Queryable, botId string) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `UPDATE bots SET deleteat = CURRENT_TIMESTAMP WHERE botId = ?`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, query, botId)
 }
 
 func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string) []Bot {
@@ -186,4 +211,24 @@ WHERE a.accountname=?
   AND b.deleteat is NULL`, accountName, login)
 
 	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
+}
+
+func (o *ErrorHandler) CheckBotOwnerById(q dbx.Queryable, botId string, accountName string) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT b.*
+FROM bots as b 
+LEFT JOIN accounts as a on b.accountid = a.accountid
+WHERE a.accountname=? 
+  AND b.botid=?
+  AND a.deleteat is NULL
+  AND b.deleteat is NULL`, accountName, botId)
+
+	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botId))
 }

@@ -72,6 +72,7 @@
 	  botName: () => row.botName,
 	  login: () => row.login,
 	  filterId: () => row.filterId,
+          momentFilterId: () => row.momentFilterId,
 	  callback: () => row.callback,
           wxaappId: () => row.wxaappId,
 	}
@@ -124,6 +125,12 @@
 	  login: () => row.login,
 	}
       })
+    }
+
+    $scope.botLogout = (row) => {
+      buildPromise(buildModelResId('bots', row.botId + "/logout").update((data) => {
+        toastr.success(data, '登出成功')
+      }))
     }
 
     $scope.showScanUrl = (row) => {
@@ -192,6 +199,204 @@
     $scope.data.clientId = clientId
     $scope.data.login = login
 
+    const commonParams = {
+      "toUserName" : {
+        "name": "toUserName",
+        "display": "收件人",
+        "type": "string",
+        "required": true,
+        "comment": "收件人的wxid或者groupid",
+      },
+      "content" : {
+        "name": "content",
+        "display": "内容",
+        "type": "longstring",
+        "required": true,
+      },
+      "userId": {
+        "name": "userId",
+        "display": "联系人ID",
+        "type": "string",
+        "required": true,
+        "comment": "联系人的wxid",
+      },
+      "stranger": {
+        "name": "stranger",
+        "display": "stranger",
+        "type": "string",
+        "required": true,
+      },
+      "ticket": {
+        "name": "ticket",
+        "display": "ticket",
+        "type": "string",
+        "required": true,
+      },
+      "type": {
+        "name": "type",
+        "display": "type",
+        "type": "int",
+        "required": true,
+      },
+      "verifyMessage": {
+        "name": "content",
+        "display": "content",
+        "type": "string",
+        "required": true,
+        "comment": "验证信息",
+      },
+      "groupId": {
+        "name": "groupId",
+        "display": "群ID",
+        "type": "string",
+        "required": true,
+      },
+      "memberId": {
+        "name": "memberId",
+        "display": "群成员ID",
+        "type": "string",
+        "required": true,
+      },
+      "momentId": {
+        "name": "momentId",
+        "display": "动态ID",
+        "type": "string",
+        "required": true,
+      },
+      "momentIdOptional": {
+        "name": "momentId",
+        "display": "动态ID",
+        "type": "string",
+        "required": false,
+      },
+    }
+
+    $scope.actions = {
+      "SendTextMessage": [
+        commonParams.toUserName,
+        commonParams.content,
+        {
+          "name": "atList",
+          "display": "点名列表",
+          "type": "string",
+          "required": false,
+        }
+      ],
+      "SendAppMessage" : [
+        commonParams.toUserName,
+        {
+          "name": "object",
+          "display": "消息体",
+          "type": "longstring",
+          "required": true,
+          "comment": "json结构的消息体",
+        }
+      ],
+      "SearchContact": [
+        commonParams.userId,
+      ],
+      "AddContact" : [
+        commonParams.stranger,
+        commonParams.ticket,
+        
+      ],
+      "AcceptUser": [
+        commonParams.stranger,
+        commonParams.ticket,
+        commonParams.verifyMessage,
+      ],
+      "SayHello": [
+        commonParams.stranger,
+        commonParams.ticket,
+        commonParams.verifyMessage,
+      ],
+      "DeleteContact": [
+        commonParams.userId,
+      ],
+      "CreateRoom": [
+        {
+          "name": "userList",
+          "display": "用户列表",
+          "type": "longstring",
+          "required": true,
+          "comment": "必须是好友才能加群",
+        },
+      ],
+      "GetRoomMembers": [
+        commonParams.groupId,
+      ],
+      "AddRoomMember": [
+        commonParams.groupId,
+        commonParams.memberId,
+      ],
+      "InviteRoomMember": [
+        commonParams.groupId,
+        commonParams.memberId,
+      ],
+      "DeleteRoomMember": [
+        commonParams.groupId,
+        commonParams.memberId,
+      ],
+      "SetRoomName": [
+        commonParams.groupId,
+        commonParams.content,
+      ],
+      "GetRoomQRCode": [
+        commonParams.groupId,
+      ],
+      "SetRoomAnnouncement": [
+        commonParams.groupId,
+        commonParams.content,
+      ],
+      "SnsSendMoment": [
+        commonParams.content,
+      ],
+      "SnsTimeline": [
+        commonParams.momentIdOptional,
+      ],
+      "SnsUserPage": [
+        commonParams.userId,
+        commonParams.momentIdOptional,
+      ],
+      "SnsGetObject": [
+        commonParams.momentId,
+      ],
+      "SnsComment": [
+        commonParams.userId,
+        commonParams.momentId,
+        commonParams.content,
+      ],
+      "SnsLike": [
+        commonParams.userId,
+        commonParams.momentId,
+      ],
+      "SnsUpload": [
+        {
+          "name": "file",
+          "display": "文件",
+          "type": "longstring",
+          "required": true,
+          "comment":"上传图片的base64串，此接口仅上传，不会发送到朋友圈"
+        }
+      ],
+      "SnsobjectOP": [
+        commonParams.momentId,
+        commonParams.type,
+        {
+          "name": "commentId",
+          "display": "评论ID",
+          "type": "string",
+          "required": true,
+        },
+        {
+          "name": "commentType",
+          "display": "评论类型",
+          "type": "int",
+          "required": true,
+        },
+      ],      
+    }
+
     $scope.close = () => {
       $uibModalInstance.dismiss();
     }
@@ -199,6 +404,8 @@
     let url = "/botaction/" + $scope.data.login
     
     $scope.sendAction = (data) => {
+      data.actionBody = JSON.stringify(data.actionBody)
+      
       $http({
 	method: 'POST',
 	url: url,
@@ -215,13 +422,14 @@
   }
 
   app.controller('editBotCtrl', editBotCtrl)
-  editBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "filterId", "callback", "wxaappId"]
-  function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, filterId, callback, wxaappId) {
+  editBotCtrl.$inject = ["$http", "$scope", "$uibModalInstance", "toastr", "buildModel", "buildModelResId", "buildPromise", "tools", "clientId", "clientType", "botName", "login", "filterId", "momentFilterId", "callback", "wxaappId"]
+  function editBotCtrl($http, $scope, $uibModalInstance, toastr, buildModel, buildModelResId, buildPromise, tools, clientId, clientType, botName, login, filterId, momentFilterId, callback, wxaappId) {
     $scope.data = {
       clientId: clientId,
       clientType: clientType,
       login: login,
       filterId: filterId,
+      momentFilterId: momentFilterId,
       botName: botName,
       callback: callback,
       wxaappId: wxaappId,
@@ -311,11 +519,12 @@
     }
 
     $scope.refresh = () => {
-      buildPromise(buildModelResId('bots/id', $scope.botId)).then((data) => {
+      buildPromise(buildModelResId('bots', $scope.botId)).then((data) => {
 	if(data.body !== undefined) {
 	  let bot = data.body
 	  if(bot.scanUrl !== undefined) {
 	    $scope.data.scanUrl = bot.scanUrl
+            $scope.flag = false
 	  } else {
 	    if ($scope.flag) {
 	      setTimeout(() => {

@@ -133,7 +133,7 @@ func (o *ErrorHandler) RedisString(reply interface{}) string {
 	case string:
 		return reply
 	case nil:
-		o.Err = fmt.Errorf("redis nil returned")
+		//o.Err = fmt.Errorf("redis nil returned")
 		return ""
 	case redis.Error:
 		o.Err = reply
@@ -172,6 +172,39 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	}
 
 	return count
+}
+
+func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
+	if o.Err != nil {
+		return []string{}
+	}
+
+	key := "0"
+	results := []string{}
+
+	for true {
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err != nil {
+			return results
+		}
+
+		if o.Err == nil {
+			if len(ret) != 2 {
+				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
+				return results
+			}
+		}
+		key = o.RedisString(ret[0])
+		for _, v := range o.RedisValue(ret[1]) {
+			results = append(results, o.RedisString(v))
+		}
+
+		if key == "0" {
+			break
+		}
+	}
+
+	return results
 }
 
 func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, int, int) {

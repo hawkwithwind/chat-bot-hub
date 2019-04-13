@@ -17,33 +17,22 @@
     <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
 	   style="padding:40px;margin:10px;width:auto">
       <th style="text-align:center">名称</th>
+      <th style="text-align:center">操作</th>
       <th style="text-align:center">类型</th>
       <th style="text-align:center">帐号</th>
       <th style="text-align:center">状态</th>
-      <th style="text-align:center">创建时间</th>
-      <th style="text-align:center">启动时间</th>
-      <th style="text-align:center">最后活跃</th>
       <th style="text-align:center">客户端编号</th>
       <th style="text-align:center">回调地址</th>
-      <th style="text-align:center">操作</th>
-      
+      <th style="text-align:center">最后活跃</th>
+      <th style="text-align:center">启动时间</th>
+      <th style="text-align:center">创建时间</th>
+            
       <tbody>
 	<tr ng-repeat="row in body">
-	  <td style="text-align:center;width:160px">
+	  <td style="text-align:center;width:120px">
 	    <a href="javascript:;" ng-click="editBot(row)">{{ row.botName }}</a>
 	  </td>
-	  <td style="text-align:center;width:120px">{{ consts.types[row.clientType] }}</td>
-	  <td style="text-align:center;width:120px">{{ row.login }}</td>
-	  <td style="text-align:center;width:120px">
-	    <span ng-if="row.status===undefined">未连接</span>
-	    <span ng-if="row.status!==undefined">{{ consts.status[row.status] }}</span>
-	  </td>
-	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>
-	  <td style="text-align:center;width:160px">{{ tsToString(row.startAt) }}</td>
-	  <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
-	  <td style="text-align:left;width:240px">{{ row.clientId }}</td>
-	  <td style="text-align:left;width:240px">{{ row.callback }}</td>
-	  <td style="width:160px">
+          <td style="width:200px">
 	    <span ng-if="row.status!=200">
 	      <span ng-if="row.clientType == 'QQBOT'">
 		<a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>
@@ -55,9 +44,21 @@
 	      </span>
 	    </span>
 	    <span ng-if="row.status==200">
-	      <a href="javascript:;" ng-click="botAction(row)">发消息</a>
+	      <a href="javascript:;" ng-click="botAction(row)">发消息</a> |
+              <a href="javascript:;" ng-click="botLogout(row)">登出</a>
 	    </span>
 	  </td>
+	  <td style="text-align:center;width:120px">{{ consts.types[row.clientType] }}</td>
+	  <td style="text-align:center;width:120px">{{ row.login }}</td>
+	  <td style="text-align:center;width:120px">
+	    <span ng-if="row.status===undefined">未连接</span>
+	    <span ng-if="row.status!==undefined">{{ consts.status[row.status] }}</span>
+	  </td>
+          <td style="text-align:left;width:240px">{{ row.clientId }}</td>
+          <td style="text-align:left;width:240px">{{ row.callback }}</td>
+          <td style="text-align:center;width:160px">{{ tsToString(row.lastPing) }}</td>
+          <td style="text-align:center;width:160px">{{ tsToString(row.startAt) }}</td>
+	  <td style="text-align:center;width:160px">{{ tsToString(row.createAt*1000) }}</td>
 	</tr>
       </tbody>
     </table>
@@ -146,6 +147,7 @@
 	  <option value="AcceptUser">通过好友申请</option>
 	  <option value="SayHello">欢迎语</option>          
 	  <option value="DeleteContact">删除好友</option>
+          <option value="===">===</option>
 	  <option value="CreateRoom">建群</option>
 	  <option value="GetRoomMembers">获取群成员</option>
 	  <option value="AddRoomMember">加好友进群</option>
@@ -154,12 +156,38 @@
 	  <option value="SetRoomName">设置群名称</option>
           <option value="GetRoomQRCode">获取群二维码</option>
 	  <option value="SetRoomAnnouncement">发布群通知</option>
+          <option value="===">===</option>
+          <option value="SnsSendMoment">发朋友圈</option>
+          <option value="SnsTimeline">查看朋友圈动态</option>
+          <option value="SnsUserPage">查看用户朋友圈</option>
+          <option value="SnsGetObject">获取朋友圈信息详情</option>
+          <option value="SnsComment">评论朋友圈</option>
+          <option value="SnsLike">朋友圈点赞</option>
+          <option value="SnsUpload">上传图片到朋友圈</option>
+          <option value="SnsobjectOP">操作朋友圈</option>
 	</select>
       </div>
     </div>
+    
     <div class="row form-group-padding">
-      <div class="col-md-12">
-	<textarea id="textarea_body" name="textarea_body" class="col-md-12" ng-model="data.actionBody" />
+      <div class="col-md-10">
+        <div class="row form-group-padding" ng-repeat="act in actions[data.actionType]">
+          <label for="{{act.name}}" class="col-md-2 control-label">{{act.display}}
+            <span style="color:red" ng-show="act.required" >*</span>
+          </label>
+          <input ng-if="act.type == 'string'" class="col-md-4"
+                 ng-model="data.actionBody[act.name]"
+                 id="{{act.name}}" ng-required="act.required" />
+          <textarea ng-if="act.type == 'longstring'" class="col-md-4"
+                    ng-model="data.actionBody[act.name]" rows="6" 
+                    id="{{act.name}}" ng-required="act.required" />
+          <span class="col-md-2" style="color:grey">
+            {{act.name}} 
+          </span>
+          <span class="col-md-4" style="color:grey">
+            {{act.comment}}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -252,8 +280,15 @@
 
     <div class="row form-group-padding">
       <div class="col-md-6">
-	<label for="text_filterId" class="col-md-3 control-label">过滤器</label>
+	<label for="text_filterId" class="col-md-3 control-label">消息过滤器</label>
 	<input id="text_filterId" name="text_filterId" type="text" class="col-md-9" ng-model="data.filterId" />
+      </div>
+    </div>
+    
+    <div class="row form-group-padding">
+      <div class="col-md-6">
+	<label for="text_momentFilterId" class="col-md-3 control-label">动态过滤器</label>
+	<input id="text_momentFilterId" name="text_momentFilterId" type="text" class="col-md-9" ng-model="data.momentFilterId" />
       </div>
     </div>
 
@@ -324,6 +359,11 @@
     <h3 class="modal-title">获取二维码</h3>
   </div>
   <div class="modal-body" id="scanUrlBody">
-    <img ng-src="{{data.scanUrl}}" width="480" height="480" />
+    <div ng-if="data.scanUrl!='CONFIRM_ON_PHONE'">
+      <img ng-src="{{data.scanUrl}}" width="480" height="480" />
+    </div>
+    <div ng-if="data.scanUrl=='CONFIRM_ON_PHONE'">
+      <span>请在手机上确认登录iPad</span>
+    </div>
   </div> 
 </script>

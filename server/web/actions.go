@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/gorilla/context"
-	"github.com/gorilla/mux"
+	"github.com/hawkwithwind/mux"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
@@ -231,21 +231,23 @@ type WechatGroupMember struct {
 	UserName         string `json:"userName"`
 }
 
-func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
-	defer o.WebError(w)
-	defer o.BackEndError(ctx)
+type WechatSnsMoment struct {
+	CreateTime  int    `json:"createTime" msg:"createTime"`
+	Description string `json:"description" msg:"description"`
+	MomentId    string `json:"id" msg:"id"`
+	NickName    string `json:"nickName" msg:"nickName"`
+	UserName    string `json:"userName" msg:"userName"`
+}
 
-	vars := mux.Vars(r)
-	botId := vars["botId"]
+type WechatSnsTimeline struct {
+	Data    []WechatSnsMoment `json:"data"`
+	Count   int               `json:"count"`
+	Message string            `json:"message"`
+	Page    string            `json:"page"`
+	Status  int               `json:"status"`
+}
 
-	tx := o.Begin(ctx.db)
-	defer o.CommitOrRollback(tx)
-
-	bot := o.GetBotById(tx, botId)
-
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()
+func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
@@ -256,10 +258,47 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
+		return nil
+	}
+
+	if botsreply == nil || len(botsreply.BotsInfo) == 0 {
+		o.Err = fmt.Errorf("cannot find bots %s", botId)
+		return nil
+	}
+
+	return botsreply.BotsInfo[0]
+}
+
+func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(ctx)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	ctx.Info("botNotify %s", botId)
+
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
+	bot := o.GetBotById(tx, botId)
+	if o.Err != nil {
 		return
 	}
 
-	thebotinfo := botsreply.BotsInfo[0]
+	if bot == nil {
+		o.Err = fmt.Errorf("bot %s not found", botId)
+		return
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
+	thebotinfo := o.getTheBot(wrapper, botId)
+	if o.Err != nil {
+		return
+	}
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
 
 	r.ParseForm()
@@ -322,20 +361,35 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		if !bot.FilterId.Valid {
 			ctx.Info("b[%s] does not have filters", bot.BotId)
-			return
+		} else {
+			ctx.Info("b[%s] initializing filters ...", bot.BotId)
+			o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("b[%s] initializing filters done", bot.BotId)
+			_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
+				BotId:    bot.BotId,
+				FilterId: bot.FilterId.String,
+			})
 		}
 
-		ctx.Info("b[%s] initializing filters ...", bot.BotId)
-		o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
-		if o.Err != nil {
-			return
-		}
-		ctx.Info("b[%s] initializing filters done", bot.BotId)
+		if !bot.MomentFilterId.Valid {
+			ctx.Info("b[%s] does not have moment filters", bot.BotId)
+		} else {
+			ctx.Info("b[%s] initializing moment filters ...", bot.BotId)
+			o.CreateFilterChain(ctx, tx, wrapper, bot.MomentFilterId.String)
+			if o.Err != nil {
+				return
+			}
+			ctx.Info("b[%s] initializing moment filters done", bot.BotId)
 
-		_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
-			BotId:    bot.BotId,
-			FilterId: bot.FilterId.String,
-		})
+			_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
+				BotId:    bot.BotId,
+				FilterId: bot.MomentFilterId.String,
+			})
+		}
+
 		return
 
 	case chatbothub.FRIENDREQUEST:
@@ -593,7 +647,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				// user
 				// create or update user
 				chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
+				chatuser.Sex = info.Sex
 				chatuser.SetAvatar(info.SmallHead)
+				chatuser.SetCountry(info.Country)
+				chatuser.SetProvince(info.Provincia)
+				chatuser.SetCity(info.City)
+				chatuser.SetSignature(info.Signature)
+				chatuser.SetRemark(info.Remark)
+				chatuser.SetLabel(info.Label)
 				chatuser.SetExt(bodystr)
 
 				o.UpdateOrCreateChatUser(tx, chatuser)
@@ -683,8 +744,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ctx.Info("action reply %v\n", localar)
-
 		switch localar.ActionType {
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
@@ -727,7 +786,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if o.Err != nil {
 				return
 			}
-			
+
 			if acresult.Success == false {
 				ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
 				return
@@ -742,7 +801,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-						
+
 			ctx.Info("delete contact %s from %s", userId, bot.Login)
 
 			o.DeleteChatContact(tx, bot.BotId, userId)
@@ -823,6 +882,101 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if len(chatgroupMembers) > 0 {
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
+
+		case chatbothub.SnsTimeline:
+			ctx.Info("snstimeline")
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
+				return
+			}
+
+			if thebotinfo.ClientType == "WECHATBOT" {
+				wetimeline := WechatSnsTimeline{}
+				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
+				if o.Err != nil {
+					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
+					return
+				}
+
+				ctx.Info("Wechat Sns Timeline")
+				newMomentIds := map[string]int{}
+				for _, m := range wetimeline.Data {
+					ctx.Info("---\n%s at %d from %s %s\n%s",
+						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
+
+					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
+					if o.Err != nil || chatuser == nil {
+						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
+						return
+					}
+
+					// if this is first time get this specific momentid
+					// push it to fluentd, it will be saved
+					foundms := o.GetMomentByCode(tx, m.MomentId)
+					if o.Err != nil {
+						return
+					}
+
+					if len(foundms) == 0 {
+						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+							if err := ctx.fluentLogger.Post(tag, m); err != nil {
+								ctx.Error(err, "push moment to fluentd failed")
+							}
+						} else {
+							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
+						}
+					}
+
+					if o.Err != nil {
+						return
+					}
+
+					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
+						// fill moment filter only if botId + moment not found (new moment)
+						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
+						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
+							BotId:  bot.BotId,
+							Source: "MOMENT",
+							Body:   o.ToJson(m),
+						})
+						newMomentIds[m.MomentId] = 1
+					} else {
+						ctx.Info("ignore fill moment b[%s] %s", thebotinfo.Login, m.MomentId)
+					}
+
+					if o.Err != nil {
+						return
+					}
+
+					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
+					o.SaveMoment(tx, moment)
+				}
+
+				if o.Err != nil {
+					return
+				}
+
+				// all items new, means there are more to pull, save earliest momentId
+				if len(wetimeline.Data) > 0 {
+					var minItem WechatSnsMoment
+					for i, d := range wetimeline.Data {
+						if i == 0 || d.CreateTime < minItem.CreateTime {
+							minItem = d
+						}
+					}
+					if _, ok := newMomentIds[minItem.MomentId]; ok {
+						ctx.Info("saving new moment tail b[%s] %s", thebotinfo.Login, minItem.MomentId)
+						o.SaveMomentCrawlTail(ctx.redispool, thebotinfo.BotId, minItem.MomentId)
+					}
+				}
+			} else {
+				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)
+			}
+
+		default:
+			ctx.Info("action reply %s\n", o.ToJson(localar))
 		}
 
 		if o.Err != nil {
@@ -874,34 +1028,50 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	var bodym map[string]interface{}
 	o.Err = decoder.Decode(&bodym)
 
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	defer wrapper.Cancel()
+
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 
-	dayCount, hourCount, minuteCount := o.ActionCount(ctx.redispool, ar)
-	ctx.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
-
-	daylimit, hourlimit, minutelimit := o.GetRateLimit(actionType)
-	if dayCount > daylimit {
-		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", login, actionType, daylimit)
+	actionReply := o.CreateAndRunAction(ctx, ar)
+	if o.Err != nil {
 		return
+	}
+
+	o.ok(w, "", actionReply)
+}
+
+func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
+
+	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
+	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
+	if o.Err != nil {
+		return nil
+	}
+
+	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
+	if dayCount > daylimit {
+		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit)
+		return nil
 	}
 
 	if hourCount > hourlimit {
-		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", login, actionType, hourlimit)
-		return
+		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit)
+		return nil
 	}
 
 	if minuteCount > minutelimit {
-		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", login, actionType, minutelimit)
-		return
+		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit)
+		return nil
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
-	o.SaveActionRequest(ctx.redispool, ar)
+	o.SaveActionRequest(web.redispool, ar)
 
-	o.ok(w, "", actionReply)
+	return actionReply
 }

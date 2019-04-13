@@ -21,6 +21,13 @@ type ChatUser struct {
 	Alias      sql.NullString `db:"alias"`
 	NickName   string         `db:"nickname"`
 	Avatar     sql.NullString `db:"avatar"`
+	Sex        int            `db:"sex"`
+	Country    sql.NullString `db:"country"`
+	Province   sql.NullString `db:"province"`
+	City       sql.NullString `db:"city"`
+	Signature  sql.NullString `db:"signature"`
+	Remark     sql.NullString `db:"remark"`
+	Label      sql.NullString `db:"label"`
 	Ext        sql.NullString `db:"ext"`
 	CreateAt   mysql.NullTime `db:"createat"`
 	UpdateAt   mysql.NullTime `db:"updateat"`
@@ -41,11 +48,57 @@ func (chatuser *ChatUser) SetAvatar(avatar string) {
 	}
 }
 
+func (chatuser *ChatUser) SetCountry(country string) {
+	chatuser.Country = sql.NullString{
+		String: country,
+		Valid:  true,
+	}
+}
+
+func (chatuser *ChatUser) SetProvince(province string) {
+	chatuser.Province = sql.NullString{
+		String: province,
+		Valid:  true,
+	}
+}
+
+func (chatuser *ChatUser) SetCity(city string) {
+	chatuser.City = sql.NullString{
+		String: city,
+		Valid:  true,
+	}
+}
+
+func (chatuser *ChatUser) SetSignature(signature string) {
+	chatuser.Signature = sql.NullString{
+		String: signature,
+		Valid:  true,
+	}
+}
+
+func (chatuser *ChatUser) SetRemark(remark string) {
+	chatuser.Remark = sql.NullString{
+		String: remark,
+		Valid:  true,
+	}
+}
+
+func (chatuser *ChatUser) SetLabel(label string) {
+	chatuser.Label = sql.NullString{
+		String: label,
+		Valid:  true,
+	}
+}
+
 func (chatuser *ChatUser) SetExt(ext string) {
 	chatuser.Ext = sql.NullString{
 		String: ext,
 		Valid:  true,
 	}
+}
+
+func (o *ErrorHandler) NewDefaultChatUser() interface{} {
+	return &ChatUser{}
 }
 
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {
@@ -73,9 +126,11 @@ func (o *ErrorHandler) SaveChatUser(q dbx.Queryable, chatuser *ChatUser) {
 
 	query := `
 INSERT INTO chatusers
-(chatuserid, username, type, alias, nickname, avatar, ext)
+(chatuserid, username, type, alias, nickname, avatar, 
+sex, country, province, city, signature, remark, label, ext)
 VALUES
-(:chatuserid, :username, :type, :alias, :nickname, :avatar, :ext)
+(:chatuserid, :username, :type, :alias, :nickname, :avatar, 
+:sex, :country, :province, :city, :signature, :remark, :label, :ext)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
@@ -88,15 +143,33 @@ func (o *ErrorHandler) UpdateOrCreateChatUser(q dbx.Queryable, chatuser *ChatUse
 
 	query := `
 INSERT INTO chatusers
-(chatuserid, username, type, alias, nickname, avatar, ext)
+(chatuserid, username, type, alias, nickname, avatar, 
+sex, country, province, city, signature, remark, label, ext)
 VALUES
-(:chatuserid, :username, :type, :alias, :nickname, :avatar, :ext)
+(:chatuserid, :username, :type, :alias, :nickname, :avatar, 
+:sex, :country, :province, :city, :signature, :remark, :label, :ext)
 ON DUPLICATE KEY UPDATE
-  nickname=IF(CHAR_LENGTH(VALUES(nickname)) > 0, VALUES(nickname), nickname),
-  alias=IF(CHAR_LENGTH(VALUES(alias)) > 0, VALUES(alias), alias),
-  avatar=IF(CHAR_LENGTH(VALUES(avatar)) > 0, VALUES(avatar), avatar),
-  ext=IF(CHAR_LENGTH(VALUES(ext)) > 0, VALUES(ext), ext)
+sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
+	vls := []string{}
+	for _, field := range []string{
+		"nickname",
+		"alias",
+		"avatar",
+		"country",
+		"province",
+		"city",
+		"remark",
+		"signature",
+		"label",
+		"ext",
+	} {
+		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
+	}
+
+	query += strings.Join(vls, ",\n")
+
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
@@ -106,22 +179,39 @@ func (o *ErrorHandler) UpdateOrCreateChatUsers(q dbx.Queryable, chatusers []*Cha
 		return
 	}
 
-	const query string = `
+	query := `
 INSERT INTO chatusers
-(chatuserid, username, type, nickname, alias, avatar, ext)
+(chatuserid, username, type, nickname, alias, avatar, 
+sex, country, province, city, signature, remark, label, ext)
 VALUES
 %s
 ON DUPLICATE KEY UPDATE
-  nickname=IF(CHAR_LENGTH(VALUES(nickname)) > 0, VALUES(nickname), nickname),
-  alias=IF(CHAR_LENGTH(VALUES(alias)) > 0, VALUES(alias), alias),
-  avatar=IF(CHAR_LENGTH(VALUES(avatar)) > 0, VALUES(avatar), avatar),
-  ext=IF(CHAR_LENGTH(VALUES(ext)) > 0, VALUES(ext), ext)
+sex=IF(VALUES(sex)=0,sex,VALUES(sex)),
 `
+	vls := []string{}
+
+	for _, field := range []string{
+		"nickname",
+		"alias",
+		"avatar",
+		"country",
+		"province",
+		"city",
+		"remark",
+		"signature",
+		"label",
+		"ext",
+	} {
+		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
+	}
+
+	query += strings.Join(vls, ",\n")
 
 	var valueStrings []string
 	var valueArgs []interface{}
 	for _, chatuser := range chatusers {
-		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 		valueArgs = append(valueArgs,
 			chatuser.ChatUserId,
@@ -138,6 +228,44 @@ ON DUPLICATE KEY UPDATE
 
 		if chatuser.Avatar.Valid {
 			valueArgs = append(valueArgs, chatuser.Avatar.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		valueArgs = append(valueArgs, chatuser.Sex)
+
+		if chatuser.Country.Valid {
+			valueArgs = append(valueArgs, chatuser.Country.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Province.Valid {
+			valueArgs = append(valueArgs, chatuser.Province.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.City.Valid {
+			valueArgs = append(valueArgs, chatuser.City.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Signature.Valid {
+			valueArgs = append(valueArgs, chatuser.Signature.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Remark.Valid {
+			valueArgs = append(valueArgs, chatuser.Remark.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatuser.Label.Valid {
+			valueArgs = append(valueArgs, chatuser.Label.String)
 		} else {
 			valueArgs = append(valueArgs, nil)
 		}
@@ -278,9 +406,9 @@ LIMIT ?, ?
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,
 		fmt.Sprintf(query,
-			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("username", criteria.UserName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
@@ -310,9 +438,9 @@ WHERE deleteat is NULL
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
-			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("username", criteria.UserName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)
@@ -326,7 +454,6 @@ func (o *ErrorHandler) GetChatUsersWithBotId(q dbx.Queryable, criteria ChatUserC
 	}
 
 	if criteria.BotId.Valid == false {
-		o.Err = fmt.Errorf("GetChatUsersWithBotId must set param botId")
 		return []ChatUser{}
 	}
 
@@ -347,9 +474,9 @@ LIMIT ?, ?
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,
 		fmt.Sprintf(query,
-			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("username", criteria.UserName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.BotId.String,
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
@@ -389,9 +516,9 @@ WHERE u.deleteat is NULL
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
-			o.AndEqual("username", criteria.UserName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("username", criteria.UserName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.BotId.String,
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),

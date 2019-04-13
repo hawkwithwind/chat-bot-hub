@@ -2,12 +2,13 @@ package web
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	grctx "github.com/gorilla/context"
-	"github.com/gorilla/mux"
+	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -87,6 +88,22 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 	}
 }
 
+func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if opreply, err := w.client.BotLogout(w.context, req); err != nil {
+		ctx.Err = err
+		return nil
+	} else if opreply == nil {
+		ctx.Err = fmt.Errorf("logoutreply is nil")
+		return nil
+	} else {
+		return opreply
+	}
+}
+
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
@@ -103,9 +120,9 @@ func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb
 	}
 }
 
-func findDevice(bots []*pb.BotsInfo, login string) *pb.BotsInfo {
+func findDevice(bots []*pb.BotsInfo, botId string) *pb.BotsInfo {
 	for _, bot := range bots {
-		if bot.Login == login {
+		if bot.BotId == botId {
 			return bot
 		}
 	}
@@ -191,27 +208,35 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "bot not found, or no access", BotsInfo{})
 }
 
+type ChatUserVO struct {
+	ChatUserId string         `json:"chatuserId"`
+	UserName   string         `json:"username"`
+	NickName   string         `json:"nickname"`
+	Type       string         `json:"type"`
+	Alias      string         `json:"alias"`
+	Avatar     string         `json:"avatar"`
+	Sex        int            `json:"sex"`
+	Country    string         `json:"country"`
+	Province   string         `json:"province"`
+	City       string         `json:"city"`
+	Signature  string         `json:"signature"`
+	Remark     string         `json:"remark"`
+	Label      string         `json:"label"`
+	CreateAt   utils.JSONTime `json:"createat"`
+	UpdateAt   utils.JSONTime `json:"updateat"`
+}
+
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
-	type ChatUserVO struct {
-		ChatUserId string         `json:"chatuserId"`
-		UserName   string         `json:"username"`
-		NickName   string         `json:"nickname"`
-		Type       string         `json:"type"`
-		Alias      string         `json:"alias"`
-		Avatar     string         `json:"avatar"`
-		CreateAt   utils.JSONTime `json:"createat"`
-		UpdateAt   utils.JSONTime `json:"updateat"`
-	}
 
 	type ChatUserResponse struct {
 		Data     []ChatUserVO             `json:"data"`
 		Criteria domains.ChatUserCriteria `json:"criteria"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
-	r.ParseForm()	
+	r.ParseForm()
 	page := o.getStringValueDefault(r.Form, "page", "0")
 	pagesize := o.getStringValueDefault(r.Form, "pagesize", "100")
 	ctype := o.getStringValueDefault(r.Form, "type", "")
@@ -277,7 +302,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 				PageSize: ipagesize,
 			})
 	}
-	
+
 	if o.Err != nil {
 		return
 	}
@@ -298,11 +323,18 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Type:       chatuser.Type,
 			Alias:      chatuser.Alias.String,
 			Avatar:     chatuser.Avatar.String,
+			Sex:        chatuser.Sex,
+			Country:    chatuser.Country.String,
+			Province:   chatuser.Province.String,
+			City:       chatuser.City.String,
+			Signature:  chatuser.Signature.String,
+			Remark:     chatuser.Remark.String,
+			Label:      chatuser.Label.String,
 			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
 			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
-	
+
 	pagecount := chatusercount / ipagesize
 	if chatusercount%ipagesize != 0 {
 		pagecount += 1
@@ -338,7 +370,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		Criteria domains.ChatGroupCriteria `json:"criteria"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -433,7 +465,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	} else {
 		chatgroupcount = o.GetChatGroupCount(tx, criteria)
 	}
-	
+
 	pagecount := chatgroupcount / ipagesize
 	if chatgroupcount%ipagesize != 0 {
 		pagecount += 1
@@ -454,15 +486,16 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	type BotsInfo struct {
 		pb.BotsInfo
-		BotId    string `json:"botId"`
-		BotName  string `json:"botName"`
-		FilterId string `json:"filterId"`
-		WxaappId string `json:"wxaappId"`
-		Callback string `json:"callback"`
-		CreateAt int64  `json:"createAt"`
+		BotId          string `json:"botId"`
+		BotName        string `json:"botName"`
+		FilterId       string `json:"filterId"`
+		MomentFilterId string `json:"momentFilterId"`
+		WxaappId       string `json:"wxaappId"`
+		Callback       string `json:"callback"`
+		CreateAt       int64  `json:"createAt"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	var login string
@@ -483,15 +516,16 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{}}); botsreply != nil {
 		for _, b := range bots {
-			if info := findDevice(botsreply.BotsInfo, b.Login); info != nil {
+			if info := findDevice(botsreply.BotsInfo, b.BotId); info != nil {
 				bs = append(bs, BotsInfo{
-					BotsInfo: *info,
-					BotId:    b.BotId,
-					BotName:  b.BotName,
-					FilterId: b.FilterId.String,
-					WxaappId: b.WxaappId.String,
-					Callback: b.Callback.String,
-					CreateAt: b.CreateAt.Time.Unix(),
+					BotsInfo:       *info,
+					BotId:          b.BotId,
+					BotName:        b.BotName,
+					FilterId:       b.FilterId.String,
+					MomentFilterId: b.MomentFilterId.String,
+					WxaappId:       b.WxaappId.String,
+					Callback:       b.Callback.String,
+					CreateAt:       b.CreateAt.Time.Unix(),
 				})
 			} else {
 				bs = append(bs, BotsInfo{
@@ -500,12 +534,13 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 						Login:      b.Login,
 						Status:     0,
 					},
-					BotId:    b.BotId,
-					BotName:  b.BotName,
-					FilterId: b.FilterId.String,
-					WxaappId: b.WxaappId.String,
-					Callback: b.Callback.String,
-					CreateAt: b.CreateAt.Time.Unix(),
+					BotId:          b.BotId,
+					BotName:        b.BotName,
+					FilterId:       b.FilterId.String,
+					MomentFilterId: b.MomentFilterId.String,
+					WxaappId:       b.WxaappId.String,
+					Callback:       b.Callback.String,
+					CreateAt:       b.CreateAt.Time.Unix(),
 				})
 			}
 		}
@@ -519,7 +554,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -527,7 +562,11 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	clientType := o.getStringValue(r.Form, "clientType")
 	login := o.getStringValue(r.Form, "login")
 	callback := o.getStringValue(r.Form, "callback")
-	loginInfo := o.getStringValue(r.Form, "loginInfo")
+	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
+
+	if o.Err != nil {
+		return
+	}
 
 	var accountName string
 	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
@@ -539,7 +578,20 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 
 	tx := o.Begin(ctx.db)
 	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
 	bot := o.NewBot(botName, clientType, account.AccountId, login)
+	if o.Err != nil {
+		return
+	}
+
+	if bot == nil {
+		o.Err = fmt.Errorf("new bot failed")
+		return
+	}
+
 	bot.Callback = sql.NullString{String: callback, Valid: true}
 	bot.LoginInfo = sql.NullString{String: loginInfo, Valid: true}
 
@@ -550,7 +602,7 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -595,8 +647,66 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", loginreply)
 }
 
+func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		if o.Err == nil {
+			o.Err = fmt.Errorf(
+				"bot %s not exists, or account %s don't have access", botId, accountName)
+			return
+		} else {
+			return
+		}
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
+		BotId: botId,
+	})
+
+	o.ok(w, "", opreply)
+}
+
+func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		if o.Err == nil {
+			o.Err = fmt.Errorf(
+				"bot %s not exists, or account %s don't have access", botId, accountName)
+			return
+		} else {
+			return
+		}
+	}
+
+	o.DeleteBot(tx, botId)
+	o.ok(w, "", nil)
+}
+
 func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -607,6 +717,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	callback := o.getStringValueDefault(r.Form, "callback", "")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
 	filterid := o.getStringValueDefault(r.Form, "filterId", "")
+	momentfilterid := o.getStringValueDefault(r.Form, "momentFilterId", "")
 	wxaappid := o.getStringValueDefault(r.Form, "wxaappId", "")
 
 	accountName := o.getAccountName(r)
@@ -652,13 +763,29 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
 		o.UpdateBotFilterId(tx, bot)
 	}
+	if momentfilterid != "" {
+		momentfilter := o.GetFilterById(tx, momentfilterid)
+		if o.Err != nil {
+			return
+		}
+		if momentfilter == nil {
+			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			return
+		}
+		if !o.CheckFilterOwner(tx, momentfilterid, accountName) {
+			o.Err = NewClientError(-4, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+			return
+		}
+		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
+		o.UpdateBotMomentFilterId(tx, bot)
+	}
 
 	o.UpdateBot(tx, bot)
 	o.ok(w, "", nil)
 }
 
 func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -709,7 +836,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -735,13 +862,13 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 }
 
 func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	o.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
-			"QQBOT":     "QQ机器人",
-			"WECHATBOT": "微信机器人",
+			"QQBOT":     "QQ",
+			"WECHATBOT": "微信",
 		},
 		"status": map[int]string{
 			0:   "未连接",
@@ -756,7 +883,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	r.ParseForm()
@@ -786,7 +913,7 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -842,7 +969,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
@@ -891,7 +1018,7 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 		CreateAt utils.JSONTime `json:"createAt"`
 	}
 
-	o := ErrorHandler{}
+	o := &ErrorHandler{}
 	defer o.WebError(w)
 
 	accountName := o.getAccountName(r)
@@ -923,4 +1050,77 @@ func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.ok(w, "success", filtervos)
+}
+
+func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	filterId := vars["filterId"]
+
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckFilterOwner(tx, filterId, accountName) {
+		if o.Err == nil {
+			o.Err = NewClientError(-3, fmt.Errorf("无权访问过滤器%s", filterId))
+		}
+		return
+	}
+
+	o.DeleteFilter(tx, filterId)
+	o.ok(w, "success", filterId)
+}
+
+func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	domain := vars["domain"]
+
+	r.ParseForm()
+	query := o.getStringValue(r.Form, "q")
+
+	//accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	rows, paging := o.SelectByCriteria(tx, query, domain)
+
+	if o.Err != nil {
+		return
+	}
+
+	var chatuserDomains []domains.ChatUser
+	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatuserDomains)
+	if o.Err != nil {
+		return
+	}
+
+	var chatuservos []ChatUserVO
+	for _, chatuser := range chatuserDomains {
+		chatuservos = append(chatuservos, ChatUserVO{
+			ChatUserId: chatuser.ChatUserId,
+			UserName:   chatuser.UserName,
+			NickName:   chatuser.NickName,
+			Type:       chatuser.Type,
+			Alias:      chatuser.Alias.String,
+			Avatar:     chatuser.Avatar.String,
+			Sex:        chatuser.Sex,
+			Country:    chatuser.Country.String,
+			Province:   chatuser.Province.String,
+			City:       chatuser.City.String,
+			Signature:  chatuser.Signature.String,
+			Remark:     chatuser.Remark.String,
+			Label:      chatuser.Label.String,
+			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
+			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+		})
+	}
+	o.okWithPaging(w, "success", chatuservos, paging)
 }

@@ -170,9 +170,9 @@ LIMIT ?, ?
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
-			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("groupname", criteria.GroupName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
@@ -202,9 +202,9 @@ WHERE deleteat is NULL
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
-			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("groupname", criteria.GroupName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String)
@@ -239,9 +239,9 @@ LIMIT ?, ?
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
-			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("groupname", criteria.GroupName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.BotId.String,
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
@@ -265,7 +265,7 @@ func (o *ErrorHandler) GetChatGroupCountWithBotId(q dbx.Queryable, criteria Chat
 		o.Err = fmt.Errorf("GetChatGroupsWithBotId must set param botId")
 		return 0
 	}
-	
+
 	const query string = `
 SELECT COUNT(*) 
 FROM chatgroups as g
@@ -281,9 +281,9 @@ WHERE g.deleteat is NULL
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &count,
 		fmt.Sprintf(query,
-			o.AndEqual("groupname", criteria.GroupName),
-			o.AndLike("nickname", criteria.NickName),
-			o.AndEqual("type", criteria.Type)),
+			o.AndEqualString("groupname", criteria.GroupName),
+			o.AndLikeString("nickname", criteria.NickName),
+			o.AndEqualString("type", criteria.Type)),
 		criteria.BotId.String,
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),

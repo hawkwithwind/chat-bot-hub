@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func TestConn(t *testing.T) {
+func TestMysqlConn(t *testing.T) {
 	db := sqlx.MustConnect("mysql", dbpath)
 	err := db.Ping()
 	if err != nil {

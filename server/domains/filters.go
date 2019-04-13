@@ -44,6 +44,16 @@ func (o *ErrorHandler) NewFilter(
 	}
 }
 
+func (o *ErrorHandler) DeleteFilter(q dbx.Queryable, filterId string) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `UPDATE filters SET deleteat=CURRENT_TIMESTAMP WHERE filterid = ?`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, query, filterId)
+}
+
 func (o *ErrorHandler) SaveFilter(q dbx.Queryable, filter *Filter) {
 	if o.Err != nil {
 		return

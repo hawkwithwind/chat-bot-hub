@@ -3,14 +3,14 @@
   URL.$inject = ['$window'];
   function URL($window) {
     var result = {
-      'login': buildUrl('login'),
+      'login': buildUrl('login'),      
       'bots': buildUrl('bots'),
       'filters': buildUrl('filters'),
       'consts': buildUrl('consts'),
       'botlogin': buildUrl('botlogin'),
+      'botlogout': buildUrl('botlogout'),
       'botaction': buildUrl('botaction'),
       'loginqq': buildUrl('loginqq'),
-      'bots/id': buildUrl('bots/id'),
       'chatusers': buildUrl('chatusers'),
       'chatgroups': buildUrl('chatgroups'),
       'filtertemplatesuites': buildUrl('filtertemplatesuites')

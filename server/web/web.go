@@ -14,21 +14,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	"github.com/gorilla/mux"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
+	"github.com/hawkwithwind/mux"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
-
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	Db       string
-}
 
 type DatabaseConfig struct {
 	DriverName     string
@@ -39,11 +35,14 @@ type WebConfig struct {
 	Host         string
 	Port         string
 	Baseurl      string
+	Redis        utils.RedisConfig
+	Fluent       utils.FluentConfig
+	Mongo        utils.MongoConfig
 	SecretPhrase string
-	Redis        RedisConfig
 	Database     DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
+	AllowOrigin  []string
 }
 
 type CommonResponse struct {
@@ -61,22 +60,49 @@ type ErrorMessage struct {
 }
 
 type WebServer struct {
-	Config    WebConfig
-	Hubport   string
-	Hubhost   string
-	logger    *log.Logger
-	redispool *redis.Pool
-	db        *dbx.Database
-	store     *sessions.CookieStore
+	Config       WebConfig
+	Hubport      string
+	Hubhost      string
+	logger       *log.Logger
+	fluentLogger *fluent.Fluent
+	redispool    *redis.Pool
+	db           *dbx.Database
+	store        *sessions.CookieStore
 }
 
 func (ctx *WebServer) init() error {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
-	ctx.redispool = ctx.newRedisPool(
+	ctx.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
 	ctx.db = &dbx.Database{}
+
+	var err error
+	ctx.fluentLogger, err = fluent.New(fluent.Config{
+		FluentPort:   ctx.Config.Fluent.Port,
+		FluentHost:   ctx.Config.Fluent.Host,
+		WriteTimeout: 60 * time.Second,
+	})
+
+	if err != nil {
+		ctx.Error(err, "create fluentlogger failed")
+	}
+
+	o := &ErrorHandler{}
+	client := o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	if o.Err != nil {
+		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
+	} else {
+		if client != nil {
+			contx, _ := context.WithTimeout(context.Background(), 10 * time.Second)
+			o.Err = client.Disconnect(contx)
+			if o.Err != nil {
+				ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
+			}
+		}
+	}
+	
 	retryTimes := 7
 	gap := 2
 	for i := 0; i < retryTimes+1; i++ {
@@ -259,34 +285,6 @@ func (ctx *WebServer) hello(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "hello", nil)
 }
 
-func (ctx *WebServer) newRedisPool(server string, db string, password string) *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
-			if err != nil {
-				return nil, err
-			}
-			if len(password) > 0 {
-				if _, err := c.Do("AUTH", password); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			if _, err := c.Do("SELECT", db); err != nil {
-				c.Close()
-				return nil, err
-			}
-			return c, nil
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	}
-}
-
 type key int
 
 const (
@@ -353,6 +351,7 @@ func (ctx *WebServer) Serve() {
 	}
 
 	r := mux.NewRouter()
+
 	r.Handle("/healthz", healthz())
 	r.HandleFunc("/echo", ctx.echo).Methods("Post")
 	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
@@ -360,7 +359,8 @@ func (ctx *WebServer) Serve() {
 	// bot CURD (controls.go)
 	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
-	r.HandleFunc("/bots/id/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.deleteBot)).Methods("DELETE")
 	r.HandleFunc("/bots/{login}", ctx.validate(ctx.updateBot)).Methods("PUT")
 	r.HandleFunc("/bots", ctx.validate(ctx.createBot)).Methods("POST")
 	r.HandleFunc("/bots/scancreate", ctx.validate(ctx.scanCreateBot)).Methods("POST")
@@ -370,6 +370,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/filters/{filterId}", ctx.validate(ctx.updateFilter)).Methods("PUT")
 	r.HandleFunc("/filters/{filterId}/next", ctx.validate(ctx.updateFilterNext)).Methods("PUT")
 	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
+	r.HandleFunc("/filter/{filterId}", ctx.validate(ctx.deleteFilter)).Methods("DELETE")
 
 	// filter templates and generators (filtermanage.go)
 	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.getFilterTemplateSuites)).Methods("GET")
@@ -385,24 +386,38 @@ func (ctx *WebServer) Serve() {
 
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/logout", ctx.validate(ctx.botLogout)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
+	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
+	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", ctx.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
 
 	// account login and auth (auth.go)
 	r.HandleFunc("/login", ctx.login).Methods("POST")
+	r.HandleFunc("/refreshtoken", ctx.refreshToken).Methods("Post")
 	r.HandleFunc("/sdktoken", ctx.validate(ctx.sdkToken)).Methods("Post")
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
+	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
+
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
-	handler := http.HandlerFunc(raven.RecoveryHandler(r.ServeHTTP))
+
+	r.Use(mux.CORSMethodMiddleware(r))
+	r.Use(handlers.CORS(
+		handlers.AllowCredentials(),
+		handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
+		handlers.AllowedOrigins(ctx.Config.AllowOrigin)))
+	r.Use(tracing(nextRequestID))
+	r.Use(logging(ctx.logger))
+	r.Use(sentryContext)
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
 	ctx.Info("listen %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      tracing(nextRequestID)(logging(ctx.logger)(sentryContext(handler))),
+		Handler:      r,
 		ErrorLog:     ctx.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,

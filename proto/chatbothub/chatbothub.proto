@@ -27,11 +27,14 @@ service ChatBotHub {
   // below are for internal web api
   rpc GetBots (BotsRequest) returns (BotsReply) {}
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
+  rpc BotLogout (BotLogoutRequest) returns (OperationReply) {}
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
+  rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
+  rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
 }
 
 message OperationReply {
@@ -100,8 +103,9 @@ message BotsInfo {
   string loginInfo = 7;
   int32 status = 8;
   string filterInfo = 9;
-  string botId = 10;
-  string scanUrl = 11;
+  string momentFilterInfo = 10;
+  string botId = 11;
+  string scanUrl = 12;
 }
 
 message BotLoginRequest {
@@ -112,6 +116,10 @@ message BotLoginRequest {
   string notifyUrl = 5;
   string loginInfo = 6;
   string botId = 7;
+}
+
+message BotLogoutRequest {
+  string botId = 1;
 }
 
 message BotLoginReply {
@@ -130,4 +138,14 @@ message BotActionReply {
   bool   success = 2;
   string msg = 3;
   string body = 4;
+}
+
+message FilterFillRequest {
+  string botId  = 1;
+  string source = 2;
+  string body   = 3;
+}
+
+message FilterFillReply {
+  bool   success = 1;
 }

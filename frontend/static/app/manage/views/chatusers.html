@@ -11,8 +11,8 @@
       </select>
     </div>
     <div class="col-xs-5 col-md-5" >
-      <label class="control-label" for="botid"  style="position:relative;top:8px">BotId</label>
-      <input ng-model="criteria.botid" type="text" id="botid" name="botid" size="14"  style="position:relative;top:8px" />
+      <label class="control-label" for="botlogin"  style="position:relative;top:8px">BotLogin</label>
+      <input ng-model="criteria.botlogin" type="text" id="botlogin" name="botlogin" size="14"  style="position:relative;top:8px" />
     </div>
   </div>
 </div>
@@ -33,7 +33,7 @@
 </div>
 
 <div class="row">
-  <div class="col-xs-10 col-md-10">
+  <div class="col-xs-12 col-md-12">
     <div layout="row" layout-sm="column" layout-align="space-around">
       <ul class="pagination">
 	<li ng-repeat="i in paging.pagerange">
@@ -52,20 +52,38 @@
       <th style="text-align:center">类型</th>
       <th style="text-align:center"></th>
       <th style="text-align:center">帐号</th>
-      <th style="text-align:center">昵称</th>      
+      <th style="text-align:center">昵称</th>
+      <th style="text-align:center">性别</th>
+      <th style="text-align:center">国家</th>
+      <th style="text-align:center">省</th>
+      <th style="text-align:center">市</th>
+      <th style="text-align:center">签名</th>
+      <th style="text-align:center">备注</th>
+      <th style="text-align:center">标签</th>
       <th style="text-align:center">创建时间</th>
       <th style="text-align:center">更新时间</th>
       
       <tbody>
 	<tr ng-repeat="row in body.data">
-          <td style="text-align:center;width:120px">{{ consts.types[row.type] }}</td>
+          <td style="text-align:center;width:60px">{{ consts.types[row.type] }}</td>
 	  <td style="text-align:center;width:60px">
             <img ng-src="{{row.avatar}}" width="32" height="32"/>
           </td>
 	  <td style="text-align:center;width:120px">{{ row.username }}</td>
 	  <td style="text-align:center;width:120px">{{ row.nickname}}</td>
-	  <td style="text-align:center;width:160px">{{ row.createat }}</td>
-	  <td style="text-align:center;width:160px">{{ row.updateat }}</td>
+          <td style="text-align:center;width:60px">
+            <span ng-if="row.sex==0">-</span>
+	    <span ng-if="row.sex==1">男</span>
+            <span ng-if="row.sex==2">女</span>
+          </td>
+          <td style="text-align:center;width:60px">{{ row.country }}</td>
+          <td style="text-align:center;width:120px">{{ row.province }}</td>
+          <td style="text-align:center;width:120px">{{ row.city }}</td>
+          <td style="text-align:center;width:120px">{{ row.signature }}</td>
+          <td style="text-align:center;width:120px">{{ row.remark }}</td>
+          <td style="text-align:center;width:120px">{{ row.label }}</td>
+	  <td style="text-align:center;width:120px">{{ row.createat }}</td>
+	  <td style="text-align:center;width:120px">{{ row.updateat }}</td>
 	</tr>
       </tbody>
     </table>

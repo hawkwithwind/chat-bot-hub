@@ -12,12 +12,16 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/tasks"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
 )
 
 type MainConfig struct {
-	Hub chatbothub.ChatHubConfig
-	Web web.WebConfig
+	Hub    chatbothub.ChatHubConfig
+	Web    web.WebConfig
+	Redis  utils.RedisConfig
+	Fluent utils.FluentConfig
 }
 
 var (
@@ -76,8 +80,12 @@ func main() {
 		go func() {
 			wg.Add(1)
 			defer wg.Done()
-
-			webserver := web.WebServer{Config: config.Web, Hubhost: "hub", Hubport: config.Hub.Port}
+			config.Web.Redis = config.Redis
+			config.Web.Fluent = config.Fluent
+			webserver := web.WebServer{
+				Config:  config.Web,
+				Hubhost: "hub",
+				Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
 	}
@@ -88,9 +96,34 @@ func main() {
 			defer wg.Done()
 
 			raven.CapturePanicAndWait(func() {
-				hub := chatbothub.ChatHub{Config: config.Hub, Webhost: "web", Webport: config.Web.Port, WebBaseUrl: config.Web.Baseurl}
+				config.Hub.Redis = config.Redis
+				config.Hub.Fluent = config.Fluent
+				hub := chatbothub.ChatHub{
+					Config:     config.Hub,
+					Webhost:    "web",
+					Webport:    config.Web.Port,
+					WebBaseUrl: config.Web.Baseurl}
 				hub.Serve()
 			}, nil)
+		}()
+	}
+
+	if *startcmd == "tasks" {
+		go func() {
+			wg.Add(1)
+			//defer wg.Done()
+
+			task := tasks.Tasks{
+				Webhost:    "web",
+				Webport:    config.Web.Port,
+				WebBaseUrl: config.Web.Baseurl,
+			}
+
+			err := task.Serve()
+			if err != nil {
+				wg.Done()
+				log.Printf("task start failed %s\n", err)
+			}
 		}()
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -26,17 +27,16 @@ type ErrorHandler struct {
 	utils.ErrorHandler
 }
 
-type FluentConfig struct {
-	Host string
-	Port int
-	Tag  string
-}
-
 type ChatHubConfig struct {
 	Host   string
 	Port   string
-	Fluent FluentConfig
+	Fluent utils.FluentConfig
+	Redis  utils.RedisConfig
 }
+
+var (
+	chathub *ChatHub
+)
 
 func (hub *ChatHub) init() {
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
@@ -51,6 +51,12 @@ func (hub *ChatHub) init() {
 	}
 	hub.bots = make(map[string]*ChatBot)
 	hub.filters = make(map[string]Filter)
+	hub.redispool = utils.NewRedisPool(
+		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
+		hub.Config.Redis.Db, hub.Config.Redis.Password)
+
+	// set global variable chathub
+	chathub = hub
 }
 
 type ChatHub struct {
@@ -64,23 +70,25 @@ type ChatHub struct {
 	bots         map[string]*ChatBot
 	muxFilters   sync.Mutex
 	filters      map[string]Filter
+	redispool    *redis.Pool
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	o := &ErrorHandler{}
 
 	return &pb.BotsInfo{
-		ClientId:   bot.ClientId,
-		ClientType: bot.ClientType,
-		Name:       bot.Name,
-		StartAt:    bot.StartAt,
-		LastPing:   bot.LastPing,
-		Login:      bot.Login,
-		LoginInfo:  o.ToJson(bot.LoginInfo),
-		Status:     int32(bot.Status),
-		FilterInfo: o.ToJson(bot.filter),
-		BotId:      bot.BotId,
-		ScanUrl:    bot.ScanUrl,
+		ClientId:         bot.ClientId,
+		ClientType:       bot.ClientType,
+		Name:             bot.Name,
+		StartAt:          bot.StartAt,
+		LastPing:         bot.LastPing,
+		Login:            bot.Login,
+		LoginInfo:        o.ToJson(bot.LoginInfo),
+		Status:           int32(bot.Status),
+		FilterInfo:       o.ToJson(bot.filter),
+		MomentFilterInfo: o.ToJson(bot.momentFilter),
+		BotId:            bot.BotId,
+		ScanUrl:          bot.ScanUrl,
 	}
 }
 
@@ -94,6 +102,7 @@ const (
 	PONG          string = "PONG"
 	REGISTER      string = "REGISTER"
 	LOGIN         string = "LOGIN"
+	LOGOUT        string = "LOGOUT"
 	LOGINSCAN     string = "LOGINSCAN"
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
@@ -183,12 +192,18 @@ func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.bots[clientid] = thebot
 }
 
+func (hub *ChatHub) DropBot(clientid string) {
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
+
+	delete(hub.bots, clientid)
+}
+
 func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
 	hub.muxFilters.Lock()
 	defer hub.muxFilters.Unlock()
 
 	hub.filters[filterId] = thefilter
-
 }
 
 func (hub *ChatHub) GetFilter(filterId string) Filter {
@@ -282,6 +297,16 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
+
+					if o.Err == nil {
+						findbot := hub.GetBotById(botId)
+						if findbot != nil && findbot.ClientId != bot.ClientId {
+							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
+							hub.Error(o.Err, "FATAL error, stop")
+							continue
+						}
+					}
+
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
@@ -354,14 +379,39 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE c[%s]", in)
 				thebot, o.Err = bot.logoutDone(in.Body)
+				// think abount closing the connection
+				// grpc connection can't close from server side, but it's ok
+				// client side will process.exit(0) receiving logout
+				// so that the connection should be recycled by the system
+
+				// think abount recycle the memory of thebot
+				// after drop the bot, it wont have any reference to it
+				// so that it should be recycled by then
+
+				hub.DropBot(thebot.ClientId)
 
 			case ACTIONREPLY:
-				hub.Info("ACTIONREPLY %s", in.Body)
+				if len(in.Body) > 240{
+					hub.Info("ACTIONREPLY %s", in.Body[:240])
+				} else {
+					hub.Info("ACTIONREPLY %s", in.Body)
+				}
 
-				body := o.FromJson(in.Body)
-				var actionBody map[string]interface{}
-				var result map[string]interface{}
-				var actionRequestId string
+				if bot.ClientType == WECHATBOT {
+					body := o.FromJson(in.Body)
+					var actionBody map[string]interface{}
+					var result map[string]interface{}
+					var actionRequestId string
+
+					if body != nil {
+						switch ab := o.FromMap("body", body, "eventRequest.body", nil).(type) {
+						case map[string]interface{}:
+							actionBody = ab
+						}
+						switch ares := o.FromMap("result", body, "eventRequest.body", nil).(type) {
+						case map[string]interface{}:
+							result = ares
+						}
 
 				if body != nil {
 					if abptr := o.FromMap("body", body, "eventRequest.body", nil); abptr != nil {
@@ -605,6 +655,22 @@ type LoginBody struct {
 	LoginInfo string `json:"loginInfo"`
 }
 
+func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
+	hub.Info("recieve logout bot cmd from web %s", req.BotId)
+
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+	}
+
+	_, err := bot.logout()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
 	o := &ErrorHandler{}
@@ -672,10 +738,16 @@ func (hub *ChatHub) CreateFilterByType(
 	switch filterType {
 	case WECHATBASEFILTER:
 		filter = NewWechatBaseFilter(filterId, filterName)
+	case WECHATMOMENTFILTER:
+		filter = NewWechatMomentFilter(filterId, filterName)
 	case PLAINFILTER:
 		filter = NewPlainFilter(filterId, filterName, hub.logger)
 	case FLUENTFILTER:
-		filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, hub.Config.Fluent.Tag)
+		if tag, ok := hub.Config.Fluent.Tags["msg"]; ok {
+			filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, tag)
+		} else {
+			return filter, fmt.Errorf("config.fluent.tags.msg not found")
+		}
 	case WEBTRIGGER:
 		filter = NewWebTrigger(filterId, filterName)
 	case KVROUTER:
@@ -720,9 +792,34 @@ func (hub *ChatHub) FilterCreate(
 			hub.Info("cannot parse body %s", req.Body)
 		}
 	}
-	
+
 	hub.SetFilter(req.FilterId, filter)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
+func (hub *ChatHub) FilterFill(
+	ctx context.Context, req *pb.FilterFillRequest) (*pb.FilterFillReply, error) {
+
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+	}
+
+	var err error
+
+	if req.Source == "MSG" {
+		if bot.filter != nil {
+			err = bot.filter.Fill(req.Body)
+		}
+	} else if req.Source == "MOMENT" {
+		if bot.momentFilter != nil {
+			err = bot.momentFilter.Fill(req.Body)
+		}
+	} else {
+		return nil, fmt.Errorf("not support filter source %s", req.Source)
+	}
+
+	return &pb.FilterFillReply{Success: true}, err
 }
 
 func (hub *ChatHub) FilterNext(
@@ -786,6 +883,25 @@ func (hub *ChatHub) BotFilter(
 	}
 
 	thebot.filter = thefilter
+
+	hub.SetBot(thebot.ClientId, thebot)
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
+func (hub *ChatHub) BotMomentFilter(
+	ctx context.Context, req *pb.BotFilterRequest) (*pb.OperationReply, error) {
+
+	thebot := hub.GetBotById(req.BotId)
+	if thebot == nil {
+		return nil, fmt.Errorf("bot %s not found", req.BotId)
+	}
+
+	thefilter := hub.GetFilter(req.FilterId)
+	if thefilter == nil {
+		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+	}
+
+	thebot.momentFilter = thefilter
 
 	hub.SetBot(thebot.ClientId, thebot)
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil

@@ -5,6 +5,7 @@ EXECUTABLE=chat-bot-hub
 RUNTIME_PATH=build
 RUNTIME_IMAGE=chat-bot-hub
 PACKAGE=github.com/hawkwithwind/$(EXECUTABLE)
+PROTOC_PATH=/opt/programs/protoc/bin
 
 GOIMAGE=golang:1.11-alpine3.8
 
@@ -64,8 +65,7 @@ clean:
 fmt:
 	docker run --rm \
 	-v $(shell pwd):/go/src/$(PACKAGE) \
-	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/server/" && gofmt -l -w $(SOURCES)
-
+	$(RUNTIME_IMAGE):build-golang sh -c "cd /go/src/$(PACKAGE)/ && gofmt -l -w $(SOURCES)"
 
 test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
 	docker run --rm \
@@ -89,8 +89,21 @@ npm-audit-fix: build-nodejs-image
 .PHONY: gen cgo
 
 gen:
-	cd proto && \
-	protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub
+	docker run --rm \
+	-e HTTPS_PROXY=$(https_proxy) \
+	-e HTTP_PROXY=$(http_proxy) \
+	--net=host \
+	-v $(GOPATH)/src:/go/src \
+	-v $(GOPATH)/pkg:/go/pkg \
+	-v $(GOPATH)/bin:/go/bin \
+	-v $(PROTOC_PATH):/home/bin \
+	-e PATH="/go/bin:/home/bin:${PATH}" \
+	-v $(shell pwd):/home/work \
+	-w /home/work \
+	$(RUNTIME_IMAGE):build-golang sh -c \
+	"go get -u github.com/golang/protobuf/protoc-gen-go && \
+	   cd proto && \
+	   protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub"
 
 
 
