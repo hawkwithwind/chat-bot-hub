@@ -194,22 +194,22 @@ type WechatContactInfo struct {
 }
 
 type WechatContactListItem struct {
-	Alias string `json:"alias"`
-	Avatar string `json:"avatar"`
-	City string `json:"city"`
-	Gender int `json:gender`
-	Id string `json:"id"`
-	Name string `json:"name"`
-	Province string `json:"province"`
+	Alias     string `json:"alias"`
+	Avatar    string `json:"avatar"`
+	City      string `json:"city"`
+	Gender    int    `json:gender`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	Province  string `json:"province"`
 	Signature string `json:"signature"`
-	Type int `json:"type"`
-	Friend bool `json:"friend"`
+	Type      int    `json:"type"`
+	Friend    bool   `json:"friend"`
 }
 
 type WechatGroupListItem struct {
-	GroupId string `json:"id"`
-	GroupName string `json:"topic"`
-	OwnerId string `json:"ownerId"`
+	GroupId      string   `json:"id"`
+	GroupName    string   `json:"topic"`
+	OwnerId      string   `json:"ownerId"`
 	MemberIdList []string `json:"memberIdList"`
 }
 
@@ -398,19 +398,19 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
 			reqm := o.FromJson(reqstr)
-			
+
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", ""); funptr != nil {
 				rlogin = funptr.(string)
-				}
-			
+			}
+
 			if len(rlogin) == 0 {
 				if funptr := o.FromMap("contactId", reqm,
 					"friendRequest.fromUserName", ""); funptr != nil {
-						rlogin = funptr.(string)
-					}				
+					rlogin = funptr.(string)
+				}
 			}
-			
+
 			ctx.Info("%v\n%s", reqm, rlogin)
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
@@ -420,14 +420,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			ctx.Error(o.Err, "[FRIENDREQUEST] failed")
 			return
 		}
-		
+
 		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, reqstr, "NEW")
-		
+
 		if fr == nil {
 			ctx.Info("NewFriendRequest returned nil")
 			return
 		}
-		
+
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -470,7 +470,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			chatuser := o.NewChatUser(info.Id, thebotinfo.ClientType, info.Name)
 			chatuser.SetAvatar(info.Avatar)
-			
+
 			chatuser.Sex = info.Gender
 			chatuser.SetAlias(info.Alias)
 			//chatuser.SetCountry(info.Country)
@@ -479,7 +479,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			chatuser.SetSignature(info.Signature)
 			//chatuser.SetRemark(info.Remark)
 			//chatuser.SetLabel(info.Label)
-			
+
 			chatuser.SetExt(bodystr)
 
 			o.UpdateOrCreateChatUser(tx, chatuser)
@@ -501,7 +501,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
 			info := WechatGroupListItem{}
-			
+
 			o.Err = json.Unmarshal([]byte(bodystr), &info)
 			if o.Err != nil {
 				return
@@ -566,8 +566,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			ctx.Info("save group info [%s]%s done", info.GroupId, info.GroupName)
-			
-			
+
 		}
 
 	case chatbothub.CONTACTINFO:
@@ -709,7 +708,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		result := o.FromJson(awayar.Result)
 		ctx.Info("[ACTIONREPLY] result %v", result)
-		
+
 		success := false
 		if result != nil {
 			if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
@@ -721,20 +720,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						localar.Status = "Failed"
 						if rdataptr := o.FromMap(
 							"data", result, "actionReply.result", nil); rdataptr != nil {
-								switch rdata := rdataptr.(type) {
-								case map[string]interface{}:
-									status := int(o.FromMapFloat(
-										"status", rdata, "actionReply.result.data", false, 0))
+							switch rdata := rdataptr.(type) {
+							case map[string]interface{}:
+								status := int(o.FromMapFloat(
+									"status", rdata, "actionReply.result.data", false, 0))
 
-									if status == 0 {
-										localar.Status = "Done"
-									}
-								default:
-									if o.Err == nil {
-										o.Err = fmt.Errorf("actionReply.result.data not map")
-									}
+								if status == 0 {
+									localar.Status = "Done"
+								}
+							default:
+								if o.Err == nil {
+									o.Err = fmt.Errorf("actionReply.result.data not map")
 								}
 							}
+						}
 					}
 				} else {
 					localar.Status = "Failed"
@@ -753,7 +752,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			bodym := o.FromJson(localar.ActionBody)
 			var rlogin string
-			
+
 			if _, found := bodym["fromUserName"]; found {
 				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 			} else if _, found := bodym["contactId"]; found {

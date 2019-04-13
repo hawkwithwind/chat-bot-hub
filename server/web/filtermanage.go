@@ -80,7 +80,7 @@ func (web *WebServer) createFilterTemplateSuite(w http.ResponseWriter, r *http.R
 		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
-	
+
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -114,7 +114,7 @@ func (web *WebServer) updateFilterTemplateSuite(w http.ResponseWriter, r *http.R
 		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
-	
+
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -207,14 +207,14 @@ func (web *WebServer) updateFilterTemplate(w http.ResponseWriter, r *http.Reques
 		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
-	
+
 	index := int(o.ParseInt(indexstr, 10, 64))
 	defaultNext := int(o.ParseInt(defaultNextstr, 10, 64))
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		return
 	}
-	
+
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -258,7 +258,7 @@ func (web *WebServer) deleteFilterTemplate(w http.ResponseWriter, r *http.Reques
 	vars := mux.Vars(r)
 	templateId := vars["templateId"]
 	accountName := o.getAccountName(r)
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 

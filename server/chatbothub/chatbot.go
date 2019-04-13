@@ -279,7 +279,7 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 			var msg WechatFriendRequest
 			o.FromXML(content.(string), &msg)
 			msgstr := o.ToJson(&msg)
-			return msgstr, o.Err			
+			return msgstr, o.Err
 		} else {
 			bot.Info("[FRIENDREQUEST] %s", body)
 			return body, nil

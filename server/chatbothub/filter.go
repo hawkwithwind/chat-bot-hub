@@ -194,7 +194,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		if len(atlist) > 0 {
 			body["atList"] = atlist
 		}
-		
+
 		switch content := contentptr.(type) {
 		case string:
 			brief = content

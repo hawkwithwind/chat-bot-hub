@@ -95,14 +95,14 @@ func (ctx *WebServer) init() error {
 		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
 	} else {
 		if client != nil {
-			contx, _ := context.WithTimeout(context.Background(), 10 * time.Second)
+			contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 			o.Err = client.Disconnect(contx)
 			if o.Err != nil {
 				ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
 			}
 		}
 	}
-	
+
 	retryTimes := 7
 	gap := 2
 	for i := 0; i < retryTimes+1; i++ {

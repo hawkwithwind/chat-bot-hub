@@ -817,25 +817,12 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	bot := o.GetBotById(ctx.db.Conn, botId)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, o.Err)
 		return
 	}
-	
-	if bot == nil {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botid %s not found", botId))
-			return
-		}
-	} else {
-		if bot.LoginInfo.Valid {
-			logininfo = bot.LoginInfo.String
-		} else {
-			logininfo = ""
-		}
 
-		if len(login) == 0 {
-			login = bot.Login
-		}
+	if bot == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botid %s not found", botId))
+		return
 	}
 
 	logininfo := ""
@@ -843,6 +830,10 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		logininfo = bot.LoginInfo.String
 	} else {
 		logininfo = ""
+	}
+
+	if len(login) == 0 {
+		login = bot.Login
 	}
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
@@ -859,7 +850,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  logininfo,
 		BotId:      botId,
 	})
-	
+
 	o.ok(w, "", loginreply)
 }
 

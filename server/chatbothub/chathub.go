@@ -217,7 +217,6 @@ func (hub *ChatHub) GetFilter(filterId string) Filter {
 	return nil
 }
 
-     
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
@@ -282,7 +281,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			o := ErrorHandler{}
 			var thebot *ChatBot
-			
+
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
 				if bot.ClientType == WECHATBOT {
@@ -391,7 +390,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.DropBot(thebot.ClientId)
 
 			case ACTIONREPLY:
-				if len(in.Body) > 240{
+				if len(in.Body) > 240 {
 					hub.Info("ACTIONREPLY %s", in.Body[:240])
 				} else {
 					hub.Info("ACTIONREPLY %s", in.Body)
@@ -421,7 +420,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								actionBody = o.FromJson(abody)
 							case map[string]interface{}:
 								actionBody = abody
-							}						
+							}
 						}
 						if rptr := o.FromMap("result", body, "eventRequest.body", nil); rptr != nil {
 							result = rptr.(map[string]interface{})
@@ -442,7 +441,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}()
 					}
 				}
-				
+
 			case MESSAGE:
 				var msg string
 				hub.Info("in.Body %v", in.Body)
@@ -460,7 +459,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						o.Err = fmt.Errorf("unexpected bodym %T %v", bodym, bodym)
 					}
 				}
-				
+
 				if o.Err == nil && bot.filter != nil {
 					o.Err = bot.filter.Fill(msg)
 				}
@@ -540,24 +539,24 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
-									hub.Error(err, "webnotify group info failed\n")
-								}
+								hub.Error(err, "webnotify group info failed\n")
+							}
 						}()
 					}
 				}
-				
+
 			case CONTACTLIST:
 				if bot.ClientType == WECHATBOT {
 					var contacts []interface{}
 					o.Err = json.Unmarshal([]byte(in.Body), &contacts)
 
 					if o.Err == nil {
-						for _, v := range contacts {							
+						for _, v := range contacts {
 							go func(v interface{}) {
 								if _, err := httpx.RestfulCallRetry(
 									bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTLIST, o.ToJson(v)), 3, 1); err != nil {
-										hub.Error(err, "webnotify contact info failed")
-									}
+									hub.Error(err, "webnotify contact info failed")
+								}
 							}(v)
 						}
 					}
@@ -574,12 +573,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								hub.Info("group %v", v)
 								if _, err := httpx.RestfulCallRetry(
 									bot.WebNotifyRequest(hub.WebBaseUrl, GROUPLIST, o.ToJson(v)), 3, 1); err != nil {
-										hub.Error(err, "webnotify contact info failed")
-									}								
+									hub.Error(err, "webnotify contact info failed")
+								}
 							}(v)
 						}
 					}
-					
+
 				}
 
 			default:
@@ -688,7 +687,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		if o.Err == nil {
 			bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 		}
-		
+
 		body := o.ToJson(LoginBody{
 			BotId:     req.BotId,
 			Login:     req.Login,
