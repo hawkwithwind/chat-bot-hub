@@ -56,7 +56,7 @@
               if(before <= headpad) {
                 before = headpad + 1
               } else {
-                $scope.paging.pagerange.push('…')
+                $scope.paging.pagerange.push('D1')
               }
               let afterflag = false
               let after  = p + middlepad
@@ -69,7 +69,7 @@
                 $scope.paging.pagerange.push(j)
               }
               if(afterflag) {
-                $scope.paging.pagerange.push('…')
+                $scope.paging.pagerange.push('D2')
               }
               for(var i=0; i<tailpad; i++){
                 $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpad+i)
