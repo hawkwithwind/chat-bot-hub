@@ -34,6 +34,10 @@ type ChatUser struct {
 	DeleteAt   mysql.NullTime `db:"deleteat"`
 }
 
+const (
+	TN_CHATUSERS string = "chatusers"
+)
+
 func (chatuser *ChatUser) SetAlias(alias string) {
 	chatuser.Alias = sql.NullString{
 		String: alias,
@@ -97,8 +101,16 @@ func (chatuser *ChatUser) SetExt(ext string) {
 	}
 }
 
-func (o *ErrorHandler) NewDefaultChatUser() interface{} {
+func (o *ErrorHandler) NewDefaultChatUser() dbx.Searchable {
 	return &ChatUser{}
+}
+
+func (u *ChatUser) Fields() []dbx.Field {
+	return dbx.GetFieldsFromStruct(TN_CHATUSERS, (*ChatUser)(nil))
+}
+
+func (u *ChatUser) SelectFrom() string {
+	return TN_CHATUSERS
 }
 
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {

@@ -1,7 +1,6 @@
 package domains
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -12,8 +11,9 @@ import (
 )
 
 var (
-	searchableDomains = map[string]func(*ErrorHandler) interface{}{
+	searchableDomains = map[string]func(*ErrorHandler) dbx.Searchable{
 		"chatusers": (*ErrorHandler).NewDefaultChatUser,
+		"chatcontacts":  (*ErrorHandler).NewDefaultChatContactExpand,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
@@ -25,8 +25,6 @@ var (
 		"lte":    (*ErrorHandler).AndLessThanEqual,
 		"like":   (*ErrorHandler).AndLike,
 	}
-
-	placeHolder = sql.NullString{String: "", Valid: true}
 
 	sortOrders = map[string]int{
 		"asc":  1,
@@ -146,7 +144,16 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		orderclauseString = "\nORDER BY " + strings.Join(orderclause, ", ")
 	}
 
-	sqlquery := fmt.Sprintf("SELECT * FROM `%s` %s %s %s", domain,
+	fs := []string{}
+	sd := searchableDomains[domain](o)
+	for _, field := range sd.Fields() {
+		fs = append(fs, fmt.Sprintf("`%s`.`%s`", field.Table, field.Name))
+	}
+	selectFields := strings.Join(fs, ",")
+
+	sqlquery := fmt.Sprintf("SELECT %s FROM %s %s %s %s",
+		selectFields,
+		sd.SelectFrom(),
 		whereclauseString,
 		orderclauseString,
 		limitclause,
