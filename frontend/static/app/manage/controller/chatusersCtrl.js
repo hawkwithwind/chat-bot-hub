@@ -77,6 +77,7 @@
                 [...middleset].sort((a, b) => { return a-b}),
                 pagetail.sort((a,b) => {return a-b }),
               )
+              console.log($scope.paging.pagerange)
             } else {
               $scope.paging.pagerange = []
               for (var i=0;i<$scope.paging.pagecount;i++) {
