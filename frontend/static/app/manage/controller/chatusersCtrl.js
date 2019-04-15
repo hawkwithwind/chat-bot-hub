@@ -49,7 +49,7 @@
               }
 
               for(var i=0; i<3; i++){
-                let p = parseInt($scope.paging.page, 10)
+                let p = parseInt($scope.paging.page, 10) + 1
                 let before = p - i
                 let after  = p + i
 
