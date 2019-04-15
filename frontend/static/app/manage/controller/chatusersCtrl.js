@@ -53,15 +53,15 @@
                             
               let p = parseInt($scope.paging.page, 10)
               let before = p - middlepad
-              if(before <= pagehead[pagehead.length-1]) {
-                before = pagehead[pagehead.length-1] + 1
+              if(before <= headpad) {
+                before = headpad + 1
               } else {
                 $scope.paging.pagerange.push('…')
               }
               let afterflag = false
               let after  = p + middlepad
-              if(after >= pagetail[0]) {
-                after = pagetail[0] - 1
+              if(after >= parseInt($scope.paging.pagecount) - tailpad) {
+                after = parseInt($scope.paging.pagecount) - tailpad -1
               } else {
                 afterflag = true
               }
