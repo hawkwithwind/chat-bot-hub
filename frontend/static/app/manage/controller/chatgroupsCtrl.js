@@ -40,8 +40,43 @@
             $scope.paging.pagecount = data.paging.pagecount
             
             $scope.paging.pagerange = []      
-            for (var i=0;i<$scope.paging.pagecount;i++) {
-	      $scope.paging.pagerange.push(i+1)
+            if($scope.paging.pagecount > 20) {
+              const headpad = 3
+              const tailpad = 3
+              const middlepad = 3
+              
+              for(var i=0; i<headpad; i++){
+                $scope.paging.pagerange.push(i+1)                
+              }
+                            
+              let p = parseInt($scope.paging.page, 10)
+              let before = p - middlepad
+              if(before <= headpad) {
+                before = headpad + 1
+              } else {
+                $scope.paging.pagerange.push('D1')
+              }
+              let afterflag = false
+              let after  = p + middlepad
+              if(after >= parseInt($scope.paging.pagecount) - tailpad) {
+                after = parseInt($scope.paging.pagecount) - tailpad -1
+              } else {
+                afterflag = true
+              }
+              for(var j = before;j <= after; j++) {
+                $scope.paging.pagerange.push(j)
+              }
+              if(afterflag) {
+                $scope.paging.pagerange.push('D2')
+              }
+              for(var i=0; i<tailpad; i++){
+                $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpad+i)
+              }
+              console.log($scope.paging.pagerange)
+            } else {
+              for (var i=0;i<$scope.paging.pagecount;i++) {
+	        $scope.paging.pagerange.push(i+1)
+              }
             }
           })
       }

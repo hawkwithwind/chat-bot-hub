@@ -76,7 +76,6 @@
               }
               console.log($scope.paging.pagerange)
             } else {
-              $scope.paging.pagerange = []
               for (var i=0;i<$scope.paging.pagecount;i++) {
 	        $scope.paging.pagerange.push(i+1)
               }
