@@ -54,11 +54,12 @@
 
                 console.log(before, after)
                 for(var j in [before, after]) {
-                  console.log(j)
                   if(j >= 0 && j < parseInt($scope.paging.pagecount, 10)) {
+                    console.log(j, j+1)
                     pageset.add(j+1)
                   }
-                }                
+                }
+                console.log('%o', [...pageset])
               }
 
               console.log('%o', [...pageset])
