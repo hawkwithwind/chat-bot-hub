@@ -49,19 +49,15 @@
               }
 
               for(var i=0; i<3; i++){
-                let before = parseInt($scope.paging.page, 10) + i
-                let after  = parseInt($scope.paging.page, 10) - i
+                let p = parseInt($scope.paging.page, 10)
+                let before = p - i
+                let after  = p + i
 
-                console.log(parseInt($scope.paging.page, 10), parseInt($scope.paging.page, 10)+1, before, before+1, after, after+1)
-                for(var j in [before, after]) {
-                  if(j >= 0 && j < parseInt($scope.paging.pagecount, 10)) {
-                    console.log(j, j+1)
-                    pageset.add(j+1)
-                  }
+                for(var j = before;j < after; j++) {
+                  pageset.add(j)
                 }
-                console.log('%o', [...pageset])
               }
-
+              
               console.log('%o', [...pageset])
               $scope.paging.pagerange = [...pageset].sort()
             } else {
