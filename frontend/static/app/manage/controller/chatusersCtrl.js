@@ -68,7 +68,7 @@
                 after = pagehead[0]
               }
 
-              middleset = new Set()
+              let middleset = new Set()
               for(var j = before;j <= after; j++) {
                 middleset.add(j)
               }
