@@ -50,30 +50,32 @@
               const middlepad = 3
               
               for(var i=0; i<headpad; i++){
-                pagehead.push(i+1)                
+                $scope.paging.pagerange.push(i+1)                
+              }
+                            
+              let p = parseInt($scope.paging.page, 10)
+              let before = p - middlepad
+              if(before <= pagehead[pagehead.length-1]) {
+                before = pagehead[pagehead.length-1] + 1
+              } else {
+                $scope.paging.pagerange.push('…')
+              }
+              let afterflag = false
+              let after  = p + middlepad
+              if(after >= pagetail[0]) {
+                after = pagetail[0] - 1
+              } else {
+                afterflag = true
+              }
+              for(var j = before;j <= after; j++) {
+                $scope.paging.pagerange.push(j)
+              }
+              if(afterflag) {
+                $scope.paging.pagerange.push('…')
               }
               for(var i=0; i<tailpad; i++){
-                pagetail.push(parseInt($scope.paging.pagecount, 10)-1)
-              }
-              
-              let p = parseInt($scope.paging.page, 10) + 1
-              let before = p - middlepad
-              if(before < pagehead[pagehead.length-1]) {
-                before = pagehead[pagehead.length-1]
-              }
-              
-              let after  = p + middlepad
-              if(after > pagetail[0]) {
-                after = pagetail[0]
-              }
-
-              let pagemiddle = []
-              for(var j = before;j <= after; j++) {
-                pagemiddle.push(j)
-              }
-              console.log(pagehead.concat(pagemiddle, pagetail))
-              
-              $scope.paging.pagerange = pagehead
+                $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpage+i)
+              }              
               console.log($scope.paging.pagerange)
             } else {
               $scope.paging.pagerange = []
