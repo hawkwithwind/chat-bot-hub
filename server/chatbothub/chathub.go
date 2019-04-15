@@ -642,16 +642,15 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		})
 	} else {
 		if req.ClientId == "" {
-			o.Err = utils.NewClientError(utils.RESOURCE_INSUFFICIENT, fmt.Errorf("cannot find available client for login"))
+			o.Err = utils.NewClientError(utils.RESOURCE_INSUFFICIENT,
+				fmt.Errorf("cannot find available client for login"))
 		} else {
-			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("cannot find bot[%s] %s", req.ClientType, req.ClientId))
+			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
+				fmt.Errorf("cannot find bot[%s] %s", req.ClientType, req.ClientId))
 		}
 	}
 
 	if o.Err != nil {
-
-		hub.Info("err %T %v",o.Err, o.Err) 
-		
 		switch clientError := o.Err.(type) {
 		case *utils.ClientError:
 			return &pb.BotLoginReply{

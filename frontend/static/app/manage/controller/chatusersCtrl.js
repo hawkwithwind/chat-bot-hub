@@ -40,11 +40,31 @@
             $scope.paging.page = data.paging.page
             $scope.paging.pagesize = data.paging.pagesize
             $scope.paging.pagecount = data.paging.pagecount
-            
-            $scope.paging.pagerange = []      
-            for (var i=0;i<$scope.paging.pagecount;i++) {
-	      $scope.paging.pagerange.push(i+1)
-            }
+
+             if($scope.paging.pagecount > 20) {
+              let pageset = new Set()
+              for(var i=0; i<5; i++){
+                pageset.add(i+1)
+                pageset.add(parseInt($scope.paging.pagecount, 10)-i)
+              }
+
+               for(var i=0; i<3; i++) {
+                 let before = parseInt($scope.paging.page, 10) + i
+                 let after  = parseInt($scope.paging.page, 10) - i
+                 for(var j in [before, after]) {
+                   if(j >= 0 && j < parseInt($scope.paging.pagecount, 10)) {
+                     pageset.add(j+1)
+                   }
+                 }                
+               }
+
+               $scope.paging.pagerange = [...pageset].sort()
+             } else {
+               $scope.paging.pagerange = []
+               for (var i=0;i<$scope.paging.pagecount;i++) {
+	         $scope.paging.pagerange.push(i+1)
+               }
+             }
           })
       }
 
