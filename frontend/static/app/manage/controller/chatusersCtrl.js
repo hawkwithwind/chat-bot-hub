@@ -74,7 +74,6 @@
               for(var i=0; i<tailpad; i++){
                 $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpad+i)
               }
-              console.log($scope.paging.pagerange)
             } else {
               for (var i=0;i<$scope.paging.pagecount;i++) {
 	        $scope.paging.pagerange.push(i+1)
