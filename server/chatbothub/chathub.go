@@ -648,19 +648,19 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 
 	if o.Err != nil {
 		switch clientError := o.Err.(type) {
-		case utils.ClientError:
+		case *utils.ClientError:
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: pb.ClientError{
-					Code: clientError.ErrorCode,
+				ClientError: &pb.ClientError{
+					Code: int32(clientError.Code),
 					Msg: clientError.Err.Error(),
 				},
 			}, o.Err
 		default:
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: pb.ClientError{
-					Code: utils.UNKNOWN,
+				ClientError: &pb.ClientError{
+					Code: int32(utils.UNKNOWN),
 					Msg: o.Err.Error(),
 				},
 			}, o.Err

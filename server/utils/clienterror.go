@@ -12,19 +12,19 @@ const (
 )
 
 type ClientError struct {
-	Err       error
-	ErrorCode ClientErrorCode
+	Err  error
+	Code ClientErrorCode
 }
 
 func NewClientError(code ClientErrorCode, err error) error {
-	return &ClientError{err: err, errorCode: code}
+	return &ClientError{Err: err, Code: code}
 }
 
 func (err *ClientError) ErrorCode() ClientErrorCode {
-	return err.errorCode
+	return err.Code
 }
 
 func (err *ClientError) Error() string {
-	return err.err.Error()
+	return err.Err.Error()
 }
 
