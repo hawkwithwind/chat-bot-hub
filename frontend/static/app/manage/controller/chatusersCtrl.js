@@ -58,6 +58,7 @@
                  }                
                }
 
+               console.log('%o', [...pageset])
                $scope.paging.pagerange = [...pageset].sort()
              } else {
                $scope.paging.pagerange = []
