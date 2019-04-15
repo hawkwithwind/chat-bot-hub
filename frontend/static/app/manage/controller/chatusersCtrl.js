@@ -72,8 +72,8 @@
                 $scope.paging.pagerange.push('…')
               }
               for(var i=0; i<tailpad; i++){
-                $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpage+i)
-              }              
+                $scope.paging.pagerange.push(parseInt($scope.paging.pagecount, 10)-tailpad+i)
+              }
               console.log($scope.paging.pagerange)
             } else {
               $scope.paging.pagerange = []
