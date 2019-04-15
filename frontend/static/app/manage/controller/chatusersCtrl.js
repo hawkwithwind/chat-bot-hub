@@ -59,7 +59,9 @@
               }
               
               console.log('%o', [...pageset])
-              $scope.paging.pagerange = [...pageset].sort()
+              $scope.paging.pagerange = [...pageset].sort((a, b) => {
+                return a-b
+              })
             } else {
               $scope.paging.pagerange = []
               for (var i=0;i<$scope.paging.pagecount;i++) {
