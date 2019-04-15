@@ -591,6 +591,10 @@ func (bot *ChatBot) CreateRoom(arId string, body string) error {
 		bodym := o.FromJson(body)
 		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
 
+		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
+			"userList": memberList,
+		}))
+		
 		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{}{
 			"userList": memberList,
 		}))

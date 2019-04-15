@@ -3,16 +3,17 @@ package utils
 type ClientErrorCode int
 
 const (
-	PARAM_REQUIRED ClientErrorCode = 1001
-	PARAM_INVALID ClientErrorCode = 1002
-	RESOURCE_INSUFFICIENT = 2001
-	RESOURCE_ACCESS_DENIED = 2002
-	RESOURCE_NOT_FOUND ClientErrorCode = 2003
+	UNKNOWN                ClientErrorCode = 0
+	PARAM_REQUIRED         ClientErrorCode = 1001
+	PARAM_INVALID          ClientErrorCode = 1002
+	RESOURCE_INSUFFICIENT  ClientErrorCode = 2001
+	RESOURCE_ACCESS_DENIED ClientErrorCode = 2002
+	RESOURCE_NOT_FOUND     ClientErrorCode = 2003
 )
 
 type ClientError struct {
-	err       error
-	errorCode ClientErrorCode
+	Err       error
+	ErrorCode ClientErrorCode
 }
 
 func NewClientError(code ClientErrorCode, err error) error {

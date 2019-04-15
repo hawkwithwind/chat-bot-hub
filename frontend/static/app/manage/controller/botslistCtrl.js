@@ -298,7 +298,13 @@
       "AddContact" : [
         commonParams.stranger,
         commonParams.ticket,
-        
+        commonParams.type,
+        {
+          "name": "content",
+          "display": "验证消息",
+          "type": "string",
+          "required": false,
+        }
       ],
       "AcceptUser": [
         commonParams.stranger,
@@ -315,7 +321,7 @@
       ],
       "CreateRoom": [
         {
-          "name": "userList",
+          "name": "memberList",
           "display": "用户列表",
           "type": "longstring",
           "required": true,
@@ -404,6 +410,18 @@
     let url = "/botaction/" + $scope.data.login
     
     $scope.sendAction = (data) => {
+      if(data.actionBody.memberList) {
+        data.actionBody.memberList = JSON.parse(data.actionBody.memberList)
+      }
+
+      if(data.actionBody.type) {
+        data.actionBody.type = parseInt(data.actionBody.type, 10)
+      }
+
+      if(data.actionBody.commentType) {
+        data.actionBody.commentType = parseInt(data.actionBody.commentType, 10)
+      }
+      
       data.actionBody = JSON.stringify(data.actionBody)
       
       $http({

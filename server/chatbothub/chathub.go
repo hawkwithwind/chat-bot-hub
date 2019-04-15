@@ -647,7 +647,24 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 	}
 
 	if o.Err != nil {
-		return &pb.BotLoginReply{Msg: fmt.Sprintf("LOGIN BOT FAILED %s", o.Err.Error())}, o.Err
+		switch clientError := o.Err.(type) {
+		case utils.ClientError:
+			return &pb.BotLoginReply{
+				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
+				ClientError: pb.ClientError{
+					Code: clientError.ErrorCode,
+					Msg: clientError.Err.Error(),
+				},
+			}, o.Err
+		default:
+			return &pb.BotLoginReply{
+				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
+				ClientError: pb.ClientError{
+					Code: utils.UNKNOWN,
+					Msg: o.Err.Error(),
+				},
+			}, o.Err
+		}
 	} else {
 		return &pb.BotLoginReply{Msg: "LOGIN BOT DONE"}, nil
 	}

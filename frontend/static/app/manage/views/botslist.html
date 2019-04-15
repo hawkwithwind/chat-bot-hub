@@ -178,6 +178,9 @@
           <input ng-if="act.type == 'string'" class="col-md-4"
                  ng-model="data.actionBody[act.name]"
                  id="{{act.name}}" ng-required="act.required" />
+          <input ng-if="act.type == 'int'" class="col-md-4"
+                 ng-model="data.actionBody[act.name]"
+                 id="{{act.name}}" ng-required="act.required" />
           <textarea ng-if="act.type == 'longstring'" class="col-md-4"
                     ng-model="data.actionBody[act.name]" rows="6" 
                     id="{{act.name}}" ng-required="act.required" />

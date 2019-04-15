@@ -122,8 +122,14 @@ message BotLogoutRequest {
   string botId = 1;
 }
 
+message ClientError {
+  int32  code = 1;
+  string msg  = 2;
+}
+
 message BotLoginReply {
   string msg = 1;
+  ClientError clientError = 2;
 }
 
 message BotActionRequest {

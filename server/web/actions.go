@@ -859,6 +859,8 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
 	o.Err = decoder.Decode(&bodym)
+	
+	ctx.Info("bot action body %v\n%v", r.Body, bodym)
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
