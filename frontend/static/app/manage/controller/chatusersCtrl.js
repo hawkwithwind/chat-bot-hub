@@ -63,15 +63,15 @@
               }
               
               let after  = p + middlepad
-              if(after > pagehead[0]) {
-                after = pagehead[0]
+              if(after > pagetail[0]) {
+                after = pagetail[0]
               }
 
-              let middleset = new Set()
+              let pagemiddle = []
               for(var j = before;j <= after; j++) {
-                middleset.add(j)
+                pagemiddle.push(j)
               }
-              console.log(before, after, [...middleset])
+              console.log(pagehead.concat(pagemiddle, pagetail))
               
               $scope.paging.pagerange = pagehead
               console.log($scope.paging.pagerange)
