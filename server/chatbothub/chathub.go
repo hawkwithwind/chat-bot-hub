@@ -237,7 +237,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		} else if in.EventType == REGISTER {
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
-				hub.Info("c[%s] not found, create new bot", in.ClinetId)
+				hub.Info("c[%s] not found, create new bot", in.ClientId)
 				bot = NewChatBot()
 			}
 
