@@ -40,7 +40,8 @@
             $scope.paging.page = data.paging.page
             $scope.paging.pagesize = data.paging.pagesize
             $scope.paging.pagecount = data.paging.pagecount
-
+            $scope.paging.pagerange = []
+            
             if($scope.paging.pagecount > 20) {
               const headpad = 3
               const tailpad = 3
