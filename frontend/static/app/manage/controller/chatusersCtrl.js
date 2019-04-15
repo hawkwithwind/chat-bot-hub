@@ -42,26 +42,41 @@
             $scope.paging.pagecount = data.paging.pagecount
 
             if($scope.paging.pagecount > 20) {
-              let pageset = new Set()
-              for(var i=0; i<5; i++){
-                pageset.add(i+1)
-                pageset.add(parseInt($scope.paging.pagecount, 10)-i)
+              let pagehead = []
+              let pagetail = []
+
+              const headpad = 3
+              const tailpad = 3
+              const middlepad = 3
+              
+              for(var i=0; i<headpad; i++){
+                pagehead.push(i+1)                
+              }
+              for(var i=0; i<tailpad; i++){
+                pagetail.push(parseInt($scope.paging.pagecount, 10)-1)
               }
 
-              for(var i=0; i<3; i++){
-                let p = parseInt($scope.paging.page, 10) + 1
-                let before = p - i
-                let after  = p + i
-
-                for(var j = before;j < after; j++) {
-                  pageset.add(j)
-                }
+              
+              let p = parseInt($scope.paging.page, 10) + 1
+              let before = p - middlepad
+              if(before < pagehead[pagehead.length-1]) {
+                before = pagehead[pagehead.length-1]
               }
               
-              console.log('%o', [...pageset])
-              $scope.paging.pagerange = [...pageset].sort((a, b) => {
-                return a-b
-              })
+              let after  = p + middlepad
+              if(after > pagehead[0]) {
+                after = pagehead[0]
+              }
+
+              middleset = new Set()
+              for(var j = before;j <= after; j++) {
+                middleset.add(j)
+              }
+              
+              $scope.paging.pagerange = pagehead.concat(
+                [...middleset].sort((a, b) => { return a-b}),
+                pagetail.sort((a,b) => {return a-b }),
+              )
             } else {
               $scope.paging.pagerange = []
               for (var i=0;i<$scope.paging.pagecount;i++) {
