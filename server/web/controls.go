@@ -84,11 +84,14 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 		ctx.Err = fmt.Errorf("loginreply is nil")
 		return nil
 	} else {
-		if loginreply.ClientError.Code != 0 {
-			ctx.Err = utils.NewClientError(
-				utils.ClientErrorCode(loginreply.ClientError.Code),
-				fmt.Errorf(loginreply.ClientError.Msg),
-			)
+		if loginreply.ClientError != nil {
+			if loginreply.ClientError.Code != 0 {
+				ctx.Err = utils.NewClientError(
+					utils.ClientErrorCode(loginreply.ClientError.Code),
+					fmt.Errorf(loginreply.ClientError.Msg),
+				)
+				return nil
+			}
 		}
 		
 		return loginreply

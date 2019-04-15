@@ -29,6 +29,7 @@ var (
 		chatbothub.CreateRoom:  1,
 		chatbothub.SyncContact: 1,
 		chatbothub.SnsTimeline: 1,
+		chatbothub.SendMessage: 20,
 	}
 )
 

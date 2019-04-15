@@ -237,6 +237,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 		} else if in.EventType == REGISTER {
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
+				hub.Info("c[%s] not found, create new bot", in.ClinetId)
 				bot = NewChatBot()
 			}
 
@@ -382,6 +383,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// so that it should be recycled by then
 
 				hub.DropBot(thebot.ClientId)
+				hub.Info("drop c[%s]", thebot.ClientId)
 
 			case ACTIONREPLY:
 				if len(in.Body) > 240{
