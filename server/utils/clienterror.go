@@ -3,7 +3,8 @@ package utils
 type ClientErrorCode int
 
 const (
-	UNKNOWN                ClientErrorCode = 0
+	OK                     ClientErrorCode = 0
+	UNKNOWN                ClientErrorCode = 1
 	PARAM_REQUIRED         ClientErrorCode = 1001
 	PARAM_INVALID          ClientErrorCode = 1002
 	RESOURCE_INSUFFICIENT  ClientErrorCode = 2001
