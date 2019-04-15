@@ -55,7 +55,6 @@
               for(var i=0; i<tailpad; i++){
                 pagetail.push(parseInt($scope.paging.pagecount, 10)-1)
               }
-
               
               let p = parseInt($scope.paging.page, 10) + 1
               let before = p - middlepad
@@ -72,11 +71,9 @@
               for(var j = before;j <= after; j++) {
                 middleset.add(j)
               }
+              console.log(before, after, [...middleset])
               
-              $scope.paging.pagerange = pagehead.concat(
-                [...middleset].sort((a, b) => { return a-b}),
-                pagetail.sort((a,b) => {return a-b }),
-              )
+              $scope.paging.pagerange = pagehead
               console.log($scope.paging.pagerange)
             } else {
               $scope.paging.pagerange = []
