@@ -902,6 +902,15 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			200: "已登录",
 			500: "连接断开",
 		},
+		"errorCodes": map[int]string{
+			0:    "OK",
+			1:    "未知错误",
+			1001: "缺少必要参数",
+			1002: "参数不合规则",
+			2001: "资源不足",
+			2002: "权限不足",
+			2003: "未找到对应资源",
+		},
 	})
 }
 
