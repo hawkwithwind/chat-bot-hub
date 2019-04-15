@@ -647,6 +647,9 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 	}
 
 	if o.Err != nil {
+
+		hub.Info("err %T %v",o.Err, o.Err) 
+		
 		switch clientError := o.Err.(type) {
 		case *utils.ClientError:
 			return &pb.BotLoginReply{

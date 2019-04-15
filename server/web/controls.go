@@ -79,6 +79,8 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 
 	if loginreply, err := w.client.BotLogin(w.context, req); err != nil {
 		ctx.Err = err
+
+		fmt.Printf("[BOTLOGIN DEBUG] %T %v\n%v", err, err, loginreply)
 		
 		if loginreply != nil {
 			if loginreply.ClientError.Code != 0 {
