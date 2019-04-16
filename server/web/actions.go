@@ -528,8 +528,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	case chatbothub.MESSAGE:
 		msg := o.getStringValue(r.Form, "body")
-		ctx.Info("c[%s] MESSAGE %s", thebotinfo.ClientType, msg)
-
 		if thebotinfo.ClientType == "WECHATBOT" {
 			body := o.FromJson(msg)
 			if body != nil {

@@ -1238,7 +1238,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupDomains)
 		if o.Err != nil {
 			return
-		}	
+		}
 
 		var groupvos []ChatGroupVO
 		for _, g := range groupDomains {

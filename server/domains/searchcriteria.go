@@ -12,11 +12,11 @@ import (
 
 var (
 	searchableDomains = map[string]func(*ErrorHandler) dbx.Searchable{
-		"chatusers":    (*ErrorHandler).NewDefaultChatUser,
-		"chatgroups":   (*ErrorHandler).NewDefaultChatGroup,
-		"chatcontacts": (*ErrorHandler).NewDefaultChatContactExpand,
+		"chatusers":         (*ErrorHandler).NewDefaultChatUser,
+		"chatgroups":        (*ErrorHandler).NewDefaultChatGroup,
+		"chatcontacts":      (*ErrorHandler).NewDefaultChatContactExpand,
 		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
-		"moments":      (*ErrorHandler).NewDefaultMoment,
+		"moments":           (*ErrorHandler).NewDefaultMoment,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
@@ -167,7 +167,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		whereclauseString,
 	)
 
-	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
+	//fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
 	var counts []int64
 	ctxcc, _ := o.DefaultContext()

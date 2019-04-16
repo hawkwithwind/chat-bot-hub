@@ -177,7 +177,7 @@ SET alias = :alias
 WHERE chatuserid = :chatuserid
 `
 	ctx, _ := o.DefaultContext()
-	_, o.Err = q.NamedExecContext(ctx, query, chatuser)	
+	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
 
 func (o *ErrorHandler) UpdateOrCreateChatUser(q dbx.Queryable, chatuser *ChatUser) {
