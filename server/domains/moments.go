@@ -39,7 +39,7 @@ func (o *ErrorHandler) SpopMomentCrawlTail(pool *redis.Pool, botId string) strin
 }
 
 const (
-	TN_MOMENTS
+	TN_MOMENTS string = "moments"
 )
 
 func (o *ErrorHandler) NewDefaultMoment() dbx.Searchable {
