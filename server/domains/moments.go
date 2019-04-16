@@ -38,6 +38,22 @@ func (o *ErrorHandler) SpopMomentCrawlTail(pool *redis.Pool, botId string) strin
 	return o.RedisString(o.RedisDo(conn, timeout, "SPOP", o.MomentCrawlRedisKey(botId)))
 }
 
+const (
+	TN_MOMENTS
+)
+
+func (o *ErrorHandler) NewDefaultMoment() dbx.Searchable {
+	return &Moment{}
+}
+
+func (m *Moments) Fields() []dbx.Field {
+	return dbx.GetFieldsFromStruct(TN_MOMENTS, (*Moments)(nil))
+}
+
+func (m *Moments) SelectFrom() string {
+	return TN_MOMENTS
+}
+
 func (o *ErrorHandler) NewMoment(
 	botId string, momentCode string, sendAt int, chatUserId string) *Moment {
 
