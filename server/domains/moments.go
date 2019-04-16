@@ -47,7 +47,7 @@ func (o *ErrorHandler) NewDefaultMoment() dbx.Searchable {
 }
 
 func (m *Moment) Fields() []dbx.Field {
-	return dbx.GetFieldsFromStruct(TN_MOMENTS, (*Moments)(nil))
+	return dbx.GetFieldsFromStruct(TN_MOMENTS, (*Moment)(nil))
 }
 
 func (m *Moment) SelectFrom() string {
