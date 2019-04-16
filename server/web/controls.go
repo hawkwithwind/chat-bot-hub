@@ -1116,6 +1116,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	domain := vars["domain"]
+	web.Info("[SEARCH DEBUG] domains %s", domain) 
 
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
@@ -1131,31 +1132,102 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chatuserDomains []domains.ChatUser
-	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatuserDomains)
-	if o.Err != nil {
-		return
-	}
+	switch domain {
+	case "chatusers":
+		var chatuserDomains []domains.ChatUser
+		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatuserDomains)
+		if o.Err != nil {
+			return
+		}
 
-	var chatuservos []ChatUserVO
-	for _, chatuser := range chatuserDomains {
-		chatuservos = append(chatuservos, ChatUserVO{
-			ChatUserId: chatuser.ChatUserId,
-			UserName:   chatuser.UserName,
-			NickName:   chatuser.NickName,
-			Type:       chatuser.Type,
-			Alias:      chatuser.Alias.String,
-			Avatar:     chatuser.Avatar.String,
-			Sex:        chatuser.Sex,
-			Country:    chatuser.Country.String,
-			Province:   chatuser.Province.String,
-			City:       chatuser.City.String,
-			Signature:  chatuser.Signature.String,
-			Remark:     chatuser.Remark.String,
-			Label:      chatuser.Label.String,
-			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
-			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
-		})
-	}
-	o.okWithPaging(w, "success", chatuservos, paging)
+		var chatuservos []ChatUserVO
+		for _, chatuser := range chatuserDomains {
+			chatuservos = append(chatuservos, ChatUserVO{
+				ChatUserId: chatuser.ChatUserId,
+				UserName:   chatuser.UserName,
+				NickName:   chatuser.NickName,
+				Type:       chatuser.Type,
+				Alias:      chatuser.Alias.String,
+				Avatar:     chatuser.Avatar.String,
+				Sex:        chatuser.Sex,
+				Country:    chatuser.Country.String,
+				Province:   chatuser.Province.String,
+				City:       chatuser.City.String,
+				Signature:  chatuser.Signature.String,
+				Remark:     chatuser.Remark.String,
+				Label:      chatuser.Label.String,
+				CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
+				UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+			})
+		}
+		o.okWithPaging(w, "success", chatuservos, paging)
+		return
+		
+	case "chatcontacts":
+		var chatcontactDomains []domains.ChatContactExpand
+		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatcontactDomains)
+		if o.Err != nil {
+			return
+		}
+
+		type ChatContactVO struct {
+			BotId string `json:"botId"`
+			ChatUserVO
+		}
+
+		var chatcontactvos []ChatContactVO
+		for _, contact := range chatcontactDomains {
+			chatcontactvos = append(chatcontactvos, ChatContactVO{
+				BotId: contact.BotId,
+				ChatUserVO: ChatUserVO{
+					ChatUserId: contact.ChatUserId,
+					UserName:   contact.UserName,
+					NickName:   contact.NickName,
+					Type:       contact.Type,
+					Alias:      contact.Alias.String,
+					Avatar:     contact.Avatar.String,
+					Sex:        contact.Sex,
+					Country:    contact.Country.String,
+					Province:   contact.Province.String,
+					City:       contact.City.String,
+					Signature:  contact.Signature.String,
+					Remark:     contact.Remark.String,
+					Label:      contact.Label.String,
+					CreateAt:   utils.JSONTime{contact.CreateAt.Time},
+					UpdateAt:   utils.JSONTime{contact.UpdateAt.Time},
+				},
+			})
+		}
+		o.okWithPaging(w, "success", chatcontactvos, paging)
+		return
+	case "moments":
+		var momentDomains []domains.Moment
+		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &momentDomains)
+		if o.Err != nil {
+			return
+		}
+
+		type MomentVO struct {
+			BotId string `json:"botId"`
+			MomentId string `json:"momentId"`
+			SendAt utils.JSONTime `json:"sendAt"`
+			CreateAt utils.JSONTime `json:"createAt"`
+		}
+
+		var momentvos []MomentVO
+		for _, m := range momentDomains {
+			momentvos = append(momentvos, MomentVO{
+				BotId: m.BotId,
+				MomentId: m.MomentCode,
+				SendAt: utils.JSONTime{m.SendAt.Time},
+				CreateAt: utils.JSONTime{m.CreateAt.Time},
+			})
+		}
+		o.okWithPaging(w, "success", momentvos, paging)
+		return
+
+	default:
+		o.Err = fmt.Errorf("unknown domain %s", domain)
+		return
+	}	
 }
