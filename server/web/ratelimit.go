@@ -24,11 +24,11 @@ var (
 	}
 
 	minuteLimit map[string]int = map[string]int{
-		chatbothub.AddContact:  1,
-		chatbothub.AcceptUser:  1,
-		chatbothub.CreateRoom:  1,
-		chatbothub.SyncContact: 1,
-		chatbothub.SnsTimeline: 1,
+		chatbothub.AddContact:      1,
+		chatbothub.AcceptUser:      1,
+		chatbothub.CreateRoom:      1,
+		chatbothub.SyncContact:     1,
+		chatbothub.SnsTimeline:     1,
 		chatbothub.SendTextMessage: 20,
 	}
 )

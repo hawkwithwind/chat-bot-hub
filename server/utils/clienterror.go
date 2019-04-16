@@ -28,4 +28,3 @@ func (err *ClientError) ErrorCode() ClientErrorCode {
 func (err *ClientError) Error() string {
 	return err.Err.Error()
 }
-

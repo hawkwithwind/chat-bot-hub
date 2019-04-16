@@ -386,7 +386,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("drop c[%s]", thebot.ClientId)
 
 			case ACTIONREPLY:
-				if len(in.Body) > 240{
+				if len(in.Body) > 240 {
 					hub.Info("ACTIONREPLY %s", in.Body[:240])
 				} else {
 					hub.Info("ACTIONREPLY %s", in.Body)
@@ -657,7 +657,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.ClientError{
 					Code: int32(clientError.Code),
-					Msg: clientError.Err.Error(),
+					Msg:  clientError.Err.Error(),
 				},
 			}, nil
 		default:
@@ -665,7 +665,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.ClientError{
 					Code: int32(utils.UNKNOWN),
-					Msg: o.Err.Error(),
+					Msg:  o.Err.Error(),
 				},
 			}, nil
 		}

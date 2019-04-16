@@ -21,8 +21,8 @@ func GetFieldsFromStruct(tablename string, i interface{}) []Field {
 	for i := 0; i < t.NumField(); i++ {
 		if tag, ok := t.Field(i).Tag.Lookup("db"); ok {
 			fs = append(fs, Field{tablename, tag})
-		}        
-    }
+		}
+	}
 
 	return fs
 }

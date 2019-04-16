@@ -1,10 +1,10 @@
 package domains
 
 import (
-	"fmt"
-	//"time"
 	"database/sql"
+	"fmt"
 	"strings"
+	"time"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -29,6 +29,7 @@ type ChatUser struct {
 	Remark     sql.NullString `db:"remark"`
 	Label      sql.NullString `db:"label"`
 	Ext        sql.NullString `db:"ext"`
+	LastSendAt mysql.NullTime `db:"lastsendat"`
 	CreateAt   mysql.NullTime `db:"createat"`
 	UpdateAt   mysql.NullTime `db:"updateat"`
 	DeleteAt   mysql.NullTime `db:"deleteat"`
@@ -101,6 +102,13 @@ func (chatuser *ChatUser) SetExt(ext string) {
 	}
 }
 
+func (chatuser *ChatUser) SetLastSendAt(sendAt time.Time) {
+	chatuser.LastSendAt = mysql.NullTime{
+		Time:  sendAt,
+		Valid: true,
+	}
+}
+
 func (o *ErrorHandler) NewDefaultChatUser() dbx.Searchable {
 	return &ChatUser{}
 }
@@ -139,10 +147,10 @@ func (o *ErrorHandler) SaveChatUser(q dbx.Queryable, chatuser *ChatUser) {
 	query := `
 INSERT INTO chatusers
 (chatuserid, username, type, alias, nickname, avatar, 
-sex, country, province, city, signature, remark, label, ext)
+sex, country, province, city, signature, remark, label, ext, lastsendat)
 VALUES
 (:chatuserid, :username, :type, :alias, :nickname, :avatar, 
-:sex, :country, :province, :city, :signature, :remark, :label, :ext)
+:sex, :country, :province, :city, :signature, :remark, :label, :ext, :lastsendat)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)

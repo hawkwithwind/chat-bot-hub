@@ -1,9 +1,9 @@
 package domains
 
 import (
-	"fmt"
-	//"time"
 	"database/sql"
+	"fmt"
+	"time"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -24,9 +24,26 @@ type ChatGroup struct {
 	MemberCount    int            `db:"membercount"`
 	MaxMemberCount int            `db:"maxmembercount"`
 	Ext            sql.NullString `db:"ext"`
+	LastSendAt     mysql.NullTime `db:"lastsendat"`
 	CreateAt       mysql.NullTime `db:"createat"`
 	UpdateAt       mysql.NullTime `db:"updateat"`
 	DeleteAt       mysql.NullTime `db:"deleteat"`
+}
+
+const (
+	TN_CHATGROUPS string = "chatgroups"
+)
+
+func (o *ErrorHandler) NewDefaultChatGroup() dbx.Searchable {
+	return &ChatGroup{}
+}
+
+func (g *ChatGroup) Fields() []dbx.Field {
+	return dbx.GetFieldsFromStruct(TN_CHATGROUPS, (*ChatGroup)(nil))
+}
+
+func (g *ChatGroup) SelectFrom() string {
+	return TN_CHATGROUPS
 }
 
 func (chatgroup *ChatGroup) SetAlias(alias string) {
@@ -47,6 +64,13 @@ func (chatgroup *ChatGroup) SetExt(ext string) {
 	chatgroup.Ext = sql.NullString{
 		String: ext,
 		Valid:  true,
+	}
+}
+
+func (chatgroup *ChatGroup) SetLastSendAt(sendAt time.Time) {
+	chatgroup.LastSendAt = mysql.NullTime{
+		Time:  sendAt,
+		Valid: true,
 	}
 }
 
@@ -78,9 +102,11 @@ func (o *ErrorHandler) SaveChatGroup(q dbx.Queryable, chatgroup *ChatGroup) {
 
 	query := `
 INSERT INTO chatgroups
-(chatgroupid, groupname, type, alias, nickname, owner, avatar, membercount, maxmembercount, ext)
+(chatgroupid, groupname, type, alias, nickname, owner, avatar, membercount, maxmembercount, 
+ext, lastsendat)
 VALUES
-(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :membercount, :maxmembercount, :ext)
+(:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :membercount, :maxmembercount, 
+:ext, :lastsendat)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)

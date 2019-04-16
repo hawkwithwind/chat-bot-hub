@@ -24,7 +24,7 @@ type ChatContact struct {
 }
 
 type ChatContactExpand struct {
-	BotId      string         `db:"botid"`
+	BotId string `db:"botid"`
 	ChatUser
 }
 

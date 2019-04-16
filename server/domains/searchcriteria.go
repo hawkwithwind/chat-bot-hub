@@ -12,9 +12,10 @@ import (
 
 var (
 	searchableDomains = map[string]func(*ErrorHandler) dbx.Searchable{
-		"chatusers": (*ErrorHandler).NewDefaultChatUser,
-		"chatcontacts":  (*ErrorHandler).NewDefaultChatContactExpand,
-		"moments": (*ErrorHandler).NewDefaultMoment,
+		"chatusers":    (*ErrorHandler).NewDefaultChatUser,
+		"chatgroups":   (*ErrorHandler).NewDefaultChatGroup,
+		"chatcontacts": (*ErrorHandler).NewDefaultChatContactExpand,
+		"moments":      (*ErrorHandler).NewDefaultMoment,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{

@@ -93,7 +93,7 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 				return nil
 			}
 		}
-		
+
 		return loginreply
 	}
 }
@@ -830,7 +830,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, o.Err)
 		return
 	}
-	
+
 	if bot == nil {
 		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botid %s not found", botId))
 		return
@@ -857,7 +857,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  logininfo,
 		BotId:      botId,
 	})
-	
+
 	o.ok(w, "", loginreply)
 }
 
@@ -1116,7 +1116,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	domain := vars["domain"]
-	web.Info("[SEARCH DEBUG] domains %s", domain) 
+	web.Info("[SEARCH DEBUG] domains %s", domain)
 
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
@@ -1162,7 +1162,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		}
 		o.okWithPaging(w, "success", chatuservos, paging)
 		return
-		
+
 	case "chatcontacts":
 		var chatcontactDomains []domains.ChatContactExpand
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &chatcontactDomains)
@@ -1208,26 +1208,68 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		}
 
 		type MomentVO struct {
-			BotId string `json:"botId"`
-			MomentId string `json:"momentId"`
-			SendAt utils.JSONTime `json:"sendAt"`
+			BotId    string         `json:"botId"`
+			MomentId string         `json:"momentId"`
+			SendAt   utils.JSONTime `json:"sendAt"`
 			CreateAt utils.JSONTime `json:"createAt"`
 		}
 
 		var momentvos []MomentVO
 		for _, m := range momentDomains {
 			momentvos = append(momentvos, MomentVO{
-				BotId: m.BotId,
+				BotId:    m.BotId,
 				MomentId: m.MomentCode,
-				SendAt: utils.JSONTime{m.SendAt.Time},
+				SendAt:   utils.JSONTime{m.SendAt.Time},
 				CreateAt: utils.JSONTime{m.CreateAt.Time},
 			})
 		}
 		o.okWithPaging(w, "success", momentvos, paging)
 		return
 
+	case "chatgroups":
+		var groupDomains []domains.ChatGroup
+		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupDomains)
+		if o.Err != nil {
+			return
+		}
+
+		type ChatGroupVO struct {
+			ChatGroupId    string         `json:"chatGroupId"`
+			GroupName      string         `json:"groupName"`
+			Type           string         `json:"type"`
+			Alias          string         `json:"alias"`
+			NickName       string         `json:"nickname"`
+			Owner          string         `json:"owner"`
+			Avatar         string         `json:"avatar"`
+			MemberCount    int            `json:"memberCount"`
+			MaxMemberCount int            `json:"maxMemberCount"`
+			LastSendAt     utils.JSONTime `json:"lastSendAt"`
+			CreateAt       utils.JSONTime `json:"createAt"`
+			UpdateAt       utils.JSONTime `json:"updateAt"`
+		}
+
+		var groupvos []ChatGroupVO
+		for _, g := range groupDomains {
+			groupvos = append(groupvos, ChatGroupVO{
+				ChatGroupId:    g.ChatGroupId,
+				GroupName:      g.GroupName,
+				Type:           g.Type,
+				Alias:          g.Alias.String,
+				NickName:       g.NickName,
+				Owner:          g.Owner,
+				Avatar:         g.Avatar.String,
+				MemberCount:    g.MemberCount,
+				MaxMemberCount: g.MaxMemberCount,
+				LastSendAt:     utils.JSONTime{g.LastSendAt.Time},
+				CreateAt:       utils.JSONTime{g.CreateAt.Time},
+				UpdateAt:       utils.JSONTime{g.UpdateAt.Time},
+			})
+		}
+		o.okWithPaging(w, "success", groupvos, paging)
+		return
+
 	default:
 		o.Err = fmt.Errorf("unknown domain %s", domain)
 		return
-	}	
+	}
 }
