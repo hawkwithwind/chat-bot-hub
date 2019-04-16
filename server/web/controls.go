@@ -232,6 +232,7 @@ type ChatUserVO struct {
 	Signature  string         `json:"signature"`
 	Remark     string         `json:"remark"`
 	Label      string         `json:"label"`
+	LastSendAt utils.JSONTime `json:"lastsendat"`
 	CreateAt   utils.JSONTime `json:"createat"`
 	UpdateAt   utils.JSONTime `json:"updateat"`
 }
@@ -1160,6 +1161,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 				Signature:  chatuser.Signature.String,
 				Remark:     chatuser.Remark.String,
 				Label:      chatuser.Label.String,
+				LastSendAt: utils.JSONTime{chatuser.LastSendAt.Time},
 				CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
 				UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
 			})
@@ -1197,6 +1199,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 					Signature:  contact.Signature.String,
 					Remark:     contact.Remark.String,
 					Label:      contact.Label.String,
+					LastSendAt: utils.JSONTime{contact.LastSendAt.Time},
 					CreateAt:   utils.JSONTime{contact.CreateAt.Time},
 					UpdateAt:   utils.JSONTime{contact.UpdateAt.Time},
 				},
