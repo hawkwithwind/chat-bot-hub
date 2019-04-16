@@ -339,37 +339,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// now, initailize bot's filter, and call chathub to create intances and get connected
-		if !bot.FilterId.Valid {
-			ctx.Info("b[%s] does not have filters", bot.BotId)
-		} else {
-			ctx.Info("b[%s] initializing filters ...", bot.BotId)
-			o.CreateFilterChain(ctx, tx, wrapper, bot.FilterId.String)
-			if o.Err != nil {
-				return
-			}
-			ctx.Info("b[%s] initializing filters done", bot.BotId)
-			_, o.Err = wrapper.client.BotFilter(wrapper.context, &pb.BotFilterRequest{
-				BotId:    bot.BotId,
-				FilterId: bot.FilterId.String,
-			})
-		}
-
-		if !bot.MomentFilterId.Valid {
-			ctx.Info("b[%s] does not have moment filters", bot.BotId)
-		} else {
-			ctx.Info("b[%s] initializing moment filters ...", bot.BotId)
-			o.CreateFilterChain(ctx, tx, wrapper, bot.MomentFilterId.String)
-			if o.Err != nil {
-				return
-			}
-			ctx.Info("b[%s] initializing moment filters done", bot.BotId)
-
-			_, o.Err = wrapper.client.BotMomentFilter(wrapper.context, &pb.BotFilterRequest{
-				BotId:    bot.BotId,
-				FilterId: bot.MomentFilterId.String,
-			})
-		}
-
+		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+		o.rebuildMomentFilters(ctx, bot, tx, wrapper)
 		return
 
 	case chatbothub.FRIENDREQUEST:
@@ -949,4 +920,105 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	o.SaveActionRequest(web.redispool, ar)
 
 	return actionReply
+}
+
+func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	var accountName string
+	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(web.db)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+		return
+	}
+
+	bot := o.GetBotById(tx, botId)
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+	
+	o.rebuildMsgFilters(web, bot, tx, wrapper)
+	o.ok(w, "success", nil)
+}
+
+func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+	if o.Err != nil {
+		return
+	}
+	
+	if !bot.FilterId.Valid {
+		web.Info("b[%s] does not have filters", bot.BotId)
+	} else {
+		web.Info("b[%s] initializing filters ...", bot.BotId)
+		o.CreateFilterChain(web, q, w, bot.FilterId.String)
+		if o.Err != nil {
+			return
+		}
+		web.Info("b[%s] initializing filters done", bot.BotId)
+		_, o.Err = w.client.BotFilter(w.context, &pb.BotFilterRequest{
+			BotId:    bot.BotId,
+			FilterId: bot.FilterId.String,
+		})
+	}
+}
+
+func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	var accountName string
+	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
+		o.Err = fmt.Errorf("context.login is null")
+		return
+	} else {
+		accountName = accountNameptr.(string)
+	}
+
+	tx := o.Begin(web.db)
+
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
+		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+		return
+	}
+
+	bot := o.GetBotById(tx, botId)
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+	
+	o.rebuildMomentFilters(web, bot, tx, wrapper)
+	o.ok(w, "success", nil)
+}
+
+func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+	if !bot.MomentFilterId.Valid {
+		web.Info("b[%s] does not have moment filters", bot.BotId)
+	} else {
+		web.Info("b[%s] initializing moment filters ...", bot.BotId)
+		o.CreateFilterChain(web, q, w, bot.MomentFilterId.String)
+		if o.Err != nil {
+			return
+		}
+		web.Info("b[%s] initializing moment filters done", bot.BotId)
+
+		_, o.Err = w.client.BotMomentFilter(w.context, &pb.BotFilterRequest{
+			BotId:    bot.BotId,
+			FilterId: bot.MomentFilterId.String,
+		})
+	}
 }

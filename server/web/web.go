@@ -344,6 +344,10 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
 	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
 	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.deleteBot)).Methods("DELETE")
+	r.HandleFunc("/bots/{botId}/msgfilters/rebuild",
+		ctx.validate(ctx.rebuildMsgFiltersFromWeb)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/momentfilters/rebuild",
+		ctx.validate(ctx.rebuildMomentFiltersFromWeb)).Methods("POST")
 	r.HandleFunc("/bots/{login}", ctx.validate(ctx.updateBot)).Methods("PUT")
 	r.HandleFunc("/bots", ctx.validate(ctx.createBot)).Methods("POST")
 	r.HandleFunc("/bots/scancreate", ctx.validate(ctx.scanCreateBot)).Methods("POST")
