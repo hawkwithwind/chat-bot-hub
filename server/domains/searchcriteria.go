@@ -159,7 +159,8 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		limitclause,
 	)
 
-	sqlcountquery := fmt.Sprintf("SELECT COUNT(*) FROM `%s` %s", domain,
+	sqlcountquery := fmt.Sprintf("SELECT COUNT(*) FROM %s %s",
+		sd.SelectFrom(),
 		whereclauseString,
 	)
 
