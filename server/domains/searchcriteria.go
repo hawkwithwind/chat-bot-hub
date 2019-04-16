@@ -15,6 +15,7 @@ var (
 		"chatusers":    (*ErrorHandler).NewDefaultChatUser,
 		"chatgroups":   (*ErrorHandler).NewDefaultChatGroup,
 		"chatcontacts": (*ErrorHandler).NewDefaultChatContactExpand,
+		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
 		"moments":      (*ErrorHandler).NewDefaultMoment,
 	}
 

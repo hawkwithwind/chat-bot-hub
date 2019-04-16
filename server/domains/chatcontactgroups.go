@@ -23,6 +23,29 @@ type ChatContactGroup struct {
 	DeleteAt           mysql.NullTime `db:"deleteat"`
 }
 
+type ChatContactGroupExpand struct {
+	BotId string `db:"botid"`
+	ChatGroup
+}
+
+const (
+	TN_CHATCONTACTGROUPS string = "chatcontactgroups"
+)
+
+func (o *ErrorHandler) NewDefaultChatContactGroupExpand() dbx.Searchable {
+	return &ChatContactGroupExpand{}
+}
+
+func (cg *ChatContactGroupExpand) Fields() []dbx.Field {
+	chatgroup := &ChatGroup{}
+	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTGROUPS, "botid"}}, chatgroup.Fields()...)
+}
+
+func (cg *ChatContactGroupExpand) SelectFrom() string {
+	return "`chatcontactgroups` LEFT JOIN `chatgroups` " +
+		"on `chatcontactgroups`.`chatgroupid` = `chatgroups`.`chatgroupid`"
+}
+
 func (ctx *ErrorHandler) NewChatContactGroup(botId string, chatgroupid string) *ChatContactGroup {
 	if ctx.Err != nil {
 		return nil

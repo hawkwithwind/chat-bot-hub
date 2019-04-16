@@ -363,18 +363,22 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 		})
 }
 
+type ChatGroupVO struct {
+	ChatGroupId    string         `json:"chatGroupId"`
+	GroupName      string         `json:"groupName"`
+	Type           string         `json:"type"`
+	Alias          string         `json:"alias"`
+	NickName       string         `json:"nickname"`
+	Owner          string         `json:"owner"`
+	Avatar         string         `json:"avatar"`
+	MemberCount    int            `json:"memberCount"`
+	MaxMemberCount int            `json:"maxMemberCount"`
+	LastSendAt     utils.JSONTime `json:"lastSendAt"`
+	CreateAt       utils.JSONTime `json:"createAt"`
+	UpdateAt       utils.JSONTime `json:"updateAt"`
+}
+
 func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
-	type ChatGroupVO struct {
-		ChatGroupId string         `json:"chatgroupId"`
-		GroupName   string         `json:"groupname"`
-		NickName    string         `json:"nickname"`
-		Type        string         `json:"type"`
-		Alias       string         `json:"alias"`
-		Avatar      string         `json:"avatar"`
-		MemberCount int            `json:"membercount"`
-		CreateAt    utils.JSONTime `json:"createat"`
-		UpdateAt    utils.JSONTime `json:"updateat"`
-	}
 
 	type ChatGroupResponse struct {
 		Data     []ChatGroupVO             `json:"data"`
@@ -1231,22 +1235,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupDomains)
 		if o.Err != nil {
 			return
-		}
-
-		type ChatGroupVO struct {
-			ChatGroupId    string         `json:"chatGroupId"`
-			GroupName      string         `json:"groupName"`
-			Type           string         `json:"type"`
-			Alias          string         `json:"alias"`
-			NickName       string         `json:"nickname"`
-			Owner          string         `json:"owner"`
-			Avatar         string         `json:"avatar"`
-			MemberCount    int            `json:"memberCount"`
-			MaxMemberCount int            `json:"maxMemberCount"`
-			LastSendAt     utils.JSONTime `json:"lastSendAt"`
-			CreateAt       utils.JSONTime `json:"createAt"`
-			UpdateAt       utils.JSONTime `json:"updateAt"`
-		}
+		}	
 
 		var groupvos []ChatGroupVO
 		for _, g := range groupDomains {
@@ -1264,6 +1253,40 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 				CreateAt:       utils.JSONTime{g.CreateAt.Time},
 				UpdateAt:       utils.JSONTime{g.UpdateAt.Time},
 			})
+		}
+		o.okWithPaging(w, "success", groupvos, paging)
+		return
+
+	case "chatcontactgroups":
+		var groupDomains []domains.ChatContactGroupExpand
+		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupDomains)
+		if o.Err != nil {
+			return
+		}
+
+		type ContactGroupVO struct {
+			BotId string `json:"botId"`
+			ChatGroupVO
+		}
+
+		var groupvos []ContactGroupVO
+		for _, g := range groupDomains {
+			groupvos = append(groupvos, ContactGroupVO{
+				BotId: g.BotId,
+				ChatGroupVO: ChatGroupVO{
+					ChatGroupId:    g.ChatGroupId,
+					GroupName:      g.GroupName,
+					Type:           g.Type,
+					Alias:          g.Alias.String,
+					NickName:       g.NickName,
+					Owner:          g.Owner,
+					Avatar:         g.Avatar.String,
+					MemberCount:    g.MemberCount,
+					MaxMemberCount: g.MaxMemberCount,
+					LastSendAt:     utils.JSONTime{g.LastSendAt.Time},
+					CreateAt:       utils.JSONTime{g.CreateAt.Time},
+					UpdateAt:       utils.JSONTime{g.UpdateAt.Time},
+				}})
 		}
 		o.okWithPaging(w, "success", groupvos, paging)
 		return
