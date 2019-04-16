@@ -88,7 +88,7 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 			if loginreply.ClientError.Code != 0 {
 				ctx.Err = utils.NewClientError(
 					utils.ClientErrorCode(loginreply.ClientError.Code),
-					fmt.Errorf(loginreply.ClientError.Msg),
+					fmt.Errorf(loginreply.ClientError.Message),
 				)
 				return nil
 			}

@@ -37,11 +37,6 @@ service ChatBotHub {
   rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
 }
 
-message OperationReply {
-  int64  code = 1;
-  string message = 2;
-}
-
 message BotFilterRequest {
   string botId = 1;
   string filterId = 2;
@@ -122,14 +117,14 @@ message BotLogoutRequest {
   string botId = 1;
 }
 
-message ClientError {
+message OperationReply {
   int32  code = 1;
-  string msg  = 2;
+  string message  = 2;
 }
 
 message BotLoginReply {
   string msg = 1;
-  ClientError clientError = 2;
+  OperationReply clientError = 2;
 }
 
 message BotActionRequest {

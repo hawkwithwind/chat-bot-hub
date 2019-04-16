@@ -15,6 +15,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -950,6 +951,10 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	defer wrapper.Cancel()
 	
 	o.rebuildMsgFilters(web, bot, tx, wrapper)
+	if o.Err != nil {
+		return
+	}
+	
 	o.ok(w, "success", nil)
 }
 
@@ -967,10 +972,21 @@ func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx
 			return
 		}
 		web.Info("b[%s] initializing filters done", bot.BotId)
-		_, o.Err = w.client.BotFilter(w.context, &pb.BotFilterRequest{
+		var ret *pb.OperationReply
+		ret, o.Err = w.client.BotFilter(w.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
+
+		if o.Err != nil {
+			return
+		} else {
+			if ret.Code != 0 {
+				o.Err = utils.NewClientError(
+					utils.ClientErrorCode(ret.Code),
+					fmt.Errorf(ret.Message))
+			}
+		}
 	}
 }
 
@@ -1002,12 +1018,21 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	defer wrapper.Cancel()
 	
 	o.rebuildMomentFilters(web, bot, tx, wrapper)
+	if o.Err != nil {
+		return
+	}
+	
 	o.ok(w, "success", nil)
 }
 
 func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+	if o.Err != nil {
+		return
+	}
+	
 	if !bot.MomentFilterId.Valid {
 		web.Info("b[%s] does not have moment filters", bot.BotId)
+		return
 	} else {
 		web.Info("b[%s] initializing moment filters ...", bot.BotId)
 		o.CreateFilterChain(web, q, w, bot.MomentFilterId.String)
@@ -1016,9 +1041,20 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 		}
 		web.Info("b[%s] initializing moment filters done", bot.BotId)
 
-		_, o.Err = w.client.BotMomentFilter(w.context, &pb.BotFilterRequest{
+		var ret *pb.OperationReply
+		ret, o.Err = w.client.BotMomentFilter(w.context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})
+		
+		if o.Err != nil {
+			return
+		} else {
+			if ret.Code != 0 {
+				o.Err = utils.NewClientError(
+					utils.ClientErrorCode(ret.Code),
+					fmt.Errorf(ret.Message))
+			}
+		}
 	}
 }

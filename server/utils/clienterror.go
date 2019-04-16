@@ -5,6 +5,7 @@ type ClientErrorCode int
 const (
 	OK                     ClientErrorCode = 0
 	UNKNOWN                ClientErrorCode = 1
+	IGNORED                ClientErrorCode = 2
 	PARAM_REQUIRED         ClientErrorCode = 1001
 	PARAM_INVALID          ClientErrorCode = 1002
 	RESOURCE_INSUFFICIENT  ClientErrorCode = 2001
