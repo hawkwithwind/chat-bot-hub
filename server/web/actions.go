@@ -547,7 +547,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 				if chatuser != nil {
 					chatuser.SetLastSendAt(tm)
-					o.SaveChatUser(tx, chatuser)
+					o.UpdateChatUser(tx, chatuser)
 					if o.Err != nil {
 						return
 					}
@@ -560,7 +560,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 					if chatgroup != nil {
 						chatgroup.SetLastSendAt(tm)
-						o.SaveChatGroup(tx, chatgroup)
+						o.UpdateChatGroup(tx, chatgroup)
 						if o.Err != nil {
 							return
 						}

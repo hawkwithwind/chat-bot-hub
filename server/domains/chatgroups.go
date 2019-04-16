@@ -136,6 +136,27 @@ ON DUPLICATE KEY UPDATE
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
 }
 
+func (o *ErrorHandler) UpdateChatGroup(q dbx.Queryable, chatgroup *ChatGroup) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE chatgroups
+SET alias = :alias
+, nickname = :nickname
+, owner = :owner
+, avatar = :avatar
+, membercount = :membercount
+, maxmembercount = :maxmembercount
+, ext = :ext
+, lastsendat = :lastsendat
+WHERE chatgroupid = :chatgroupid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
+}
+
 func (o *ErrorHandler) GetChatGroupById(q dbx.Queryable, cgid string) *ChatGroup {
 	if o.Err != nil {
 		return nil

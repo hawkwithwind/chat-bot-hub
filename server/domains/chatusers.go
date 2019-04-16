@@ -156,6 +156,30 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
 }
 
+func (o *ErrorHandler) UpdateChatUser(q dbx.Queryable, chatuser *ChatUser) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+UPDATE chatusers
+SET alias = :alias
+, nickname = :nickname
+, avatar = :avatar
+, sex = :sex
+, country = :country
+, province = :province
+, signature = :signature
+, remark = :remark
+, label = :label
+, ext = :ext
+, lastsendat = :lastsendat
+WHERE chatuserid = :chatuserid
+`
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.NamedExecContext(ctx, query, chatuser)	
+}
+
 func (o *ErrorHandler) UpdateOrCreateChatUser(q dbx.Queryable, chatuser *ChatUser) {
 	if o.Err != nil {
 		return
