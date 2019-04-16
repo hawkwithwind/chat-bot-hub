@@ -46,11 +46,11 @@ func (o *ErrorHandler) NewDefaultMoment() dbx.Searchable {
 	return &Moment{}
 }
 
-func (m *Moments) Fields() []dbx.Field {
+func (m *Moment) Fields() []dbx.Field {
 	return dbx.GetFieldsFromStruct(TN_MOMENTS, (*Moments)(nil))
 }
 
-func (m *Moments) SelectFrom() string {
+func (m *Moment) SelectFrom() string {
 	return TN_MOMENTS
 }
 
