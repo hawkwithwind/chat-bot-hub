@@ -469,9 +469,30 @@
       }, (error) => {
 	toastr.error(error, '编辑失败')
       })
-
       $scope.close()
-    }    
+    }
+
+    $scope.rebuildMsgFilters = function(data) {
+      $http({
+        method: 'POST',
+        url: '/bots/' + $scope.data.botId + '/msgfilters/rebuild'
+      }).then((success) => {
+        toastr.success(success, '重建成功')
+      }, (error) => {
+        toastr.error(error, '重建失败')
+      })
+    }
+
+    $scope.rebuildMomentFilters = function(data) {
+      $http({
+        method: 'POST',
+        url: '/bots/' + $scope.data.botId + '/momentfilters/rebuild'
+      }).then((success) => {
+        toastr.success(success, '重建成功')
+      }, (error) => {
+        toastr.error(error, '重建失败')
+      })
+    }         
   }
 
   app.controller('createBotCtrl', createBotCtrl)
