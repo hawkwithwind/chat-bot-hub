@@ -526,6 +526,49 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		}
 
+	case chatbothub.MESSAGE:
+		msg := o.getStringValue(r.Form, "body")
+		ctx.Info("c[%s] MESSAGE %s", thebotinfo.ClientType, msg)
+
+		if thebotinfo.ClientType == "WECHATBOT" {
+			body := o.FromJson(msg)
+			if body != nil {
+				fromUser := o.FromMapString("fromUser", body, "body", false, "")
+				groupId := o.FromMapString("groupId", body, "body", true, "")
+				timestamp := int64(o.FromMapFloat("timestamp", body, "body", false, 0))
+				tm := o.BJTimeFromUnix(timestamp)
+				if o.Err != nil {
+					return
+				}
+
+				chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, fromUser)
+				if o.Err != nil {
+					return
+				}
+				if chatuser != nil {
+					chatuser.SetLastSendAt(tm)
+					o.SaveChatUser(tx, chatuser)
+					if o.Err != nil {
+						return
+					}
+				}
+
+				if groupId != "" {
+					chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupId)
+					if o.Err != nil {
+						return
+					}
+					if chatgroup != nil {
+						chatgroup.SetLastSendAt(tm)
+						o.SaveChatGroup(tx, chatgroup)
+						if o.Err != nil {
+							return
+						}
+					}
+				}
+			}
+		}
+
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
 		debugstr := reqstr

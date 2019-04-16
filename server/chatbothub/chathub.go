@@ -435,6 +435,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(msg)
 					}
+
+					if o.Err == nil {
+						go func () {
+							httpx.RestfulCallRetry(bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, msg), 5, 1)
+						} ()
+					}
+					
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}

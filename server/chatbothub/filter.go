@@ -169,16 +169,16 @@ func (f *PlainFilter) Fill(msg string) error {
 	o := &ErrorHandler{}
 	body := o.FromJson(msg)
 	if body != nil {
-		contentptr := o.FromMap("content", body, "eventRequest.body", nil)
+		contentptr := o.FromMap("content", body, "body", nil)
 
-		fromUser := o.FromMapString("fromUser", body, "eventRequest.body", false, "")
-		toUser := o.FromMapString("toUser", body, "eventRequest.body", false, "")
-		groupId := o.FromMapString("groupId", body, "eventRequest.body", true, "")
-		status := int64(o.FromMapFloat("status", body, "eventRequest.body", true, 0))
+		fromUser := o.FromMapString("fromUser", body, "body", false, "")
+		toUser := o.FromMapString("toUser", body, "body", false, "")
+		groupId := o.FromMapString("groupId", body, "body", true, "")
+		status := int64(o.FromMapFloat("status", body, "body", true, 0))
 		//timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
 		//tm := o.BJTimeFromUnix(timestamp)
-		mtype := int64(o.FromMapFloat("mType", body, "eventRequest.body", false, 0))
-		msgsourcexml := o.FromMapString("msgSource", body, "eventRequest.body", true, "")
+		mtype := int64(o.FromMapFloat("mType", body, "body", false, 0))
+		msgsourcexml := o.FromMapString("msgSource", body, "body", true, "")
 
 		if msgsourcexml != "" {
 			var msgSource WechatMsgSource
