@@ -315,7 +315,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			oldtoken = ""
 		}
-		ctx.Info("2  %#v", o.Err)
 		if tokenptr := o.FromMap(
 			"token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
 			tk := tokenptr.(string)
@@ -323,13 +322,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				localmap["token"] = tk
 			}
 		}
-		ctx.Info("3  %#v", o.Err)
 		if oldwxdataptr, ok := ifmap["wxData"]; ok {
 			oldwxdata = oldwxdataptr.(string)
 		} else {
 			oldwxdata = ""
 		}
-		ctx.Info("4  %#v", o.Err)
 		if wxdataptr := o.FromMap(
 			"wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
 			wd := wxdataptr.(string)
@@ -337,6 +334,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				localmap["wxData"] = wd
 			}
 		}
+		if o.Err != nil {
+			return
+		}
+		
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
@@ -347,11 +348,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// now, initailize bot's filter, and call chathub to create intances and get connected
-		ctx.Info("5  %#v", o.Err)
 		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		ctx.Info("6  %#v", o.Err)
+		if o.Err != nil {
+			return
+		}
 		o.rebuildMomentFilters(ctx, bot, tx, wrapper)
-		ctx.Info("7  %#v", o.Err)
 		return
 
 	case chatbothub.FRIENDREQUEST:
