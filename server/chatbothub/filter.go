@@ -430,8 +430,6 @@ func (f *KVRouter) Fill(msg string) error {
 		return fmt.Errorf("call on empty *KVRouter")
 	}
 
-	fmt.Printf("[FILTER DEBUG] KVRouter received\n%s\n", msg)
-	
 	o := ErrorHandler{}
 	body := o.FromJson(msg)
 
