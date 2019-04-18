@@ -293,7 +293,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		localmap = make(map[string]interface{})
 	}
 
-	ctx.Info("1  %#v", o.Err)
+	ctx.Info("1  %#v\n%s", o.Err, bot.LoginInfo.String)
+
+	if o.Err != nil {
+		return
+	}
 	
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
