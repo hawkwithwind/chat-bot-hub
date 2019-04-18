@@ -48,7 +48,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = fmt.Errorf("cannot find filter %s", filterId)
 			return
 		}
-		ctx.Info("creating filter %s", filter.FilterId)
+		//ctx.Info("creating filter %s", filter.FilterId)
 
 		// generate filter in chathub
 		var body string
@@ -76,7 +76,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			bodym := o.FromJson(body)
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
-				ctx.Info("generate KVRouter children")
+				//ctx.Info("generate KVRouter children")
 				if bodym == nil {
 					o.Err = fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body)
 					return
@@ -88,7 +88,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						for value, fid := range vm {
 							switch childFilterId := fid.(type) {
 							case string:
-								ctx.Info("creating child filter %s", childFilterId)
+								//ctx.Info("creating child filter %s", childFilterId)
 								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 								if o.Err != nil {
 									return
