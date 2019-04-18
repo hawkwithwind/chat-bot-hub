@@ -380,6 +380,7 @@ func findByJsonPath(body map[string]interface{}, name string) interface{} {
 type KVRouter struct {
 	BaseFilter
 	NextFilter        map[string]map[string]Filter `json:"next"`
+	compiledRegexp    map[string]*regexp.Regexp
 	DefaultNextFilter Filter                       `json:"defaultNext"`
 }
 
@@ -405,7 +406,14 @@ func (f *KVRouter) Branch(tag BranchTag, filter Filter) error {
 		f.NextFilter[tag.Key] = make(map[string]Filter)
 	}
 
+	if f.compiledRegexp == nil {
+		f.compiledRegexp = make(map[string]*regexp.Regexp)
+	}
+	
+	compiledregexp := regexp.MustCompile(tag.Value)
+
 	f.NextFilter[tag.Key][tag.Value] = filter
+	f.compiledRegexp[tag.Value] = compiledregexp
 	return nil
 }
 
@@ -447,13 +455,17 @@ func (f *KVRouter) Fill(msg string) error {
 			valuestring = ""
 		}
 
-		if filter, found := vmaps[valuestring]; found {
-			fillOnce = true
-			if filter != nil {
-				if err := filter.Fill(msg); err != nil {
-					errlist = append(errlist, err)
-				} else {
-					fmt.Printf("[FILTER DEBUG][%s][%s:%s] filled\n", f.Name, k, valuestring)
+		for regstr, nextfilter := range vmaps {
+			if cr, found := f.compiledRegexp[regstr]; found {
+				if cr.MatchString(valuestring) {
+					fillOnce = true
+					if nextfilter != nil {
+						if err := nextfilter.Fill(msg); err != nil {
+							errlist = append(errlist, err)
+						} else {
+							fmt.Printf("[FILTER DEBUG][%s][%s][%s] filled\n", f.Name, k, regstr)
+						}
+					}
 				}
 			}
 		}
@@ -472,7 +484,7 @@ func (f *KVRouter) Fill(msg string) error {
 	if len(errlist) == 0 {
 		return nil
 	} else {
-		return fmt.Errorf("multiple error occured while trigger filters %v", errlist)
+		return fmt.Errorf("error occured while trigger filters %v", errlist)
 	}
 }
 
