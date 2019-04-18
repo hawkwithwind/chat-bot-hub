@@ -952,6 +952,46 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "success", filter)
 }
 
+func (web *WebServer) getFilter(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	filterId := vars["filterId"]
+
+	r.ParseForm()
+	accountName := o.getAccountName(r)
+
+	if o.Err != nil {
+		return
+	}
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	if !o.CheckFilterOwner(tx, filterId, accountName) {
+		if o.Err == nil {
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
+		}
+	}
+
+	if o.Err != nil {
+		return
+	}
+
+	filter := o.GetFilterById(tx, filterId)
+	if o.Err == nil && filter == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
+		return
+	}
+
+	if o.Err != nil {
+		return
+	}
+
+	o.ok(w, "", filter)
+}
+
 func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)

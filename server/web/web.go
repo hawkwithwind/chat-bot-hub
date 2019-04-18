@@ -358,6 +358,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/filters/{filterId}/next", ctx.validate(ctx.updateFilterNext)).Methods("PUT")
 	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
 	r.HandleFunc("/filter/{filterId}", ctx.validate(ctx.deleteFilter)).Methods("DELETE")
+	r.HandleFunc("/filter/{filterId}", ctx.validate(ctx.getFilter)).Methods("GET")
 
 	// filter templates and generators (filtermanage.go)
 	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.getFilterTemplateSuites)).Methods("GET")
