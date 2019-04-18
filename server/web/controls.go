@@ -740,7 +740,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
-	login := vars["login"]
+	botId := vars["botId"]
 
 	r.ParseForm()
 	botName := o.getStringValueDefault(r.Form, "botName", "")
@@ -755,16 +755,16 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwner(tx, login, accountName) {
+	if !o.CheckBotOwnerById(tx, botId, accountName) {
 		if o.Err == nil {
-			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
 			return
 		} else {
 			return
 		}
 	}
 
-	bot := o.GetBotByLogin(tx, login)
+	bot := o.GetBotById(tx, botId)
 	if botName != "" {
 		bot.BotName = botName
 	}

@@ -459,7 +459,7 @@
       $uibModalInstance.dismiss()
     }
 
-    let url = "/bots/" + $scope.data.login
+    let url = "/bots/" + $scope.data.botId
 
     $scope.saveBot = function(data) {
       $http({
