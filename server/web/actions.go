@@ -287,13 +287,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	ctx.Info("notify event %s", eventType)
 
 	var localmap map[string]interface{}
-	if bot.LoginInfo.Valid {
+	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
 		localmap = o.FromJson(bot.LoginInfo.String)
 	} else {
 		localmap = make(map[string]interface{})
 	}
-
-	ctx.Info("1  %#v\n%s", o.Err, bot.LoginInfo.String)
 
 	if o.Err != nil {
 		return
