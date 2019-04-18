@@ -426,6 +426,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case MESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
+					hub.Info("receive msg \n%s", in.Body)
 					var msg string
 					o.Err = json.Unmarshal([]byte(in.Body), &msg)
 					if o.Err != nil {
@@ -433,6 +434,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil && bot.filter != nil {
+						hub.Info("filling \n%s", msg)
 						o.Err = bot.filter.Fill(msg)
 					}
 
