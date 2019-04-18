@@ -663,16 +663,16 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.OperationReply{
-					Code: int32(clientError.Code),
-					Message:  clientError.Err.Error(),
+					Code:    int32(clientError.Code),
+					Message: clientError.Err.Error(),
 				},
 			}, nil
 		default:
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.OperationReply{
-					Code: int32(utils.UNKNOWN),
-					Message:  o.Err.Error(),
+					Code:    int32(utils.UNKNOWN),
+					Message: o.Err.Error(),
 				},
 			}, nil
 		}
@@ -843,7 +843,7 @@ func (hub *ChatHub) BotFilter(
 	thebot := hub.GetBotById(req.BotId)
 	if thebot == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("bot %s not found", req.BotId),
 		}, nil
 	}
@@ -851,7 +851,7 @@ func (hub *ChatHub) BotFilter(
 	thefilter := hub.GetFilter(req.FilterId)
 	if thefilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("filter %s not found", req.FilterId),
 		}, nil
 	}
@@ -868,7 +868,7 @@ func (hub *ChatHub) BotMomentFilter(
 	thebot := hub.GetBotById(req.BotId)
 	if thebot == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("bot %s not found", req.BotId),
 		}, nil
 	}
@@ -876,9 +876,9 @@ func (hub *ChatHub) BotMomentFilter(
 	thefilter := hub.GetFilter(req.FilterId)
 	if thefilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("filter %s not found", req.FilterId),
-		}, nil		
+		}, nil
 	}
 
 	thebot.momentFilter = thefilter

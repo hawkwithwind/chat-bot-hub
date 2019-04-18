@@ -949,12 +949,12 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	bot := o.GetBotById(tx, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
-	
+
 	o.rebuildMsgFilters(web, bot, tx, wrapper)
 	if o.Err != nil {
 		return
 	}
-	
+
 	o.ok(w, "success", nil)
 }
 
@@ -962,7 +962,7 @@ func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx
 	if o.Err != nil {
 		return
 	}
-	
+
 	if !bot.FilterId.Valid {
 		web.Info("b[%s] does not have filters", bot.BotId)
 	} else {
@@ -1016,12 +1016,12 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	bot := o.GetBotById(tx, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
-	
+
 	o.rebuildMomentFilters(web, bot, tx, wrapper)
 	if o.Err != nil {
 		return
 	}
-	
+
 	o.ok(w, "success", nil)
 }
 
@@ -1029,7 +1029,7 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 	if o.Err != nil {
 		return
 	}
-	
+
 	if !bot.MomentFilterId.Valid {
 		web.Info("b[%s] does not have moment filters", bot.BotId)
 		return
@@ -1046,7 +1046,7 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})
-		
+
 		if o.Err != nil {
 			return
 		} else {

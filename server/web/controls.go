@@ -952,6 +952,15 @@ func (web *WebServer) createFilter(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "success", filter)
 }
 
+type FilterVO struct {
+	FilterId string         `json:"filterId"`
+	Name     string         `json:"name"`
+	Type     string         `json:"type"`
+	Body     string         `json:"body"`
+	Next     string         `json:"next"`
+	CreateAt utils.JSONTime `json:"createAt"`
+}
+
 func (web *WebServer) getFilter(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
@@ -989,7 +998,14 @@ func (web *WebServer) getFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o.ok(w, "", filter)
+	o.ok(w, "", FilterVO{
+		FilterId: filter.FilterId,
+		Name:     filter.FilterName,
+		Type:     filter.FilterType,
+		Body:     filter.Body.String,
+		Next:     filter.Next.String,
+		CreateAt: utils.JSONTime{filter.CreateAt.Time},
+	})
 }
 
 func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
@@ -1089,15 +1105,6 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 }
 
 func (web *WebServer) getFilters(w http.ResponseWriter, r *http.Request) {
-	type FilterVO struct {
-		FilterId string         `json:"filterId"`
-		Name     string         `json:"name"`
-		Type     string         `json:"type"`
-		Body     string         `json:"body"`
-		Next     string         `json:"next"`
-		CreateAt utils.JSONTime `json:"createAt"`
-	}
-
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
