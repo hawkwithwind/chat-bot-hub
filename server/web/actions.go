@@ -48,7 +48,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = fmt.Errorf("cannot find filter %s", filterId)
 			return
 		}
-		//ctx.Info("creating filter %s", filter.FilterId)
+		ctx.Info("creating filter %s", filter.FilterId)
 
 		// generate filter in chathub
 		var body string
@@ -76,7 +76,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			bodym := o.FromJson(body)
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
-				//ctx.Info("generate KVRouter children")
+				ctx.Info("generate KVRouter children")
 				if bodym == nil {
 					o.Err = fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body)
 					return
@@ -88,7 +88,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						for value, fid := range vm {
 							switch childFilterId := fid.(type) {
 							case string:
-								//ctx.Info("creating child filter %s", childFilterId)
+								ctx.Info("creating child filter %s", childFilterId)
 								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 								if o.Err != nil {
 									return
@@ -293,6 +293,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		localmap = make(map[string]interface{})
 	}
 
+	ctx.Info("1  %#v", o.Err)
+	
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
@@ -311,6 +313,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			oldtoken = ""
 		}
+		ctx.Info("2  %#v", o.Err)
 		if tokenptr := o.FromMap(
 			"token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
 			tk := tokenptr.(string)
@@ -318,11 +321,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				localmap["token"] = tk
 			}
 		}
+		ctx.Info("3  %#v", o.Err)
 		if oldwxdataptr, ok := ifmap["wxData"]; ok {
 			oldwxdata = oldwxdataptr.(string)
 		} else {
 			oldwxdata = ""
 		}
+		ctx.Info("4  %#v", o.Err)
 		if wxdataptr := o.FromMap(
 			"wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
 			wd := wxdataptr.(string)
@@ -340,8 +345,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// now, initailize bot's filter, and call chathub to create intances and get connected
+		ctx.Info("5  %#v", o.Err)
 		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+		ctx.Info("6  %#v", o.Err)
 		o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		ctx.Info("7  %#v", o.Err)
 		return
 
 	case chatbothub.FRIENDREQUEST:
