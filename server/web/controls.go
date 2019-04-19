@@ -1060,7 +1060,11 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if filternext != "" {
-		filter.Next = sql.NullString{String: filternext, Valid: true}
+		if filternext == "N/A" {
+			filter.Next = sql.NullString{String: "", Valid: false}
+		} else {
+			filter.Next = sql.NullString{String: filternext, Valid: true}
+		}
 	}
 
 	o.UpdateFilter(tx, filter)
