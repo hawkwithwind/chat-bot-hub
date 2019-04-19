@@ -1017,7 +1017,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
-	web.Info("update filter %s %#v", filterId, r.Form)
+	web.Info("update filter %s\nr.Form[%#v]", filterId, r.Form)
 	
 	filtername := o.getStringValueDefault(r.Form, "name", "")
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
@@ -1051,8 +1051,6 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.Info("update filter %s -> %s %s %s", filterId, filtername, filterbody, filternext)
-
 	if filtername != "" {
 		filter.FilterName = filtername
 	}
@@ -1063,16 +1061,9 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 
 	if filternext != "" {
 		filter.Next = sql.NullString{String: filternext, Valid: true}
-	} else {
-		filter.Next = sql.NullString{String: "", Valid: false}
 	}
 
-	web.Info("filter %#v ", filter)
-
 	o.UpdateFilter(tx, filter)
-
-	web.Info("update filter %s [%#v]", filter.FilterId, filter)
-	
 	o.ok(w, "update filter success", filter)
 }
 
