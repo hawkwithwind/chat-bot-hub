@@ -281,6 +281,4 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 	})
-
-	o.deny(w, "unknown auth problem")
 }
