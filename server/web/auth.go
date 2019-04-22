@@ -203,7 +203,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		o := &ErrorHandler{}
-		defer o.WebError(w)
+		//defer o.WebError(w)
 
 		var session *sessions.Session
 		var bearerToken string = ""
@@ -281,4 +281,6 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 	})
+
+	o.deny(w, "unknown auth problem")
 }

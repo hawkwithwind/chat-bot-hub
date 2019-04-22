@@ -134,9 +134,9 @@ func (ctx *WebServer) Error(err error, msg string, v ...interface{}) {
 }
 
 func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
-	if ctx.Err != nil {
-		return
-	}
+	// if ctx.Err != nil {
+	// 	return
+	// }
 
 	// HTTP CODE 403
 	w.WriteHeader(http.StatusForbidden)
