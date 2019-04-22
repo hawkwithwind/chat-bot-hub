@@ -236,6 +236,20 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				}
 				return []byte(ctx.Config.SecretPhrase), nil
 			})
+
+			if o.Err != nil {
+				ctx.Error(o.Err, "parse token failed")
+				o.deny(w, "解析身份令牌出错")
+				return
+			}
+
+			if token == nil {
+				o.Err = fmt.Errorf("token is null")
+				ctx.Error(o.Err, "parse token failed")
+				o.deny(w, "解析身份令牌出错")
+				return
+			}
+			
 			if token.Valid {
 				var user User
 				utils.DecodeMap(token.Claims, &user)
