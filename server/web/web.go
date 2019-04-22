@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -200,15 +199,16 @@ type ErrorHandler struct {
 	domains.ErrorHandler
 }
 
-func (ctx *ErrorHandler) WebError(w http.ResponseWriter) {
-	if ctx.Err != nil {
-		v := reflect.ValueOf(ctx.Err)
-		if v.Type() == reflect.TypeOf((*utils.ClientError)(nil)) {
-			c := v.Interface().(*utils.ClientError)
-			ctx.complain(w, c.ErrorCode(), c.Error())
-		} else {
-			ctx.fail(w, "")
-		}
+func (o *ErrorHandler) WebError(w http.ResponseWriter) {
+	switch err := o.Err.(type) {
+	case *utils.ClientError:
+		o.complain(w, err.ErrorCode(), err.Error())
+	case *AuthError:
+		o.deny(w, err.Error())
+	case nil:
+		// do nothing
+	default:
+		o.fail(w, "")
 	}
 }
 
@@ -237,13 +237,14 @@ func (ctx *ErrorHandler) getValueNullable(form url.Values, name string) []string
 	}
 }
 
-func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
-	if ctx.Err != nil {
+func (o *ErrorHandler) getStringValue(form url.Values, name string) string {
+	if o.Err != nil {
 		return ""
 	}
 
-	v := ctx.getValue(form, name)
-	if ctx.Err != nil {
+	v := o.getValue(form, name)
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return ""
 	}
 	return v[0]

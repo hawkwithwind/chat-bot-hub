@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	grctx "github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -168,9 +167,9 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountname string
-	if accountptr := grctx.Get(r, "login"); accountptr != nil {
-		accountname = accountptr.(string)
+	accountname := o.getAccountName(r)
+	if o.Err != nil {
+		return
 	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
@@ -257,14 +256,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	ipage := o.ParseInt(page, 0, 64)
 	ipagesize := o.ParseInt(pagesize, 0, 64)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		return
 	}
 
@@ -274,6 +272,10 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	botid := ""
 	if botlogin != "" {
 		thebot := o.GetBotByLogin(tx, botlogin)
+		if o.Err != nil {
+			return
+		}
+
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
@@ -281,13 +283,9 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !o.CheckBotOwner(tx, botlogin, accountName) {
-			if o.Err == nil {
-				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
-				return
-			} else {
-				return
-			}
+		o.CheckBotOwner(tx, botlogin, accountName)
+		if o.Err != nil {
+			return
 		}
 	}
 
@@ -396,11 +394,6 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	groupname := o.getStringValueDefault(r.Form, "groupname", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
 	botlogin := o.getStringValueDefault(r.Form, "botlogin", "")
-	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
-		return
-	}
-
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
 		return
@@ -426,13 +419,9 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !o.CheckBotOwner(tx, botlogin, accountName) {
-			if o.Err == nil {
-				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
-				return
-			} else {
-				return
-			}
+		o.CheckBotOwner(tx, botlogin, accountName)
+		if o.Err == nil {
+			return
 		}
 	}
 
@@ -518,13 +507,13 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
-	var login string
-	if loginptr := grctx.Get(r, "login"); loginptr != nil {
-		login = loginptr.(string)
+	accountName := o.getAccountName(r)
+	bots := o.GetBotsByAccountName(ctx.db.Conn, accountName)
+	if o.Err != nil {
+		return
 	}
 
-	bots := o.GetBotsByAccountName(ctx.db.Conn, login)
-	if o.Err == nil && len(bots) == 0 {
+	if len(bots) == 0 {
 		o.ok(w, "", []BotsInfo{})
 		return
 	}
@@ -583,18 +572,9 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	login := o.getStringValue(r.Form, "login")
 	callback := o.getStringValue(r.Form, "callback")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
-
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
-	}
-
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("context.login is null"))
-		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
 
 	tx := o.Begin(ctx.db)
@@ -630,22 +610,14 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	botName := o.getStringValue(r.Form, "botName")
 	clientType := o.getStringValue(r.Form, "clientType")
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	if clientType != "WECHATBOT" {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("scan create bot %s not supported", clientType))
 		return
-	}
-
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
 
 	tx := o.Begin(ctx.db)
@@ -689,14 +661,9 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf(
-				"bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err == nil {
+		return
 	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
@@ -721,14 +688,9 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf(
-				"bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
 	}
 
 	o.DeleteBot(tx, botId)
@@ -755,13 +717,9 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
 	}
 
 	bot := o.GetBotById(tx, botId)
@@ -786,8 +744,8 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
-		if !o.CheckFilterOwner(tx, filterid, accountName) {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
+		o.CheckFilterOwner(tx, filterid, accountName)
+		if o.Err != nil {
 			return
 		}
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
@@ -802,10 +760,11 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
 			return
 		}
-		if !o.CheckFilterOwner(tx, momentfilterid, accountName) {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+		o.CheckFilterOwner(tx, momentfilterid, accountName)
+		if o.Err != nil {
 			return
 		}
+
 		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
 		o.UpdateBotMomentFilterId(tx, bot)
 	}
@@ -826,13 +785,11 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	bot := o.GetBotById(ctx.db.Conn, botId)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, o.Err)
 		return
 	}
 
@@ -880,13 +837,17 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 
 	tx := o.Begin(ctx.db)
 
-	if !o.CheckBotOwner(tx, login, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+	o.CheckBotOwner(tx, login, accountName)
+	if o.Err != nil {
 		return
 	}
 
 	r.ParseForm()
 	status := o.getStringValue(r.Form, "status")
+	if o.Err != nil {
+		return
+	}
+
 	frs := o.GetFriendRequestsByLogin(tx, login, status)
 
 	o.ok(w, "", frs)
@@ -918,6 +879,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			2001: "资源不足",
 			2002: "权限不足",
 			2003: "未找到对应资源",
+			2004: "资源调用配额不足",
 		},
 	})
 }
@@ -978,23 +940,14 @@ func (web *WebServer) getFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
-	}
-
-	if o.Err != nil {
-		return
-	}
-
+	o.CheckFilterOwner(tx, filterId, accountName)
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
+	if o.Err != nil {
 		return
 	}
 
-	if o.Err != nil {
+	if filter == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -1018,7 +971,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	web.Info("update filter %s\nr.Form[%#v]", filterId, r.Form)
-	
+
 	filtername := o.getStringValueDefault(r.Form, "name", "")
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
 	filternext := o.getStringValueDefault(r.Form, "next", "")
@@ -1031,23 +984,14 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
-	}
-
-	if o.Err != nil {
-		return
-	}
-
+	o.CheckFilterOwner(tx, filterId, accountName)
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
+	if o.Err != nil {
 		return
 	}
 
-	if o.Err != nil {
+	if filter == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -1082,29 +1026,24 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 	nextFilterId := o.getStringValue(r.Form, "next")
 	accountName := o.getAccountName(r)
 	tx := o.Begin(web.db)
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, filterId, accountName)
+	if o.Err != nil {
 		return
 	}
-
-	if !o.CheckFilterOwner(tx, nextFilterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问下一级过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, nextFilterId, accountName)
+	if o.Err != nil {
 		return
 	}
-
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
+	if o.Err != nil {
+		return
+	}
+
+	if filter == nil {
 		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
-	if o.Err != nil {
-		return
-	}
 	filter.Next = sql.NullString{String: nextFilterId, Valid: true}
 	o.UpdateFilter(tx, filter)
 	o.CommitOrRollback(tx)
@@ -1158,10 +1097,8 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, filterId, accountName)
+	if o.Err != nil {
 		return
 	}
 
@@ -1180,7 +1117,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
 
-	//accountName := o.getAccountName(r)
+	o.getAccountName(r)
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)

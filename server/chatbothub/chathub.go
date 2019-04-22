@@ -499,7 +499,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("contact info %v", bodym)
-					
+
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
@@ -664,7 +664,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.OperationReply{
 					Code:    int32(clientError.Code),
-					Message: clientError.Err.Error(),
+					Message: clientError.Error(),
 				},
 			}, nil
 		default:

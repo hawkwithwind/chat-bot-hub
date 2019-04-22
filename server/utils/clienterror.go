@@ -11,21 +11,18 @@ const (
 	RESOURCE_INSUFFICIENT  ClientErrorCode = 2001
 	RESOURCE_ACCESS_DENIED ClientErrorCode = 2002
 	RESOURCE_NOT_FOUND     ClientErrorCode = 2003
+	RESOURCE_QUOTA_LIMIT   ClientErrorCode = 2004
 )
 
 type ClientError struct {
-	Err  error
+	error
 	Code ClientErrorCode
 }
 
 func NewClientError(code ClientErrorCode, err error) error {
-	return &ClientError{Err: err, Code: code}
+	return &ClientError{error: err, Code: code}
 }
 
 func (err *ClientError) ErrorCode() ClientErrorCode {
 	return err.Code
-}
-
-func (err *ClientError) Error() string {
-	return err.Err.Error()
 }

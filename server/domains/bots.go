@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type Bot struct {
@@ -193,9 +194,9 @@ WHERE login=?
 	}
 }
 
-func (o *ErrorHandler) CheckBotOwner(q dbx.Queryable, login string, accountName string) bool {
+func (o *ErrorHandler) CheckBotOwner(q dbx.Queryable, login string, accountName string) {
 	if o.Err != nil {
-		return false
+		return
 	}
 
 	bots := []Bot{}
@@ -210,12 +211,20 @@ WHERE a.accountname=?
   AND a.deleteat is NULL
   AND b.deleteat is NULL`, accountName, login)
 
-	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
+	head := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
+	if o.Err != nil {
+		return
+	}
+
+	if head == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("cannot access bot %s, or not found", login))
+		return
+	}
 }
 
-func (o *ErrorHandler) CheckBotOwnerById(q dbx.Queryable, botId string, accountName string) bool {
+func (o *ErrorHandler) CheckBotOwnerById(q dbx.Queryable, botId string, accountName string) {
 	if o.Err != nil {
-		return false
+		return
 	}
 
 	bots := []Bot{}
@@ -230,5 +239,13 @@ WHERE a.accountname=?
   AND a.deleteat is NULL
   AND b.deleteat is NULL`, accountName, botId)
 
-	return nil != o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botId))
+	head := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botId))
+	if o.Err != nil {
+		return
+	}
+
+	if head == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("cannot access bot %s, or not found", botId))
+		return
+	}
 }

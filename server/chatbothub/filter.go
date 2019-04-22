@@ -381,7 +381,7 @@ type KVRouter struct {
 	BaseFilter
 	NextFilter        map[string]map[string]Filter `json:"next"`
 	compiledRegexp    map[string]*regexp.Regexp
-	DefaultNextFilter Filter                       `json:"defaultNext"`
+	DefaultNextFilter Filter `json:"defaultNext"`
 }
 
 func NewKVRouter(filterId string, filterName string) *KVRouter {
@@ -409,7 +409,7 @@ func (f *KVRouter) Branch(tag BranchTag, filter Filter) error {
 	if f.compiledRegexp == nil {
 		f.compiledRegexp = make(map[string]*regexp.Regexp)
 	}
-	
+
 	compiledregexp := regexp.MustCompile(tag.Value)
 
 	f.NextFilter[tag.Key][tag.Value] = filter

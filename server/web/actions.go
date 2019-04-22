@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -296,7 +295,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
@@ -337,7 +336,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			return
 		}
-		
+
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
@@ -863,22 +862,12 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(ctx.db)
-
-	if !o.CheckBotOwner(tx, login, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwner(ctx.db.Conn, login, accountName)
+	bot := o.GetBotByLogin(ctx.db.Conn, login)
+	if o.Err != nil {
 		return
 	}
-
-	bot := o.GetBotByLogin(tx, login)
 
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
@@ -886,12 +875,13 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 	ctx.Info("bot action body %v\n%v", r.Body, bodym)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()
-
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))
+		return
+	}
 
 	actionReply := o.CreateAndRunAction(ctx, ar)
 	if o.Err != nil {
@@ -911,17 +901,17 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 	if dayCount > daylimit {
-		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
 		return nil
 	}
 
 	if hourCount > hourlimit {
-		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
 		return nil
 	}
 
 	if minuteCount > minutelimit {
-		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
 		return nil
 	}
 
@@ -942,26 +932,17 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(web.db)
-
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwnerById(web.db.Conn, botId, accountName)
+	if o.Err != nil {
 		return
 	}
 
-	bot := o.GetBotById(tx, botId)
+	bot := o.GetBotById(web.db.Conn, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
-	o.rebuildMsgFilters(web, bot, tx, wrapper)
+	o.rebuildMsgFilters(web, bot, web.db.Conn, wrapper)
 	if o.Err != nil {
 		return
 	}
@@ -1009,26 +990,17 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(web.db)
-
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwnerById(web.db.Conn, botId, accountName)
+	if o.Err != nil {
 		return
 	}
 
-	bot := o.GetBotById(tx, botId)
+	bot := o.GetBotById(web.db.Conn, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
-	o.rebuildMomentFilters(web, bot, tx, wrapper)
+	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)
 	if o.Err != nil {
 		return
 	}
