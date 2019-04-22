@@ -694,7 +694,24 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err != nil {
-		return &pb.BotActionReply{Success: false, Msg: fmt.Sprintf("Action failed %s", o.Err.Error())}, o.Err
+		switch clientError:= o.Err.(type) {
+		case *utils.ClientError:
+			return &pb.BotActionReply{
+				Msg: "Action failed",
+				ClientError: &pb.OperationReply{
+					Code: int32(clientError.Code),
+					Message: clientError.Error(),
+				},
+			}, nil
+		default:
+			return &pb.BotActionReply{
+				Msg: "Action failed",
+				ClientError: &pb.OperationReply{
+					Code: int32(utils.UNKNOWN),
+					Message: o.Err.Error(),
+				},
+			}, nil
+		}
 	} else {
 		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
 	}

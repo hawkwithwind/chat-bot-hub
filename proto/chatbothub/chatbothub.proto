@@ -139,6 +139,7 @@ message BotActionReply {
   bool   success = 2;
   string msg = 3;
   string body = 4;
+  OperationReply clientError = 5;
 }
 
 message FilterFillRequest {

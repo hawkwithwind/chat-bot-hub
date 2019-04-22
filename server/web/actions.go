@@ -919,8 +919,21 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	defer wrapper.Cancel()
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
+	if o.Err != nil {
+		return nil
+	}
+	
+	if actionReply.ClientError != nil {
+		if actionReply.ClientError.Code != 0 {
+			o.Err = utils.NewClientError(
+				utils.ClientErrorCode(actionReply.ClientError.Code),
+				fmt.Errorf(actionReply.ClientError.Message),
+			)
+			return nil
+		}
+	}
+	
 	o.SaveActionRequest(web.redispool, ar)
-
 	return actionReply
 }
 
