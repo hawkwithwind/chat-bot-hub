@@ -66,18 +66,27 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = err
 			return
 		} else if opreply.Code != 0 {
-			o.Err = fmt.Errorf(opreply.Message)
+			o.Err = utils.NewClientError(
+				utils.ClientErrorCode(opreply.Code),
+				fmt.Errorf(opreply.Message),
+			)
 			return
 		}
 
 		// routers should create its children first, then create themselves.
 		if body != "" {
 			bodym := o.FromJson(body)
+			if o.Err != nil {
+				o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+				return
+			}
+			
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
 				//ctx.Info("generate KVRouter children")
 				if bodym == nil {
-					o.Err = fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body)
+					o.Err = utils.NewClientError(utils.PARAM_INVALID,
+						fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body))
 					return
 				}
 
@@ -92,7 +101,8 @@ func (o *ErrorHandler) CreateFilterChain(
 								if o.Err != nil {
 									return
 								}
-								_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+								var opreply *pb.OperationReply
+								opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
 										Key:   key,
 										Value: value,
@@ -100,10 +110,23 @@ func (o *ErrorHandler) CreateFilterChain(
 									RouterId: filter.FilterId,
 									FilterId: childFilterId,
 								})
+
+								if o.Err != nil {
+									return
+								}
+
+								if opreply.Code != 0 {
+									o.Err = utils.NewClientError(
+										utils.ClientErrorCode(opreply.Code),
+										fmt.Errorf(opreply.Message),
+									)
+									return
+								}
 							}
 						}
 					default:
-						o.Err = fmt.Errorf("Error generate KVRouter children: unexpected filter.body.key type %T", vm)
+						o.Err = utils.NewClientError(utils.PARAM_INVALID,
+							fmt.Errorf("Error generate KVRouter children: unexpected filter.body.key type %T", vm))
 						return
 					}
 				}
@@ -118,13 +141,26 @@ func (o *ErrorHandler) CreateFilterChain(
 							return
 						}
 						// branch this
-						_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+						var opreply *pb.OperationReply
+						opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
 							Tag: &pb.BranchTag{
 								Key: regstr,
 							},
 							RouterId: filter.FilterId,
 							FilterId: childFilterId,
 						})
+
+						if o.Err != nil {
+							return
+						}
+
+						if opreply.Code != 0 {
+							o.Err = utils.NewClientError(
+								utils.ClientErrorCode(opreply.Code),
+								fmt.Errorf(opreply.Message),
+							)
+							return
+						}
 					}
 				}
 			}
@@ -142,7 +178,10 @@ func (o *ErrorHandler) CreateFilterChain(
 				o.Err = err
 				return
 			} else if nxtreply.Code != 0 {
-				o.Err = fmt.Errorf(nxtreply.Message)
+				o.Err = utils.NewClientError(
+					utils.ClientErrorCode(nxtreply.Code),
+					fmt.Errorf(nxtreply.Message),
+				)
 				return
 			}
 		}

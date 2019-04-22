@@ -125,6 +125,15 @@ func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb
 		ctx.Err = fmt.Errorf("actionreply is nil")
 		return nil
 	} else {
+		if actionreply.ClientError != nil {
+			if actionreply.ClientError.Code != 0 {
+				ctx.Err = utils.NewClientError(
+					utils.ClientErrorCode(actionreply.ClientError.Code),
+					fmt.Errorf(actionreply.ClientError.Message),
+				)
+				return nil
+			}
+		}
 		return actionreply
 	}
 }
