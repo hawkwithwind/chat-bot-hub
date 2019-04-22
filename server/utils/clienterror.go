@@ -12,8 +12,8 @@ const (
 	RESOURCE_ACCESS_DENIED ClientErrorCode = 2002
 	RESOURCE_NOT_FOUND     ClientErrorCode = 2003
 	RESOURCE_QUOTA_LIMIT   ClientErrorCode = 2004
-	BOT_STATUS_INCONSISTENT ClientErrorCode = 3001
-	BOT_METHOD_UNSUPPORTED ClientErrorCode = 3002
+	STATUS_INCONSISTENT    ClientErrorCode = 3001
+	METHOD_UNSUPPORTED     ClientErrorCode = 3002
 )
 
 type ClientError struct {

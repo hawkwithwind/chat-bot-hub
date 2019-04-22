@@ -752,22 +752,32 @@ func (hub *ChatHub) FilterCreate(
 
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
-		return &pb.OperationReply{Code: -1, Message: err.Error()}, err
+		return &pb.OperationReply{
+			Code: int32(utils.PARAM_INVALID),
+			Message: err.Error(),
+		}, err
 	}
 
 	if req.Body != "" {
 		o := &ErrorHandler{}
 		bodym := o.FromJson(req.Body)
 		if o.Err != nil {
-			return nil, o.Err
+			return &pb.OperationReply{
+				Code: int32(utils.PARAM_INVALID),
+				Message: o.Err.Error(),
+			}, nil
 		}
+		
 		if bodym != nil {
 			switch ff := filter.(type) {
 			case *WebTrigger:
 				url := o.FromMapString("url", bodym, "body.url", false, "")
 				method := o.FromMapString("method", bodym, "body.method", false, "")
 				if o.Err != nil {
-					return nil, o.Err
+					return &pb.OperationReply{
+						Code: int32(utils.PARAM_INVALID),
+						Message: o.Err.Error(),
+					}, nil
 				}
 
 				ff.Action.Url = url
@@ -813,12 +823,18 @@ func (hub *ChatHub) FilterNext(
 
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+		return &pb.OperationReply{
+			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.FilterId),
+		}, nil
 	}
 
 	nextFilter := hub.GetFilter(req.NextFilterId)
 	if nextFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.NextFilterId)
+		return &pb.OperationReply{
+			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.NextFilterId),
+		}, nil
 	}
 
 	if err := parentFilter.Next(nextFilter); err != nil {
@@ -834,12 +850,18 @@ func (hub *ChatHub) RouterBranch(
 
 	parentFilter := hub.GetFilter(req.RouterId)
 	if parentFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.RouterId)
+		return &pb.OperationReply{
+			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.RouterId),
+		}, nil
 	}
 
 	childFilter := hub.GetFilter(req.FilterId)
 	if childFilter == nil {
-		return nil, fmt.Errorf("child filter %s not found", req.FilterId)
+		return &pb.OperationReply{
+			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("child filter %s not found", req.FilterId),
+		}, nil
 	}
 
 	switch r := parentFilter.(type) {
@@ -848,7 +870,10 @@ func (hub *ChatHub) RouterBranch(
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("filter type %T cannot branch", r)
+		return &pb.OperationReply{
+			Code: int32(utils.METHOD_UNSUPPORTED),
+			Message: fmt.Sprintf("filter type %T cannot branch", r),
+		}, nil
 	}
 
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil

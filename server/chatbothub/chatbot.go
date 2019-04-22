@@ -151,7 +151,7 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 	o := &ErrorHandler{}
 
 	if bot.Status != WorkingLoggedIn {
-		return bot, utils.NewClientError(utils.BOT_STATUS_INCONSISTENT,
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot logout", bot.Status))
 	}
 
@@ -174,7 +174,7 @@ func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token s
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
-		return bot, utils.NewClientError(utils.BOT_STATUS_INCONSISTENT,
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
 	}
 
@@ -336,7 +336,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 	if m, ok := actionMap[actionType]; ok {
 		err = m(bot, actionType, arId, body)
 	} else {
-		err = utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType))
 	}
 
@@ -408,7 +408,7 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 
 		o.SendAction(bot, arId, actionType, o.ToJson(parammap))
 	} else {
-		o.Err = utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		o.Err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 }
@@ -553,7 +553,7 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 			"ticket":   msg.Ticket,
 		}))
 	} else {
-		return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
@@ -579,7 +579,7 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 			"userList": memberList,
 		}))
 	} else {
-		return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
@@ -624,7 +624,7 @@ func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string
 			"style":  style,
 		}))
 	} else {
-		return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
@@ -692,7 +692,7 @@ func (bot *ChatBot) AddContact(actionType string, arId string, body string) erro
 			"content":  content,
 		}))
 	} else {
-		return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 	
@@ -985,7 +985,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 				}
 			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
 				//emoji := msg.Emoji
-				return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+				return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 					fmt.Errorf("c[%s] not support %s with emoji", bot.ClientType, actionType))
 				//emojiattr := emoji.Attributions
 
@@ -1034,7 +1034,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 				fmt.Errorf("Action unknown SendMessage Type <%T>", content))
 		}
 	} else {
-		return utils.NewClientError(utils.BOT_METHOD_UNSUPPORTED,
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
