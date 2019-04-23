@@ -1137,7 +1137,16 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	query := fmt.Sprintf(`{ "find": {"groupname": "%s"}}`, groupname)
+	query := o.ToJson(map[string]interface{} {
+		"find": map[string]interface{} {
+			"groupnames": map[string]interface{} {
+				"in": []string{
+					groupname,
+				},
+			},
+		},
+	})
+	
 	web.Info("search groupmembers\n%s\n", query)
 		
 	rows, paging := o.SelectByCriteria(tx, query, domain)
