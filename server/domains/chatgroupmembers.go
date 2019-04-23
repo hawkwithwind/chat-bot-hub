@@ -58,7 +58,7 @@ func (gm *ChatGroupMemberExpand) SelectFrom() string {
 	return "`chatgroupmembers` LEFT JOIN `chatusers` " +
 		"on `chatgroupmembers`.`chatmemberid` = `chatusers`.`chatuserid`" +
 		"LEFT JOIN `chatgroups` " +
-		"on `chatgroupmembers`.`chatgroupid` = `chatgroups`.`chatgropuid`"
+		"on `chatgroupmembers`.`chatgroupid` = `chatgroups`.`chatgroupid`"
 }
 
 func (chatGroupMember *ChatGroupMember) SetInvitedBy(invitedby string) {
