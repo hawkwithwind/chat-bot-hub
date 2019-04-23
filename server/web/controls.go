@@ -1127,6 +1127,7 @@ type ChatGroupMemberVO struct {
 func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(web)
 
 	vars := mux.Vars(r)
 	groupname := vars["groupname"]
@@ -1150,6 +1151,11 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	web.Info("search groupmembers\n%s\n", query)
 		
 	rows, paging := o.SelectByCriteria(tx, query, domain)
+	if o.Err != nil {
+		return
+	}
+
+	web.Info("search groupmembers 1 ... ")
 
 	var groupMemberDomains []domains.ChatGroupMemberExpand
 	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupMemberDomains)
