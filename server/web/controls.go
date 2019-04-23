@@ -1140,7 +1140,7 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 
 	query := o.ToJson(map[string]interface{} {
 		"find": map[string]interface{} {
-			"groupnames": map[string]interface{} {
+			"groupname": map[string]interface{} {
 				"in": []string{
 					groupname,
 				},

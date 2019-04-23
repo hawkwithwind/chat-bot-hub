@@ -42,7 +42,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		return []interface{}{}, Paging{}
 	}
 
-	fmt.Printf("[SEARCH DEBUG] 1")
+	fmt.Printf("[SEARCH DEBUG] 1\n")
 	
 	if _, ok := searchableDomains[domain]; !ok {
 		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
@@ -53,7 +53,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	whereclause := []string{}
 	orderclause := []string{}
 
-	fmt.Printf("[SEARCH DEBUG] 2")
+	fmt.Printf("[SEARCH DEBUG] 2\n")
 	
 	criteria := o.FromJson(query)
 	if o.Err != nil {
@@ -62,7 +62,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		return []interface{}{}, Paging{}
 	}
 
-	fmt.Printf("[SEARCH DEBUG] 3")
+	fmt.Printf("[SEARCH DEBUG] 3\n")
 
 	findm := o.FromMap("find", criteria, "query", map[string]interface{}{})
 	if o.Err != nil {
