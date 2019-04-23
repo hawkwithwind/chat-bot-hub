@@ -35,6 +35,7 @@ func (gm *ChatGroupMember) Fields() []dbx.Field {
 }
 
 type ChatGroupMemberExpand struct {
+	GroupName string `db:"groupname"`
 	ChatGroupMember
 	ChatUser
 }
