@@ -372,6 +372,7 @@ func (ctx *WebServer) Serve() {
 	// chatusers and more (controls.go)
 	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatUsers)).Methods("GET")
 	r.HandleFunc("/chatgroups", ctx.validate(ctx.getChatGroups)).Methods("GET")
+	r.HandleFunc("/chatgorups/{groupname}/members", ctx.validate(ctx.getGroupMembers)).Methods("GET")
 
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")

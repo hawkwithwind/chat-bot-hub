@@ -1115,6 +1115,71 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "success", filterId)
 }
 
+type ChatGroupMemberVO struct {
+	ChatGroupMemberId string `json:"chatGroupMemberId"`
+	ChatGroupId       string `json:"chatGroupId"`
+	GroupName         string `json:"groupName"`
+	InvitedBy         string `json:"invitedBy"`
+	GroupNickName     string `json:"groupNickName"`
+	ChatUserVO
+}
+
+func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	groupname := vars["groupname"]
+	domain := "chatgroupmembers"
+
+	o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := fmt.Sprintf(`{ "find": {"groupname": "%s"}}`, groupname)
+	web.Info("search groupmembers\n%s\n", query)
+		
+	rows, paging := o.SelectByCriteria(tx, query, domain)
+
+	var groupMemberDomains []domains.ChatGroupMemberExpand
+	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupMemberDomains)
+	if o.Err != nil {
+		return
+	}
+
+	var gmvos []ChatGroupMemberVO
+	for _, gm := range groupMemberDomains {
+		gmvos = append(gmvos, ChatGroupMemberVO{
+			ChatGroupMemberId: gm.ChatGroupMemberId,
+			ChatGroupId: gm.ChatGroupId,
+			GroupName: groupname,
+			InvitedBy: gm.InvitedBy.String,
+			GroupNickName: gm.GroupNickName.String,
+			ChatUserVO: ChatUserVO{
+				ChatUserId: gm.ChatUserId,
+				UserName:   gm.UserName,
+				NickName:   gm.NickName,
+				Type:       gm.Type,
+				Alias:      gm.Alias.String,
+				Avatar:     gm.Avatar.String,
+				Sex:        gm.Sex,
+				Country:    gm.Country.String,
+				Province:   gm.Province.String,
+				City:       gm.City.String,
+				Signature:  gm.Signature.String,
+				Remark:     gm.Remark.String,
+				Label:      gm.Label.String,
+				LastSendAt: utils.JSONTime{gm.LastSendAt.Time},
+				CreateAt:   utils.JSONTime{gm.ChatUser.CreateAt.Time},
+				UpdateAt:   utils.JSONTime{gm.ChatUser.UpdateAt.Time},
+			},
+		})
+	}
+
+	o.okWithPaging(w, "success", gmvos, paging)
+}
+
 func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)

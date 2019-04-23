@@ -26,6 +26,41 @@ type ChatGroupMember struct {
 	DeleteAt          mysql.NullTime `db:"deleteat"`
 }
 
+const (
+	TN_CHATGROUPMEMBERS string = "chatgroupmembers"
+)
+
+func (gm *ChatGroupMember) Fields() []dbx.Field {
+	return dbx.GetFieldsFromStruct(TN_CHATGROUPMEMBERS, (*ChatGroupMember)(nil))
+}
+
+type ChatGroupMemberExpand struct {
+	ChatGroupMember
+	ChatUser
+}
+
+func (o *ErrorHandler) NewDefaultChatGroupMemberExpand() dbx.Searchable {
+	return &ChatGroupMemberExpand{}
+}
+
+func (gm *ChatGroupMemberExpand) Fields() []dbx.Field {
+	chatuser := &ChatUser{}
+	return append([]dbx.Field{
+		dbx.Field{TN_CHATGROUPMEMBERS, "chatgroupmemberid"},
+		dbx.Field{TN_CHATGROUPMEMBERS, "chatgroupid"},
+		dbx.Field{TN_CHATGROUPS, "groupname"},
+		dbx.Field{TN_CHATGROUPMEMBERS, "invitedby"},
+		dbx.Field{TN_CHATGROUPMEMBERS, "groupnickname"},
+	}, chatuser.Fields()...)
+}
+
+func (gm *ChatGroupMemberExpand) SelectFrom() string {
+	return "`chatgroupmembers` LEFT JOIN `chatusers` " +
+		"on `chatgroupmembers`.`chatmemberid` = `chatusers`.`chatuserid`" +
+		"LEFT JOIN `chatgroups` " +
+		"on `chatgroupmembers`.`chatgroupid` = `chatgroups`.`chatgropuid`"
+}
+
 func (chatGroupMember *ChatGroupMember) SetInvitedBy(invitedby string) {
 	chatGroupMember.InvitedBy = sql.NullString{
 		String: invitedby,

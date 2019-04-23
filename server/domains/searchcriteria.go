@@ -17,6 +17,7 @@ var (
 		"chatcontacts":      (*ErrorHandler).NewDefaultChatContactExpand,
 		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
 		"moments":           (*ErrorHandler).NewDefaultMoment,
+		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
