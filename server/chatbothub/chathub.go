@@ -146,8 +146,6 @@ func (hub *ChatHub) GetBot(clientid string) *ChatBot {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
 
-	hub.Info("[GET BOT] %s %#v", clientid, hub.bots)
-	
 	if thebot, found := hub.bots[clientid]; found {
 		return thebot
 	}
@@ -186,8 +184,6 @@ func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	defer hub.muxBots.Unlock()
 	
 	hub.bots[clientid] = thebot
-
-	hub.Info("[SET BOT] %s %#v", clientid, hub.bots)
 }
 
 func (hub *ChatHub) DropBot(clientid string) {
@@ -543,7 +539,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			if o.Err == nil {
 				if thebot != nil {
 					if bot := hub.GetBot(in.ClientId); bot != nil {
-						hub.Info("<SET BOT IN EVENT LOOP>")
 						hub.SetBot(in.ClientId, thebot)
 					}
 				}
@@ -616,9 +611,10 @@ type LoginBody struct {
 
 func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve logout bot cmd from web %s", req.BotId)
-
+	
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
+		hub.Info("cannot find bot %s\n%#v", req.BotId, hub.bots)
 		return nil, fmt.Errorf("b[%s] not found", req.BotId)
 	}
 
