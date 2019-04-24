@@ -567,24 +567,31 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
-	bots := make([]*pb.BotsInfo, 0)
+	botm := make(map[string]*pb.BotsInfo)
+	
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
-				bots = append(bots, NewBotsInfo(v))
+				botm[v.BotId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.BotIds) > 0 {
 			if o.FindFromLines(req.BotIds, v.BotId) {
-				bots = append(bots, NewBotsInfo(v))
+				botm[v.BotId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.Logins) == 0 && len(req.BotIds) == 0 {
-			bots = append(bots, NewBotsInfo(v))
+			botm[v.BotId] = NewBotsInfo(v)
 		}
 	}
+		
+	bots := make([]*pb.BotsInfo, 0)
+	for _, v := range botm {
+		bots = append(bots, v)
+	}
+
 	return &pb.BotsReply{BotsInfo: bots}, nil
 }
 

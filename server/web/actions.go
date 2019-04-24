@@ -270,9 +270,15 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
-			o.Err = fmt.Errorf("bot {%s} not activated", botId)
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} not activated", botId),
+			)
 		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo)
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo),
+			)
 		}
 	}
 
