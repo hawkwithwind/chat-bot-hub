@@ -572,18 +572,18 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
-				botm[v.BotId] = NewBotsInfo(v)
+				botm[v.ClientId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.BotIds) > 0 {
 			if o.FindFromLines(req.BotIds, v.BotId) {
-				botm[v.BotId] = NewBotsInfo(v)
+				botm[v.ClientId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.Logins) == 0 && len(req.BotIds) == 0 {
-			botm[v.BotId] = NewBotsInfo(v)
+			botm[v.ClientId] = NewBotsInfo(v)
 		}
 	}
 		
