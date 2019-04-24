@@ -146,6 +146,8 @@ func (hub *ChatHub) GetBot(clientid string) *ChatBot {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
 
+	hub.Info("[GET BOT] %s %#v", clientid, hub.bots)
+	
 	if thebot, found := hub.bots[clientid]; found {
 		return thebot
 	}
@@ -182,8 +184,10 @@ func (hub *ChatHub) GetBotById(botId string) *ChatBot {
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
-
+	
 	hub.bots[clientid] = thebot
+
+	hub.Info("[SET BOT] %s %#v", clientid, hub.bots)
 }
 
 func (hub *ChatHub) DropBot(clientid string) {
@@ -191,6 +195,8 @@ func (hub *ChatHub) DropBot(clientid string) {
 	defer hub.muxBots.Unlock()
 
 	delete(hub.bots, clientid)
+
+	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
 }
 
 func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
@@ -230,7 +236,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
 				thebot.LastPing = ts
-				hub.SetBot(in.ClientId, thebot)
+				
+				if bot := hub.GetBot(in.ClientId); bot != nil {
+					hub.Info("PING SET BOT %s", in.ClientId)
+					hub.SetBot(in.ClientId, thebot)
+				}
 			} else {
 				hub.Info("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
