@@ -383,7 +383,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// so that it should be recycled by then
 
 				hub.DropBot(thebot.ClientId)
-				hub.Info("drop c[%s]", thebot.ClientId)
+				hub.Info("drop c[%s]\n%#v", thebot.ClientId, hub.bots)
 
 			case ACTIONREPLY:
 				if len(in.Body) > 240 {
