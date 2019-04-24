@@ -662,35 +662,25 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
-	web.Info("[LOGOUT] 1")
-
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
 	accountName := o.getAccountName(r)
 
-	web.Info("[LOGOUT] 2")
-
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
 	o.CheckBotOwnerById(tx, botId, accountName)
-	if o.Err == nil {
+	if o.Err != nil {
 		return
 	}
-
-	web.Info("[LOGOUT] 3")
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
-	web.Info("[LOGOUT] 4")
-
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
 		BotId: botId,
 	})
-
-	web.Info("[LOGOUT] 5 {%#v}", o.Err)
 	
 	o.ok(w, "", opreply)
 }
