@@ -237,10 +237,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				thebot.LastPing = ts
 				
-				// if bot := hub.GetBot(in.ClientId); bot != nil {
-				// 	hub.Info("PING SET BOT %s", in.ClientId)
-				// 	hub.SetBot(in.ClientId, thebot)
-				// }
+				if bot := hub.GetBot(in.ClientId); bot != nil {
+					hub.SetBot(in.ClientId, thebot)
+				}
 			} else {
 				hub.Info("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
@@ -543,7 +542,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			if o.Err == nil {
 				if thebot != nil {
-					hub.SetBot(in.ClientId, thebot)
+					if bot := hub.GetBot(in.ClientId); bot != nil {
+						hub.Info("<SET BOT IN EVENT LOOP>")
+						hub.SetBot(in.ClientId, thebot)
+					}
 				}
 			} else {
 				hub.Error(o.Err, "[%s] Error %s", in.EventType, o.Err.Error())
