@@ -28,6 +28,7 @@ service ChatBotHub {
   rpc GetBots (BotsRequest) returns (BotsReply) {}
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
   rpc BotLogout (BotLogoutRequest) returns (OperationReply) {}
+  rpc BotShutdown (BotLogoutRequest) returns (OperationReply) {}
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
   rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}

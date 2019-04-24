@@ -113,6 +113,24 @@ func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb
 	}
 }
 
+func (ctx *ErrorHandler) BotShutdown(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if opreply, err := w.client.BotShutdown(w.context, req); err != nil {
+		ctx.Err = err
+		return nil
+	} else if opreply == nil {
+		ctx.Err = fmt.Errorf("logoutreply is nil")
+		return nil
+	} else {
+		return opreply
+	}
+}
+
+
+
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
@@ -654,7 +672,18 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  "",
 		BotId:      bot.BotId,
 	})
+	
+	if o.Err != nil {
+		return
+	}
 
+	if loginreply.ClientError != nil && loginreply.ClientError.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(loginreply.ClientError.Code),
+			fmt.Errorf(loginreply.ClientError.Message))
+		return
+	}
+	
 	o.ok(w, "", loginreply)
 }
 
@@ -681,6 +710,17 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
 		BotId: botId,
 	})
+
+	if o.Err != nil {
+		return
+	}
+
+	if opreply.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(opreply.Code),
+			fmt.Errorf(opreply.Message))
+		return
+	}
 	
 	o.ok(w, "", opreply)
 }
@@ -702,6 +742,24 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
+		BotId: botId,
+	})
+
+	if o.Err != nil {
+		return
+	}
+
+	if opreply.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(opreply.Code),
+			fmt.Errorf(opreply.Message))
+		return
+	}
+	
 	o.DeleteBot(tx, botId)
 	o.ok(w, "", nil)
 }

@@ -103,6 +103,7 @@ const (
 	REGISTER      string = "REGISTER"
 	LOGIN         string = "LOGIN"
 	LOGOUT        string = "LOGOUT"
+	SHUTDOWN      string = "SHUTDOWN"
 	LOGINSCAN     string = "LOGINSCAN"
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
@@ -615,7 +616,10 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
 		hub.Info("cannot find bot %s\n%#v", req.BotId, hub.bots)
-		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+		return &pb.OperationReply{
+			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("b[%s] not found", req.BotId),
+		}, nil
 	}
 
 	_, err := bot.logout()
@@ -625,6 +629,24 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
+
+func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
+	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
+	
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
+		return &pb.OperationReply{Code: 0, Message: "success"}, nil
+	}
+
+	_, err := bot.shutdown()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)

@@ -24,6 +24,7 @@ const (
 	LoggingChallenged   ChatBotStatus = 150
 	LoggingFailed       ChatBotStatus = 151
 	WorkingLoggedIn     ChatBotStatus = 200
+	ShuttingdownDone    ChatBotStatus = 404
 	FailingDisconnected ChatBotStatus = 500
 )
 
@@ -138,12 +139,37 @@ func (bot *ChatBot) register(clientId string, clientType string,
 
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
-		return bot, fmt.Errorf("bot status %s cannot login", bot.Status)
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot login", bot.Status))
 	}
 
 	bot.BotId = botId
 	bot.Login = login
 	bot.Status = LoggingPrepared
+	return bot, nil
+}
+
+func (bot *ChatBot) shutdown() (*ChatBot, error) {
+	o := &ErrorHandler{}
+
+	if bot.Status == WorkingLoggedIn {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot shutdown, try logout", bot.Status))
+	}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType: SHUTDOWN,
+		ClientType: bot.ClientType,
+		ClientId: bot.ClientId,
+		Body: "{}",
+	})
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	bot.Status = ShuttingdownDone
+	
 	return bot, nil
 }
 
@@ -161,6 +187,10 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 		ClientId:   bot.ClientId,
 		Body:       "{}",
 	})
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
 
 	return bot, nil
 }
