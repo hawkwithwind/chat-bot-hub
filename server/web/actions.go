@@ -272,7 +272,7 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 		if len(botsreply.BotsInfo) == 0 {
 			o.Err = fmt.Errorf("bot {%s} not activated", botId)
 		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot {%s} multiple instance", botId)
+			o.Err = fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo)
 		}
 	}
 
