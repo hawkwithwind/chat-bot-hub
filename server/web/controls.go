@@ -183,7 +183,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		pb.BotsInfo
 		BotName  string `json:"botName"`
 		Callback string `json:"callback"`
-		CreateAt int64  `json:"createAt"`
+		CreateAt utils.JSONTime `json:"createAt"`
 		UpdateAt utils.JSONTime `json:"updateAt"`
 		DeleteAt utils.JSONTime `json:"deleteAt,omitempty"`
 	}
