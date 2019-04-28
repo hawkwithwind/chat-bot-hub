@@ -310,7 +310,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					
-if o.Err == nil {
+					if o.Err == nil {
 						findbot := hub.GetBotById(botId)
 						if findbot != nil && findbot.ClientId != bot.ClientId {
 							hub.Info(
@@ -363,24 +363,27 @@ if o.Err == nil {
 							switch respbody := cresp.Body.(type) {
 							case map[string]interface{}:
 								if respBotId, ok := respbody["botId"]; ok {
-									findbot := hub.GetBotById(respBotId.(string))
-									if findbot != nil {
-										hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
-											findbot.BotId, findbot.ClientId)
-										findbot, o.Err = findbot.logoutOrShutdown()
-										if o.Err != nil {
-											hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+									if respBotId != "" {
+										hub.Info("[LOGIN MIGRATE] return oldId %s", respBotId)
+										findbot := hub.GetBotById(respBotId.(string))
+										if findbot != nil {
+											hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 												findbot.BotId, findbot.ClientId)
-											bot.logout()
-											continue
+											findbot, o.Err = findbot.logoutOrShutdown()
+											if o.Err != nil {
+												hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+													findbot.BotId, findbot.ClientId)
+												bot.logout()
+												continue
+											}
+
+											hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+											hub.DropBot(findbot.ClientId)
 										}
 
-										hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
-										hub.DropBot(findbot.ClientId)
+										bot.BotId = respBotId.(string)
+										botId = respBotId.(string)
 									}
-
-									bot.BotId = respBotId.(string)
-									botId = respBotId.(string)
 
 								} else {
 									hub.Error(fmt.Errorf("unexpected return %v, key botId required", cresp.Body),
