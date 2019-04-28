@@ -365,7 +365,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/bots/{botId}/logout", ctx.validate(ctx.botLogout)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
-	//r.HandleFunc("/bots/{botId}/loginstage", ctx.botLoginStage).Methods("POST")
+	r.HandleFunc("/bots/{botId}/loginstage", ctx.botLoginStage).Methods("Post")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", ctx.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
