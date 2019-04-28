@@ -108,6 +108,7 @@ const (
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
 	LOGOUTDONE    string = "LOGOUTDONE"
+	BOTMIGRATE    string = "BOTMIGRATE"
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	IMAGEMESSAGE  string = "IMAGEMESSAGE"
@@ -183,7 +184,7 @@ func (hub *ChatHub) GetBotById(botId string) *ChatBot {
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
-
+	
 	hub.bots[clientid] = thebot
 }
 
@@ -362,10 +363,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 							switch respbody := cresp.Body.(type) {
 							case map[string]interface{}:
-								if respBotId, ok := respbody["botId"]; ok {
+								if respBotIdptr, ok := respbody["botId"]; ok {
+									switch respBotId := respBotIdptr.(type) {
+									case string:
 									if respBotId != "" {
 										hub.Info("[LOGIN MIGRATE] return oldId %s", respBotId)
-										findbot := hub.GetBotById(respBotId.(string))
+										findbot := hub.GetBotById(respBotId)
 										if findbot != nil {
 											hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 												findbot.BotId, findbot.ClientId)
@@ -381,26 +384,36 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 											hub.DropBot(findbot.ClientId)
 										}
 
-										bot.BotId = respBotId.(string)
-										botId = respBotId.(string)
+										botId = respBotId
+										bot, o.Err = bot.botMigrate(botId)
+										if o.Err != nil {
+											hub.Error(o.Err, "call client bot migrate failed")
+											bot.logout()
+											continue
+										}
+									}
+									default:
+										hub.Error(fmt.Errorf("unexpected respbot %T %#v", respBotId, respBotId), "[LOGIN MIGRATE] b[%s] login stage failed<1>, logout")
+										bot.logout()
+										continue
 									}
 
 								} else {
 									hub.Error(fmt.Errorf("unexpected return %v, key botId required", cresp.Body),
-										"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+										"[LOGIN MIGRATE] b[%s] loginstage failed<2>, logout", bot.BotId)
 									bot.logout()
 									continue
 								}
 							default:
 								hub.Error(fmt.Errorf("unexpected return %T %#v", respbody, respbody),
-									"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+									"[LOGIN MIGRATE] b[%s] loginstage failed<3>, logout", bot.BotId)
 								bot.logout()
 								continue
 							}
 
 						} else {
 							hub.Error(fmt.Errorf("web status code %d", resp.StatusCode),
-								"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+								"[LOGIN MIGRATE] b[%s] loginstage failed<4>, logout", bot.BotId)
 							bot.logout()
 							continue
 						}

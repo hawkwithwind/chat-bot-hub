@@ -175,6 +175,27 @@ func (bot *ChatBot) shutdown() (*ChatBot, error) {
 	return bot, nil
 }
 
+func (bot *ChatBot) botMigrate(botId string) (*ChatBot, error) {
+	o := &ErrorHandler{}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType: BOTMIGRATE,
+		ClientType: bot.ClientType,
+		ClientId: bot.ClientId,
+		Body: o.ToJson(map[string]interface{}{
+			"botId": botId,
+		}),
+	})
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	bot.BotId = botId
+
+	return bot, nil
+}
+
 func (bot *ChatBot) logout() (*ChatBot, error) {
 	o := &ErrorHandler{}
 
