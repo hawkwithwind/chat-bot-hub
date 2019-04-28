@@ -43,7 +43,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	}
 
 	fmt.Printf("[SEARCH DEBUG] 1\n")
-	
+
 	if _, ok := searchableDomains[domain]; !ok {
 		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 			fmt.Errorf("domain %s not found, or not searchable", domain))
@@ -54,7 +54,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	orderclause := []string{}
 
 	fmt.Printf("[SEARCH DEBUG] 2\n")
-	
+
 	criteria := o.FromJson(query)
 	if o.Err != nil {
 		fmt.Printf("[SEARCH CRITERIA] parse failed\n%s\n", query)
@@ -89,7 +89,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 					}
 				}
 
-			default:				
+			default:
 				o.Err = utils.NewClientError(utils.PARAM_INVALID,
 					fmt.Errorf("query.find.%s %T %v not support", fieldName, v, v))
 				return []interface{}{}, utils.Paging{}
@@ -130,7 +130,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 			}
 		}
 
-	default:		
+	default:
 		o.Err = utils.NewClientError(utils.PARAM_INVALID,
 			fmt.Errorf("query.sort should be map{string: string}"))
 		return []interface{}{}, utils.Paging{}
@@ -208,7 +208,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	}
 
 	var results []interface{}
-	
+
 	for rows.Next() {
 		m := searchableDomains[domain](o)
 		if err := rows.StructScan(m); err != nil {

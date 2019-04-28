@@ -41,11 +41,10 @@ type Paging struct {
 }
 
 type CommonResponse struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message,omitempty"`
-	Ts      int64          `json:"ts"`
-	Error   ErrorMessage   `json:"error,omitempty""`
-	Body    interface{}    `json:"body,omitempty""`
-	Paging  Paging         `json:"paging,omitempty"`
+	Code    int          `json:"code"`
+	Message string       `json:"message,omitempty"`
+	Ts      int64        `json:"ts"`
+	Error   ErrorMessage `json:"error,omitempty""`
+	Body    interface{}  `json:"body,omitempty""`
+	Paging  Paging       `json:"paging,omitempty"`
 }
-

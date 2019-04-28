@@ -160,10 +160,10 @@ func (bot *ChatBot) shutdown() (*ChatBot, error) {
 	}
 
 	o.sendEvent(bot.tunnel, &pb.EventReply{
-		EventType: SHUTDOWN,
+		EventType:  SHUTDOWN,
 		ClientType: bot.ClientType,
-		ClientId: bot.ClientId,
-		Body: "{}",
+		ClientId:   bot.ClientId,
+		Body:       "{}",
 	})
 
 	if o.Err != nil {
@@ -171,7 +171,7 @@ func (bot *ChatBot) shutdown() (*ChatBot, error) {
 	}
 
 	bot.Status = ShuttingdownDone
-	
+
 	return bot, nil
 }
 
@@ -273,7 +273,7 @@ func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 	if bot.Status != LoggingPrepared {
 		err := fmt.Errorf("bot status %s cannot loginFail", bot.Status)
 		bot.Error(err, "UNEXPECTED BEHAVIOR")
-	 	return bot, err
+		return bot, err
 	}
 
 	bot.errmsg = errmsg
@@ -572,8 +572,7 @@ func (bot *ChatBot) DeleteContact(actionType string, arId string, body string) e
 
 func (bot *ChatBot) SyncContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam{
-	}
+	params := []ActionParam{}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
@@ -614,7 +613,7 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
-		
+
 		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
 		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
 			"stranger": msg.EncryptUserName,
@@ -630,7 +629,7 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 
 func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	
+
 	if bot.ClientType == WECHATBOT {
 		bot.Info("Create Room")
 		bodym := o.FromJson(body)
@@ -638,7 +637,7 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
-		
+
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
 			"userList": memberList,
 		}))
@@ -656,7 +655,7 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 
 func (bot *ChatBot) DeleteRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
 	}
@@ -666,7 +665,7 @@ func (bot *ChatBot) DeleteRoomMember(actionType string, arId string, body string
 
 func (bot *ChatBot) SetRoomAnnouncement(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParam("content", false, ""),
 	}
@@ -701,7 +700,7 @@ func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string
 
 func (bot *ChatBot) SetRoomName(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParam("content", false, ""),
 	}
@@ -711,7 +710,7 @@ func (bot *ChatBot) SetRoomName(actionType string, arId string, body string) err
 
 func (bot *ChatBot) AddRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
 	}
@@ -721,7 +720,7 @@ func (bot *ChatBot) AddRoomMember(actionType string, arId string, body string) e
 
 func (bot *ChatBot) InviteRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
 	}
@@ -731,7 +730,7 @@ func (bot *ChatBot) InviteRoomMember(actionType string, arId string, body string
 
 func (bot *ChatBot) GetRoomMembers(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
@@ -763,7 +762,7 @@ func (bot *ChatBot) AddContact(actionType string, arId string, body string) erro
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
-	
+
 	return o.Err
 }
 
@@ -963,7 +962,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
-		
+
 		switch content := content_if.(type) {
 		case string:
 			var atList []interface{}
@@ -1111,7 +1110,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 
 func (bot *ChatBot) SendImageResourceMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("toUserName", false, ""),
 		NewActionParam("imageId", false, ""),
 	}
@@ -1121,7 +1120,7 @@ func (bot *ChatBot) SendImageResourceMessage(actionType string, arId string, bod
 
 func (bot *ChatBot) SendImageMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	params := []ActionParam {
+	params := []ActionParam{
 		NewActionParam("toUserName", false, ""),
 		NewActionParam("payload", false, ""),
 	}

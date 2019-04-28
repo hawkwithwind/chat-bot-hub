@@ -183,7 +183,7 @@ func (hub *ChatHub) GetBotById(botId string) *ChatBot {
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
-	
+
 	hub.bots[clientid] = thebot
 }
 
@@ -233,7 +233,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
 				thebot.LastPing = ts
-				
+
 				if bot := hub.GetBot(in.ClientId); bot != nil {
 					hub.SetBot(in.ClientId, thebot)
 				}
@@ -310,13 +310,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 									findbot.BotId, findbot.ClientId)
 								continue
 							}
-							
+
 							hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
 							hub.DropBot(findbot.ClientId)
 						}
 					}
-
-					
 
 					if o.Err == nil {
 						bot, o.Err = bot.loginStaging(botId, userName, wxData, token)
@@ -337,10 +335,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							bot.logout()
 							continue
 						}
-						
+
 						hub.Info("[LOGIN MIGRATE] b[%s] loginstage return %d",
 							bot.BotId, resp.StatusCode)
-						
+
 						if resp.StatusCode == 200 {
 							cresp := utils.CommonResponse{}
 							o.Err = json.Unmarshal([]byte(resp.Body), &cresp)
@@ -368,10 +366,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 										hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
 										hub.DropBot(findbot.ClientId)
 									}
-									
+
 									bot.BotId = respBotId.(string)
 									botId = respBotId.(string)
-									
+
 								} else {
 									hub.Error(fmt.Errorf("unexpected return %v, key botId required", cresp.Body),
 										"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
@@ -384,13 +382,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								bot.logout()
 								continue
 							}
-							
+
 						} else {
 							hub.Error(fmt.Errorf("web status code %d", resp.StatusCode),
 								"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
 							bot.logout()
 							continue
-						}	
+						}
 					}
 
 					if o.Err == nil {
@@ -400,8 +398,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-									hub.Error(err, "webnotify logindone failed\n")
-								}
+								hub.Error(err, "webnotify logindone failed\n")
+							}
 						}()
 					}
 				} else if bot.ClientType == QQBOT {
@@ -654,7 +652,7 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 	o := &ErrorHandler{}
 
 	botm := make(map[string]*pb.BotsInfo)
-	
+
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
@@ -672,7 +670,7 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 			botm[v.ClientId] = NewBotsInfo(v)
 		}
 	}
-		
+
 	bots := make([]*pb.BotsInfo, 0)
 	for _, v := range botm {
 		bots = append(bots, v)
@@ -705,12 +703,12 @@ type LoginBody struct {
 
 func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve logout bot cmd from web %s", req.BotId)
-	
+
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
 		hub.Info("cannot find bot %s\n%#v", req.BotId, hub.bots)
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("b[%s] not found", req.BotId),
 		}, nil
 	}
@@ -725,7 +723,7 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 
 func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
-	
+
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
 		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
@@ -739,7 +737,6 @@ func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (
 
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
-
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
@@ -817,12 +814,12 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err != nil {
-		switch clientError:= o.Err.(type) {
+		switch clientError := o.Err.(type) {
 		case *utils.ClientError:
 			return &pb.BotActionReply{
 				Msg: "Action failed",
 				ClientError: &pb.OperationReply{
-					Code: int32(clientError.Code),
+					Code:    int32(clientError.Code),
 					Message: clientError.Error(),
 				},
 			}, nil
@@ -830,7 +827,7 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 			return &pb.BotActionReply{
 				Msg: "Action failed",
 				ClientError: &pb.OperationReply{
-					Code: int32(utils.UNKNOWN),
+					Code:    int32(utils.UNKNOWN),
 					Message: o.Err.Error(),
 				},
 			}, nil
@@ -876,7 +873,7 @@ func (hub *ChatHub) FilterCreate(
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
 		return &pb.OperationReply{
-			Code: int32(utils.PARAM_INVALID),
+			Code:    int32(utils.PARAM_INVALID),
 			Message: err.Error(),
 		}, err
 	}
@@ -886,11 +883,11 @@ func (hub *ChatHub) FilterCreate(
 		bodym := o.FromJson(req.Body)
 		if o.Err != nil {
 			return &pb.OperationReply{
-				Code: int32(utils.PARAM_INVALID),
+				Code:    int32(utils.PARAM_INVALID),
 				Message: o.Err.Error(),
 			}, nil
 		}
-		
+
 		if bodym != nil {
 			switch ff := filter.(type) {
 			case *WebTrigger:
@@ -898,7 +895,7 @@ func (hub *ChatHub) FilterCreate(
 				method := o.FromMapString("method", bodym, "body.method", false, "")
 				if o.Err != nil {
 					return &pb.OperationReply{
-						Code: int32(utils.PARAM_INVALID),
+						Code:    int32(utils.PARAM_INVALID),
 						Message: o.Err.Error(),
 					}, nil
 				}
@@ -947,7 +944,7 @@ func (hub *ChatHub) FilterNext(
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("filter %s not found", req.FilterId),
 		}, nil
 	}
@@ -955,7 +952,7 @@ func (hub *ChatHub) FilterNext(
 	nextFilter := hub.GetFilter(req.NextFilterId)
 	if nextFilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("filter %s not found", req.NextFilterId),
 		}, nil
 	}
@@ -974,7 +971,7 @@ func (hub *ChatHub) RouterBranch(
 	parentFilter := hub.GetFilter(req.RouterId)
 	if parentFilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("filter %s not found", req.RouterId),
 		}, nil
 	}
@@ -982,7 +979,7 @@ func (hub *ChatHub) RouterBranch(
 	childFilter := hub.GetFilter(req.FilterId)
 	if childFilter == nil {
 		return &pb.OperationReply{
-			Code: int32(utils.RESOURCE_NOT_FOUND),
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
 			Message: fmt.Sprintf("child filter %s not found", req.FilterId),
 		}, nil
 	}
@@ -994,7 +991,7 @@ func (hub *ChatHub) RouterBranch(
 		}
 	default:
 		return &pb.OperationReply{
-			Code: int32(utils.METHOD_UNSUPPORTED),
+			Code:    int32(utils.METHOD_UNSUPPORTED),
 			Message: fmt.Sprintf("filter type %T cannot branch", r),
 		}, nil
 	}

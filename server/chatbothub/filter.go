@@ -439,7 +439,7 @@ func (f *KVRouter) Fill(msg string) error {
 	if f.NextFilter == nil && f.DefaultNextFilter == nil {
 		return nil
 	}
-	
+
 	if body == nil {
 		return nil
 	}
@@ -448,7 +448,7 @@ func (f *KVRouter) Fill(msg string) error {
 		fmt.Printf("[FILTER DEBUG][%s][default] filled\n", f.Name)
 		return f.DefaultNextFilter.Fill(msg)
 	}
-	
+
 	errlist := make([]error, 0)
 	fillOnce := false
 

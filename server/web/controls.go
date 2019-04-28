@@ -129,8 +129,6 @@ func (ctx *ErrorHandler) BotShutdown(w *GRPCWrapper, req *pb.BotLogoutRequest) *
 	}
 }
 
-
-
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
@@ -672,7 +670,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		LoginInfo:  "",
 		BotId:      bot.BotId,
 	})
-	
+
 	if o.Err != nil {
 		return
 	}
@@ -683,7 +681,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf(loginreply.ClientError.Message))
 		return
 	}
-	
+
 	o.ok(w, "", loginreply)
 }
 
@@ -721,7 +719,7 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf(opreply.Message))
 		return
 	}
-	
+
 	o.ok(w, "", opreply)
 }
 
@@ -759,7 +757,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf(opreply.Message))
 		return
 	}
-	
+
 	o.DeleteBot(tx, botId)
 	o.ok(w, "", nil)
 }
@@ -1196,18 +1194,18 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	query := o.ToJson(map[string]interface{} {
-		"find": map[string]interface{} {
-			"groupname": map[string]interface{} {
+	query := o.ToJson(map[string]interface{}{
+		"find": map[string]interface{}{
+			"groupname": map[string]interface{}{
 				"in": []string{
 					groupname,
 				},
 			},
 		},
 	})
-	
+
 	web.Info("search groupmembers\n%s\n", query)
-		
+
 	rows, paging := o.SelectByCriteria(tx, query, domain)
 	if o.Err != nil {
 		return
@@ -1225,10 +1223,10 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	for _, gm := range groupMemberDomains {
 		gmvos = append(gmvos, ChatGroupMemberVO{
 			ChatGroupMemberId: gm.ChatGroupMemberId,
-			ChatGroupId: gm.ChatGroupId,
-			GroupName: groupname,
-			InvitedBy: gm.InvitedBy.String,
-			GroupNickName: gm.GroupNickName.String,
+			ChatGroupId:       gm.ChatGroupId,
+			GroupName:         groupname,
+			InvitedBy:         gm.InvitedBy.String,
+			GroupNickName:     gm.GroupNickName.String,
 			ChatUserVO: ChatUserVO{
 				ChatUserId: gm.ChatUserId,
 				UserName:   gm.UserName,

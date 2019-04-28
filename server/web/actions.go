@@ -80,7 +80,7 @@ func (o *ErrorHandler) CreateFilterChain(
 				o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 				return
 			}
-			
+
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
 				//ctx.Info("generate KVRouter children")
@@ -965,7 +965,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	if actionReply.ClientError != nil {
 		if actionReply.ClientError.Code != 0 {
 			o.Err = utils.NewClientError(
@@ -975,7 +975,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 			return nil
 		}
 	}
-	
+
 	o.SaveActionRequest(web.redispool, ar)
 	return actionReply
 }
