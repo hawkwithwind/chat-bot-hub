@@ -199,7 +199,7 @@ func (bot *ChatBot) botMigrate(botId string) (*ChatBot, error) {
 func (bot *ChatBot) logout() (*ChatBot, error) {
 	o := &ErrorHandler{}
 
-	if bot.Status != WorkingLoggedIn {
+	if bot.Status != WorkingLoggedIn && bot.Status != LoggingStaging {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot logout", bot.Status))
 	}

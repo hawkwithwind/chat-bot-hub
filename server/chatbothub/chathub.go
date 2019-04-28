@@ -344,7 +344,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								fmt.Sprintf("%s/bots/%s/loginstage", hub.WebBaseUrl, bot.BotId)),
 							5, 1)
 						if o.Err != nil {
-							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout<post>", bot.BotId)
 							bot.logout()
 							continue
 						}
@@ -356,7 +356,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							cresp := utils.CommonResponse{}
 							o.Err = json.Unmarshal([]byte(resp.Body), &cresp)
 							if o.Err != nil {
-								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout<0>", bot.BotId)
 								bot.logout()
 								continue
 							}
@@ -393,7 +393,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 										}
 									}
 									default:
-										hub.Error(fmt.Errorf("unexpected respbot %T %#v", respBotId, respBotId), "[LOGIN MIGRATE] b[%s] login stage failed<1>, logout")
+										hub.Error(fmt.Errorf("unexpected respbot %T %#v", respBotId, respBotId),
+											"[LOGIN MIGRATE] b[%s] login stage failed<1>, logout")
 										bot.logout()
 										continue
 									}
