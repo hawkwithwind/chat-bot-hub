@@ -241,7 +241,8 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 				},
 				BotName:  bot.BotName,
 				Callback: bot.Callback.String,
-				CreateAt: bot.CreateAt.Time.Unix(),
+				CreateAt: utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: utils.JSONTime{Time: bot.UpdateAt.Time},
 			}
 			if bot.DeleteAt.Valid {
 				bi.DeleteAt = utils.JSONTime{Time:bot.DeleteAt.Time}
