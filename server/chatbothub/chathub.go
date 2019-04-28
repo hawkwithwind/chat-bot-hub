@@ -298,7 +298,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 
-					o.Err != nil {
+					if o.Err != nil {
 						hub.Error(o.Err, "LOGIN DONE MALFALED DATA %s", in.Body)
 						continue
 					}
@@ -309,7 +309,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						continue
 					}
 
-					if o.Err == nil {
+					
+if o.Err == nil {
 						findbot := hub.GetBotById(botId)
 						if findbot != nil && findbot.ClientId != bot.ClientId {
 							hub.Info(
