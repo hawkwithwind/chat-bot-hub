@@ -275,7 +275,7 @@ WHERE login=?
 		// should migrate chatuser info, later with tasks
 		
 		ctx, _ = o.DefaultContext()
-		_, o.Err = q.ExecContext(ctx, `UPDATE bots SET deleteat=CURRENT_TIME_STAMP`)
+		_, o.Err = q.ExecContext(ctx, `UPDATE bots SET deleteat=CURRENT_TIMESTAMP`)
 		if o.Err != nil {
 			return ""
 		}
