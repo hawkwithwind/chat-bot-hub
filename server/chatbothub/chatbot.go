@@ -620,7 +620,7 @@ func (bot *ChatBot) DeleteRoomMember(actionType string, arId string, body string
 	o := &ErrorHandler{}
 	params := []ActionParam {
 		NewActionParam("groupId", false, ""),
-		NewActionParamCName("userid", "memberId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -675,7 +675,7 @@ func (bot *ChatBot) AddRoomMember(actionType string, arId string, body string) e
 	o := &ErrorHandler{}
 	params := []ActionParam {
 		NewActionParam("groupId", false, ""),
-		NewActionParamCName("userid", "memberId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -685,7 +685,7 @@ func (bot *ChatBot) InviteRoomMember(actionType string, arId string, body string
 	o := &ErrorHandler{}
 	params := []ActionParam {
 		NewActionParam("groupId", false, ""),
-		NewActionParamCName("userid", "memberId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
