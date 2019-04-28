@@ -272,19 +272,8 @@ WHERE login=?
 
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
-
-		ctx, _ := o.DefaultContext()
-		_, o.Err = q.ExecContext(ctx, `UPDATE chatcontacts SET botId=? WHERE botId=?`, oldId, botId)
-		if o.Err != nil {
-			return ""
-		}
-
-		ctx, _ = o.DefaultContext()
-		_, o.Err = q.ExecContext(ctx, `UPDATE chatcontactgroups SET botId=? WHERE botId=?`, oldId, botId)
-		if o.Err != nil {
-			return ""
-		}
-
+		// should migrate chatuser info, later with tasks
+		
 		ctx, _ = o.DefaultContext()
 		_, o.Err = q.ExecContext(ctx, `UPDATE bots SET deleteat=CURRENT_TIME_STAMP`)
 		if o.Err != nil {
