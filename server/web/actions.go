@@ -441,12 +441,16 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.Login = thebotinfo.Login
 		o.UpdateBotLogin(tx, bot)
 
+		// rebuild msg filter error should not effect update bot login
+		// consider transaction, we use new errorhandler here
+
+		re_o := &ErrorHandler{}
 		// now, initailize bot's filter, and call chathub to create intances and get connected
-		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		if o.Err != nil {
+		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+		if re_o.Err != nil {
 			return
 		}
-		o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
 		return
 
 	case chatbothub.FRIENDREQUEST:
