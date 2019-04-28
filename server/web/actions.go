@@ -385,11 +385,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
-		if len(bot.Login) == 0 {
-			ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
-			bot.Login = thebotinfo.Login
-			o.UpdateBotLogin(tx, bot)
-		}
+		ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
+		bot.Login = thebotinfo.Login
+		o.UpdateBotLogin(tx, bot)
 
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
