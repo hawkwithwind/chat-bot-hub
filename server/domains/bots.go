@@ -266,12 +266,15 @@ WHERE login=?
   AND botid<>?
   AND deleteat is NULL`, botId, login)
 
+	fmt.Printf("[BOT MIGRATE] %s %s find [%d]", botId, login, len(bots))
+
 	if len(bots) == 0 {
 		return ""
 	}
 
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
+		fmt.Printf("[BOT MIGRATE] oldId %s\n", oldId)
 
 		ctx, _ := o.DefaultContext()
 		_, o.Err = q.ExecContext(ctx, `UPDATE chatcontacts SET botId=? WHERE botId=?`, oldId, botId)
@@ -294,6 +297,6 @@ WHERE login=?
 		return oldId
 	}
 
-	o.Err = fmt.Errorf("multiple bot with login %s found, fatal error", login)
+	o.Err = fmt.Errorf("[BOT MIGRATE] multiple bot with login %s found, fatal error", login)
 	return ""
 }

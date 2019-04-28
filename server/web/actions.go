@@ -340,6 +340,8 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	web.Info("[LOGIN MIGRATE] bot migrate b[%s] %s", botId, thebotinfo.Login)
+	
 	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
 	o.ok(w, "", map[string]interface{}{
 		"botId": oldId,
