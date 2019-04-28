@@ -185,7 +185,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
 		UpdateAt utils.JSONTime `json:"updateAt"`
-		DeleteAt utils.JSONTime `json:"deleteAt"`
+		DeleteAt utils.JSONTime `json:"deleteAt,omitempty"`
 	}
 
 	o := ErrorHandler{}
@@ -219,15 +219,20 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 1 {
-			o.ok(w, "", BotsInfo{
+			bi := BotsInfo{
 				BotsInfo: *botsreply.BotsInfo[0],
 				BotName:  bot.BotName,
 				Callback: bot.Callback.String,
-				CreateAt: bot.CreateAt.Time.Unix(),
-			})
+				CreateAt: utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: utils.JSONTime{Time: bot.UpdateAt.Time},
+			}
+			if bot.DeleteAt.Valid {
+				bi.DeleteAt = utils.JSONTime{Time: bot.DeleteAt.Time}
+			}
+			o.ok(w, "", bi)
 			return
 		} else if len(botsreply.BotsInfo) == 0 {
-			o.ok(w, "", BotsInfo{
+			bi := BotsInfo{
 				BotsInfo: pb.BotsInfo{
 					ClientType: bot.ChatbotType,
 					Login:      bot.Login,
@@ -237,7 +242,12 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 				BotName:  bot.BotName,
 				Callback: bot.Callback.String,
 				CreateAt: bot.CreateAt.Time.Unix(),
-			})
+			}
+			if bot.DeleteAt.Valid {
+				bi.DeleteAt = utils.JSONTime{Time:bot.DeleteAt.Time}
+			}
+			
+			o.ok(w, "", bi)
 			return
 		} else {
 			o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
