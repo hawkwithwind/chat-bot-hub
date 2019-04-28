@@ -264,9 +264,7 @@ SELECT *
 FROM bots
 WHERE login=?
   AND botid<>?
-  AND deleteat is NULL`, botId, login)
-
-	fmt.Printf("[BOT MIGRATE] %s %s find [%d]", botId, login, len(bots))
+  AND deleteat is NULL`, login, botId)
 
 	if len(bots) == 0 {
 		return ""
@@ -274,7 +272,6 @@ WHERE login=?
 
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
-		fmt.Printf("[BOT MIGRATE] oldId %s\n", oldId)
 
 		ctx, _ := o.DefaultContext()
 		_, o.Err = q.ExecContext(ctx, `UPDATE chatcontacts SET botId=? WHERE botId=?`, oldId, botId)
