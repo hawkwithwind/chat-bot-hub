@@ -348,8 +348,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							continue
 						}
 
-						hub.Info("[LOGIN MIGRATE] b[%s] loginstage return %d",
-							bot.BotId, resp.StatusCode)
+						hub.Info("[LOGIN MIGRATE] b[%s] loginstage return %d\n%s",
+							bot.BotId, resp.StatusCode, resp.Body)
 
 						if resp.StatusCode == 200 {
 							cresp := utils.CommonResponse{}
