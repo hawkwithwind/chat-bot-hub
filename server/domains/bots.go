@@ -256,8 +256,7 @@ FROM bots as b
 LEFT JOIN accounts as a on b.accountid = a.accountid
 WHERE a.accountname=? 
   AND b.botid=?
-  AND a.deleteat is NULL
-  AND b.deleteat is NULL`, accountName, botId)
+  AND a.deleteat is NULL`, accountName, botId)
 
 	head := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botId))
 	if o.Err != nil {
