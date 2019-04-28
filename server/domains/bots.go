@@ -173,6 +173,27 @@ WHERE botid=?
 	}
 }
 
+func (o *ErrorHandler) GetBotByIdNull(q dbx.Queryable, botid string) *Bot {
+	if o.Err != nil {
+		return nil
+	}
+
+	bots := []Bot{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT *
+FROM bots
+WHERE botid=?`, botid)
+
+	if b := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botid)); b != nil {
+		return b.(*Bot)
+	} else {
+		return nil
+	}
+}
+
+
 func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) *Bot {
 	if o.Err != nil {
 		return nil
@@ -208,8 +229,7 @@ FROM bots as b
 LEFT JOIN accounts as a on b.accountid = a.accountid
 WHERE a.accountname=? 
   AND b.login=?
-  AND a.deleteat is NULL
-  AND b.deleteat is NULL`, accountName, login)
+  AND a.deleteat is NULL`, accountName, login)
 
 	head := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
 	if o.Err != nil {

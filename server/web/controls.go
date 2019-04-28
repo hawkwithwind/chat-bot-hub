@@ -184,6 +184,8 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		BotName  string `json:"botName"`
 		Callback string `json:"callback"`
 		CreateAt int64  `json:"createAt"`
+		UpdateAt utils.JSONTime `json:"updateAt"`
+		DeleteAt utils.JSONTime `json:"deleteAt"`
 	}
 
 	o := ErrorHandler{}
@@ -197,48 +199,52 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
+	o.CheckBotOwnerById(tx, botId, accountname)
+	if o.Err != nil {
+		return
+	}	
+
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	bots := o.GetBotsByAccountName(ctx.db.Conn, accountname)
-	for _, bot := range bots {
-		if bot.BotId == botId {
-			botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
-			if botsreply == nil {
-				o.Err = fmt.Errorf("get bots from hub failed")
-				return
-			}
-
-			if o.Err == nil {
-				if len(botsreply.BotsInfo) == 1 {
-					o.ok(w, "", BotsInfo{
-						BotsInfo: *botsreply.BotsInfo[0],
-						BotName:  bot.BotName,
-						Callback: bot.Callback.String,
-						CreateAt: bot.CreateAt.Time.Unix(),
-					})
-					return
-				} else if len(botsreply.BotsInfo) == 0 {
-					o.ok(w, "", BotsInfo{
-						BotsInfo: pb.BotsInfo{
-							ClientType: bot.ChatbotType,
-							Login:      bot.Login,
-							Status:     0,
-							BotId:      bot.BotId,
-						},
-						BotName:  bot.BotName,
-						Callback: bot.Callback.String,
-						CreateAt: bot.CreateAt.Time.Unix(),
-					})
-					return
-				} else {
-					o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
-					return
-				}
-			}
-		}
+	bot := o.GetBotByIdNull(tx, botId)
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
+	if botsreply == nil {
+		o.Err = fmt.Errorf("get bots from hub failed")
+		return
 	}
 
+	if o.Err == nil {
+		if len(botsreply.BotsInfo) == 1 {
+			o.ok(w, "", BotsInfo{
+				BotsInfo: *botsreply.BotsInfo[0],
+				BotName:  bot.BotName,
+				Callback: bot.Callback.String,
+				CreateAt: bot.CreateAt.Time.Unix(),
+			})
+			return
+		} else if len(botsreply.BotsInfo) == 0 {
+			o.ok(w, "", BotsInfo{
+				BotsInfo: pb.BotsInfo{
+					ClientType: bot.ChatbotType,
+					Login:      bot.Login,
+					Status:     0,
+					BotId:      bot.BotId,
+				},
+				BotName:  bot.BotName,
+				Callback: bot.Callback.String,
+				CreateAt: bot.CreateAt.Time.Unix(),
+			})
+			return
+		} else {
+			o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
+			return
+		}
+	}
+	
 	o.ok(w, "bot not found, or no access", BotsInfo{})
 }
 
@@ -445,7 +451,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		}
 
 		o.CheckBotOwner(tx, botlogin, accountName)
-		if o.Err == nil {
+		if o.Err != nil {
 			return
 		}
 	}
