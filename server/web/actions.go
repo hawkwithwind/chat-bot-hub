@@ -294,6 +294,58 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 	return botsreply.BotsInfo[0]
 }
 
+func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]	
+
+	web.Info("botNotify %s", botId)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	bot := o.GetBotById(tx, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if bot == nil {
+		o.Err = fmt.Errorf("bot %s not found", botId)
+		return
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	thebotinfo := o.getTheBot(wrapper, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if thebotinfo == nil {
+		o.Err = fmt.Errorf("bot %s not active", botId)
+		return
+	}
+
+	if thebotinfo.Status != int32(chatbothub.LoggingStaging) {
+		o.Err = fmt.Errorf("bot[%s] not LogingStaging but %d", botId, thebotinfo.Status)
+		return
+	}
+	
+	if len(thebotinfo.Login) == 0 {
+		o.Err = fmt.Errorf("bot[%s] loging staging with empty login %#v", botId, thebotinfo)
+		return
+	}
+
+	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
+	o.ok(w, "", map[string]interface{}{
+		"botId": oldId,
+	})
+}
+
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
