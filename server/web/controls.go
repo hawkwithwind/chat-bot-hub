@@ -327,14 +327,14 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	if criteria.BotId.Valid {
 		chatusers = o.GetChatUsersWithBotId(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
 	} else {
 		chatusers = o.GetChatUsers(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
@@ -382,7 +382,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Data:     chatuservos,
 			Criteria: criteria,
 		},
-		domains.Paging{
+		utils.Paging{
 			Page:      ipage,
 			PageCount: pagecount,
 			PageSize:  ipagesize,
@@ -463,14 +463,14 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	if criteria.BotId.Valid {
 		chatgroups = o.GetChatGroupsWithBotId(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
 	} else {
 		chatgroups = o.GetChatGroups(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
@@ -512,7 +512,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			Data:     chatgroupvos,
 			Criteria: criteria,
 		},
-		domains.Paging{
+		utils.Paging{
 			Page:      ipage,
 			PageCount: pagecount,
 			PageSize:  ipagesize,

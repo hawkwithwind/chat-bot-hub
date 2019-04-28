@@ -23,6 +23,7 @@ const (
 	LoggingPrepared     ChatBotStatus = 100
 	LoggingChallenged   ChatBotStatus = 150
 	LoggingFailed       ChatBotStatus = 151
+	LoggingStaging      ChatBotStatus = 190
 	WorkingLoggedIn     ChatBotStatus = 200
 	ShuttingdownDone    ChatBotStatus = 404
 	FailingDisconnected ChatBotStatus = 500
@@ -35,6 +36,7 @@ func (status ChatBotStatus) String() string {
 		LoggingPrepared:     "准备登录",
 		LoggingChallenged:   "等待扫码",
 		LoggingFailed:       "登录失败",
+		LoggingStaging:      "登录校验中",
 		WorkingLoggedIn:     "已登录",
 		FailingDisconnected: "连接断开",
 	}
@@ -200,10 +202,36 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
+func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+	bot.Info("c[%s:%s]{%s} loginStaging", bot.ClientType, bot.Login, bot.ClientId)
+
+	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
+	}
+
+	if len(bot.Login) > 0 && bot.Login != login {
+		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
+	}
+
+	if len(bot.BotId) > 0 && bot.BotId != botId {
+		bot.Info("bot c[%s]{%s} botId %s -> %s ", bot.ClientType, bot.ClientId, bot.BotId, botId)
+	}
+
+	bot.BotId = botId
+	bot.Login = login
+	bot.LoginInfo.WxData = wxdata
+	bot.LoginInfo.Token = token
+	bot.ScanUrl = ""
+
+	bot.Status = LoggingStaging
+	return bot, nil
+}
+
 func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
-	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
+	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared && bot.Status != LoggingStaging {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
 	}
@@ -329,6 +357,16 @@ func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) 
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 	return rr
+}
+
+func (bot *ChatBot) logoutOrShutdown() (*ChatBot, error) {
+	if bot.Status == WorkingLoggedIn || bot.Status == LoggingStaging {
+		bot.Info("[LOGIN MIGRATE] b[%s]c[%s] logout ...", bot.BotId, bot.ClientId)
+		return bot.logout()
+	} else {
+		bot.Info("[LOGIN MIGRATE] b[%s]c[%s] shutdown ...", bot.BotId, bot.ClientId)
+		return bot.shutdown()
+	}
 }
 
 func (bot *ChatBot) BotAction(arId string, actionType string, body string) error {

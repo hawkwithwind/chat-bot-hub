@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
-	//"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ChatUser struct {
@@ -431,7 +431,7 @@ type ChatUserCriteria struct {
 	BotId    sql.NullString
 }
 
-func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
+func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, paging utils.Paging) []ChatUser {
 	if o.Err != nil {
 		return []ChatUser{}
 	}
@@ -492,7 +492,7 @@ WHERE deleteat is NULL
 	return count[0]
 }
 
-func (o *ErrorHandler) GetChatUsersWithBotId(q dbx.Queryable, criteria ChatUserCriteria, paging Paging) []ChatUser {
+func (o *ErrorHandler) GetChatUsersWithBotId(q dbx.Queryable, criteria ChatUserCriteria, paging utils.Paging) []ChatUser {
 	if o.Err != nil {
 		return []ChatUser{}
 	}

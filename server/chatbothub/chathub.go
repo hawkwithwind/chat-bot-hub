@@ -301,10 +301,96 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						findbot := hub.GetBotById(botId)
 						if findbot != nil && findbot.ClientId != bot.ClientId {
-							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
-							hub.Error(o.Err, "FATAL error, stop")
+							hub.Info(
+								"[LOGIN MIGRATE] bot[%s] already login b[%s]c[%s]; logout b[%s] now",
+								botId, findbot.BotId, findbot.ClientId, findbot.BotId)
+							findbot, o.Err = findbot.logoutOrShutdown()
+							if o.Err != nil {
+								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s]c[%s] try drop failed",
+									findbot.BotId, findbot.ClientId)
+								continue
+							}
+							
+							hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+							hub.DropBot(findbot.ClientId)
+						}
+					}
+
+					
+
+					if o.Err == nil {
+						bot, o.Err = bot.loginStaging(botId, userName, wxData, token)
+						if o.Err != nil {
+							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+							bot.logout()
 							continue
 						}
+
+						var resp *httpx.RestfulResponse
+						resp, o.Err = httpx.RestfulCallRetry(
+							httpx.NewRestfulRequest(
+								"post",
+								fmt.Sprintf("%s/bots/%s/loginstage", hub.WebBaseUrl, bot.BotId)),
+							5, 1)
+						if o.Err != nil {
+							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+							bot.logout()
+							continue
+						}
+						
+						hub.Info("[LOGIN MIGRATE] b[%s] loginstage return %d",
+							bot.BotId, resp.StatusCode)
+						
+						if resp.StatusCode == 200 {
+							cresp := utils.CommonResponse{}
+							o.Err = json.Unmarshal([]byte(resp.Body), &cresp)
+							if o.Err != nil {
+								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+								bot.logout()
+								continue
+							}
+
+							switch respbody := cresp.Body.(type) {
+							case map[string]interface{}:
+								if respBotId, ok := respbody["botId"]; ok {
+									findbot := hub.GetBotById(respBotId.(string))
+									if findbot != nil {
+										hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
+											findbot.BotId, findbot.ClientId)
+										findbot, o.Err = findbot.logoutOrShutdown()
+										if o.Err != nil {
+											hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+												findbot.BotId, findbot.ClientId)
+											bot.logout()
+											continue
+										}
+
+										hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+										hub.DropBot(findbot.ClientId)
+									}
+									
+									bot.BotId = respBotId.(string)
+									botId = respBotId.(string)
+									
+								} else {
+									hub.Error(fmt.Errorf("unexpected return %v, key botId required", cresp.Body),
+										"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+									bot.logout()
+									continue
+								}
+							default:
+								hub.Error(fmt.Errorf("unexpected return %T %#v", respbody, respbody),
+									"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+								bot.logout()
+								continue
+							}
+							
+						} else {
+							hub.Error(fmt.Errorf("web status code %d", resp.StatusCode),
+								"[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+							bot.logout()
+							continue
+						}	
 					}
 
 					if o.Err == nil {
@@ -314,8 +400,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
 								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-								hub.Error(err, "webnotify logindone failed\n")
-							}
+									hub.Error(err, "webnotify logindone failed\n")
+								}
 						}()
 					}
 				} else if bot.ClientType == QQBOT {

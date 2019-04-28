@@ -22,8 +22,12 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	. "github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
+
+type ErrorHandler struct {
+	domains.ErrorHandler
+}
 
 type DatabaseConfig struct {
 	DriverName     string
@@ -34,28 +38,14 @@ type WebConfig struct {
 	Host         string
 	Port         string
 	Baseurl      string
-	Redis        utils.RedisConfig
-	Fluent       utils.FluentConfig
-	Mongo        utils.MongoConfig
+	Redis        RedisConfig
+	Fluent       FluentConfig
+	Mongo        MongoConfig
 	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
-}
-
-type CommonResponse struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message,omitempty"`
-	Ts      int64          `json:"ts"`
-	Error   ErrorMessage   `json:"error,omitempty""`
-	Body    interface{}    `json:"body,omitempty""`
-	Paging  domains.Paging `json:"paging,omitempty"`
-}
-
-type ErrorMessage struct {
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
 }
 
 type WebServer struct {
@@ -71,7 +61,7 @@ type WebServer struct {
 
 func (ctx *WebServer) init() error {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
-	ctx.redispool = utils.NewRedisPool(
+	ctx.redispool = NewRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
@@ -146,7 +136,7 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 	})
 }
 
-func (ctx *ErrorHandler) complain(w http.ResponseWriter, code utils.ClientErrorCode, msg string) {
+func (ctx *ErrorHandler) complain(w http.ResponseWriter, code ClientErrorCode, msg string) {
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(CommonResponse{
@@ -169,7 +159,7 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 	})
 }
 
-func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging domains.Paging) {
+func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging Paging) {
 	if ctx.Err != nil {
 		return
 	}
@@ -195,13 +185,9 @@ func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	})
 }
 
-type ErrorHandler struct {
-	domains.ErrorHandler
-}
-
 func (o *ErrorHandler) WebError(w http.ResponseWriter) {
 	switch err := o.Err.(type) {
-	case *utils.ClientError:
+	case *ClientError:
 		o.complain(w, err.ErrorCode(), err.Error())
 	case *AuthError:
 		o.deny(w, err.Error())
@@ -220,7 +206,7 @@ func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
 	if len(form[name]) > 0 {
 		return form[name]
 	} else {
-		ctx.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("参数 %s 不应为空", name))
+		ctx.Err = NewClientError(PARAM_REQUIRED, fmt.Errorf("参数 %s 不应为空", name))
 		return nil
 	}
 }
@@ -244,7 +230,7 @@ func (o *ErrorHandler) getStringValue(form url.Values, name string) string {
 
 	v := o.getValue(form, name)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		o.Err = NewClientError(PARAM_REQUIRED, o.Err)
 		return ""
 	}
 	return v[0]

@@ -28,3 +28,24 @@ func NewClientError(code ClientErrorCode, err error) error {
 func (err *ClientError) ErrorCode() ClientErrorCode {
 	return err.Code
 }
+
+type ErrorMessage struct {
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+type Paging struct {
+	Page      int64 `json:"page,omitempty"`
+	PageCount int64 `json:"pagecount,omitempty"`
+	PageSize  int64 `json:"pagesize,omitempty"`
+}
+
+type CommonResponse struct {
+	Code    int            `json:"code"`
+	Message string         `json:"message,omitempty"`
+	Ts      int64          `json:"ts"`
+	Error   ErrorMessage   `json:"error,omitempty""`
+	Body    interface{}    `json:"body,omitempty""`
+	Paging  Paging         `json:"paging,omitempty"`
+}
+

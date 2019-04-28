@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
-	//"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ChatGroup struct {
@@ -199,7 +199,7 @@ type ChatGroupCriteria struct {
 	BotId     sql.NullString
 }
 
-func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, criteria ChatGroupCriteria, paging Paging) []ChatGroup {
+func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
 	if o.Err != nil {
 		return []ChatGroup{}
 	}
@@ -259,7 +259,7 @@ WHERE deleteat is NULL
 	return count[0]
 }
 
-func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGroupCriteria, paging Paging) []ChatGroup {
+func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
 	if o.Err != nil {
 		return []ChatGroup{}
 	}
