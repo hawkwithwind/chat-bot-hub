@@ -183,9 +183,9 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		pb.BotsInfo
 		BotName  string `json:"botName"`
 		Callback string `json:"callback"`
-		CreateAt utils.JSONTime `json:"createAt"`
-		UpdateAt utils.JSONTime `json:"updateAt"`
-		DeleteAt utils.JSONTime `json:"deleteAt,omitempty"`
+		CreateAt *utils.JSONTime `json:"createAt"`
+		UpdateAt *utils.JSONTime `json:"updateAt"`
+		DeleteAt *utils.JSONTime `json:"deleteAt,omitempty"`
 	}
 
 	o := ErrorHandler{}
@@ -223,11 +223,11 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 				BotsInfo: *botsreply.BotsInfo[0],
 				BotName:  bot.BotName,
 				Callback: bot.Callback.String,
-				CreateAt: utils.JSONTime{Time: bot.CreateAt.Time},
-				UpdateAt: utils.JSONTime{Time: bot.UpdateAt.Time},
+				CreateAt: &utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: &utils.JSONTime{Time: bot.UpdateAt.Time},
 			}
 			if bot.DeleteAt.Valid {
-				bi.DeleteAt = utils.JSONTime{Time: bot.DeleteAt.Time}
+				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
 			}
 			o.ok(w, "", bi)
 			return
@@ -241,11 +241,11 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 				},
 				BotName:  bot.BotName,
 				Callback: bot.Callback.String,
-				CreateAt: utils.JSONTime{Time: bot.CreateAt.Time},
-				UpdateAt: utils.JSONTime{Time: bot.UpdateAt.Time},
+				CreateAt: &utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: &utils.JSONTime{Time: bot.UpdateAt.Time},
 			}
 			if bot.DeleteAt.Valid {
-				bi.DeleteAt = utils.JSONTime{Time:bot.DeleteAt.Time}
+				bi.DeleteAt = &utils.JSONTime{Time:bot.DeleteAt.Time}
 			}
 			
 			o.ok(w, "", bi)
