@@ -208,7 +208,7 @@ FROM bots
 WHERE login=?
   AND deleteat is NULL`, login)
 
-	if b := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login)); b != nil {
+	if b := o.Head(bots, fmt.Sprintf("Bot %s", login)); b != nil {
 		return b.(*Bot)
 	} else {
 		return nil
@@ -231,12 +231,7 @@ WHERE a.accountname=?
   AND b.login=?
   AND a.deleteat is NULL`, accountName, login)
 
-	head := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", login))
-	if o.Err != nil {
-		return
-	}
-
-	if head == nil {
+	if len(bots) == 0 {
 		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("cannot access bot %s, or not found", login))
 		return
 	}
