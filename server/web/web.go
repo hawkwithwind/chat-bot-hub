@@ -22,7 +22,7 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
-	. "github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
@@ -38,9 +38,9 @@ type WebConfig struct {
 	Host         string
 	Port         string
 	Baseurl      string
-	Redis        RedisConfig
-	Fluent       FluentConfig
-	Mongo        MongoConfig
+	Redis        utils.RedisConfig
+	Fluent       utils.FluentConfig
+	Mongo        utils.MongoConfig
 	SecretPhrase string
 	Database     DatabaseConfig
 	Sentry       string
@@ -61,7 +61,7 @@ type WebServer struct {
 
 func (ctx *WebServer) init() error {
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
-	ctx.redispool = NewRedisPool(
+	ctx.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
@@ -129,20 +129,20 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 
 	// HTTP CODE 403
 	w.WriteHeader(http.StatusForbidden)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    -1,
 		Message: msg,
 		Ts:      time.Now().Unix(),
 	})
 }
 
-func (ctx *ErrorHandler) complain(w http.ResponseWriter, code ClientErrorCode, msg string) {
+func (ctx *ErrorHandler) complain(w http.ResponseWriter, code utils.ClientErrorCode, msg string) {
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:  int(code),
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg},
+		Error: utils.ErrorMessage{Message: msg},
 	})
 }
 
@@ -151,7 +151,7 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 		return
 	}
 
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    0,
 		Ts:      time.Now().Unix(),
 		Message: msg,
@@ -159,12 +159,12 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 	})
 }
 
-func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging Paging) {
+func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging utils.Paging) {
 	if ctx.Err != nil {
 		return
 	}
 
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    0,
 		Ts:      time.Now().Unix(),
 		Message: msg,
@@ -178,16 +178,16 @@ func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	raven.CaptureError(ctx.Err, nil)
 
 	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:  -1,
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg, Error: ctx.Err.Error()},
+		Error: utils.ErrorMessage{Message: msg, Error: ctx.Err.Error()},
 	})
 }
 
 func (o *ErrorHandler) WebError(w http.ResponseWriter) {
 	switch err := o.Err.(type) {
-	case *ClientError:
+	case *utils.ClientError:
 		o.complain(w, err.ErrorCode(), err.Error())
 	case *AuthError:
 		o.deny(w, err.Error())
@@ -206,7 +206,7 @@ func (ctx *ErrorHandler) getValue(form url.Values, name string) []string {
 	if len(form[name]) > 0 {
 		return form[name]
 	} else {
-		ctx.Err = NewClientError(PARAM_REQUIRED, fmt.Errorf("参数 %s 不应为空", name))
+		ctx.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("参数 %s 不应为空", name))
 		return nil
 	}
 }
@@ -230,7 +230,7 @@ func (o *ErrorHandler) getStringValue(form url.Values, name string) string {
 
 	v := o.getValue(form, name)
 	if o.Err != nil {
-		o.Err = NewClientError(PARAM_REQUIRED, o.Err)
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return ""
 	}
 	return v[0]
