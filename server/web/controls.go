@@ -950,6 +950,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			100: "准备登录",
 			150: "等待扫码",
 			151: "登录失败",
+			190: "登录接入中",
 			200: "已登录",
 			500: "连接断开",
 		},

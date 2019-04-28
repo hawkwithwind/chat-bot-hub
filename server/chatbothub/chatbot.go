@@ -36,7 +36,7 @@ func (status ChatBotStatus) String() string {
 		LoggingPrepared:     "准备登录",
 		LoggingChallenged:   "等待扫码",
 		LoggingFailed:       "登录失败",
-		LoggingStaging:      "登录校验中",
+		LoggingStaging:      "登录接入中",
 		WorkingLoggedIn:     "已登录",
 		FailingDisconnected: "连接断开",
 	}
