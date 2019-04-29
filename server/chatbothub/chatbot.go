@@ -12,6 +12,7 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ChatBotStatus int32
@@ -22,7 +23,9 @@ const (
 	LoggingPrepared     ChatBotStatus = 100
 	LoggingChallenged   ChatBotStatus = 150
 	LoggingFailed       ChatBotStatus = 151
+	LoggingStaging      ChatBotStatus = 190
 	WorkingLoggedIn     ChatBotStatus = 200
+	ShuttingdownDone    ChatBotStatus = 404
 	FailingDisconnected ChatBotStatus = 500
 )
 
@@ -33,6 +36,7 @@ func (status ChatBotStatus) String() string {
 		LoggingPrepared:     "准备登录",
 		LoggingChallenged:   "等待扫码",
 		LoggingFailed:       "登录失败",
+		LoggingStaging:      "登录接入中",
 		WorkingLoggedIn:     "已登录",
 		FailingDisconnected: "连接断开",
 	}
@@ -137,7 +141,8 @@ func (bot *ChatBot) register(clientId string, clientType string,
 
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
-		return bot, fmt.Errorf("bot status %s cannot login", bot.Status)
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot login", bot.Status))
 	}
 
 	bot.BotId = botId
@@ -146,11 +151,57 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	return bot, nil
 }
 
+func (bot *ChatBot) shutdown() (*ChatBot, error) {
+	o := &ErrorHandler{}
+
+	if bot.Status == WorkingLoggedIn {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot shutdown, try logout", bot.Status))
+	}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType:  SHUTDOWN,
+		ClientType: bot.ClientType,
+		ClientId:   bot.ClientId,
+		Body:       "{}",
+	})
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	bot.Status = ShuttingdownDone
+
+	return bot, nil
+}
+
+func (bot *ChatBot) botMigrate(botId string) (*ChatBot, error) {
+	o := &ErrorHandler{}
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType:  BOTMIGRATE,
+		ClientType: bot.ClientType,
+		ClientId:   bot.ClientId,
+		Body: o.ToJson(map[string]interface{}{
+			"botId": botId,
+		}),
+	})
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	bot.BotId = botId
+
+	return bot, nil
+}
+
 func (bot *ChatBot) logout() (*ChatBot, error) {
 	o := &ErrorHandler{}
 
-	if bot.Status != WorkingLoggedIn {
-		return bot, fmt.Errorf("bot status %s cannot logout", bot.Status)
+	if bot.Status != WorkingLoggedIn && bot.Status != LoggingStaging {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot logout", bot.Status))
 	}
 
 	o.sendEvent(bot.tunnel, &pb.EventReply{
@@ -160,6 +211,10 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 		Body:       "{}",
 	})
 
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
 	return bot, nil
 }
 
@@ -168,11 +223,38 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
+func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+	bot.Info("c[%s:%s]{%s} loginStaging", bot.ClientType, bot.Login, bot.ClientId)
+
+	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
+	}
+
+	if len(bot.Login) > 0 && bot.Login != login {
+		bot.Info("bot c[%s]{%s} login %s -> %s ", bot.ClientType, bot.ClientId, bot.Login, login)
+	}
+
+	if len(bot.BotId) > 0 && bot.BotId != botId {
+		bot.Info("bot c[%s]{%s} botId %s -> %s ", bot.ClientType, bot.ClientId, bot.BotId, botId)
+	}
+
+	bot.BotId = botId
+	bot.Login = login
+	bot.LoginInfo.WxData = wxdata
+	bot.LoginInfo.Token = token
+	bot.ScanUrl = ""
+
+	bot.Status = LoggingStaging
+	return bot, nil
+}
+
 func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
-	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
-		return bot, fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status)
+	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared && bot.Status != LoggingStaging {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
 	}
 
 	if len(bot.Login) > 0 && bot.Login != login {
@@ -210,7 +292,9 @@ func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginFail", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != LoggingPrepared {
-		return bot, fmt.Errorf("bot status %s cannot loginFail", bot.Status)
+		err := fmt.Errorf("bot status %s cannot loginFail", bot.Status)
+		bot.Error(err, "UNEXPECTED BEHAVIOR")
+		return bot, err
 	}
 
 	bot.errmsg = errmsg
@@ -296,10 +380,20 @@ func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) 
 	return rr
 }
 
+func (bot *ChatBot) logoutOrShutdown() (*ChatBot, error) {
+	if bot.Status == WorkingLoggedIn || bot.Status == LoggingStaging {
+		bot.Info("[LOGIN MIGRATE] b[%s]c[%s] logout ...", bot.BotId, bot.ClientId)
+		return bot.logout()
+	} else {
+		bot.Info("[LOGIN MIGRATE] b[%s]c[%s] shutdown ...", bot.BotId, bot.ClientId)
+		return bot.shutdown()
+	}
+}
+
 func (bot *ChatBot) BotAction(arId string, actionType string, body string) error {
 	var err error
 
-	actionMap := map[string]func(*ChatBot, string, string) error{
+	actionMap := map[string]func(*ChatBot, string, string, string) error{
 		AddContact:               (*ChatBot).AddContact,
 		DeleteContact:            (*ChatBot).DeleteContact,
 		AcceptUser:               (*ChatBot).AcceptUser,
@@ -329,9 +423,10 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 	}
 
 	if m, ok := actionMap[actionType]; ok {
-		err = m(bot, arId, body)
+		err = m(bot, actionType, arId, body)
 	} else {
-		err = fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType)
+		err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("b[%s] dont support a[%s]", bot.Login, actionType))
 	}
 
 	return err
@@ -358,13 +453,24 @@ func (o *ErrorHandler) SendAction(bot *ChatBot, arId string, actionType string, 
 
 type ActionParam struct {
 	Name         string
+	FromName     string
 	HasDefault   bool
 	DefaultValue string
+}
+
+func NewActionParamCName(name string, fromName string, hasdefault bool, defaultvalue string) ActionParam {
+	return ActionParam{
+		Name:         name,
+		FromName:     fromName,
+		HasDefault:   hasdefault,
+		DefaultValue: defaultvalue,
+	}
 }
 
 func NewActionParam(name string, hasdefault bool, defaultvalue string) ActionParam {
 	return ActionParam{
 		Name:         name,
+		FromName:     name,
 		HasDefault:   hasdefault,
 		DefaultValue: defaultvalue,
 	}
@@ -374,11 +480,16 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 	if bot.ClientType == WECHATBOT {
 		bot.Info("action %s", actionType)
 		bodym := o.FromJson(body)
+		if o.Err != nil {
+			o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+			return
+		}
 
 		parammap := make(map[string]interface{})
 		for _, p := range params {
-			paramvalue := o.FromMapString(p.Name, bodym, "actionbody", p.HasDefault, p.DefaultValue)
+			paramvalue := o.FromMapString(p.FromName, bodym, "actionbody", p.HasDefault, p.DefaultValue)
 			if o.Err != nil {
+				o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 				return
 			}
 			parammap[p.Name] = paramvalue
@@ -386,13 +497,13 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 
 		o.SendAction(bot, arId, actionType, o.ToJson(parammap))
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType)
+		o.Err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 }
 
-func (bot *ChatBot) SnsTimeline(arId string, body string) error {
+func (bot *ChatBot) SnsTimeline(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsTimeline
 	params := []ActionParam{
 		NewActionParam("momentId", true, ""),
 	}
@@ -400,9 +511,8 @@ func (bot *ChatBot) SnsTimeline(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsUserPage(arId string, body string) error {
+func (bot *ChatBot) SnsUserPage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsUserPage
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
 		NewActionParam("momentId", true, ""),
@@ -411,9 +521,8 @@ func (bot *ChatBot) SnsUserPage(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsGetObject(arId string, body string) error {
+func (bot *ChatBot) SnsGetObject(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsGetObject
 	params := []ActionParam{
 		NewActionParam("momentId", false, ""),
 	}
@@ -421,9 +530,8 @@ func (bot *ChatBot) SnsGetObject(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsComment(arId string, body string) error {
+func (bot *ChatBot) SnsComment(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsComment
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
 		NewActionParam("momentId", false, ""),
@@ -434,9 +542,8 @@ func (bot *ChatBot) SnsComment(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsLike(arId string, body string) error {
+func (bot *ChatBot) SnsLike(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsLike
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
 		NewActionParam("momentId", false, ""),
@@ -445,9 +552,8 @@ func (bot *ChatBot) SnsLike(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsUpload(arId string, body string) error {
+func (bot *ChatBot) SnsUpload(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsUpload
 	params := []ActionParam{
 		NewActionParam("file", false, ""),
 	}
@@ -455,9 +561,8 @@ func (bot *ChatBot) SnsUpload(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsobjectOP(arId string, body string) error {
+func (bot *ChatBot) SnsobjectOP(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsobjectOP
 	params := []ActionParam{
 		NewActionParam("momentId", false, ""),
 		NewActionParam("type", false, ""),
@@ -468,9 +573,8 @@ func (bot *ChatBot) SnsobjectOP(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) SnsSendMoment(arId string, body string) error {
+func (bot *ChatBot) SnsSendMoment(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	const actionType string = SnsSendMoment
 	params := []ActionParam{
 		NewActionParam("content", false, ""),
 	}
@@ -478,118 +582,82 @@ func (bot *ChatBot) SnsSendMoment(arId string, body string) error {
 	return o.Err
 }
 
-func (bot *ChatBot) DeleteContact(arId string, body string) error {
+func (bot *ChatBot) DeleteContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bot.Info("DeleteContact")
-		bodym := o.FromJson(body)
-		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		o.SendAction(bot, arId, DeleteContact, userId)
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, DeleteContact)
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) SyncContact(arId string, body string) error {
+func (bot *ChatBot) SyncContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bot.Info("SyncContact")
-		o.SendAction(bot, arId, SyncContact, "{}")
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SyncContact)
-	}
-
+	params := []ActionParam{}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) GetRoomQRCode(arId string, body string) error {
+func (bot *ChatBot) GetRoomQRCode(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bot.Info("GetRoomQRCode")
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-
-		o.SendAction(bot, arId, GetRoomQRCode, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-		}))
-
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) SendAppMessage(arId string, body string) error {
+func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bot.Info("SendAppMessage")
-		bodym := o.FromJson(body)
-		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		xml := o.FromMapString("xml", bodym, "actionbody", false, "")
-
-		o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
-			"toUserName": toUserName,
-			"xml":        xml,
-		}))
-
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendAppMessage)
+	params := []ActionParam{
+		NewActionParam("toUserName", false, ""),
+		NewActionParam("xml", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) SearchContact(arId string, body string) error {
+func (bot *ChatBot) SearchContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bot.Info("Search Contact")
-		bodym := o.FromJson(body)
-		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-
-		o.SendAction(bot, arId, SearchContact, o.ToJson(map[string]interface{}{
-			"userId": userId,
-		}))
-
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SearchContact)
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) AcceptUser(arId string, body string) error {
+func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
 	if bot.ClientType == WECHATBOT {
 		var msg WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
 		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
 		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
 			"stranger": msg.EncryptUserName,
 			"ticket":   msg.Ticket,
 		}))
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AcceptUser)
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
 	return o.Err
 }
 
-func (bot *ChatBot) CreateRoom(arId string, body string) error {
+func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
 		bot.Info("Create Room")
 		bodym := o.FromJson(body)
 		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
 
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
 			"userList": memberList,
@@ -599,55 +667,35 @@ func (bot *ChatBot) CreateRoom(arId string, body string) error {
 			"userList": memberList,
 		}))
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, CreateRoom)
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
 	return o.Err
 }
 
-func (bot *ChatBot) DeleteRoomMember(arId string, body string) error {
+func (bot *ChatBot) DeleteRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
-		bot.Info("Delete Room Member %s from %s", memberId, groupId)
-
-		o.SendAction(bot, arId, DeleteRoomMember, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-			"userId":  memberId,
-		}))
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, DeleteRoomMember)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) SetRoomAnnouncement(arId string, body string) error {
+func (bot *ChatBot) SetRoomAnnouncement(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		content := o.FromMapString("content", bodym, "actionbody", false, "")
-		bot.Info("Set room announcement %s %s", groupId, content)
-
-		o.SendAction(bot, arId, SetRoomAnnouncement, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-			"content": content,
-		}))
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SetRoomAnnouncement)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
+		NewActionParam("content", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) GetContactQRCode(arId string, body string) error {
+func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
@@ -655,98 +703,62 @@ func (bot *ChatBot) GetContactQRCode(arId string, body string) error {
 		style := int(style_f)
 		bot.Info("get contact QRCode %s %d", userId, style)
 
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
 		o.SendAction(bot, arId, GetContactQRCode, o.ToJson(map[string]interface{}{
 			"userId": userId,
 			"style":  style,
 		}))
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, GetContactQRCode)
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
 	return o.Err
 }
 
-func (bot *ChatBot) SetRoomName(arId string, body string) error {
+func (bot *ChatBot) SetRoomName(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		content := o.FromMapString("content", bodym, "actionbody", false, "")
-		bot.Info("Set room name %s %s", groupId, content)
-
-		o.SendAction(bot, arId, SetRoomName, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-			"content": content,
-		}))
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SetRoomName)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
+		NewActionParam("content", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) AddRoomMember(arId string, body string) error {
+func (bot *ChatBot) AddRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
-		bot.Info("AddRoomMember %s %s", groupId, memberId)
-
-		o.SendAction(bot, arId, AddRoomMember, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-			"userId":  memberId,
-		}))
-
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddRoomMember)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) InviteRoomMember(arId string, body string) error {
+func (bot *ChatBot) InviteRoomMember(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		memberId := o.FromMapString("memberId", bodym, "actionbody", false, "")
-		bot.Info("InviteRoomMember %s %s", groupId, memberId)
-
-		o.SendAction(bot, arId, InviteRoomMember, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-			"userId":  memberId,
-		}))
-
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, InviteRoomMember)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
+		NewActionParamCName("userId", "memberId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) GetRoomMembers(arId string, body string) error {
+func (bot *ChatBot) GetRoomMembers(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		groupId := o.FromMapString("groupId", bodym, "actionbody", false, "")
-		bot.Info("get room members %s", groupId)
-
-		o.SendAction(bot, arId, GetRoomMembers, o.ToJson(map[string]interface{}{
-			"groupId": groupId,
-		}))
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, GetRoomMembers)
+	params := []ActionParam{
+		NewActionParam("groupId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) AddContact(arId string, body string) error {
+func (bot *ChatBot) AddContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
@@ -755,6 +767,9 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 		ticket := o.FromMapString("ticket", bodym, "actionbody", false, "")
 		actype := int(o.FromMapFloat("type", bodym, "actionbody", false, 0.0))
 		content := o.FromMapString("content", bodym, "actionbody", true, "")
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
 
 		bot.Info("add contact %s", stranger)
 
@@ -765,7 +780,8 @@ func (bot *ChatBot) AddContact(arId string, body string) error {
 			"content":  content,
 		}))
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, AddContact)
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
 	return o.Err
@@ -956,14 +972,18 @@ attachedtext="%s"
 attachedtextcolor="%s" 
 lensid="%s"></emoji>`
 
-func (bot *ChatBot) SendTextMessage(arId string, body string) error {
+func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-
 		content_if := o.FromMap("content", bodym, "actionbody", nil)
+
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
 		switch content := content_if.(type) {
 		case string:
 			var atList []interface{}
@@ -984,7 +1004,7 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 			var msg WechatMsg
 			o.Err = json.Unmarshal([]byte(o.ToJson(msg_if)), &msg)
 			if o.Err != nil {
-				return o.Err
+				return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 			}
 
 			var xml string
@@ -1052,8 +1072,9 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 					//bot.Info("xml\n%s\n", xml)
 				}
 			} else if len(msg.Emoji.Attributions.FromUserName) > 0 {
-				emoji := msg.Emoji
-				bot.Info("send emoji NOT SUPPORT %v", emoji)
+				//emoji := msg.Emoji
+				return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+					fmt.Errorf("c[%s] not support %s with emoji", bot.ClientType, actionType))
 				//emojiattr := emoji.Attributions
 
 				// xml = fmt.Sprintf(WeEmojiXmlTemp,
@@ -1097,51 +1118,33 @@ func (bot *ChatBot) SendTextMessage(arId string, body string) error {
 
 		default:
 			bot.Info("Action unknown SendMessage %s %T \n%v \n", toUserName, content, content)
+			return utils.NewClientError(utils.PARAM_INVALID,
+				fmt.Errorf("Action unknown SendMessage Type <%T>", content))
 		}
 	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendTextMessage)
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
 
 	return o.Err
 }
 
-func (bot *ChatBot) SendImageResourceMessage(arId string, body string) error {
+func (bot *ChatBot) SendImageResourceMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-		o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		o.FromMapString("imageId", bodym, "actionbody", false, "")
-
-		if o.Err != nil {
-			return o.Err
-		}
-
-		o.SendAction(bot, arId, SendImageResourceMessage, body)
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageResourceMessage)
+	params := []ActionParam{
+		NewActionParam("toUserName", false, ""),
+		NewActionParam("imageId", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 
-func (bot *ChatBot) SendImageMessage(arId string, body string) error {
+func (bot *ChatBot) SendImageMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT {
-		bodym := o.FromJson(body)
-
-		o.FromMapString("toUserName", bodym, "actionbody", false, "")
-		o.FromMapString("payload", bodym, "actionbody", false, "")
-
-		if o.Err != nil {
-			return o.Err
-		}
-
-		o.SendAction(bot, arId, SendImageMessage, body)
-	} else {
-		o.Err = fmt.Errorf("c[%s] not support %s", bot.ClientType, SendImageMessage)
+	params := []ActionParam{
+		NewActionParam("toUserName", false, ""),
+		NewActionParam("payload", false, ""),
 	}
-
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }

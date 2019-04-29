@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 var (
@@ -17,6 +18,7 @@ var (
 		"chatcontacts":      (*ErrorHandler).NewDefaultChatContactExpand,
 		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
 		"moments":           (*ErrorHandler).NewDefaultMoment,
+		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
@@ -35,24 +37,31 @@ var (
 	}
 )
 
-func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) ([]interface{}, Paging) {
+func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) ([]interface{}, utils.Paging) {
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		return []interface{}{}, utils.Paging{}
 	}
 
 	if _, ok := searchableDomains[domain]; !ok {
-		o.Err = fmt.Errorf("domain %s not found, or not searchable", domain)
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("domain %s not found, or not searchable", domain))
+		return []interface{}{}, utils.Paging{}
 	}
 
 	whereclause := []string{}
 	orderclause := []string{}
 
 	criteria := o.FromJson(query)
+	if o.Err != nil {
+		fmt.Printf("[SEARCH CRITERIA] parse failed\n%s\n", query)
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return []interface{}{}, utils.Paging{}
+	}
 
 	findm := o.FromMap("find", criteria, "query", map[string]interface{}{})
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return []interface{}{}, utils.Paging{}
 	}
 
 	whereparams := []interface{}{}
@@ -75,22 +84,25 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 				}
 
 			default:
-				o.Err = fmt.Errorf("query.find.%s %T %v not support", fieldName, v, v)
-				return []interface{}{}, Paging{}
+				o.Err = utils.NewClientError(utils.PARAM_INVALID,
+					fmt.Errorf("query.find.%s %T %v not support", fieldName, v, v))
+				return []interface{}{}, utils.Paging{}
 			}
 		}
 	default:
-		o.Err = fmt.Errorf("query.find should be map{string: anything }")
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_INVALID,
+			fmt.Errorf("query.find should be map{string: anything }"))
+		return []interface{}{}, utils.Paging{}
 	}
 
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		return []interface{}{}, utils.Paging{}
 	}
 
 	sortm := o.FromMap("sort", criteria, "query", map[string]interface{}{})
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		return []interface{}{}, utils.Paging{}
 	}
 
 	switch sorts := sortm.(type) {
@@ -101,19 +113,21 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 			case string:
 				if _, ok := sortOrders[order]; !ok {
 					o.Err = fmt.Errorf("sort order %s not support", order)
-					return []interface{}{}, Paging{}
+					return []interface{}{}, utils.Paging{}
 				}
 
 				orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
 			default:
-				o.Err = fmt.Errorf("query.sort should be map{string: string}")
-				return []interface{}{}, Paging{}
+				o.Err = utils.NewClientError(utils.PARAM_INVALID,
+					fmt.Errorf("query.sort should be map{string: string}"))
+				return []interface{}{}, utils.Paging{}
 			}
 		}
 
 	default:
-		o.Err = fmt.Errorf("query.sort should be map{string: string}")
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_INVALID,
+			fmt.Errorf("query.sort should be map{string: string}"))
+		return []interface{}{}, utils.Paging{}
 	}
 
 	pagingraw := o.FromMap("paging", criteria, "query",
@@ -123,13 +137,15 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		})
 
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return []interface{}{}, utils.Paging{}
 	}
-	paging := Paging{}
+	paging := utils.Paging{}
 	o.Err = json.Unmarshal([]byte(o.ToJson(pagingraw)), &paging)
 
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return []interface{}{}, utils.Paging{}
 	}
 
 	limitclause := fmt.Sprintf("LIMIT %d,%d",
@@ -173,7 +189,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	ctxcc, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		return []interface{}{}, utils.Paging{}
 	}
 
 	count := counts[0]
@@ -182,7 +198,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	var rows *sqlx.Rows
 	rows, o.Err = q.QueryxContext(ctx, sqlquery, whereparams...)
 	if o.Err != nil {
-		return []interface{}{}, Paging{}
+		return []interface{}{}, utils.Paging{}
 	}
 
 	var results []interface{}
@@ -191,7 +207,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		m := searchableDomains[domain](o)
 		if err := rows.StructScan(m); err != nil {
 			o.Err = err
-			return []interface{}{}, Paging{}
+			return []interface{}{}, utils.Paging{}
 		}
 
 		results = append(results, m)
@@ -202,7 +218,7 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 		pagecount += 1
 	}
 
-	return results, Paging{
+	return results, utils.Paging{
 		Page:      paging.Page,
 		PageCount: pagecount,
 		PageSize:  paging.PageSize,

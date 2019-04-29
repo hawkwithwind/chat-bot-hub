@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type Filter struct {
@@ -121,9 +122,9 @@ ORDER BY createat desc`, accountid)
 	return filters
 }
 
-func (o *ErrorHandler) CheckFilterOwner(q dbx.Queryable, filterId string, accountName string) bool {
+func (o *ErrorHandler) CheckFilterOwner(q dbx.Queryable, filterId string, accountName string) {
 	if o.Err != nil {
-		return false
+		return
 	}
 
 	filters := []Filter{}
@@ -140,5 +141,12 @@ WHERE a.accountname=?
 
 	fmt.Printf("check filter owner %v\n", filters)
 
-	return nil != o.Head(filters, fmt.Sprintf("Filter %s more than one instance", filterId))
+	head := o.Head(filters, fmt.Sprintf("Filter %s more than one instance", filterId))
+	if o.Err != nil {
+		return
+	}
+
+	if head == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("cannot access filter %s or not found", filterId))
+	}
 }

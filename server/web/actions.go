@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -68,18 +67,27 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = err
 			return
 		} else if opreply.Code != 0 {
-			o.Err = fmt.Errorf(opreply.Message)
+			o.Err = utils.NewClientError(
+				utils.ClientErrorCode(opreply.Code),
+				fmt.Errorf(opreply.Message),
+			)
 			return
 		}
 
 		// routers should create its children first, then create themselves.
 		if body != "" {
 			bodym := o.FromJson(body)
+			if o.Err != nil {
+				o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+				return
+			}
+
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
 				//ctx.Info("generate KVRouter children")
 				if bodym == nil {
-					o.Err = fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body)
+					o.Err = utils.NewClientError(utils.PARAM_INVALID,
+						fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body))
 					return
 				}
 
@@ -94,7 +102,8 @@ func (o *ErrorHandler) CreateFilterChain(
 								if o.Err != nil {
 									return
 								}
-								_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+								var opreply *pb.OperationReply
+								opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
 										Key:   key,
 										Value: value,
@@ -102,10 +111,23 @@ func (o *ErrorHandler) CreateFilterChain(
 									RouterId: filter.FilterId,
 									FilterId: childFilterId,
 								})
+
+								if o.Err != nil {
+									return
+								}
+
+								if opreply.Code != 0 {
+									o.Err = utils.NewClientError(
+										utils.ClientErrorCode(opreply.Code),
+										fmt.Errorf(opreply.Message),
+									)
+									return
+								}
 							}
 						}
 					default:
-						o.Err = fmt.Errorf("Error generate KVRouter children: unexpected filter.body.key type %T", vm)
+						o.Err = utils.NewClientError(utils.PARAM_INVALID,
+							fmt.Errorf("Error generate KVRouter children: unexpected filter.body.key type %T", vm))
 						return
 					}
 				}
@@ -120,13 +142,26 @@ func (o *ErrorHandler) CreateFilterChain(
 							return
 						}
 						// branch this
-						_, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+						var opreply *pb.OperationReply
+						opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
 							Tag: &pb.BranchTag{
 								Key: regstr,
 							},
 							RouterId: filter.FilterId,
 							FilterId: childFilterId,
 						})
+
+						if o.Err != nil {
+							return
+						}
+
+						if opreply.Code != 0 {
+							o.Err = utils.NewClientError(
+								utils.ClientErrorCode(opreply.Code),
+								fmt.Errorf(opreply.Message),
+							)
+							return
+						}
 					}
 				}
 			}
@@ -144,7 +179,10 @@ func (o *ErrorHandler) CreateFilterChain(
 				o.Err = err
 				return
 			} else if nxtreply.Code != 0 {
-				o.Err = fmt.Errorf(nxtreply.Message)
+				o.Err = utils.NewClientError(
+					utils.ClientErrorCode(nxtreply.Code),
+					fmt.Errorf(nxtreply.Message),
+				)
 				return
 			}
 		}
@@ -233,9 +271,15 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
-			o.Err = fmt.Errorf("bot {%s} not activated", botId)
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} not activated", botId),
+			)
 		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = fmt.Errorf("bot {%s} multiple instance", botId)
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo),
+			)
 		}
 	}
 
@@ -249,6 +293,60 @@ func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInf
 	}
 
 	return botsreply.BotsInfo[0]
+}
+
+func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
+	o := ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	web.Info("botNotify %s", botId)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	bot := o.GetBotById(tx, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if bot == nil {
+		o.Err = fmt.Errorf("bot %s not found", botId)
+		return
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	thebotinfo := o.getTheBot(wrapper, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if thebotinfo == nil {
+		o.Err = fmt.Errorf("bot %s not active", botId)
+		return
+	}
+
+	if thebotinfo.Status != int32(chatbothub.LoggingStaging) {
+		o.Err = fmt.Errorf("bot[%s] not LogingStaging but %d", botId, thebotinfo.Status)
+		return
+	}
+
+	if len(thebotinfo.Login) == 0 {
+		o.Err = fmt.Errorf("bot[%s] loging staging with empty login %#v", botId, thebotinfo)
+		return
+	}
+
+	web.Info("[LOGIN MIGRATE] bot migrate b[%s] %s", botId, thebotinfo.Login)
+
+	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
+	o.ok(w, "", map[string]interface{}{
+		"botId": oldId,
+	})
 }
 
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
@@ -297,7 +395,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
 		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
@@ -338,22 +436,31 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			return
 		}
-		
+
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 
-		if len(bot.Login) == 0 {
-			ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
-			bot.Login = thebotinfo.Login
-			o.UpdateBotLogin(tx, bot)
-		}
-
-		// now, initailize bot's filter, and call chathub to create intances and get connected
-		o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+		ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
+		bot.Login = thebotinfo.Login
+		o.UpdateBotLogin(tx, bot)
 		if o.Err != nil {
 			return
 		}
-		o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+
+		// rebuild msg filter error and new action error should not effect update bot login
+		// consider transaction, we use new errorhandler here
+
+		// now call search user to get self profile
+		a_o := &ErrorHandler{}
+		ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
+			"userId": bot.Login,
+		}), "NEW")
+		a_o.CreateAndRunAction(ctx, ar)
+
+		re_o := &ErrorHandler{}
+		// now, initailize bot's filter, and call chathub to create intances and get connected
+		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
 		return
 
 	case chatbothub.FRIENDREQUEST:
@@ -668,6 +775,44 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
+		case chatbothub.SearchContact:
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				return
+			}
+
+			info := WechatContactInfo{}
+			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &info)
+			if o.Err != nil {
+				return
+			}
+
+			if info.UserName == "" {
+				ctx.Info("search user name empty, ignore")
+				return
+			}
+
+			if info.UserName[:5] != "wxid_" {
+				ctx.Info("search user not friend, ignore for now.\n%v", info)
+				return
+			}
+
+			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+			chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
+			chatuser.Sex = info.Sex
+			chatuser.SetAvatar(info.SmallHead)
+			chatuser.SetCountry(info.Country)
+			chatuser.SetProvince(info.Provincia)
+			chatuser.SetCity(info.City)
+			chatuser.SetSignature(info.Signature)
+			chatuser.SetRemark(info.Remark)
+			chatuser.SetLabel(info.Label)
+			chatuser.SetExt(acresult.Data.(string))
+
+			o.UpdateOrCreateChatUser(tx, chatuser)
+			ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)
+
 		case chatbothub.GetRoomMembers:
 			bodym := o.FromJson(localar.ActionBody)
 			groupId := o.FromMapString("groupId", bodym, "actionBody", false, "")
@@ -865,22 +1010,12 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(ctx.db)
-
-	if !o.CheckBotOwner(tx, login, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwner(ctx.db.Conn, login, accountName)
+	bot := o.GetBotByLogin(ctx.db.Conn, login)
+	if o.Err != nil {
 		return
 	}
-
-	bot := o.GetBotByLogin(tx, login)
 
 	decoder := json.NewDecoder(r.Body)
 	var bodym map[string]interface{}
@@ -888,12 +1023,13 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 	ctx.Info("bot action body %v\n%v", r.Body, bodym)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
-	defer wrapper.Cancel()
-
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))
+		return
+	}
 
 	actionReply := o.CreateAndRunAction(ctx, ar)
 	if o.Err != nil {
@@ -913,17 +1049,17 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 	if dayCount > daylimit {
-		o.Err = fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
 		return nil
 	}
 
 	if hourCount > hourlimit {
-		o.Err = fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
 		return nil
 	}
 
 	if minuteCount > minutelimit {
-		o.Err = fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit)
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
 		return nil
 	}
 
@@ -931,8 +1067,21 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	defer wrapper.Cancel()
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
-	o.SaveActionRequest(web.redispool, ar)
+	if o.Err != nil {
+		return nil
+	}
 
+	if actionReply.ClientError != nil {
+		if actionReply.ClientError.Code != 0 {
+			o.Err = utils.NewClientError(
+				utils.ClientErrorCode(actionReply.ClientError.Code),
+				fmt.Errorf(actionReply.ClientError.Message),
+			)
+			return nil
+		}
+	}
+
+	o.SaveActionRequest(web.redispool, ar)
 	return actionReply
 }
 
@@ -944,26 +1093,17 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(web.db)
-
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwnerById(web.db.Conn, botId, accountName)
+	if o.Err != nil {
 		return
 	}
 
-	bot := o.GetBotById(tx, botId)
+	bot := o.GetBotById(web.db.Conn, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
-	o.rebuildMsgFilters(web, bot, tx, wrapper)
+	o.rebuildMsgFilters(web, bot, web.db.Conn, wrapper)
 	if o.Err != nil {
 		return
 	}
@@ -1011,26 +1151,17 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountName string
-	if accountNameptr, ok := context.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
-	}
-
-	tx := o.Begin(web.db)
-
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
+	accountName := o.getAccountName(r)
+	o.CheckBotOwnerById(web.db.Conn, botId, accountName)
+	if o.Err != nil {
 		return
 	}
 
-	bot := o.GetBotById(tx, botId)
+	bot := o.GetBotById(web.db.Conn, botId)
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	defer wrapper.Cancel()
 
-	o.rebuildMomentFilters(web, bot, tx, wrapper)
+	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)
 	if o.Err != nil {
 		return
 	}

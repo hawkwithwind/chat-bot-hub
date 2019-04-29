@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -25,6 +24,10 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
+
+type ErrorHandler struct {
+	domains.ErrorHandler
+}
 
 type DatabaseConfig struct {
 	DriverName     string
@@ -43,20 +46,6 @@ type WebConfig struct {
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
-}
-
-type CommonResponse struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message,omitempty"`
-	Ts      int64          `json:"ts"`
-	Error   ErrorMessage   `json:"error,omitempty""`
-	Body    interface{}    `json:"body,omitempty""`
-	Paging  domains.Paging `json:"paging,omitempty"`
-}
-
-type ErrorMessage struct {
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
 }
 
 type WebServer struct {
@@ -142,7 +131,7 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 
 	// HTTP CODE 403
 	w.WriteHeader(http.StatusForbidden)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    -1,
 		Message: msg,
 		Ts:      time.Now().Unix(),
@@ -152,10 +141,10 @@ func (ctx *ErrorHandler) deny(w http.ResponseWriter, msg string) {
 func (ctx *ErrorHandler) complain(w http.ResponseWriter, code utils.ClientErrorCode, msg string) {
 	// HTTP CODE 400
 	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:  int(code),
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg},
+		Error: utils.ErrorMessage{Message: msg},
 	})
 }
 
@@ -164,7 +153,7 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 		return
 	}
 
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    0,
 		Ts:      time.Now().Unix(),
 		Message: msg,
@@ -172,12 +161,12 @@ func (ctx *ErrorHandler) ok(w http.ResponseWriter, msg string, body interface{})
 	})
 }
 
-func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging domains.Paging) {
+func (ctx *ErrorHandler) okWithPaging(w http.ResponseWriter, msg string, body interface{}, paging utils.Paging) {
 	if ctx.Err != nil {
 		return
 	}
 
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:    0,
 		Ts:      time.Now().Unix(),
 		Message: msg,
@@ -191,26 +180,23 @@ func (ctx *ErrorHandler) fail(w http.ResponseWriter, msg string) {
 	raven.CaptureError(ctx.Err, nil)
 
 	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(CommonResponse{
+	json.NewEncoder(w).Encode(utils.CommonResponse{
 		Code:  -1,
 		Ts:    time.Now().Unix(),
-		Error: ErrorMessage{Message: msg, Error: ctx.Err.Error()},
+		Error: utils.ErrorMessage{Message: msg, Error: ctx.Err.Error()},
 	})
 }
 
-type ErrorHandler struct {
-	domains.ErrorHandler
-}
-
-func (ctx *ErrorHandler) WebError(w http.ResponseWriter) {
-	if ctx.Err != nil {
-		v := reflect.ValueOf(ctx.Err)
-		if v.Type() == reflect.TypeOf((*utils.ClientError)(nil)) {
-			c := v.Interface().(*utils.ClientError)
-			ctx.complain(w, c.ErrorCode(), c.Error())
-		} else {
-			ctx.fail(w, "")
-		}
+func (o *ErrorHandler) WebError(w http.ResponseWriter) {
+	switch err := o.Err.(type) {
+	case *utils.ClientError:
+		o.complain(w, err.ErrorCode(), err.Error())
+	case *AuthError:
+		o.deny(w, err.Error())
+	case nil:
+		// do nothing
+	default:
+		o.fail(w, "")
 	}
 }
 
@@ -239,13 +225,14 @@ func (ctx *ErrorHandler) getValueNullable(form url.Values, name string) []string
 	}
 }
 
-func (ctx *ErrorHandler) getStringValue(form url.Values, name string) string {
-	if ctx.Err != nil {
+func (o *ErrorHandler) getStringValue(form url.Values, name string) string {
+	if o.Err != nil {
 		return ""
 	}
 
-	v := ctx.getValue(form, name)
-	if ctx.Err != nil {
+	v := o.getValue(form, name)
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return ""
 	}
 	return v[0]
@@ -373,12 +360,14 @@ func (ctx *WebServer) Serve() {
 	// chatusers and more (controls.go)
 	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatUsers)).Methods("GET")
 	r.HandleFunc("/chatgroups", ctx.validate(ctx.getChatGroups)).Methods("GET")
+	r.HandleFunc("/chatgroups/{groupname}/members", ctx.validate(ctx.getGroupMembers)).Methods("GET")
 
 	// bot login and action (actions.go)
 	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/logout", ctx.validate(ctx.botLogout)).Methods("POST")
 	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
+	r.HandleFunc("/bots/{botId}/loginstage", ctx.botLoginStage).Methods("Post")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", ctx.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")

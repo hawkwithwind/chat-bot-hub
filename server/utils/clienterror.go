@@ -11,21 +11,40 @@ const (
 	RESOURCE_INSUFFICIENT  ClientErrorCode = 2001
 	RESOURCE_ACCESS_DENIED ClientErrorCode = 2002
 	RESOURCE_NOT_FOUND     ClientErrorCode = 2003
+	RESOURCE_QUOTA_LIMIT   ClientErrorCode = 2004
+	STATUS_INCONSISTENT    ClientErrorCode = 3001
+	METHOD_UNSUPPORTED     ClientErrorCode = 3002
 )
 
 type ClientError struct {
-	Err  error
+	error
 	Code ClientErrorCode
 }
 
 func NewClientError(code ClientErrorCode, err error) error {
-	return &ClientError{Err: err, Code: code}
+	return &ClientError{error: err, Code: code}
 }
 
 func (err *ClientError) ErrorCode() ClientErrorCode {
 	return err.Code
 }
 
-func (err *ClientError) Error() string {
-	return err.Err.Error()
+type ErrorMessage struct {
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+type Paging struct {
+	Page      int64 `json:"page,omitempty"`
+	PageCount int64 `json:"pagecount,omitempty"`
+	PageSize  int64 `json:"pagesize,omitempty"`
+}
+
+type CommonResponse struct {
+	Code    int          `json:"code"`
+	Message string       `json:"message,omitempty"`
+	Ts      int64        `json:"ts"`
+	Error   ErrorMessage `json:"error,omitempty""`
+	Body    interface{}  `json:"body,omitempty""`
+	Paging  Paging       `json:"paging,omitempty"`
 }

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	grctx "github.com/gorilla/context"
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -114,6 +113,22 @@ func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb
 	}
 }
 
+func (ctx *ErrorHandler) BotShutdown(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+	if ctx.Err != nil {
+		return nil
+	}
+
+	if opreply, err := w.client.BotShutdown(w.context, req); err != nil {
+		ctx.Err = err
+		return nil
+	} else if opreply == nil {
+		ctx.Err = fmt.Errorf("logoutreply is nil")
+		return nil
+	} else {
+		return opreply
+	}
+}
+
 func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
@@ -126,6 +141,15 @@ func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb
 		ctx.Err = fmt.Errorf("actionreply is nil")
 		return nil
 	} else {
+		if actionreply.ClientError != nil {
+			if actionreply.ClientError.Code != 0 {
+				ctx.Err = utils.NewClientError(
+					utils.ClientErrorCode(actionreply.ClientError.Code),
+					fmt.Errorf(actionreply.ClientError.Message),
+				)
+				return nil
+			}
+		}
 		return actionreply
 	}
 }
@@ -155,63 +179,71 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
-	type BotsInfo struct {
-		pb.BotsInfo
-		BotName  string `json:"botName"`
-		Callback string `json:"callback"`
-		CreateAt int64  `json:"createAt"`
-	}
-
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	var accountname string
-	if accountptr := grctx.Get(r, "login"); accountptr != nil {
-		accountname = accountptr.(string)
+	accountname := o.getAccountName(r)
+	if o.Err != nil {
+		return
+	}
+
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
+	o.CheckBotOwnerById(tx, botId, accountname)
+	if o.Err != nil {
+		return
 	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
 
-	bots := o.GetBotsByAccountName(ctx.db.Conn, accountname)
-	for _, bot := range bots {
-		if bot.BotId == botId {
-			botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
-			if botsreply == nil {
-				o.Err = fmt.Errorf("get bots from hub failed")
-				return
+	bot := o.GetBotByIdNull(tx, botId)
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
+	if botsreply == nil {
+		o.Err = fmt.Errorf("get bots from hub failed")
+		return
+	}
+
+	if o.Err == nil {
+		if len(botsreply.BotsInfo) == 1 {
+			bi := BotsInfo{
+				BotsInfo: *botsreply.BotsInfo[0],
+				BotName:  bot.BotName,
+				Callback: bot.Callback.String,
+				CreateAt: &utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: &utils.JSONTime{Time: bot.UpdateAt.Time},
+			}
+			if bot.DeleteAt.Valid {
+				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
+			}
+			o.ok(w, "", bi)
+			return
+		} else if len(botsreply.BotsInfo) == 0 {
+			bi := BotsInfo{
+				BotsInfo: pb.BotsInfo{
+					ClientType: bot.ChatbotType,
+					Login:      bot.Login,
+					Status:     0,
+					BotId:      bot.BotId,
+				},
+				BotName:  bot.BotName,
+				Callback: bot.Callback.String,
+				CreateAt: &utils.JSONTime{Time: bot.CreateAt.Time},
+				UpdateAt: &utils.JSONTime{Time: bot.UpdateAt.Time},
+			}
+			if bot.DeleteAt.Valid {
+				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
 			}
 
-			if o.Err == nil {
-				if len(botsreply.BotsInfo) == 1 {
-					o.ok(w, "", BotsInfo{
-						BotsInfo: *botsreply.BotsInfo[0],
-						BotName:  bot.BotName,
-						Callback: bot.Callback.String,
-						CreateAt: bot.CreateAt.Time.Unix(),
-					})
-					return
-				} else if len(botsreply.BotsInfo) == 0 {
-					o.ok(w, "", BotsInfo{
-						BotsInfo: pb.BotsInfo{
-							ClientType: bot.ChatbotType,
-							Login:      bot.Login,
-							Status:     0,
-							BotId:      bot.BotId,
-						},
-						BotName:  bot.BotName,
-						Callback: bot.Callback.String,
-						CreateAt: bot.CreateAt.Time.Unix(),
-					})
-					return
-				} else {
-					o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
-					return
-				}
-			}
+			o.ok(w, "", bi)
+			return
+		} else {
+			o.Err = fmt.Errorf("get bots %s more than 1 instance", botId)
+			return
 		}
 	}
 
@@ -233,8 +265,8 @@ type ChatUserVO struct {
 	Remark     string         `json:"remark"`
 	Label      string         `json:"label"`
 	LastSendAt utils.JSONTime `json:"lastsendat"`
-	CreateAt   utils.JSONTime `json:"createat"`
-	UpdateAt   utils.JSONTime `json:"updateat"`
+	CuCreateAt utils.JSONTime `json:"cu_createat"`
+	CuUpdateAt utils.JSONTime `json:"cu_updateat"`
 }
 
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
@@ -257,14 +289,13 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	ipage := o.ParseInt(page, 0, 64)
 	ipagesize := o.ParseInt(pagesize, 0, 64)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		return
 	}
 
@@ -274,6 +305,10 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	botid := ""
 	if botlogin != "" {
 		thebot := o.GetBotByLogin(tx, botlogin)
+		if o.Err != nil {
+			return
+		}
+
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
@@ -281,13 +316,9 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !o.CheckBotOwner(tx, botlogin, accountName) {
-			if o.Err == nil {
-				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
-				return
-			} else {
-				return
-			}
+		o.CheckBotOwner(tx, botlogin, accountName)
+		if o.Err != nil {
+			return
 		}
 	}
 
@@ -302,14 +333,14 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	if criteria.BotId.Valid {
 		chatusers = o.GetChatUsersWithBotId(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
 	} else {
 		chatusers = o.GetChatUsers(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
@@ -342,8 +373,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Signature:  chatuser.Signature.String,
 			Remark:     chatuser.Remark.String,
 			Label:      chatuser.Label.String,
-			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
-			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+			CuCreateAt: utils.JSONTime{chatuser.CreateAt.Time},
+			CuUpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
 
@@ -357,7 +388,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Data:     chatuservos,
 			Criteria: criteria,
 		},
-		domains.Paging{
+		utils.Paging{
 			Page:      ipage,
 			PageCount: pagecount,
 			PageSize:  ipagesize,
@@ -396,11 +427,6 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	groupname := o.getStringValueDefault(r.Form, "groupname", "")
 	nickname := o.getStringValueDefault(r.Form, "nickname", "")
 	botlogin := o.getStringValueDefault(r.Form, "botlogin", "")
-	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
-		return
-	}
-
 	accountName := o.getAccountName(r)
 	if o.Err != nil {
 		return
@@ -426,13 +452,9 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !o.CheckBotOwner(tx, botlogin, accountName) {
-			if o.Err == nil {
-				o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("bot %s not exists, or account %s don't have access", botlogin, accountName))
-				return
-			} else {
-				return
-			}
+		o.CheckBotOwner(tx, botlogin, accountName)
+		if o.Err != nil {
+			return
 		}
 	}
 
@@ -447,14 +469,14 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	if criteria.BotId.Valid {
 		chatgroups = o.GetChatGroupsWithBotId(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
 	} else {
 		chatgroups = o.GetChatGroups(tx,
 			criteria,
-			domains.Paging{
+			utils.Paging{
 				Page:     ipage,
 				PageSize: ipagesize,
 			})
@@ -496,35 +518,38 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			Data:     chatgroupvos,
 			Criteria: criteria,
 		},
-		domains.Paging{
+		utils.Paging{
 			Page:      ipage,
 			PageCount: pagecount,
 			PageSize:  ipagesize,
 		})
 }
 
-func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
-	type BotsInfo struct {
-		pb.BotsInfo
-		BotId          string `json:"botId"`
-		BotName        string `json:"botName"`
-		FilterId       string `json:"filterId"`
-		MomentFilterId string `json:"momentFilterId"`
-		WxaappId       string `json:"wxaappId"`
-		Callback       string `json:"callback"`
-		CreateAt       int64  `json:"createAt"`
-	}
+type BotsInfo struct {
+	pb.BotsInfo
+	BotName        string          `json:"botName"`
+	BotId          string          `json:"botId"`
+	FilterId       string          `json:"filterId"`
+	MomentFilterId string          `json:"momentFilterId"`
+	WxaappId       string          `json:"wxaappId"`
+	Callback       string          `json:"callback"`
+	CreateAt       *utils.JSONTime `json:"createAt"`
+	UpdateAt       *utils.JSONTime `json:"updateAt"`
+	DeleteAt       *utils.JSONTime `json:"deleteAt,omitempty"`
+	ChatUserVO
+}
 
+func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
-	var login string
-	if loginptr := grctx.Get(r, "login"); loginptr != nil {
-		login = loginptr.(string)
+	accountName := o.getAccountName(r)
+	bots := o.GetBotsByAccountName(ctx.db.Conn, accountName)
+	if o.Err != nil {
+		return
 	}
 
-	bots := o.GetBotsByAccountName(ctx.db.Conn, login)
-	if o.Err == nil && len(bots) == 0 {
+	if len(bots) == 0 {
 		o.ok(w, "", []BotsInfo{})
 		return
 	}
@@ -545,7 +570,20 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					MomentFilterId: b.MomentFilterId.String,
 					WxaappId:       b.WxaappId.String,
 					Callback:       b.Callback.String,
-					CreateAt:       b.CreateAt.Time.Unix(),
+					CreateAt:       &utils.JSONTime{b.CreateAt.Time},
+					ChatUserVO: ChatUserVO{
+						NickName:   b.NickName.String,
+						Alias:      b.Alias.String,
+						Avatar:     b.Avatar.String,
+						Sex:        b.Sex,
+						Country:    b.Country.String,
+						Province:   b.Province.String,
+						City:       b.City.String,
+						Signature:  b.Signature.String,
+						Remark:     b.Remark.String,
+						Label:      b.Label.String,
+						LastSendAt: utils.JSONTime{b.LastSendAt.Time},
+					},
 				})
 			} else {
 				bs = append(bs, BotsInfo{
@@ -560,7 +598,20 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					MomentFilterId: b.MomentFilterId.String,
 					WxaappId:       b.WxaappId.String,
 					Callback:       b.Callback.String,
-					CreateAt:       b.CreateAt.Time.Unix(),
+					CreateAt:       &utils.JSONTime{Time: b.CreateAt.Time},
+					ChatUserVO: ChatUserVO{
+						NickName:   b.NickName.String,
+						Alias:      b.Alias.String,
+						Avatar:     b.Avatar.String,
+						Sex:        b.Sex,
+						Country:    b.Country.String,
+						Province:   b.Province.String,
+						City:       b.City.String,
+						Signature:  b.Signature.String,
+						Remark:     b.Remark.String,
+						Label:      b.Label.String,
+						LastSendAt: utils.JSONTime{b.LastSendAt.Time},
+					},
 				})
 			}
 		}
@@ -583,18 +634,9 @@ func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
 	login := o.getStringValue(r.Form, "login")
 	callback := o.getStringValue(r.Form, "callback")
 	loginInfo := o.getStringValueDefault(r.Form, "loginInfo", "")
-
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
-	}
-
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("context.login is null"))
-		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
 
 	tx := o.Begin(ctx.db)
@@ -630,22 +672,14 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	botName := o.getStringValue(r.Form, "botName")
 	clientType := o.getStringValue(r.Form, "clientType")
+	accountName := o.getAccountName(r)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	if clientType != "WECHATBOT" {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("scan create bot %s not supported", clientType))
 		return
-	}
-
-	var accountName string
-	if accountNameptr, ok := grctx.GetOk(r, "login"); !ok {
-		o.Err = fmt.Errorf("context.login is null")
-		return
-	} else {
-		accountName = accountNameptr.(string)
 	}
 
 	tx := o.Begin(ctx.db)
@@ -674,6 +708,17 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		BotId:      bot.BotId,
 	})
 
+	if o.Err != nil {
+		return
+	}
+
+	if loginreply.ClientError != nil && loginreply.ClientError.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(loginreply.ClientError.Code),
+			fmt.Errorf(loginreply.ClientError.Message))
+		return
+	}
+
 	o.ok(w, "", loginreply)
 }
 
@@ -689,14 +734,9 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf(
-				"bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
 	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
@@ -705,6 +745,17 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
 		BotId: botId,
 	})
+
+	if o.Err != nil {
+		return
+	}
+
+	if opreply.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(opreply.Code),
+			fmt.Errorf(opreply.Message))
+		return
+	}
 
 	o.ok(w, "", opreply)
 }
@@ -721,14 +772,27 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf(
-				"bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	defer wrapper.Cancel()
+
+	opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
+		BotId: botId,
+	})
+
+	if o.Err != nil {
+		return
+	}
+
+	if opreply.Code != 0 {
+		o.Err = utils.NewClientError(
+			utils.ClientErrorCode(opreply.Code),
+			fmt.Errorf(opreply.Message))
+		return
 	}
 
 	o.DeleteBot(tx, botId)
@@ -755,13 +819,9 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckBotOwnerById(tx, botId, accountName) {
-		if o.Err == nil {
-			o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", botId, accountName)
-			return
-		} else {
-			return
-		}
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
 	}
 
 	bot := o.GetBotById(tx, botId)
@@ -786,8 +846,8 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
 			return
 		}
-		if !o.CheckFilterOwner(tx, filterid, accountName) {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("filter %s not exists, or no permission", filterid))
+		o.CheckFilterOwner(tx, filterid, accountName)
+		if o.Err != nil {
 			return
 		}
 		bot.FilterId = sql.NullString{String: filterid, Valid: true}
@@ -802,10 +862,11 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
 			return
 		}
-		if !o.CheckFilterOwner(tx, momentfilterid, accountName) {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("moment filter %s not exists, or no permission", momentfilterid))
+		o.CheckFilterOwner(tx, momentfilterid, accountName)
+		if o.Err != nil {
 			return
 		}
+
 		bot.MomentFilterId = sql.NullString{String: momentfilterid, Valid: true}
 		o.UpdateBotMomentFilterId(tx, bot)
 	}
@@ -826,13 +887,11 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 		return
 	}
 
 	bot := o.GetBotById(ctx.db.Conn, botId)
 	if o.Err != nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, o.Err)
 		return
 	}
 
@@ -880,13 +939,17 @@ func (ctx *WebServer) getFriendRequests(w http.ResponseWriter, r *http.Request) 
 
 	tx := o.Begin(ctx.db)
 
-	if !o.CheckBotOwner(tx, login, accountName) {
-		o.Err = fmt.Errorf("bot %s not exists, or account %s don't have access", login, accountName)
+	o.CheckBotOwner(tx, login, accountName)
+	if o.Err != nil {
 		return
 	}
 
 	r.ParseForm()
 	status := o.getStringValue(r.Form, "status")
+	if o.Err != nil {
+		return
+	}
+
 	frs := o.GetFriendRequestsByLogin(tx, login, status)
 
 	o.ok(w, "", frs)
@@ -907,6 +970,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			100: "准备登录",
 			150: "等待扫码",
 			151: "登录失败",
+			190: "登录接入中",
 			200: "已登录",
 			500: "连接断开",
 		},
@@ -918,6 +982,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			2001: "资源不足",
 			2002: "权限不足",
 			2003: "未找到对应资源",
+			2004: "资源调用配额不足",
 		},
 	})
 }
@@ -978,23 +1043,14 @@ func (web *WebServer) getFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
-	}
-
-	if o.Err != nil {
-		return
-	}
-
+	o.CheckFilterOwner(tx, filterId, accountName)
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
+	if o.Err != nil {
 		return
 	}
 
-	if o.Err != nil {
+	if filter == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -1018,7 +1074,7 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	web.Info("update filter %s\nr.Form[%#v]", filterId, r.Form)
-	
+
 	filtername := o.getStringValueDefault(r.Form, "name", "")
 	filterbody := o.getStringValueDefault(r.Form, "body", "")
 	filternext := o.getStringValueDefault(r.Form, "next", "")
@@ -1031,23 +1087,14 @@ func (web *WebServer) updateFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
-	}
-
-	if o.Err != nil {
-		return
-	}
-
+	o.CheckFilterOwner(tx, filterId, accountName)
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
-		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
+	if o.Err != nil {
 		return
 	}
 
-	if o.Err != nil {
+	if filter == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
@@ -1082,29 +1129,24 @@ func (web *WebServer) updateFilterNext(w http.ResponseWriter, r *http.Request) {
 	nextFilterId := o.getStringValue(r.Form, "next")
 	accountName := o.getAccountName(r)
 	tx := o.Begin(web.db)
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, filterId, accountName)
+	if o.Err != nil {
 		return
 	}
-
-	if !o.CheckFilterOwner(tx, nextFilterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问下一级过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, nextFilterId, accountName)
+	if o.Err != nil {
 		return
 	}
-
 	filter := o.GetFilterById(tx, filterId)
-	if o.Err == nil && filter == nil {
+	if o.Err != nil {
+		return
+	}
+
+	if filter == nil {
 		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("找不到过滤器%s", filterId))
 		return
 	}
 
-	if o.Err != nil {
-		return
-	}
 	filter.Next = sql.NullString{String: nextFilterId, Valid: true}
 	o.UpdateFilter(tx, filter)
 	o.CommitOrRollback(tx)
@@ -1158,15 +1200,93 @@ func (web *WebServer) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	if !o.CheckFilterOwner(tx, filterId, accountName) {
-		if o.Err == nil {
-			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, fmt.Errorf("无权访问过滤器%s", filterId))
-		}
+	o.CheckFilterOwner(tx, filterId, accountName)
+	if o.Err != nil {
 		return
 	}
 
 	o.DeleteFilter(tx, filterId)
 	o.ok(w, "success", filterId)
+}
+
+type ChatGroupMemberVO struct {
+	ChatGroupMemberId string `json:"chatGroupMemberId"`
+	ChatGroupId       string `json:"chatGroupId"`
+	GroupName         string `json:"groupName"`
+	InvitedBy         string `json:"invitedBy"`
+	GroupNickName     string `json:"groupNickName"`
+	ChatUserVO
+}
+
+func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	groupname := vars["groupname"]
+	domain := "chatgroupmembers"
+
+	o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := o.ToJson(map[string]interface{}{
+		"find": map[string]interface{}{
+			"groupname": map[string]interface{}{
+				"in": []string{
+					groupname,
+				},
+			},
+		},
+	})
+
+	web.Info("search groupmembers\n%s\n", query)
+
+	rows, paging := o.SelectByCriteria(tx, query, domain)
+	if o.Err != nil {
+		return
+	}
+
+	web.Info("search groupmembers 1 ... ")
+
+	var groupMemberDomains []domains.ChatGroupMemberExpand
+	o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &groupMemberDomains)
+	if o.Err != nil {
+		return
+	}
+
+	var gmvos []ChatGroupMemberVO
+	for _, gm := range groupMemberDomains {
+		gmvos = append(gmvos, ChatGroupMemberVO{
+			ChatGroupMemberId: gm.ChatGroupMemberId,
+			ChatGroupId:       gm.ChatGroupId,
+			GroupName:         groupname,
+			InvitedBy:         gm.InvitedBy.String,
+			GroupNickName:     gm.GroupNickName.String,
+			ChatUserVO: ChatUserVO{
+				ChatUserId: gm.ChatUserId,
+				UserName:   gm.UserName,
+				NickName:   gm.NickName,
+				Type:       gm.Type,
+				Alias:      gm.Alias.String,
+				Avatar:     gm.Avatar.String,
+				Sex:        gm.Sex,
+				Country:    gm.Country.String,
+				Province:   gm.Province.String,
+				City:       gm.City.String,
+				Signature:  gm.Signature.String,
+				Remark:     gm.Remark.String,
+				Label:      gm.Label.String,
+				LastSendAt: utils.JSONTime{gm.LastSendAt.Time},
+				CuCreateAt: utils.JSONTime{gm.ChatUser.CreateAt.Time},
+				CuUpdateAt: utils.JSONTime{gm.ChatUser.UpdateAt.Time},
+			},
+		})
+	}
+
+	o.okWithPaging(w, "success", gmvos, paging)
 }
 
 func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
@@ -1180,7 +1300,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
 
-	//accountName := o.getAccountName(r)
+	o.getAccountName(r)
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
@@ -1216,8 +1336,8 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 				Remark:     chatuser.Remark.String,
 				Label:      chatuser.Label.String,
 				LastSendAt: utils.JSONTime{chatuser.LastSendAt.Time},
-				CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
-				UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+				CuCreateAt: utils.JSONTime{chatuser.CreateAt.Time},
+				CuUpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
 			})
 		}
 		o.okWithPaging(w, "success", chatuservos, paging)
@@ -1254,8 +1374,8 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 					Remark:     contact.Remark.String,
 					Label:      contact.Label.String,
 					LastSendAt: utils.JSONTime{contact.LastSendAt.Time},
-					CreateAt:   utils.JSONTime{contact.CreateAt.Time},
-					UpdateAt:   utils.JSONTime{contact.UpdateAt.Time},
+					CuCreateAt: utils.JSONTime{contact.CreateAt.Time},
+					CuUpdateAt: utils.JSONTime{contact.UpdateAt.Time},
 				},
 			})
 		}

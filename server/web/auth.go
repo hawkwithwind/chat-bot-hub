@@ -29,6 +29,16 @@ type User struct {
 	ExpireAt    utils.JSONTime `json:"expireat"`
 }
 
+type AuthError struct {
+	error
+}
+
+func NewAuthError(err error) error {
+	return &AuthError{
+		err,
+	}
+}
+
 func (o *ErrorHandler) getAccountName(r *http.Request) string {
 	if o.Err != nil {
 		return ""
@@ -121,7 +131,8 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 	case string:
 		accountName = login
 	default:
-		o.Err = fmt.Errorf("context[login] should be string but [%T]%v", login, login)
+		o.Err = NewAuthError(fmt.Errorf("context[login] should be string but [%T]%v", login, login))
+		return
 	}
 
 	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30))
@@ -147,16 +158,16 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 
 		if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
 			if user.ExpireAt.Before(time.Now()) {
-				o.deny(w, "身份令牌已过期")
+				o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 				return
 			} else {
 				if user.SdkCode != REFRESHCODE {
-					o.deny(w, "不支持的令牌类型")
+					o.Err = NewAuthError(fmt.Errorf("不支持的令牌类型"))
 					return
 				}
 
 				if clientType != SDK {
-					o.deny(w, "不支持的用户类型")
+					o.Err = NewAuthError(fmt.Errorf("不支持的用户类型"))
 					return
 				}
 
@@ -165,11 +176,11 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 		} else {
-			o.deny(w, "身份令牌未验证通过")
+			o.Err = NewAuthError(fmt.Errorf("身份令牌未验证通过"))
 			return
 		}
 	} else {
-		o.deny(w, "身份令牌无效")
+		o.Err = NewAuthError(fmt.Errorf("身份令牌无效"))
 		return
 	}
 }
@@ -180,10 +191,14 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 	var session *sessions.Session
 	session, o.Err = ctx.store.Get(req, "chatbothub")
+	if o.Err != nil {
+		o.Err = NewAuthError(o.Err)
+	}
 
 	var user User
-	if o.Err == nil {
-		o.Err = json.NewDecoder(req.Body).Decode(&user)
+	o.Err = json.NewDecoder(req.Body).Decode(&user)
+	if o.Err != nil {
+		o.Err = NewAuthError(o.Err)
 	}
 
 	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
@@ -194,16 +209,18 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 		if o.Err == nil {
 			http.Redirect(w, req, "/", http.StatusFound)
+		} else {
+			o.Err = NewAuthError(o.Err)
 		}
 	} else {
-		o.deny(w, "用户名密码不匹配")
+		o.Err = NewAuthError(fmt.Errorf("用户名密码不匹配"))
 	}
 }
 
 func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		o := &ErrorHandler{}
-		//defer o.WebError(w)
+		defer o.WebError(w)
 
 		var session *sessions.Session
 		var bearerToken string = ""
@@ -238,29 +255,26 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			})
 
 			if o.Err != nil {
-				ctx.Error(o.Err, "parse token failed")
-				o.deny(w, "解析身份令牌出错")
+				o.Err = NewAuthError(fmt.Errorf("解析令牌出错: %s", o.Err.Error()))
 				return
 			}
 
 			if token == nil {
-				o.Err = fmt.Errorf("token is null")
-				ctx.Error(o.Err, "parse token failed")
-				o.deny(w, "解析身份令牌出错")
+				o.Err = NewAuthError(fmt.Errorf("token is null"))
 				return
 			}
-			
+
 			if token.Valid {
 				var user User
 				utils.DecodeMap(token.Claims, &user)
 
 				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
 					if user.ExpireAt.Before(time.Now()) {
-						o.deny(w, "身份令牌已过期")
+						o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 						return
 					} else {
 						if clientType == SDK && user.SdkCode != SDKCODE {
-							o.deny(w, "不支持的用户类型")
+							o.Err = NewAuthError(fmt.Errorf("不支持的用户类型"))
 							return
 						}
 
@@ -269,15 +283,15 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 						next(w, req)
 					}
 				} else {
-					o.deny(w, "身份令牌未验证通过")
+					o.Err = NewAuthError(fmt.Errorf("身份令牌未验证通过"))
 					return
 				}
 			} else {
-				o.deny(w, "身份令牌无效")
+				o.Err = NewAuthError(fmt.Errorf("身份令牌无效"))
 				return
 			}
 		} else {
-			o.deny(w, "未登录用户无权限访问")
+			o.Err = NewAuthError(fmt.Errorf("未登录用户无权限访问"))
 			return
 		}
 	})

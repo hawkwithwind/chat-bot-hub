@@ -103,10 +103,12 @@ const (
 	REGISTER      string = "REGISTER"
 	LOGIN         string = "LOGIN"
 	LOGOUT        string = "LOGOUT"
+	SHUTDOWN      string = "SHUTDOWN"
 	LOGINSCAN     string = "LOGINSCAN"
 	LOGINDONE     string = "LOGINDONE"
 	LOGINFAILED   string = "LOGINFAILED"
 	LOGOUTDONE    string = "LOGOUTDONE"
+	BOTMIGRATE    string = "BOTMIGRATE"
 	UPDATETOKEN   string = "UPDATETOKEN"
 	MESSAGE       string = "MESSAGE"
 	IMAGEMESSAGE  string = "IMAGEMESSAGE"
@@ -191,6 +193,8 @@ func (hub *ChatHub) DropBot(clientid string) {
 	defer hub.muxBots.Unlock()
 
 	delete(hub.bots, clientid)
+
+	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
 }
 
 func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
@@ -230,7 +234,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
 				thebot.LastPing = ts
-				hub.SetBot(in.ClientId, thebot)
+
+				if bot := hub.GetBot(in.ClientId); bot != nil {
+					hub.SetBot(in.ClientId, thebot)
+				}
 			} else {
 				hub.Info("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
@@ -292,11 +299,122 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 					}
 
+					if o.Err != nil {
+						hub.Error(o.Err, "LOGIN DONE MALFALED DATA %s", in.Body)
+						continue
+					}
+
+					if botId == "" {
+						hub.Error(fmt.Errorf("botId is null"),
+							"LOGIN DONE MALFALED DATA %s", in.Body)
+						continue
+					}
+
 					if o.Err == nil {
 						findbot := hub.GetBotById(botId)
 						if findbot != nil && findbot.ClientId != bot.ClientId {
-							o.Err = fmt.Errorf("bot[%s] already login on c[%s]", botId, findbot.ClientId)
-							hub.Error(o.Err, "FATAL error, stop")
+							hub.Info(
+								"[LOGIN MIGRATE] bot[%s] already login b[%s]c[%s]; logout b[%s] now",
+								botId, findbot.BotId, findbot.ClientId, findbot.BotId)
+							findbot, o.Err = findbot.logoutOrShutdown()
+							if o.Err != nil {
+								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s]c[%s] try drop failed",
+									findbot.BotId, findbot.ClientId)
+								continue
+							}
+
+							hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+							hub.DropBot(findbot.ClientId)
+						}
+					}
+
+					if o.Err == nil {
+						bot, o.Err = bot.loginStaging(botId, userName, wxData, token)
+						if o.Err != nil {
+							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
+							bot.logout()
+							continue
+						}
+
+						var resp *httpx.RestfulResponse
+						resp, o.Err = httpx.RestfulCallRetry(
+							httpx.NewRestfulRequest(
+								"post",
+								fmt.Sprintf("%s/bots/%s/loginstage", hub.WebBaseUrl, bot.BotId)),
+							5, 1)
+						if o.Err != nil {
+							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout<post>", bot.BotId)
+							bot.logout()
+							continue
+						}
+
+						hub.Info("[LOGIN MIGRATE] b[%s] loginstage return %d\n%s",
+							bot.BotId, resp.StatusCode, resp.Body)
+
+						if resp.StatusCode == 200 {
+							cresp := utils.CommonResponse{}
+							o.Err = json.Unmarshal([]byte(resp.Body), &cresp)
+							if o.Err != nil {
+								hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout<0>", bot.BotId)
+								bot.logout()
+								continue
+							}
+
+							switch respbody := cresp.Body.(type) {
+							case map[string]interface{}:
+								if respBotIdptr, ok := respbody["botId"]; ok {
+									switch respBotId := respBotIdptr.(type) {
+									case string:
+										if respBotId != "" {
+											hub.Info("[LOGIN MIGRATE] return oldId %s", respBotId)
+											findbot := hub.GetBotById(respBotId)
+											if findbot != nil {
+												hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
+													findbot.BotId, findbot.ClientId)
+												findbot, o.Err = findbot.logoutOrShutdown()
+												if o.Err != nil {
+													hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+														findbot.BotId, findbot.ClientId)
+													bot.logout()
+													continue
+												}
+
+												hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+												hub.DropBot(findbot.ClientId)
+											}
+
+											botId = respBotId
+											bot, o.Err = bot.botMigrate(botId)
+											if o.Err != nil {
+												hub.Error(o.Err, "call client bot migrate failed")
+												bot.logout()
+												continue
+											}
+										}
+									default:
+										hub.Error(fmt.Errorf("unexpected respbot %T %#v", respBotId, respBotId),
+											"[LOGIN MIGRATE] b[%s] login stage failed<1>, logout")
+										bot.logout()
+										continue
+									}
+
+								} else {
+									hub.Error(fmt.Errorf("unexpected return %v, key botId required", cresp.Body),
+										"[LOGIN MIGRATE] b[%s] loginstage failed<2>, logout", bot.BotId)
+									bot.logout()
+									continue
+								}
+							default:
+								hub.Error(fmt.Errorf("unexpected return %T %#v", respbody, respbody),
+									"[LOGIN MIGRATE] b[%s] loginstage failed<3>, logout", bot.BotId)
+								bot.logout()
+								continue
+							}
+
+						} else {
+							hub.Error(fmt.Errorf("web status code %d", resp.StatusCode),
+								"[LOGIN MIGRATE] b[%s] loginstage failed<4>, logout", bot.BotId)
+							bot.logout()
 							continue
 						}
 					}
@@ -383,7 +501,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// so that it should be recycled by then
 
 				hub.DropBot(thebot.ClientId)
-				hub.Info("drop c[%s]", thebot.ClientId)
+				hub.Info("drop c[%s]\n%#v", thebot.ClientId, hub.bots)
 
 			case ACTIONREPLY:
 				if len(in.Body) > 240 {
@@ -499,7 +617,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("contact info %v", bodym)
-					
+
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
@@ -533,7 +651,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			if o.Err == nil {
 				if thebot != nil {
-					hub.SetBot(in.ClientId, thebot)
+					if bot := hub.GetBot(in.ClientId); bot != nil {
+						hub.SetBot(in.ClientId, thebot)
+					}
 				}
 			} else {
 				hub.Error(o.Err, "[%s] Error %s", in.EventType, o.Err.Error())
@@ -559,24 +679,31 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
 	o := &ErrorHandler{}
 
-	bots := make([]*pb.BotsInfo, 0)
+	botm := make(map[string]*pb.BotsInfo)
+
 	for _, v := range hub.bots {
 		if len(req.Logins) > 0 {
 			if o.FindFromLines(req.Logins, v.Login) {
-				bots = append(bots, NewBotsInfo(v))
+				botm[v.ClientId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.BotIds) > 0 {
 			if o.FindFromLines(req.BotIds, v.BotId) {
-				bots = append(bots, NewBotsInfo(v))
+				botm[v.ClientId] = NewBotsInfo(v)
 			}
 		}
 
 		if len(req.Logins) == 0 && len(req.BotIds) == 0 {
-			bots = append(bots, NewBotsInfo(v))
+			botm[v.ClientId] = NewBotsInfo(v)
 		}
 	}
+
+	bots := make([]*pb.BotsInfo, 0)
+	for _, v := range botm {
+		bots = append(bots, v)
+	}
+
 	return &pb.BotsReply{BotsInfo: bots}, nil
 }
 
@@ -607,10 +734,31 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 
 	bot := hub.GetBotById(req.BotId)
 	if bot == nil {
-		return nil, fmt.Errorf("b[%s] not found", req.BotId)
+		hub.Info("cannot find bot %s\n%#v", req.BotId, hub.bots)
+		return &pb.OperationReply{
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("b[%s] not found", req.BotId),
+		}, nil
 	}
 
 	_, err := bot.logout()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.OperationReply{Code: 0, Message: "success"}, nil
+}
+
+func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
+	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
+
+	bot := hub.GetBotById(req.BotId)
+	if bot == nil {
+		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
+		return &pb.OperationReply{Code: 0, Message: "success"}, nil
+	}
+
+	_, err := bot.shutdown()
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +812,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
 				ClientError: &pb.OperationReply{
 					Code:    int32(clientError.Code),
-					Message: clientError.Err.Error(),
+					Message: clientError.Error(),
 				},
 			}, nil
 		default:
@@ -694,7 +842,24 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 	}
 
 	if o.Err != nil {
-		return &pb.BotActionReply{Success: false, Msg: fmt.Sprintf("Action failed %s", o.Err.Error())}, o.Err
+		switch clientError := o.Err.(type) {
+		case *utils.ClientError:
+			return &pb.BotActionReply{
+				Msg: "Action failed",
+				ClientError: &pb.OperationReply{
+					Code:    int32(clientError.Code),
+					Message: clientError.Error(),
+				},
+			}, nil
+		default:
+			return &pb.BotActionReply{
+				Msg: "Action failed",
+				ClientError: &pb.OperationReply{
+					Code:    int32(utils.UNKNOWN),
+					Message: o.Err.Error(),
+				},
+			}, nil
+		}
 	} else {
 		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
 	}
@@ -735,22 +900,32 @@ func (hub *ChatHub) FilterCreate(
 
 	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
 	if err != nil {
-		return &pb.OperationReply{Code: -1, Message: err.Error()}, err
+		return &pb.OperationReply{
+			Code:    int32(utils.PARAM_INVALID),
+			Message: err.Error(),
+		}, err
 	}
 
 	if req.Body != "" {
 		o := &ErrorHandler{}
 		bodym := o.FromJson(req.Body)
 		if o.Err != nil {
-			return nil, o.Err
+			return &pb.OperationReply{
+				Code:    int32(utils.PARAM_INVALID),
+				Message: o.Err.Error(),
+			}, nil
 		}
+
 		if bodym != nil {
 			switch ff := filter.(type) {
 			case *WebTrigger:
 				url := o.FromMapString("url", bodym, "body.url", false, "")
 				method := o.FromMapString("method", bodym, "body.method", false, "")
 				if o.Err != nil {
-					return nil, o.Err
+					return &pb.OperationReply{
+						Code:    int32(utils.PARAM_INVALID),
+						Message: o.Err.Error(),
+					}, nil
 				}
 
 				ff.Action.Url = url
@@ -796,12 +971,18 @@ func (hub *ChatHub) FilterNext(
 
 	parentFilter := hub.GetFilter(req.FilterId)
 	if parentFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.FilterId)
+		return &pb.OperationReply{
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.FilterId),
+		}, nil
 	}
 
 	nextFilter := hub.GetFilter(req.NextFilterId)
 	if nextFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.NextFilterId)
+		return &pb.OperationReply{
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.NextFilterId),
+		}, nil
 	}
 
 	if err := parentFilter.Next(nextFilter); err != nil {
@@ -817,12 +998,18 @@ func (hub *ChatHub) RouterBranch(
 
 	parentFilter := hub.GetFilter(req.RouterId)
 	if parentFilter == nil {
-		return nil, fmt.Errorf("filter %s not found", req.RouterId)
+		return &pb.OperationReply{
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("filter %s not found", req.RouterId),
+		}, nil
 	}
 
 	childFilter := hub.GetFilter(req.FilterId)
 	if childFilter == nil {
-		return nil, fmt.Errorf("child filter %s not found", req.FilterId)
+		return &pb.OperationReply{
+			Code:    int32(utils.RESOURCE_NOT_FOUND),
+			Message: fmt.Sprintf("child filter %s not found", req.FilterId),
+		}, nil
 	}
 
 	switch r := parentFilter.(type) {
@@ -831,7 +1018,10 @@ func (hub *ChatHub) RouterBranch(
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("filter type %T cannot branch", r)
+		return &pb.OperationReply{
+			Code:    int32(utils.METHOD_UNSUPPORTED),
+			Message: fmt.Sprintf("filter type %T cannot branch", r),
+		}, nil
 	}
 
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
