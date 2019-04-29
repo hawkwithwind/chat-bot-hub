@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"net/http"
 	"regexp"
 
@@ -547,6 +548,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+				models.InsertMessage(msg)
 			}
 		}
 
