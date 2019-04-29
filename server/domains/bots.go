@@ -29,6 +29,33 @@ type Bot struct {
 	DeleteAt       mysql.NullTime `db:"deleteat"`
 }
 
+type BotExpand struct {
+	BotId          string         `db:"botid"`
+	AccountId      string         `db:"accountid"`
+	BotName        string         `db:"botname"`
+	Login          string         `db:"login"`
+	ChatbotType    string         `db:"chatbottype"`
+	LoginInfo      sql.NullString `db:"logininfo"`
+	Callback       sql.NullString `db:"callback"`
+	FilterId       sql.NullString `db:"filterid"`
+	MomentFilterId sql.NullString `db:"momentfilterid"`
+	WxaappId       sql.NullString `db:"wxaappid"`
+	CreateAt       mysql.NullTime `db:"createat"`
+	UpdateAt       mysql.NullTime `db:"updateat"`
+	DeleteAt       mysql.NullTime `db:"deleteat"`
+	Alias          sql.NullString `db:"alias"`
+	NickName       string         `db:"nickname"`
+	Avatar         sql.NullString `db:"avatar"`
+	Sex            int            `db:"sex"`
+	Country        sql.NullString `db:"country"`
+	Province       sql.NullString `db:"province"`
+	City           sql.NullString `db:"city"`
+	Signature      sql.NullString `db:"signature"`
+	Remark         sql.NullString `db:"remark"`
+	Label          sql.NullString `db:"label"`
+	LastSendAt     mysql.NullTime `db:"lastsendat"`
+}
+
 func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {
 	if o.Err != nil {
 		return nil
@@ -133,21 +160,33 @@ func (o *ErrorHandler) DeleteBot(q dbx.Queryable, botId string) {
 	_, o.Err = q.ExecContext(ctx, query, botId)
 }
 
-func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string) []Bot {
+func (o *ErrorHandler) GetBotsByAccountName(q dbx.Queryable, accountname string) []BotExpand {
 	if o.Err != nil {
 		return nil
 	}
 
-	bots := []Bot{}
+	bots := []BotExpand{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &bots,
 		`
-SELECT d.*
-FROM bots as d 
-LEFT JOIN accounts as a on d.accountid = a.accountid
+SELECT b.* 
+, c.alias
+, c.nickname
+, c.avatar
+, c.sex
+, c.country
+, c.province
+, c.city
+, c.signature
+, c.remark
+, c.label
+, c.lastsendat
+FROM bots as b 
+LEFT JOIN accounts as a on b.accountid = a.accountid
+LEFT JOIN chatusers as c on b.login = c.username
 WHERE a.accountname=? 
   AND a.deleteat is NULL
-  AND d.deleteat is NULL`, accountname)
+  AND b.deleteat is NULL`, accountname)
 
 	return bots
 }
@@ -166,8 +205,42 @@ FROM bots
 WHERE botid=?
   AND deleteat is NULL`, botid)
 
-	if b := o.Head(bots, fmt.Sprintf("Bot %s more than one instance", botid)); b != nil {
+	if b := o.Head(bots, fmt.Sprintf("Bot %s", botid)); b != nil {
 		return b.(*Bot)
+	} else {
+		return nil
+	}
+
+}
+
+func (o *ErrorHandler) GetBotExpandById(q dbx.Queryable, botid string) *BotExpand {
+	if o.Err != nil {
+		return nil
+	}
+
+	bots := []BotExpand{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &bots,
+		`
+SELECT b.*
+, c.alias
+, c.nickname
+, c.avatar
+, c.sex
+, c.country
+, c.province
+, c.city
+, c.signature
+, c.remark
+, c.label
+, c.lastsendat
+FROM bots as b
+LEFT JOIN chatusers as c on b.login = c.username
+WHERE b.botid=?
+  AND b.deleteat is NULL`, botid)
+
+	if b := o.Head(bots, fmt.Sprintf("Bot %s", botid)); b != nil {
+		return b.(*BotExpand)
 	} else {
 		return nil
 	}
@@ -192,7 +265,6 @@ WHERE botid=?`, botid)
 		return nil
 	}
 }
-
 
 func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) *Bot {
 	if o.Err != nil {
@@ -225,10 +297,12 @@ func (o *ErrorHandler) CheckBotOwner(q dbx.Queryable, login string, accountName 
 	o.Err = q.SelectContext(ctx, &bots,
 		`
 SELECT b.*
+, 
 FROM bots as b 
 LEFT JOIN accounts as a on b.accountid = a.accountid
 WHERE a.accountname=? 
   AND b.login=?
+  AND b.deleteat is NULL
   AND a.deleteat is NULL`, accountName, login)
 
 	if len(bots) == 0 {
@@ -264,8 +338,7 @@ WHERE a.accountname=?
 	}
 }
 
-
-func (o *ErrorHandler) BotMigrate(q dbx.Queryable, botId string, login string)  string {
+func (o *ErrorHandler) BotMigrate(q dbx.Queryable, botId string, login string) string {
 	if o.Err != nil {
 		return ""
 	}
@@ -287,14 +360,14 @@ WHERE login=?
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
 		// should migrate chatuser info, later with tasks
-		
+
 		ctx, _ = o.DefaultContext()
 		_, o.Err = q.ExecContext(ctx,
 			`UPDATE bots SET deleteat=CURRENT_TIMESTAMP where botId=?`, botId)
 		if o.Err != nil {
 			return ""
 		}
-		
+
 		return oldId
 	}
 

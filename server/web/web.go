@@ -369,7 +369,6 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", ctx.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
-	
 
 	// account login and auth (auth.go)
 	r.HandleFunc("/login", ctx.login).Methods("POST")

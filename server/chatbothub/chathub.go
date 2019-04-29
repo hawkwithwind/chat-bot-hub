@@ -184,7 +184,7 @@ func (hub *ChatHub) GetBotById(botId string) *ChatBot {
 func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
 	hub.muxBots.Lock()
 	defer hub.muxBots.Unlock()
-	
+
 	hub.bots[clientid] = thebot
 }
 
@@ -310,7 +310,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						continue
 					}
 
-					
 					if o.Err == nil {
 						findbot := hub.GetBotById(botId)
 						if findbot != nil && findbot.ClientId != bot.ClientId {
@@ -366,32 +365,32 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								if respBotIdptr, ok := respbody["botId"]; ok {
 									switch respBotId := respBotIdptr.(type) {
 									case string:
-									if respBotId != "" {
-										hub.Info("[LOGIN MIGRATE] return oldId %s", respBotId)
-										findbot := hub.GetBotById(respBotId)
-										if findbot != nil {
-											hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
-												findbot.BotId, findbot.ClientId)
-											findbot, o.Err = findbot.logoutOrShutdown()
-											if o.Err != nil {
-												hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+										if respBotId != "" {
+											hub.Info("[LOGIN MIGRATE] return oldId %s", respBotId)
+											findbot := hub.GetBotById(respBotId)
+											if findbot != nil {
+												hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 													findbot.BotId, findbot.ClientId)
+												findbot, o.Err = findbot.logoutOrShutdown()
+												if o.Err != nil {
+													hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
+														findbot.BotId, findbot.ClientId)
+													bot.logout()
+													continue
+												}
+
+												hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+												hub.DropBot(findbot.ClientId)
+											}
+
+											botId = respBotId
+											bot, o.Err = bot.botMigrate(botId)
+											if o.Err != nil {
+												hub.Error(o.Err, "call client bot migrate failed")
 												bot.logout()
 												continue
 											}
-
-											hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
-											hub.DropBot(findbot.ClientId)
 										}
-
-										botId = respBotId
-										bot, o.Err = bot.botMigrate(botId)
-										if o.Err != nil {
-											hub.Error(o.Err, "call client bot migrate failed")
-											bot.logout()
-											continue
-										}
-									}
 									default:
 										hub.Error(fmt.Errorf("unexpected respbot %T %#v", respBotId, respBotId),
 											"[LOGIN MIGRATE] b[%s] login stage failed<1>, logout")

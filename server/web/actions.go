@@ -300,7 +300,7 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 	defer o.BackEndError(web)
 
 	vars := mux.Vars(r)
-	botId := vars["botId"]	
+	botId := vars["botId"]
 
 	web.Info("botNotify %s", botId)
 
@@ -334,14 +334,14 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("bot[%s] not LogingStaging but %d", botId, thebotinfo.Status)
 		return
 	}
-	
+
 	if len(thebotinfo.Login) == 0 {
 		o.Err = fmt.Errorf("bot[%s] loging staging with empty login %#v", botId, thebotinfo)
 		return
 	}
 
 	web.Info("[LOGIN MIGRATE] bot migrate b[%s] %s", botId, thebotinfo.Login)
-	
+
 	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
 	o.ok(w, "", map[string]interface{}{
 		"botId": oldId,
@@ -442,16 +442,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
 		bot.Login = thebotinfo.Login
 		o.UpdateBotLogin(tx, bot)
+		if o.Err != nil {
+			return
+		}
 
-		// rebuild msg filter error should not effect update bot login
+		// rebuild msg filter error and new action error should not effect update bot login
 		// consider transaction, we use new errorhandler here
+
+		// now call search user to get self profile
+		a_o := &ErrorHandler{}
+		ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
+			"userId": bot.Login,
+		}), "NEW")
+		a_o.CreateAndRunAction(ctx, ar)
 
 		re_o := &ErrorHandler{}
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		if re_o.Err != nil {
-			return
-		}
 		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
 		return
 
@@ -765,6 +772,44 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
+
+		case chatbothub.SearchContact:
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				return
+			}
+
+			info := WechatContactInfo{}
+			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &info)
+			if o.Err != nil {
+				return
+			}
+
+			if info.UserName == "" {
+				ctx.Info("search user name empty, ignore")
+				return
+			}
+
+			if info.UserName[:5] != "wxid_" {
+				ctx.Info("search user not friend, ignore for now.\n%v", info)
+				return
+			}
+
+			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+			chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
+			chatuser.Sex = info.Sex
+			chatuser.SetAvatar(info.SmallHead)
+			chatuser.SetCountry(info.Country)
+			chatuser.SetProvince(info.Provincia)
+			chatuser.SetCity(info.City)
+			chatuser.SetSignature(info.Signature)
+			chatuser.SetRemark(info.Remark)
+			chatuser.SetLabel(info.Label)
+			chatuser.SetExt(acresult.Data.(string))
+
+			o.UpdateOrCreateChatUser(tx, chatuser)
+			ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)
 
 		case chatbothub.GetRoomMembers:
 			bodym := o.FromJson(localar.ActionBody)

@@ -179,15 +179,6 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
-	type BotsInfo struct {
-		pb.BotsInfo
-		BotName  string `json:"botName"`
-		Callback string `json:"callback"`
-		CreateAt *utils.JSONTime `json:"createAt"`
-		UpdateAt *utils.JSONTime `json:"updateAt"`
-		DeleteAt *utils.JSONTime `json:"deleteAt,omitempty"`
-	}
-
 	o := ErrorHandler{}
 	defer o.WebError(w)
 
@@ -205,7 +196,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	o.CheckBotOwnerById(tx, botId, accountname)
 	if o.Err != nil {
 		return
-	}	
+	}
 
 	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 	defer wrapper.Cancel()
@@ -245,9 +236,9 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 				UpdateAt: &utils.JSONTime{Time: bot.UpdateAt.Time},
 			}
 			if bot.DeleteAt.Valid {
-				bi.DeleteAt = &utils.JSONTime{Time:bot.DeleteAt.Time}
+				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
 			}
-			
+
 			o.ok(w, "", bi)
 			return
 		} else {
@@ -255,7 +246,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	o.ok(w, "bot not found, or no access", BotsInfo{})
 }
 
@@ -274,8 +265,8 @@ type ChatUserVO struct {
 	Remark     string         `json:"remark"`
 	Label      string         `json:"label"`
 	LastSendAt utils.JSONTime `json:"lastsendat"`
-	CreateAt   utils.JSONTime `json:"createat"`
-	UpdateAt   utils.JSONTime `json:"updateat"`
+	CuCreateAt utils.JSONTime `json:"cu_createat"`
+	CuUpdateAt utils.JSONTime `json:"cu_updateat"`
 }
 
 func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
@@ -382,8 +373,8 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			Signature:  chatuser.Signature.String,
 			Remark:     chatuser.Remark.String,
 			Label:      chatuser.Label.String,
-			CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
-			UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+			CuCreateAt: utils.JSONTime{chatuser.CreateAt.Time},
+			CuUpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
 		})
 	}
 
@@ -534,18 +525,21 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		})
 }
 
-func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
-	type BotsInfo struct {
-		pb.BotsInfo
-		BotId          string `json:"botId"`
-		BotName        string `json:"botName"`
-		FilterId       string `json:"filterId"`
-		MomentFilterId string `json:"momentFilterId"`
-		WxaappId       string `json:"wxaappId"`
-		Callback       string `json:"callback"`
-		CreateAt       int64  `json:"createAt"`
-	}
+type BotsInfo struct {
+	pb.BotsInfo
+	BotName        string          `json:"botName"`
+	BotId          string          `json:"botId"`
+	FilterId       string          `json:"filterId"`
+	MomentFilterId string          `json:"momentFilterId"`
+	WxaappId       string          `json:"wxaappId"`
+	Callback       string          `json:"callback"`
+	CreateAt       *utils.JSONTime `json:"createAt"`
+	UpdateAt       *utils.JSONTime `json:"updateAt"`
+	DeleteAt       *utils.JSONTime `json:"deleteAt,omitempty"`
+	ChatUserVO
+}
 
+func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
@@ -576,7 +570,20 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					MomentFilterId: b.MomentFilterId.String,
 					WxaappId:       b.WxaappId.String,
 					Callback:       b.Callback.String,
-					CreateAt:       b.CreateAt.Time.Unix(),
+					CreateAt:       &utils.JSONTime{b.CreateAt.Time},
+					ChatUserVO: ChatUserVO{
+						NickName:   b.NickName,
+						Alias:      b.Alias.String,
+						Avatar:     b.Avatar.String,
+						Sex:        b.Sex,
+						Country:    b.Country.String,
+						Province:   b.Province.String,
+						City:       b.City.String,
+						Signature:  b.Signature.String,
+						Remark:     b.Remark.String,
+						Label:      b.Label.String,
+						LastSendAt: utils.JSONTime{b.LastSendAt.Time},
+					},
 				})
 			} else {
 				bs = append(bs, BotsInfo{
@@ -591,7 +598,20 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					MomentFilterId: b.MomentFilterId.String,
 					WxaappId:       b.WxaappId.String,
 					Callback:       b.Callback.String,
-					CreateAt:       b.CreateAt.Time.Unix(),
+					CreateAt:       &utils.JSONTime{Time: b.CreateAt.Time},
+					ChatUserVO: ChatUserVO{
+						NickName:   b.NickName,
+						Alias:      b.Alias.String,
+						Avatar:     b.Avatar.String,
+						Sex:        b.Sex,
+						Country:    b.Country.String,
+						Province:   b.Province.String,
+						City:       b.City.String,
+						Signature:  b.Signature.String,
+						Remark:     b.Remark.String,
+						Label:      b.Label.String,
+						LastSendAt: utils.JSONTime{b.LastSendAt.Time},
+					},
 				})
 			}
 		}
@@ -1260,8 +1280,8 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 				Remark:     gm.Remark.String,
 				Label:      gm.Label.String,
 				LastSendAt: utils.JSONTime{gm.LastSendAt.Time},
-				CreateAt:   utils.JSONTime{gm.ChatUser.CreateAt.Time},
-				UpdateAt:   utils.JSONTime{gm.ChatUser.UpdateAt.Time},
+				CuCreateAt: utils.JSONTime{gm.ChatUser.CreateAt.Time},
+				CuUpdateAt: utils.JSONTime{gm.ChatUser.UpdateAt.Time},
 			},
 		})
 	}
@@ -1316,8 +1336,8 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 				Remark:     chatuser.Remark.String,
 				Label:      chatuser.Label.String,
 				LastSendAt: utils.JSONTime{chatuser.LastSendAt.Time},
-				CreateAt:   utils.JSONTime{chatuser.CreateAt.Time},
-				UpdateAt:   utils.JSONTime{chatuser.UpdateAt.Time},
+				CuCreateAt: utils.JSONTime{chatuser.CreateAt.Time},
+				CuUpdateAt: utils.JSONTime{chatuser.UpdateAt.Time},
 			})
 		}
 		o.okWithPaging(w, "success", chatuservos, paging)
@@ -1354,8 +1374,8 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 					Remark:     contact.Remark.String,
 					Label:      contact.Label.String,
 					LastSendAt: utils.JSONTime{contact.LastSendAt.Time},
-					CreateAt:   utils.JSONTime{contact.CreateAt.Time},
-					UpdateAt:   utils.JSONTime{contact.UpdateAt.Time},
+					CuCreateAt: utils.JSONTime{contact.CreateAt.Time},
+					CuUpdateAt: utils.JSONTime{contact.UpdateAt.Time},
 				},
 			})
 		}

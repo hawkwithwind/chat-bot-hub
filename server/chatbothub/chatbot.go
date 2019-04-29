@@ -179,9 +179,9 @@ func (bot *ChatBot) botMigrate(botId string) (*ChatBot, error) {
 	o := &ErrorHandler{}
 
 	o.sendEvent(bot.tunnel, &pb.EventReply{
-		EventType: BOTMIGRATE,
+		EventType:  BOTMIGRATE,
 		ClientType: bot.ClientType,
-		ClientId: bot.ClientId,
+		ClientId:   bot.ClientId,
 		Body: o.ToJson(map[string]interface{}{
 			"botId": botId,
 		}),
