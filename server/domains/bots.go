@@ -44,7 +44,7 @@ type BotExpand struct {
 	UpdateAt       mysql.NullTime `db:"updateat"`
 	DeleteAt       mysql.NullTime `db:"deleteat"`
 	Alias          sql.NullString `db:"alias"`
-	NickName       string         `db:"nickname"`
+	NickName       sql.NullString `db:"nickname"`
 	Avatar         sql.NullString `db:"avatar"`
 	Sex            int            `db:"sex"`
 	Country        sql.NullString `db:"country"`

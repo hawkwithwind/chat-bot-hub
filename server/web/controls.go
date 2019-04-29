@@ -572,7 +572,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					Callback:       b.Callback.String,
 					CreateAt:       &utils.JSONTime{b.CreateAt.Time},
 					ChatUserVO: ChatUserVO{
-						NickName:   b.NickName,
+						NickName:   b.NickName.String,
 						Alias:      b.Alias.String,
 						Avatar:     b.Avatar.String,
 						Sex:        b.Sex,
@@ -600,7 +600,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 					Callback:       b.Callback.String,
 					CreateAt:       &utils.JSONTime{Time: b.CreateAt.Time},
 					ChatUserVO: ChatUserVO{
-						NickName:   b.NickName,
+						NickName:   b.NickName.String,
 						Alias:      b.Alias.String,
 						Avatar:     b.Avatar.String,
 						Sex:        b.Sex,
