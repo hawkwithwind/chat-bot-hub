@@ -655,7 +655,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
-				models.InsertMessage(msg)
+				models.UpdateMessages([]string{msg})
 			}
 		}
 
