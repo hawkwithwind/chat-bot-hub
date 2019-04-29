@@ -173,7 +173,10 @@ SELECT b.*
 , c.alias
 , c.nickname
 , c.avatar
-, c.sex
+, CASE 
+WHEN c.sex is NULL THEN 0 
+WHEN c.sex is NOT NULL THEN c.sex 
+END as sex
 , c.country
 , c.province
 , c.city
