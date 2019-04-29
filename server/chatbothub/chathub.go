@@ -1080,6 +1080,11 @@ func (hub *ChatHub) BotMomentFilter(
 func (hub *ChatHub) Serve() {
 	hub.init()
 
+	hub.Info("chat streaming server starts ...")
+	go func() {
+		hub.StreamingServe()
+	}()
+	
 	hub.Info("chat hub starts....")
 	hub.Info("lisening to %s:%s", hub.Config.Host, hub.Config.Port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", hub.Config.Host, hub.Config.Port))
