@@ -24,6 +24,9 @@ service ChatBotHub {
   // bots only use eventtunnel to communicate
   rpc EventTunnel (stream EventRequest) returns (stream EventReply) {}
 
+  // tunnel that connect streaming server and chathub server
+  rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
+
   // below are for internal web api
   rpc GetBots (BotsRequest) returns (BotsReply) {}
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}

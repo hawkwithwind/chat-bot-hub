@@ -3,15 +3,30 @@ package chatbothub
 import (
 	"net/http"
 	"fmt"
+	"log"
 	
 	"github.com/googollee/go-socket.io"
+	"github.com/getsentry/raven-go"
 )
 
+type StreamingServer struct {
+	logger       *log.Logger
+}
 
-func (hub *ChatHub) StreamingServe() {
+func (ctx *StreamingServer) Info(msg string, v ...interface{}) {
+	ctx.logger.Printf(msg, v...)
+}
+
+func (ctx *StreamingServer) Error(err error, msg string, v ...interface{}) {
+	ctx.logger.Printf(msg, v...)
+	ctx.logger.Printf("Error %v", err)
+	raven.CaptureError(err, nil)
+}
+
+func (ss *StreamingServer) StreamingServe() {
 	server, err := socketio.NewServer(nil)
 	if err != nil {
-		hub.Error(err, "init socketio failed")
+		ss.Error(err, "init socketio failed")
 	}
 	
 	server.OnConnect("/", func(s socketio.Conn) error {
@@ -50,7 +65,7 @@ func (hub *ChatHub) StreamingServe() {
 
 	http.Handle("/socket.io/", server)
 	http.Handle("/", http.FileServer(http.Dir("./asset")))
-	hub.Info("[Streaming] Serving at localhost:8000...")
-	hub.Error(http.ListenAndServe(":8000", nil), "streaming server stopped")
+	ss.Info("[Streaming] Serving at localhost:8000...")
+	ss.Error(http.ListenAndServe(":8000", nil), "streaming server stopped")
 }
 
