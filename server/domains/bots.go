@@ -300,7 +300,6 @@ func (o *ErrorHandler) CheckBotOwner(q dbx.Queryable, login string, accountName 
 	o.Err = q.SelectContext(ctx, &bots,
 		`
 SELECT b.*
-, 
 FROM bots as b 
 LEFT JOIN accounts as a on b.accountid = a.accountid
 WHERE a.accountname=? 
