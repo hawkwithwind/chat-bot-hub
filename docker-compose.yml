@@ -51,6 +51,12 @@ services:
     command: ./app/server -s tasks
     env_file:
       - ./mysql.env
+
+  streaming:
+    <<: *defaults
+    command: ./app/server -s streaming
+    ports:
+      - '13148:13148'
       
 
 volumes:

@@ -12,16 +12,18 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/streaming"
 	"github.com/hawkwithwind/chat-bot-hub/server/tasks"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
 )
 
 type MainConfig struct {
-	Hub    chatbothub.ChatHubConfig
-	Web    web.WebConfig
-	Redis  utils.RedisConfig
-	Fluent utils.FluentConfig
+	Hub       chatbothub.ChatHubConfig
+	Web       web.WebConfig
+	Redis     utils.RedisConfig
+	Fluent    utils.FluentConfig
+	Streaming streaming.StreamingConfig
 }
 
 var (
@@ -123,6 +125,23 @@ func main() {
 			if err != nil {
 				wg.Done()
 				log.Printf("task start failed %s\n", err)
+			}
+		}()
+	}
+
+	if *startcmd == "streaming" {
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+
+			server := streaming.StreamingServer{
+				Config: config.Streaming,
+			}
+
+			err := server.Serve()
+			if err != nil {
+				wg.Done()
+				log.Printf("streaming start failed %s\n", err.Error())
 			}
 		}()
 	}

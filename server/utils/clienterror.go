@@ -48,4 +48,3 @@ type CommonResponse struct {
 	Body    interface{}  `json:"body,omitempty""`
 	Paging  Paging       `json:"paging,omitempty"`
 }
-

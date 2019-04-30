@@ -55,8 +55,6 @@ func (hub *ChatHub) init() {
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
 
-	hub.chmsg = make(chan string)
-
 	// set global variable chathub
 	chathub = hub
 }
@@ -68,21 +66,20 @@ type ChatHub struct {
 	WebBaseUrl   string
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
-	
-	muxBots      sync.Mutex
-	bots         map[string]*ChatBot
-	
-	muxFilters   sync.Mutex
-	filters      map[string]Filter
-	
-	muxStreamingNodes   sync.Mutex
-	streamingNodes      map[string]*StreamingNode
-	chmsg               chan string
-	
-	muxBotsSubs         sync.Mutex
-	botsSubs            map[string]string
-	
-	redispool    *redis.Pool
+
+	muxBots sync.Mutex
+	bots    map[string]*ChatBot
+
+	muxFilters sync.Mutex
+	filters    map[string]Filter
+
+	muxStreamingNodes sync.Mutex
+	streamingNodes    map[string]*StreamingNode
+
+	muxBotsSubs sync.Mutex
+	botsSubs    map[string]string
+
+	redispool *redis.Pool
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -485,6 +482,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						go func() {
 							httpx.RestfulCallRetry(bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, msg), 5, 1)
+						}()
+					}
+
+					if o.Err == nil {
+						go func() {
+							for _, snode := range hub.streamingNodes {
+								if _, ok := snode.SubBots[bot.BotId]; ok {
+									err := snode.SendMsg(in.EventType, msg)
+									if err != nil {
+										hub.Error(err, "send msg failed, continue")
+									}
+								}
+							}
 						}()
 					}
 

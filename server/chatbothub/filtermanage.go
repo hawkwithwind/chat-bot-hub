@@ -2,10 +2,10 @@ package chatbothub
 
 import (
 	"fmt"
-	
-	"golang.org/x/net/context"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"golang.org/x/net/context"
 )
 
 func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {

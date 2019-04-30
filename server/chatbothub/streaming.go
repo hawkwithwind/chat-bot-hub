@@ -1,24 +1,54 @@
 package chatbothub
 
 import (
-	"io"
+	"fmt"
 	"golang.org/x/net/context"
-	
+	"io"
+	"sync"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type StreamingNode struct {
-	NodeId string `json:"streamingNodeId"`
-	NodeType string `json:"streamingNodeType"`
-	StartAt utils.JSONTime `json:"startAt"`
-	LastPing utils.JSONTime `json:"lastPingAt"`
-	SubBots []string `json:"subBots"`
-	tunnel pb.ChatBotHub_StreamingTunnelServer
+	NodeId     string         `json:"streamingNodeId"`
+	NodeType   string         `json:"streamingNodeType"`
+	StartAt    utils.JSONTime `json:"startAt"`
+	LastPing   utils.JSONTime `json:"lastPingAt"`
+	muxSubBots sync.Mutex
+	SubBots    map[string]int `json:"subBots"`
+	tunnel     pb.ChatBotHub_StreamingTunnelServer
 }
 
+type StreamingActionType int32
+
+const (
+	Subscribe   StreamingActionType = 1
+	UnSubscribe StreamingActionType = 2
+)
+
 func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequest) (*pb.OperationReply, error) {
-	_ = ctx
+	snode := hub.GetStreamingNode(req.ClientId)
+	if snode == nil {
+		return nil, fmt.Errorf("s[%s] not found, or not registerd", req.ClientId)
+	}
+
+	subs := []string{}
+	unsubs := []string{}
+
+	for _, res := range req.Resources {
+		at := StreamingActionType(res.ActionType)
+		switch at {
+		case Subscribe:
+			subs = append(subs, res.BotId)
+		case UnSubscribe:
+			unsubs = append(unsubs, res.BotId)
+		}
+	}
+
+	snode.UnSub(unsubs)
+	snode.Sub(subs)
+
 	return &pb.OperationReply{}, nil
 }
 
@@ -32,13 +62,11 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 			return err
 		}
 
-		hub.Info("[STREAMING] %#v", in)
-		
 		switch in.EventType {
 		case PING:
 			pong := pb.EventReply{EventType: PONG, Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
 			if err := tunnel.Send(&pong); err != nil {
-				hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
+				hub.Error(err, "send PING to s[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 			}
 
 		case REGISTER:
@@ -46,18 +74,30 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 			if snode = hub.GetStreamingNode(in.ClientId); snode == nil {
 				hub.Info("s[%s] not found, create new streaming node", in.ClientId)
 				snode = NewStreamingNode()
-			} 
-			
+			}
+
 			if newsnode, err := snode.register(in.ClientId, in.ClientType, tunnel); err != nil {
 				hub.Error(err, "[STREAMING] register failed")
 			} else {
 				hub.SetStreamingNode(in.ClientId, newsnode)
 				hub.Info("s[%s] registered [%s]", in.ClientType, in.ClientId)
 			}
+
+		default:
+			hub.Info("[STREAMING] %#v", in)
 		}
 	}
 }
 
+func (s *StreamingNode) SendMsg(eventType string, msgbody string) error {
+	msg := pb.EventReply{EventType: eventType, Body: msgbody, ClientType: s.NodeType, ClientId: s.NodeId}
+	if err := s.tunnel.Send(&msg); err != nil {
+		chathub.Error(err, "send %s to s[%s][%s] failed %s\n%s", eventType, s.NodeType, s.NodeId, err.Error(), msgbody)
+		return err
+	}
+
+	return nil
+}
 
 func (hub *ChatHub) GetStreamingNode(clientid string) *StreamingNode {
 	hub.muxStreamingNodes.Lock()
@@ -84,6 +124,23 @@ func (hub *ChatHub) DropStreamingNode(clientid string) {
 	delete(hub.streamingNodes, clientid)
 }
 
+func (s *StreamingNode) Sub(botIds []string) {
+	s.muxSubBots.Lock()
+	defer s.muxSubBots.Unlock()
+
+	for _, botId := range botIds {
+		s.SubBots[botId] = 1
+	}
+}
+
+func (s *StreamingNode) UnSub(botIds []string) {
+	s.muxSubBots.Lock()
+	defer s.muxSubBots.Unlock()
+
+	for _, botId := range botIds {
+		delete(s.SubBots, botId)
+	}
+}
 
 func (s *StreamingNode) register(clientId string, clientType string, tunnel pb.ChatBotHub_StreamingTunnelServer) (*StreamingNode, error) {
 	s.NodeId = clientId
