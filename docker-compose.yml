@@ -51,7 +51,15 @@ services:
     command: ./app/server -s tasks
     env_file:
       - ./mysql.env
-      
+
+  mongo:
+    restart: unless-stopped
+    image: mongo
+    networks:
+      - chatbothub-network
+    command: --smallfiles
+    ports:
+      - '27017:27017'
 
 volumes:
   chatbothub-mysql:

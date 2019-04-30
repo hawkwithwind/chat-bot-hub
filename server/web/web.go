@@ -79,17 +79,19 @@ func (ctx *WebServer) init() error {
 	}
 
 	o := &ErrorHandler{}
-	client := o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+
 	if o.Err != nil {
 		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
 	} else {
-		if client != nil {
-			contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-			o.Err = client.Disconnect(contx)
-			if o.Err != nil {
-				ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
-			}
-		}
+		//if client != nil {
+		//	contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		//	o.Err = client.Disconnect(contx)
+		//	if o.Err != nil {
+		//		ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
+		//	}
+		//}
 	}
 
 	retryTimes := 7
