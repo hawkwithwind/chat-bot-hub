@@ -1,4 +1,4 @@
-package models
+package domains
 
 import (
 	"context"
@@ -20,21 +20,21 @@ type JMsgSource struct {
 }
 
 type JMessage struct {
-	MsgId       string     `json:"msgId"`
-	MsgType     int        `json:"msgType"`
-	ImageId     string     `json:"imageId"`
-	Content     string     `json:"content"`
-	GroupId     string     `json:"groupId"`
-	Description string     `json:"description"`
-	FromUser    string     `json:"fromUser"`
-	MType       int        `json:"mType"`
-	SubType     int        `json:"subType"`
-	Status      int        `json:"status"`
-	Continue    int        `json:"continue"`
-	Timestamp   uint64     `json:"timestamp"`
-	ToUser      string     `json:"toUser"`
-	Uin         uint64     `json:"uin"`
-	MsgSource   JMsgSource `json:"msgSource"`
+	MsgId       string      `json:"msgId"`
+	MsgType     int         `json:"msgType"`
+	ImageId     string      `json:"imageId"`
+	Content     interface{} `json:"content"`
+	GroupId     string      `json:"groupId"`
+	Description string      `json:"description"`
+	FromUser    string      `json:"fromUser"`
+	MType       int         `json:"mType"`
+	SubType     int         `json:"subType"`
+	Status      int         `json:"status"`
+	Continue    int         `json:"continue"`
+	Timestamp   uint64      `json:"timestamp"`
+	ToUser      string      `json:"toUser"`
+	Uin         uint64      `json:"uin"`
+	MsgSource   JMsgSource  `json:"msgSource"`
 }
 
 type BMsgSource struct {
@@ -98,7 +98,13 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) {
 		jMessage := JMessage{}
 		err := json.Unmarshal([]byte(message), &jMessage)
 		if err != nil {
+			fmt.Println("unmarshal message  error: ", err)
 			return
+		}
+
+		content, err := pkgbson.MarshalJSON(jMessage.Content)
+		if err != nil {
+			fmt.Println("marshal content  error: ", err)
 		}
 
 		update := struct {
@@ -110,7 +116,7 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) {
 				MsgId:       jMessage.MsgId,
 				MsgType:     jMessage.MsgType,
 				ImageId:     jMessage.ImageId,
-				Content:     jMessage.Content,
+				Content:     string(content),
 				GroupId:     jMessage.GroupId,
 				Description: jMessage.Description,
 				FromUser:    jMessage.FromUser,
