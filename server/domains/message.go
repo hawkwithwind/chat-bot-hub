@@ -87,9 +87,9 @@ func InsertMessage(mongoDb *mongo.Database, message string) {
 	fmt.Println("Inserted a single document: ", result.InsertedID)
 }
 
-func UpdateMessages(mongoDb *mongo.Database, messages []string) {
+func UpdateMessages(mongoDb *mongo.Database, messages []string) error {
 	if len(messages) == 0 {
-		return
+		return fmt.Errorf("mongo update message empty")
 	}
 
 	// create the slice of write models
@@ -98,7 +98,7 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) {
 		jMessage := JMessage{}
 		err := json.Unmarshal([]byte(message), &jMessage)
 		if err != nil {
-			return
+			return err
 		}
 
 		update := struct {
@@ -141,10 +141,12 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) {
 	col := mongoDb.Collection("message_histories")
 	res, err := col.BulkWrite(ctx, writes)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	fmt.Printf("insert: %d, updated: %d, deleted: %d", res.InsertedCount, res.ModifiedCount, res.DeletedCount)
+	fmt.Printf("[MONGO DEBUG] insert: %d, updated: %d, deleted: %d",
+		res.InsertedCount, res.ModifiedCount, res.DeletedCount)
+	return nil
 }
 
 func findMessages(mongoDb *mongo.Database, filter interface{}) {

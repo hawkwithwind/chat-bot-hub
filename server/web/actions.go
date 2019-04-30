@@ -654,7 +654,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
-				domains.UpdateMessages(ctx.mongoDb, []string{msg})
+
+				if o.Err != nil {
+					return
+				}
+				o.Err = domains.UpdateMessages(ctx.mongoDb, []string{msg})
 			}
 		}
 
