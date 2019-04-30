@@ -79,6 +79,16 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 			if newsnode, err := snode.register(in.ClientId, in.ClientType, tunnel); err != nil {
 				hub.Error(err, "[STREAMING] register failed")
 			} else {
+				///////////////////
+				//just for testing, will delete after implement sub/unsub and auth
+				subs := []string{}
+				for botId, _ := range hub.bots {
+					subs = append(subs, botId)
+				}
+				newsnode.Sub(subs)
+				////////////////////
+				
+				
 				hub.SetStreamingNode(in.ClientId, newsnode)
 				hub.Info("s[%s] registered [%s]", in.ClientType, in.ClientId)
 			}
