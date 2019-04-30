@@ -23,6 +23,7 @@ type JMessage struct {
 	MsgId       string     `json:"msgId"`
 	MsgType     int        `json:"msgType"`
 	Content     string     `json:"content"`
+	GroupId     string     `json:"group_id"`
 	Description string     `json:"description"`
 	FromUser    string     `json:"fromUser"`
 	MType       int        `json:"mType"`
@@ -45,6 +46,7 @@ type BMessage struct {
 	MsgId       string     `bson:"msg_id"`
 	MsgType     int        `bson:"msg_type"`
 	Content     string     `bson:"content"`
+	GroupId     string     `bson:"group_id"`
 	Description string     `bson:"description"`
 	FromUser    string     `bson:"from_user"`
 	MType       int        `bson:"m_type"`
@@ -69,8 +71,8 @@ func InsertMessage(message string) {
 	collection := utils.DbCollection("message_histories")
 
 	indexModels := make([]mongo.IndexModel, 0, 3)
-	indexModels = append(indexModels, utils.YieldIndexModel("groupId"))
-	indexModels = append(indexModels, utils.YieldIndexModel("fromUser"))
+	indexModels = append(indexModels, utils.YieldIndexModel("group_id"))
+	indexModels = append(indexModels, utils.YieldIndexModel("from_user"))
 	indexModels = append(indexModels, utils.YieldIndexModel("timestamp"))
 	utils.PopulateManyIndex(collection, indexModels)
 
@@ -106,6 +108,7 @@ func UpdateMessages(messages []string) {
 				MsgId:       jMessage.MsgId,
 				MsgType:     jMessage.MsgType,
 				Content:     jMessage.Content,
+				GroupId:     jMessage.GroupId,
 				Description: jMessage.Description,
 				FromUser:    jMessage.FromUser,
 				MType:       jMessage.MType,
@@ -139,4 +142,32 @@ func UpdateMessages(messages []string) {
 	}
 
 	fmt.Printf("insert: %d, updated: %d, deleted: %d", res.InsertedCount, res.ModifiedCount, res.DeletedCount)
+}
+
+func findMessages(filter interface{}) {
+	col := utils.DbCollection("message_histories")
+	// create a new timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// find all documents
+	cursor, err := col.Find(ctx, filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// iterate through all documents
+	for cursor.Next(ctx) {
+		var bMessage BMessage
+		// decode the document
+		if err := cursor.Decode(&bMessage); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("message: %+v\n", bMessage)
+	}
+
+	// check if the cursor encountered any errors while iterating
+	if err := cursor.Err(); err != nil {
+		log.Fatal(err)
+	}
 }

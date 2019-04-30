@@ -47,7 +47,19 @@ func (o *ErrorHandler) NewMongoConn(host string, port string) *mongo.Client {
 	chathubMongo = client.Database("mo-chathub")
 	fmt.Println("Connected to MongoDB!")
 
+	createMessageIndexes()
+
 	return client
+}
+
+func createMessageIndexes() {
+	collection := DbCollection("message_histories")
+
+	indexModels := make([]mongo.IndexModel, 0, 3)
+	indexModels = append(indexModels, YieldIndexModel("group_id"))
+	indexModels = append(indexModels, YieldIndexModel("from_user"))
+	indexModels = append(indexModels, YieldIndexModel("timestamp"))
+	PopulateManyIndex(collection, indexModels)
 }
 
 func DbCollection(name string) *mongo.Collection {
