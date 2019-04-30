@@ -118,13 +118,13 @@ func UpdateWechatMessages(mongoDb *mongo.Database, messages []string) error {
 
 	// run bulk write
 	col := mongoDb.Collection("message_histories")
-	res, err := col.BulkWrite(ctx, writes)
+	_, err := col.BulkWrite(ctx, writes)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("[MONGO DEBUG] insert: %d, updated: %d, deleted: %d",
-		res.InsertedCount, res.ModifiedCount, res.DeletedCount)
+	// fmt.Printf("[MONGO DEBUG] insert: %d, updated: %d, deleted: %d",
+	// 	res.InsertedCount, res.ModifiedCount, res.DeletedCount)
 	return nil
 }
 
