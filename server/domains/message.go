@@ -77,11 +77,23 @@ func UpdateWechatMessages(mongoDb *mongo.Database, messages []string) error {
 		}
 
 		wechatMessage.UpdatedAt = time.Now()
+		switch content := wechatMessage.Content.(type) {
+		case map[string]interface{}:
+			cjson , err := pkgbson.MarshalJSON(content)
+			if err != nil {
+				return err
+			}
+			wechatMessage.Content = string(cjson)
+		}
+		
 		switch src := wechatMessage.MsgSource.(type) {
 		case map[string]interface{}:
 			var msgsource MsgSource
 			srcjson, err := pkgbson.MarshalJSON(src)
-			err = json.Unmarshal([]byte(srcjson), &msgsource)
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(srcjson, &msgsource)
 			if err != nil {
 				return err
 			}
