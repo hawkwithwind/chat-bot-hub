@@ -655,7 +655,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
-				models.UpdateMessages([]string{msg})
+				models.UpdateMessages(ctx.mongoDb, []string{msg})
 			}
 		}
 

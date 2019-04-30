@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	//"io"
 	"context"
@@ -57,6 +58,7 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
+	mongoDb	     *mongo.Database
 }
 
 func (ctx *WebServer) init() error {
@@ -79,7 +81,7 @@ func (ctx *WebServer) init() error {
 	}
 
 	o := &ErrorHandler{}
-	o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
 	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
 
 	if o.Err != nil {

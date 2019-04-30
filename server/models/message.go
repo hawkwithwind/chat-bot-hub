@@ -22,6 +22,7 @@ type JMsgSource struct {
 type JMessage struct {
 	MsgId       string     `json:"msgId"`
 	MsgType     int        `json:"msgType"`
+	ImageId     string     `json:"image_id"`
 	Content     string     `json:"content"`
 	GroupId     string     `json:"group_id"`
 	Description string     `json:"description"`
@@ -45,6 +46,7 @@ type BMsgSource struct {
 type BMessage struct {
 	MsgId       string     `bson:"msg_id"`
 	MsgType     int        `bson:"msg_type"`
+	ImageId     string     `bson:"image_id"`
 	Content     string     `bson:"content"`
 	GroupId     string     `bson:"group_id"`
 	Description string     `bson:"description"`
@@ -61,14 +63,14 @@ type BMessage struct {
 	UpdatedAt time.Time `bson:"updated_at"`
 }
 
-func InsertMessage(message string) {
+func InsertMessage(mongoDb *mongo.Database, message string) {
 	var bdoc interface{}
 	bsonErr := pkgbson.UnmarshalJSON([]byte(message), &bdoc)
 	if bsonErr != nil {
 		return
 	}
 
-	collection := utils.DbCollection("message_histories")
+	collection := mongoDb.Collection("message_histories")
 
 	indexModels := make([]mongo.IndexModel, 0, 3)
 	indexModels = append(indexModels, utils.YieldIndexModel("group_id"))
@@ -85,7 +87,7 @@ func InsertMessage(message string) {
 	fmt.Println("Inserted a single document: ", result.InsertedID)
 }
 
-func UpdateMessages(messages []string) {
+func UpdateMessages(mongoDb *mongo.Database, messages []string) {
 	if len(messages) == 0 {
 		return
 	}
@@ -107,6 +109,7 @@ func UpdateMessages(messages []string) {
 			update: bson.M{"$set": &BMessage{
 				MsgId:       jMessage.MsgId,
 				MsgType:     jMessage.MsgType,
+				ImageId:     jMessage.ImageId,
 				Content:     jMessage.Content,
 				GroupId:     jMessage.GroupId,
 				Description: jMessage.Description,
@@ -135,7 +138,7 @@ func UpdateMessages(messages []string) {
 	defer cancel()
 
 	// run bulk write
-	col := utils.DbCollection("message_histories")
+	col := mongoDb.Collection("message_histories")
 	res, err := col.BulkWrite(ctx, writes)
 	if err != nil {
 		log.Fatal(err)
@@ -144,8 +147,8 @@ func UpdateMessages(messages []string) {
 	fmt.Printf("insert: %d, updated: %d, deleted: %d", res.InsertedCount, res.ModifiedCount, res.DeletedCount)
 }
 
-func findMessages(filter interface{}) {
-	col := utils.DbCollection("message_histories")
+func findMessages(mongoDb *mongo.Database, filter interface{}) {
+	col := mongoDb.Collection("message_histories")
 	// create a new timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -17,9 +17,7 @@ type MongoConfig struct {
 	Port string
 }
 
-var chathubMongo *mongo.Database
-
-func (o *ErrorHandler) NewMongoConn(host string, port string) *mongo.Client {
+func (o *ErrorHandler) NewMongoConn(host string, port string) *mongo.Database {
 	if o.Err != nil {
 		return nil
 	}
@@ -44,28 +42,22 @@ func (o *ErrorHandler) NewMongoConn(host string, port string) *mongo.Client {
 		return nil
 	}
 
-	chathubMongo = client.Database("mo-chathub")
+	mongoDb := client.Database("mo-chathub")
 	fmt.Println("Connected to MongoDB!")
 
-	createMessageIndexes()
+	createMessageIndexes(mongoDb)
 
-	return client
+	return mongoDb
 }
 
-func createMessageIndexes() {
-	collection := DbCollection("message_histories")
+func createMessageIndexes(mongoDb *mongo.Database) {
+	collection := mongoDb.Collection("message_histories")
 
 	indexModels := make([]mongo.IndexModel, 0, 3)
 	indexModels = append(indexModels, YieldIndexModel("group_id"))
 	indexModels = append(indexModels, YieldIndexModel("from_user"))
 	indexModels = append(indexModels, YieldIndexModel("timestamp"))
 	PopulateManyIndex(collection, indexModels)
-}
-
-func DbCollection(name string) *mongo.Collection {
-	collection := chathubMongo.Collection(name)
-
-	return collection
 }
 
 func PopulateOneIndex(collection *mongo.Collection, indexModel mongo.IndexModel) {
