@@ -215,6 +215,30 @@ func (hub *ChatHub) GetFilter(filterId string) Filter {
 	return nil
 }
 
+type WechatMsgSource struct {
+	AtUserList  string `xml:"atuserlist" json:"atUserList"`
+	Silence     int    `xml:"silence" json:"silence"`
+	MemberCount int    `xml:"membercount" json:"memberCount"`
+}
+
+func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[string]interface{} {
+	msgsourcexml := o.FromMapString("msgSource", body, "body", true, "")
+	if o.Err != nil {
+		return body
+	}
+	if msgsourcexml != "" {
+		var msgSource WechatMsgSource
+		o.FromXML(msgsourcexml, &msgSource)
+		if o.Err != nil {
+			return body
+		} else {
+			body["msgSource"] = msgSource
+		}
+	}
+
+	return body
+}
+
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
@@ -550,6 +574,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.Error(o.Err, "cannot parse %s", in.Body)
 					}
 
+					if o.Err == nil {
+						body := o.FromJson(msg)
+						if o.Err == nil {
+							body = o.ReplaceWechatMsgSource(body)
+						}
+					}
+
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(msg)
 					}
@@ -586,8 +617,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case EMOJIMESSAGE:
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
-					o.FromMapString("emojiId", bodym, "actionBody", false, "")
-
+					emojiId := o.FromMapString("emojiId", bodym, "actionBody", false, "")
+					
+					if o.Err == nil {
+						bodym["imageId"] = emojiId
+					}
+					
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}
