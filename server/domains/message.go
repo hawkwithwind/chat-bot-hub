@@ -4,73 +4,48 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
-	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	pkgbson "gopkg.in/mgo.v2/bson"
 )
 
-type JMsgSource struct {
-	Silence     uint64 `json:"silence"`
-	AtUserList  string `json:"atUserList"`
-	MemberCount uint64 `json:"memberCount"`
+type MsgSource struct {
+	Silence     uint64 `json:"silence" bson:"silence"`
+	AtUserList  string `json:"atUserList" bson:"atUserList"`
+	MemberCount uint64 `json:"memberCount" bson:"memberCount"`
 }
 
-type JMessage struct {
-	MsgId       string     `json:"msgId"`
-	MsgType     int        `json:"msgType"`
-	ImageId     string     `json:"imageId"`
-	Content     interface{} `json:"content"`
-	GroupId     string     `json:"groupId"`
-	Description string     `json:"description"`
-	FromUser    string     `json:"fromUser"`
-	MType       int        `json:"mType"`
-	SubType     int        `json:"subType"`
-	Status      int        `json:"status"`
-	Continue    int        `json:"continue"`
-	Timestamp   uint64     `json:"timestamp"`
-	ToUser      string     `json:"toUser"`
-	Uin         uint64     `json:"uin"`
-	MsgSource   *JMsgSource `json:"msgSource"`
+type WechatMessage struct {
+	MsgId       string      `json:"msgId" bson:"msg_id"`
+	MsgType     int         `json:"msgType" bson:"msg_type"`
+	ImageId     string      `json:"imageId" bson:"image_id"`
+	Content     interface{} `json:"content" bson:"content"`
+	GroupId     string      `json:"groupId" bson:"group_id"`
+	Description string      `json:"description" bson:"description"`
+	FromUser    string      `json:"fromUser" bson:"from_user"`
+	MType       int         `json:"mType" bson:"m_type"`
+	SubType     int         `json:"subType" bson:"sub_type"`
+	Status      int         `json:"status" bson:"status"`
+	Continue    int         `json:"continue" bson:"continue"`
+	Timestamp   uint64      `json:"timestamp" bson:"timestamp"`
+	ToUser      string      `json:"toUser" bson:"to_user"`
+	Uin         uint64      `json:"uin" bson:"uin"`
+	MsgSource   interface{} `json:"msgSource" bson:"msg_source"`
+	UpdatedAt   time.Time   `json:"updateAt" bson:"updated_at"`
 }
 
-type BMsgSource struct {
-	Silence     uint64 `bson:"silence"`
-	AtUserList  string `bson:"atUserList"`
-	MemberCount uint64 `bson:"memberCount"`
-}
-
-type BMessage struct {
-	MsgId       string     `bson:"msg_id"`
-	MsgType     int        `bson:"msg_type"`
-	ImageId     string     `bson:"image_id"`
-	Content     interface{}     `bson:"content"`
-	GroupId     string     `bson:"group_id"`
-	Description string     `bson:"description"`
-	FromUser    string     `bson:"from_user"`
-	MType       int        `bson:"m_type"`
-	SubType     int        `bson:"sub_type"`
-	Status      int        `bson:"status"`
-	Continue    int        `bson:"continue"`
-	Timestamp   uint64     `bson:"timestamp"`
-	ToUser      string     `bson:"to_user"`
-	Uin         uint64     `bson:"uin"`
-	MsgSource   *BMsgSource `bson:"msg_source"`
-
-	UpdatedAt time.Time `bson:"updated_at"`
-}
-
-func InsertMessage(mongoDb *mongo.Database, message string) {
+func InsertWechatMessage(mongoDb *mongo.Database, message string) {
 	var bdoc interface{}
 	bsonErr := pkgbson.UnmarshalJSON([]byte(message), &bdoc)
 	if bsonErr != nil {
 		return
 	}
 
-	collection := mongoDb.Collection("message_histories")
+	collection := mongoDb.Collection("wechat_message_histories")
 
 	indexModels := make([]mongo.IndexModel, 0, 3)
 	indexModels = append(indexModels, utils.YieldIndexModel("group_id"))
@@ -87,7 +62,7 @@ func InsertMessage(mongoDb *mongo.Database, message string) {
 	fmt.Println("Inserted a single document: ", result.InsertedID)
 }
 
-func UpdateMessages(mongoDb *mongo.Database, messages []string) error {
+func UpdateWechatMessages(mongoDb *mongo.Database, messages []string) error {
 	if len(messages) == 0 {
 		return fmt.Errorf("mongo update message empty")
 	}
@@ -95,45 +70,32 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) error {
 	// create the slice of write models
 	var writes []mongo.WriteModel
 	for _, message := range messages {
-		jMessage := JMessage{}
-		err := json.Unmarshal([]byte(message), &jMessage)
+		wechatMessage := WechatMessage{}
+		err := json.Unmarshal([]byte(message), &wechatMessage)
 		if err != nil {
 			return err
 		}
 
-		bmsg := &BMessage{
-			MsgId:       jMessage.MsgId,
-			MsgType:     jMessage.MsgType,
-			ImageId:     jMessage.ImageId,
-			Content:     jMessage.Content,
-			GroupId:     jMessage.GroupId,
-			Description: jMessage.Description,
-			FromUser:    jMessage.FromUser,
-			MType:       jMessage.MType,
-			SubType:     jMessage.SubType,
-			Status:      jMessage.Status,
-			Continue:    jMessage.Continue,
-			Timestamp:   jMessage.Timestamp,
-			ToUser:      jMessage.ToUser,
-			Uin:         jMessage.Uin,
-			UpdatedAt:   time.Now(),
+		wechatMessage.UpdatedAt = time.Now()
+		switch src := wechatMessage.MsgSource.(type) {
+		case map[string]interface{}:
+			var msgsource MsgSource
+			srcjson, err := pkgbson.MarshalJSON(src)
+			err = json.Unmarshal([]byte(srcjson), &msgsource)
+			if err != nil {
+				return err
+			}
+			wechatMessage.MsgSource = &msgsource
 		}
 
-		if jMessage.MsgSource != nil {
-			bmsg.MsgSource =  &BMsgSource{
-				Silence:     jMessage.MsgSource.Silence,
-				AtUserList:  jMessage.MsgSource.AtUserList,
-				MemberCount: jMessage.MsgSource.MemberCount,
-			}
-		}
-		
 		update := struct {
 			filter bson.M
 			update bson.M
 		}{
-			filter: bson.M{"msg_id": jMessage.MsgId},
-			update: bson.M{"$set": bmsg},
+			filter: bson.M{"msg_id": wechatMessage.MsgId},
+			update: bson.M{"$set": wechatMessage},
 		}
+		
 		model := mongo.NewUpdateManyModel().SetFilter(update.filter).SetUpdate(update.update).SetUpsert(true)
 		writes = append(writes, model)
 	}
@@ -154,7 +116,7 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) error {
 	return nil
 }
 
-func findMessages(mongoDb *mongo.Database, filter interface{}) {
+func findWechatMessages(mongoDb *mongo.Database, filter interface{}) error {
 	col := mongoDb.Collection("message_histories")
 	// create a new timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -163,21 +125,23 @@ func findMessages(mongoDb *mongo.Database, filter interface{}) {
 	// find all documents
 	cursor, err := col.Find(ctx, filter)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// iterate through all documents
 	for cursor.Next(ctx) {
-		var bMessage BMessage
+		var wechatMessage WechatMessage
 		// decode the document
-		if err := cursor.Decode(&bMessage); err != nil {
-			log.Fatal(err)
+		if err := cursor.Decode(&wechatMessage); err != nil {
+			return err
 		}
-		fmt.Printf("message: %+v\n", bMessage)
+		fmt.Printf("message: %+v\n", wechatMessage)
 	}
 
 	// check if the cursor encountered any errors while iterating
 	if err := cursor.Err(); err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

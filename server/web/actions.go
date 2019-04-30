@@ -658,7 +658,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
-				o.Err = domains.UpdateMessages(ctx.mongoDb, []string{msg})
+				o.Err = domains.UpdateWechatMessages(ctx.mongoDb, []string{msg})
 			}
 		}
 
