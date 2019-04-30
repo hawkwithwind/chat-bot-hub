@@ -24,9 +24,6 @@ service ChatBotHub {
   // bots only use eventtunnel to communicate
   rpc EventTunnel (stream EventRequest) returns (stream EventReply) {}
 
-  // tunnel that connect streaming server and chathub server
-  rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
-
   // below are for internal web api
   rpc GetBots (BotsRequest) returns (BotsReply) {}
   rpc BotLogin (BotLoginRequest) returns (BotLoginReply) {}
@@ -39,6 +36,12 @@ service ChatBotHub {
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
   rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
+
+  // tunnel that connect streaming server and chathub server
+  rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
+  
+  // streaming rpc
+  rpc StreamingCtrl (StreamingCtrlRequest) returns (OperationReply) {}
 }
 
 message BotFilterRequest {
@@ -155,3 +158,18 @@ message FilterFillRequest {
 message FilterFillReply {
   bool   success = 1;
 }
+
+message StreamingCtrlRequest {
+  string clientId = 1;
+  string clientType = 2;
+  repeated StreamingResource resources = 3;
+}
+
+message StreamingResource {
+  string botId = 1;
+  int32 resourceType = 2;
+  int32 actionType = 3;
+  repeated string chatusers = 4;
+  repeated string chatgroups = 5;
+}
+

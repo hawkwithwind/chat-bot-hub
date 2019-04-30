@@ -49,11 +49,13 @@ func (hub *ChatHub) init() {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
 	hub.bots = make(map[string]*ChatBot)
-	hub.streamingNodes = make(map[string]*ChatStreamingNode)
+	hub.streamingNodes = make(map[string]*StreamingNode)
 	hub.filters = make(map[string]Filter)
 	hub.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
+
+	hub.chmsg = make(chan string)
 
 	// set global variable chathub
 	chathub = hub
@@ -74,7 +76,8 @@ type ChatHub struct {
 	filters      map[string]Filter
 	
 	muxStreamingNodes   sync.Mutex
-	streamingNodes      map[string]*ChatStreamingNode
+	streamingNodes      map[string]*StreamingNode
+	chmsg               chan string
 	
 	muxBotsSubs         sync.Mutex
 	botsSubs            map[string]string
@@ -138,42 +141,6 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 	ctx.logger.Printf(msg, v...)
 	ctx.logger.Printf("Error %v", err)
 	raven.CaptureError(err, nil)
-}
-
-func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) error {
-	for {
-		in, err := tunnel.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		hub.Info("[STREAMING] %#v", in)
-
-		switch in.EventType {
-		case PING:
-			pong := pb.EventReply{EventType: PONG, Body: "", ClientType: in.ClientType, ClientId: in.ClientId}
-			if err := tunnel.Send(&pong); err != nil {
-				hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
-			}
-
-		case REGISTER:
-			var snode *ChatStreamingNode
-			if snode = hub.GetStreamingNode(in.ClientId); snode == nil {
-				hub.Info("s[%s] not found, create new streaming node", in.ClientId)
-				snode = NewStreamingNode()
-			}
-
-			if newsnode, err := snode.register(in.ClientId, in.ClientType, tunnel); err != nil {
-				hub.Error(err, "[STREAMING] register failed")
-			} else {
-				hub.SetStreamingNode(in.ClientId, newsnode)
-				hub.Info("s[%s] registered [%s]", in.ClientType, in.ClientId)
-			}
-		}
-	}
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
