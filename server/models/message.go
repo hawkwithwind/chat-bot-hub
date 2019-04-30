@@ -22,9 +22,9 @@ type JMsgSource struct {
 type JMessage struct {
 	MsgId       string     `json:"msgId"`
 	MsgType     int        `json:"msgType"`
-	ImageId     string     `json:"image_id"`
+	ImageId     string     `json:"imageId"`
 	Content     string     `json:"content"`
-	GroupId     string     `json:"group_id"`
+	GroupId     string     `json:"groupId"`
 	Description string     `json:"description"`
 	FromUser    string     `json:"fromUser"`
 	MType       int        `json:"mType"`
