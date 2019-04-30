@@ -178,6 +178,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
+				
 				if newbot.canReLogin() {
 					//relogin the bot
 					o := ErrorHandler{}
@@ -347,6 +348,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
+
+					///////////////////
+					//just for testing, will delete after implement sub/unsub and auth
+					for _, snode := range hub.streamingNodes {
+						snode.Sub([]string{botId})
+					}
+					////////////////////
+
+					
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
