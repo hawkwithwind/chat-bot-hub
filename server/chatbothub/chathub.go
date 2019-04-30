@@ -574,20 +574,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.Error(o.Err, "cannot parse %s", in.Body)
 					}
 
+					body := o.FromJson(msg)
 					if o.Err == nil {
-						body := o.FromJson(msg)
 						if o.Err == nil {
 							body = o.ReplaceWechatMsgSource(body)
 						}
 					}
 
 					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(msg)
+						o.Err = bot.filter.Fill(o.ToJson(body))
 					}
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, msg), 5, 1)
+							httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, o.ToJson(body)), 5, 1)
 						}()
 					}
 
@@ -600,13 +601,18 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					bodym := o.FromJson(in.Body)
 					o.FromMapString("imageId", bodym, "actionBody", false, "")
 
+					if o.Err == nil {
+						bodym = o.ReplaceWechatMsgSource(bodym)
+					}
+
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, in.Body), 5, 1)
+							httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
 					
@@ -622,6 +628,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						bodym["imageId"] = emojiId
 					}
+
+					if o.Err == nil {
+						bodym = o.ReplaceWechatMsgSource(bodym)
+					}
 					
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
@@ -629,7 +639,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, in.Body), 5, 1)
+							httpx.RestfulCallRetry(
+								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
 				} else {
