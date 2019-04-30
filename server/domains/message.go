@@ -23,7 +23,7 @@ type JMessage struct {
 	MsgId       string     `json:"msgId"`
 	MsgType     int        `json:"msgType"`
 	ImageId     string     `json:"imageId"`
-	Content     string     `json:"content"`
+	Content     interface{} `json:"content"`
 	GroupId     string     `json:"groupId"`
 	Description string     `json:"description"`
 	FromUser    string     `json:"fromUser"`
@@ -34,7 +34,7 @@ type JMessage struct {
 	Timestamp   uint64     `json:"timestamp"`
 	ToUser      string     `json:"toUser"`
 	Uin         uint64     `json:"uin"`
-	MsgSource   JMsgSource `json:"msgSource"`
+	MsgSource   *JMsgSource `json:"msgSource"`
 }
 
 type BMsgSource struct {
@@ -47,7 +47,7 @@ type BMessage struct {
 	MsgId       string     `bson:"msg_id"`
 	MsgType     int        `bson:"msg_type"`
 	ImageId     string     `bson:"image_id"`
-	Content     string     `bson:"content"`
+	Content     interface{}     `bson:"content"`
 	GroupId     string     `bson:"group_id"`
 	Description string     `bson:"description"`
 	FromUser    string     `bson:"from_user"`
@@ -58,7 +58,7 @@ type BMessage struct {
 	Timestamp   uint64     `bson:"timestamp"`
 	ToUser      string     `bson:"to_user"`
 	Uin         uint64     `bson:"uin"`
-	MsgSource   BMsgSource `bson:"msg_source"`
+	MsgSource   *BMsgSource `bson:"msg_source"`
 
 	UpdatedAt time.Time `bson:"updated_at"`
 }
@@ -101,33 +101,38 @@ func UpdateMessages(mongoDb *mongo.Database, messages []string) error {
 			return err
 		}
 
+		bmsg := &BMessage{
+			MsgId:       jMessage.MsgId,
+			MsgType:     jMessage.MsgType,
+			ImageId:     jMessage.ImageId,
+			Content:     jMessage.Content,
+			GroupId:     jMessage.GroupId,
+			Description: jMessage.Description,
+			FromUser:    jMessage.FromUser,
+			MType:       jMessage.MType,
+			SubType:     jMessage.SubType,
+			Status:      jMessage.Status,
+			Continue:    jMessage.Continue,
+			Timestamp:   jMessage.Timestamp,
+			ToUser:      jMessage.ToUser,
+			Uin:         jMessage.Uin,
+			UpdatedAt:   time.Now(),
+		}
+
+		if jMessage.MsgSource != nil {
+			bmsg.MsgSource =  &BMsgSource{
+				Silence:     jMessage.MsgSource.Silence,
+				AtUserList:  jMessage.MsgSource.AtUserList,
+				MemberCount: jMessage.MsgSource.MemberCount,
+			}
+		}
+		
 		update := struct {
 			filter bson.M
 			update bson.M
 		}{
 			filter: bson.M{"msg_id": jMessage.MsgId},
-			update: bson.M{"$set": &BMessage{
-				MsgId:       jMessage.MsgId,
-				MsgType:     jMessage.MsgType,
-				ImageId:     jMessage.ImageId,
-				Content:     jMessage.Content,
-				GroupId:     jMessage.GroupId,
-				Description: jMessage.Description,
-				FromUser:    jMessage.FromUser,
-				MType:       jMessage.MType,
-				SubType:     jMessage.SubType,
-				Status:      jMessage.Status,
-				Continue:    jMessage.Continue,
-				Timestamp:   jMessage.Timestamp,
-				ToUser:      jMessage.ToUser,
-				Uin:         jMessage.Uin,
-				UpdatedAt:   time.Now(),
-				MsgSource: BMsgSource{
-					Silence:     jMessage.MsgSource.Silence,
-					AtUserList:  jMessage.MsgSource.AtUserList,
-					MemberCount: jMessage.MsgSource.MemberCount,
-				},
-			}},
+			update: bson.M{"$set": bmsg},
 		}
 		model := mongo.NewUpdateManyModel().SetFilter(update.filter).SetUpdate(update.update).SetUpsert(true)
 		writes = append(writes, model)
