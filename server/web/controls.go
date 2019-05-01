@@ -1478,6 +1478,141 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	chatEntity := vars["chatEntity"]
+	chatEntityId := vars["chatEntityId"]
+	
+	r.ParseForm()	
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := o.getStringValue(r.Form, "q")
+	if o.Err != nil {
+		return
+	}
+
+	querym := o.FromJson(query)
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return
+	}
+
+	paging := utils.Paging{}
+	if pgquery, ok := querym["paging"]; !ok {
+		paging = utils.Paging{
+			Page: 1,
+			PageSize: 20,
+		}
+	} else {
+		o.Err = json.Unmarshal([]byte(o.ToJson(pgquery)), &paging)
+		if o.Err != nil {
+			o.Err = nil
+			paging = utils.Paging{
+				Page: 1,
+				PageSize: 20,
+			}
+		}
+	}
+
+	criteria := bson.M{}
+
+	switch chatEntity {
+	case "chatusers":
+		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatEntityId})
+		if o.Err != nil {
+			return
+		}
+		if len(ret) == 0 {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
+			return
+		}
+
+		chatuser := o.GetChatUserById(tx, chatEntityId)
+		if o.Err != nil {
+			return
+		}
+
+		if chatuser == nil {
+			o.Err = fmt.Errorf("cannot find chatuser %s", chatEntityId)
+			return
+		}
+
+		criteria["fromUser"] = bson.M{"$eq": chatuser.UserName}
+
+		if findquery, ok := querym["find"]; ok {
+			switch findm := findquery.(type) {
+			case map[string]interface{}:
+				switch touser := findm["toUser"].(type) {
+				case string:
+					o.CheckBotOwner(tx, touser, accountName)
+					if o.Err != nil {
+						return
+					}
+					
+					criteria["toUser"] = bson.M{"$eq": touser}
+					criteria["groupId"] = bson.M{"$eq": ""}
+				default:
+					o.Err = utils.NewClientError(utils.PARAM_INVALID,
+						fmt.Errorf("criteria find.toUser must be type string ,not <%T>", touser))
+					return
+				}
+				
+			default:
+				o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+					fmt.Errorf("criteria find.toUser must be set for chatuser/message "))
+				return
+			}
+		}		
+		
+	case "chatgroups":
+		ret := o.CheckOwnerOfChatgroups(tx, accountName, []string{chatEntityId})
+		if len(ret) == 0 {
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
+			return
+		}
+
+		chatgroup := o.GetChatGroupById(tx, chatEntityId)
+		if o.Err != nil {
+			return
+		}
+
+		if chatgroup == nil {
+			o.Err = fmt.Errorf("cannot find chatgroup %s", chatEntityId)
+			return
+		}
+
+		criteria["groupId"] = bson.M{"$eq": chatgroup.GroupName}
+		
+	default:
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
+			fmt.Errorf("get message for <%s> not supported", chatEntity))
+		return		
+	}
+
+	wms := o.GetWechatMessages(web.mongoDb.C(
+		domains.WechatMessageCollection,
+	).Find(criteria).Sort(
+		"-timestamp",
+	).Skip(
+		int((paging.Page-1) * paging.PageSize),
+	).Limit(int(paging.PageSize)))
+	
+	if o.Err != nil {
+		return
+	}
+	
+	o.ok(w, "", wms)
+}
+
 func (o *ErrorHandler) getListFromCriteria(criteria map[string]interface{}) []string {
 	res := []string{}
 	if in, ok := criteria["in"]; ok {
@@ -1533,7 +1668,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	query := o.getStringValueDefault(r.Form, "q", "")
+	query := o.getStringValue(r.Form, "q")
 	if o.Err != nil {
 		return
 	}
@@ -1681,14 +1816,14 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 
 	mapfunc := fmt.Sprintf(`function() {emit(this.%s, 
       JSON.stringify({
-        msgId:    this.msgId,
-        msgType:  this.msgType,
-        mType:    this.mType,
-        subType:  this.subType,
-        imageId:  this.imageId,
-        groupId:  this.groupId,
-        fromUser: this.fromUser,
-        toUser:   this.toUser,
+        msgId:     this.msgId,
+        msgType:   this.msgType,
+        mType:     this.mType,
+        subType:   this.subType,
+        imageId:   this.imageId,
+        groupId:   this.groupId,
+        fromUser:  this.fromUser,
+        toUser:    this.toUser,
         timestamp: this.timestamp,
         msgSource: this.msgSource,
         content:   this.content,
@@ -1706,7 +1841,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
     }).slice(0, 0+%d));
   }
 `, pagesize)
-
+	
 	//web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
 	//web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
 
@@ -1716,8 +1851,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var results []struct {Id string "_id"; Value string}
-	var ret *mgo.MapReduceInfo
-	ret, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
+	//var ret *mgo.MapReduceInfo
+	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
 	if o.Err != nil {
 		return
 	}

@@ -37,6 +37,21 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
+func (o *ErrorHandler) GetWechatMessages(query *mgo.Query) []WechatMessage {
+	if o.Err != nil {
+		return []WechatMessage{}
+	}
+
+	wm := []WechatMessage{}
+
+	o.Err = query.All(&wm)
+	if o.Err != nil {
+		return []WechatMessage{}
+	}
+
+	return wm
+}
+
 func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
 	col := db.C(WechatMessageCollection)
 	for _, key := range []string{"msgId", "fromUser", "toUser", "groupId", "timestamp"} {
