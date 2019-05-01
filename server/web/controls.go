@@ -1679,11 +1679,31 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	mapfunc := fmt.Sprintf(`function() {emit(this.%s, this)}`, mapkey)
+	mapfunc := fmt.Sprintf(`function() {emit(this.%s, 
+      JSON.stringify({
+        msgId:    this.msgId,
+        msgType:  this.msgType,
+        mType:    this.mType,
+        subType:  this.subType,
+        imageId:  this.imageId,
+        groupId:  this.groupId,
+        fromUser: this.fromUser,
+        toUser:   this.toUser,
+        timestamp: this.timestamp,
+        msgSource: this.msgSource,
+        content:   this.content,
+      })
+    )}`, mapkey)
+	
 	reducefunc := fmt.Sprintf(`
 function(key, values) { 
+  let l = [];
+  for(var i in values) {
+     let o = JSON.parse(values[i]);
+     l.push(o);
+  };
   return  JSON.stringify(
-    Array.concat(values).sort(
+    Array.concat(l).sort(
       (lhs, rhs) => {return lhs.timestamp < rhs.timestamp}
     ).slice(0, 0+%d))}
 `, pagesize)
