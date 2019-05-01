@@ -1704,7 +1704,7 @@ function(key, values) {
   };
   return  JSON.stringify(
     Array.concat(l).sort(
-      (lhs, rhs) => {return rhs.timestamp - lhs.timestamp}
+      function (lhs, rhs){ return int(rhs.timestamp) - int(lhs.timestamp)}
     ).slice(0, 0+%d))}
 `, pagesize)
 
