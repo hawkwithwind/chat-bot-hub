@@ -1606,7 +1606,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if len(checkedlist) > MaxLimitUsers {
-					errmsgs = append(errmsgs, "search entity exceeds limit %d", MaxLimitUsers)
+					errmsgs = append(errmsgs, fmt.Sprintf("search entity exceeds limit %d", MaxLimitUsers))
 					checkedlist = checkedlist[:MaxLimitUsers]
 				}
 				
@@ -1626,13 +1626,13 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		
 		criteria["groupId"] = bson.M{"$eq":""}
 
-		if fu, fuok := criteria["fromUser"]; !fuok {
+		if _, fuok := criteria["fromUser"]; !fuok {
 			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
 				fmt.Errorf("search for chatusers, criteria find.fromUser required"))
 			return
 		}
 	} else if mapkey == "groupId" {
-		if gi, giok := criteria["groupId"]; !giok {
+		if _, giok := criteria["groupId"]; !giok {
 			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
 				fmt.Errorf("search for groups, criteria find.groupId required"))
 			return
@@ -1673,11 +1673,12 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 			if p, pok := paging["pagesize"]; pok {
 				switch pa := p.(type) {
 				case float64:
-					if pa > MaxLimitPagesize {
+					pai := int(pa)
+					if pai > MaxLimitPagesize {
 						errmsgs = append(errmsgs, "pagesize %d too large")
 						pagesize = MaxLimitPagesize
 					} else {
-						pagesize = int(pa)
+						pagesize = pai
 					}
 				}
 			}
