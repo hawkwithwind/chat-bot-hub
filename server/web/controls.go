@@ -1508,6 +1508,19 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	mapkey := vars["mapkey"]
+	
+
+	switch mapkey {
+	case "chatusers":
+		mapkey = "fromUser"
+	case "chatgroups":
+		mapkey = "groupId"
+	default:
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
+			fmt.Errorf("message for <%s> not supported ", mapkey))
+		return
+	}
+
 	web.Info("[MESSAGE SEARCH DEBUG] %s", mapkey)
 
 	r.ParseForm()	

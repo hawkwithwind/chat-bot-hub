@@ -383,7 +383,7 @@ func (ctx *WebServer) Serve() {
 
 	// search
 	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
-	r.HandleFunc("/messages/history", ctx.validate(ctx.SearchMessage)).Methods("GET")
+	r.HandleFunc("/{mapkey}/messages", ctx.validate(ctx.SearchMessage)).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 
