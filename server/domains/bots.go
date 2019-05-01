@@ -345,6 +345,10 @@ func (o *ErrorHandler) CheckOwnerOfChatusers(q dbx.Queryable, accountName string
 		return []string{}
 	}
 
+	if len(ids) == 0 {
+		return []string{}
+	}
+
 	query, args, err := sqlx.In(`
 SELECT distinct u.username
 FROM bots as b
@@ -372,6 +376,10 @@ WHERE a.accountname=?
 
 func (o *ErrorHandler) CheckOwnerOfChatgroups(q dbx.Queryable, accountName string, ids []string) []string {
 	if o.Err != nil {
+		return []string{}
+	}
+
+	if len(ids) == 0 {
 		return []string{}
 	}
 
