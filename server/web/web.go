@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	//"io"
 	"context"
@@ -19,6 +18,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
+	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/mux"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
@@ -58,7 +58,7 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
-	mongoDb	     *mongo.Database
+	mongoDb	     *mgo.Database
 }
 
 func (ctx *WebServer) init() error {

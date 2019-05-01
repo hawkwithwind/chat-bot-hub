@@ -340,6 +340,55 @@ WHERE a.accountname=?
 	}
 }
 
+func (o *ErrorHandler) CheckOwnerOfChatusers(q dbx.Queryable, accountName string, ids []string) []string {
+	if o.Err != nil {
+		return []string{}
+	}
+
+	usernames := []string{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &usernames, 
+	`
+SELECT distinct u.username
+FROM bots as b
+LEFT JOIN accounts as a on b.accountid = a.accountid
+LEFT JOIN chatcontacts as c on b.botId = c.botId
+LEFT JOIN chatusers as u on c.chatuserid = u.chatuserid
+WHERE a.accountname=?
+  AND b.botid is not NULL
+  AND u.username in (?)
+  AND a.deleteat is NULL
+  AND b.deleteat is NULL
+  AND c.deleteat is NULL`, accountName, ids)
+
+	return usernames
+}
+
+func (o *ErrorHandler) CheckOwnerOfChatgroups(q dbx.Queryable, accountName string, ids []string) []string {
+	if o.Err != nil {
+		return []string{}
+	}
+
+	groupnames := []string{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &groupnames, 
+	`
+SELECT distinct g.groupname
+FROM bots as b
+LEFT JOIN accounts as a on b.accountid = a.accountid
+LEFT JOIN chatcontactgroups as c on b.botId = c.botId
+LEFT JOIN chatgroups as g on c.chatgroupid = g.chatgroupid
+WHERE a.accountname=?
+  AND b.botid is not NULL
+  AND g.groupname in (?)
+  AND a.deleteat is NULL
+  AND b.deleteat is NULL
+  AND c.deleteat is NULL`, accountName, ids)
+
+	return groupnames
+}
+
+
 func (o *ErrorHandler) BotMigrate(q dbx.Queryable, botId string, login string) string {
 	if o.Err != nil {
 		return ""

@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"io/ioutil"
 
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -1472,4 +1475,182 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("unknown domain %s", domain)
 		return
 	}
+}
+
+func (o *ErrorHandler) getListFromCriteria(criteria map[string]interface{}) []string {
+	res := []string{}
+	if in, ok := criteria["in"]; ok {
+		switch inlist := in.(type) {
+		case []interface{}:
+			for _, v := range inlist {
+				switch value := v.(type) {
+				case string:
+					res = append(res, value)
+				}
+			}
+		}
+	}
+
+	if eq, ok := criteria["equals"]; ok {
+		switch value := eq.(type) {
+		case string:
+			res = append(res, value)
+		}
+	}
+
+	return res
+}
+
+func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	mapkey := vars["mapkey"]
+	web.Info("[MESSAGE SEARCH DEBUG] %s", mapkey)
+
+	r.ParseForm()	
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := o.getStringValueDefault(r.Form, "q", "")
+	if o.Err != nil {
+		return
+	}
+	
+	if query == "" {
+		var b []byte
+		b, o.Err = ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		query = string(b)
+	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] %s", query)
+
+	querym := o.FromJson(query)
+	if o.Err != nil {
+		return
+	}
+
+	errmsgs := []string{}
+
+	find_p, ok := querym["find"]
+	if !ok {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("criteria find must set"))
+		return
+	}
+	var find map[string]interface{}
+	switch find_m := find_p.(type) {
+	case map[string]interface{}:
+		find = find_m
+	default:
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("criteria find must be map[string]{ ... }"))
+		return
+	}
+
+	criteria := bson.M{}
+
+	for _, key := range []string{"fromUser", "toUser", "groupId"} {
+		if value, ok := find[key]; ok == true {
+			switch cond := value.(type) {
+			case map[string]interface{}:
+				vl := o.getListFromCriteria(cond)
+				var checkedlist []string
+				switch key {
+				case "fromUser":
+					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+				case "toUser":
+					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+				case "groupId":
+					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
+				}
+
+				if o.Err != nil {
+					return
+				}
+
+				if len(checkedlist) < len(vl) {
+					errmsgs = append(errmsgs, fmt.Sprintf("some %s(s) are filtered by access control", key))
+				}
+
+				if len(checkedlist) == 0 {
+					continue
+				}
+				
+				criteria[key] =  bson.M{"$in": checkedlist}
+			default:
+				o.Err = utils.NewClientError(utils.PARAM_INVALID,
+					fmt.Errorf("criteria find.%s should be map[string] {... }", key))
+				return
+			}
+		}
+	}
+
+	if sendat_p, ok := find["sendAt"]; ok == true {
+		switch sendat := sendat_p.(type) {
+		case map[string]interface{}:
+			ct := bson.M{}
+			for _, op := range []string{"gt", "gte", "lt", "lte"} {
+				if value, opok := sendat[op]; opok == true {
+					switch timestamp := value.(type) {
+					case float64:
+						ct[fmt.Sprintf("$%s", op)] = timestamp
+					default:
+						o.Err = utils.NewClientError(utils.PARAM_INVALID,
+							fmt.Errorf("unexpected criteria sendAt <%T> %v", timestamp, timestamp))
+						return
+					}
+				}
+			}
+			criteria["timestamp"] = ct
+		}
+	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] CRITERIA \n %s", o.ToJson(criteria))
+
+	if o.Err != nil {
+		return
+	}
+
+	pagesize := 5
+	paging_p, ok := querym["paging"]
+	if ok {
+		switch paging := paging_p.(type) {
+		case map[string]interface{}:
+			if p, pok := paging["pagesize"]; pok {
+				switch pa := p.(type) {
+				case float64:
+					if pa > 20 {
+						errmsgs = append(errmsgs, "pagesize %d too large")
+					} else {
+						pagesize = int(pa)
+					}
+				}
+			}
+		}
+	}
+	
+
+	job := &mgo.MapReduce{
+		Map: fmt.Sprintf(`function() {emit(this.%s, this)}`, mapkey),
+		Reduce: fmt.Sprintf(`
+function(key, values) { 
+  return  JSON.stringify(
+    Array.concat(values).sort(
+      (lhs, rhs) => {return lhs.timestamp < rhs.timestamp}
+    ).slice(0, 0+%d))}
+`, pagesize),
+	}
+
+	var results []struct {Id string "_id"; Value string}
+	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
+	if o.Err != nil {
+		return
+	}
+	
+	o.ok(w, "", results)
 }
