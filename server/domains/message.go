@@ -15,22 +15,22 @@ type MsgSource struct {
 }
 
 type WechatMessage struct {
-	MsgId       string      `json:"msgId" bson:"msg_id"`
-	MsgType     int         `json:"msgType" bson:"msg_type"`
-	ImageId     string      `json:"imageId" bson:"image_id"`
+	MsgId       string      `json:"msgId" bson:"msgId"`
+	MsgType     int         `json:"msgType" bson:"msgType"`
+	ImageId     string      `json:"imageId" bson:"imageId"`
 	Content     interface{} `json:"content" bson:"content"`
-	GroupId     string      `json:"groupId" bson:"group_id"`
+	GroupId     string      `json:"groupId" bson:"groupId"`
 	Description string      `json:"description" bson:"description"`
-	FromUser    string      `json:"fromUser" bson:"from_user"`
-	MType       int         `json:"mType" bson:"m_type"`
-	SubType     int         `json:"subType" bson:"sub_type"`
+	FromUser    string      `json:"fromUser" bson:"fromUser"`
+	MType       int         `json:"mType" bson:"mType"`
+	SubType     int         `json:"subType" bson:"subType"`
 	Status      int         `json:"status" bson:"status"`
 	Continue    int         `json:"continue" bson:"continue"`
 	Timestamp   uint64      `json:"timestamp" bson:"timestamp"`
-	ToUser      string      `json:"toUser" bson:"to_user"`
+	ToUser      string      `json:"toUser" bson:"toUser"`
 	Uin         uint64      `json:"uin" bson:"uin"`
-	MsgSource   interface{} `json:"msgSource" bson:"msg_source"`
-	UpdatedAt   time.Time   `json:"updateAt" bson:"updated_at"`
+	MsgSource   interface{} `json:"msgSource" bson:"msgSource"`
+	UpdatedAt   time.Time   `json:"updateAt" bson:"updatedAt"`
 }
 
 const (
