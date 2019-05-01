@@ -1703,8 +1703,8 @@ function(key, values) {
      l.push(o);
   };
   return  JSON.stringify(
-    Array.concat(l).sort(
-      function (lhs, rhs){ return int(rhs.timestamp) - int(lhs.timestamp)}
+    l.sort(
+      function (lhs, rhs){ return rhs.timestamp - lhs.timestamp}
     ).slice(0, 0+%d))}
 `, pagesize)
 
