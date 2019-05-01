@@ -1525,18 +1525,19 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 
 	switch chatEntity {
 	case "chatusers":
-		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatEntityId})
+		chatuser := o.GetChatUserById(tx, chatEntityId)
+		if o.Err != nil {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, o.Err)
+			return
+		}
+		
+		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
 		if o.Err != nil {
 			return
 		}
 		if len(ret) == 0 {
 			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
-			return
-		}
-
-		chatuser := o.GetChatUserById(tx, chatEntityId)
-		if o.Err != nil {
 			return
 		}
 
