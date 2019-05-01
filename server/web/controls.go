@@ -1682,11 +1682,11 @@ function(key, values) {
 
 	retmap := bson.M{}
 	for _, result := range results {
-		objs := []*bson.M{}
+		objs := []bson.M{}
 
 		web.Info("unmarshal %s", result.Value)
 		
-		o.Err = bson.UnmarshalJSON([]byte(result.Value), objs)
+		o.Err = bson.UnmarshalJSON([]byte(result.Value), &objs)
 		if o.Err != nil {
 			return
 		}
