@@ -1711,7 +1711,12 @@ function(key, values) {
 		
 		o.Err = bson.UnmarshalJSON([]byte(result.Value), &objs)
 		if o.Err != nil {
-			return
+			// maybe objs is single, then it is bson
+			web.Info("result.Value is %v", result.Value)
+			o.Err = nil
+			obj := bson.M{}
+			o.Err = bson.UnmarshalJSON([]byte(result.Value), &obj)
+			objs = append(objs, obj)
 		}
 
 		web.Info("unmarshaled %v", objs)
