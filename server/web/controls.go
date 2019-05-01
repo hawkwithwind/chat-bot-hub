@@ -1519,6 +1519,10 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 				PageSize: 20,
 			}
 		}
+
+		if paging.Page <= 0 {
+			paging.Page = 1
+		}
 	}
 
 	criteria := bson.M{}
