@@ -1682,7 +1682,7 @@ function(key, values) {
 
 	retmap := bson.M{}
 	for _, result := range results {
-		var obj interface{}
+		obj := bson.M{}
 		o.Err = bson.UnmarshalJSON([]byte(result.Value), obj)
 		if o.Err != nil {
 			return
