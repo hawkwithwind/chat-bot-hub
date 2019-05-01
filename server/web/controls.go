@@ -1704,7 +1704,7 @@ function(key, values) {
   };
   return  JSON.stringify(
     l.sort(
-      function (lhs, rhs){ return rhs.timestamp - lhs.timestamp}
+      function (lhs, rhs){ return parseInt(rhs.timestamp+0) - parseInt(lhs.timestamp+0)}
     ).slice(0, 0+%d))}
 `, pagesize)
 
