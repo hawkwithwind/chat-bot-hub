@@ -381,7 +381,9 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
+	// search
 	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
+	r.HandleFunc("/messages/history", ctx.validate(ctx.SearchMessage)).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 
