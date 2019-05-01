@@ -1699,11 +1699,11 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
   function(key, values) { 
     let l = [];
     for(var i in values) {
-       let o = JSON.parse(values[i]);
-       l.push(o);
-    };
-    l.sort(function (lhs, rhs){ return rhs.timestamp -lhs.timestamp});
-    return JSON.stringify(l.slice(0, 0+%d));
+       l.push(JSON.parse(values[i]));
+    };    
+    return JSON.stringify(l.sort((lhs, rhs) => {
+      return parseInt(rhs.timestamp['$numberLong']) - parseInt(lhs.timestamp['$numberLong'])
+    }).slice(0, 0+%d));
   }
 `, pagesize)
 
