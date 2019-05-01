@@ -1561,21 +1561,15 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.Info("a")
-	
 	var find map[string]interface{}
 	switch find_m := find_p.(type) {
 	case map[string]interface{}:
-		web.Info("b")
 		find = find_m
 	default:
-		web.Info("c")
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("criteria find must be map[string]{ ... }"))
 		return
 	}
 
-	web.Info("d find type <%T> %#v", find_p, find_p)
-	
 	criteria := bson.M{}
 
 	for _, key := range []string{"fromUser", "toUser", "groupId"} {
