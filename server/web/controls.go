@@ -1509,6 +1509,9 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	mapkey := vars["mapkey"]
+
+	const MaxLimitUsers int = 500
+	const MaxLimitPagesize int = 20
 	
 
 	switch mapkey {
@@ -1557,15 +1560,22 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("criteria find must set"))
 		return
 	}
+
+	web.Info("a")
+	
 	var find map[string]interface{}
 	switch find_m := find_p.(type) {
 	case map[string]interface{}:
+		web.Info("b")
 		find = find_m
 	default:
+		web.Info("c")
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("criteria find must be map[string]{ ... }"))
 		return
 	}
 
+	web.Info("d find type <%T> %#v", find_p, find_p)
+	
 	criteria := bson.M{}
 
 	for _, key := range []string{"fromUser", "toUser", "groupId"} {
@@ -1594,6 +1604,11 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				if len(checkedlist) == 0 {
 					continue
 				}
+
+				if len(checkedlist) > MaxLimitUsers {
+					errmsgs = append(errmsgs, "search entity exceeds limit %d", MaxLimitUsers)
+					checkedlist = checkedlist[:MaxLimitUsers]
+				}
 				
 				criteria[key] =  bson.M{"$in": checkedlist}
 			default:
@@ -1604,12 +1619,24 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if mapkey == "chatusers" {
+	if mapkey == "fromUser" {
 		if _, ok := criteria["groupId"]; ok {
 			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
 		}
 		
 		criteria["groupId"] = bson.M{"$eq":""}
+
+		if fu, fuok := criteria["fromUser"]; !fuok {
+			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+				fmt.Errorf("search for chatusers, criteria find.fromUser required"))
+			return
+		}
+	} else if mapkey == "groupId" {
+		if gi, giok := criteria["groupId"]; !giok {
+			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+				fmt.Errorf("search for groups, criteria find.groupId required"))
+			return
+		}
 	}
 
 	if sendat_p, ok := find["sendAt"]; ok == true {
@@ -1646,8 +1673,9 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 			if p, pok := paging["pagesize"]; pok {
 				switch pa := p.(type) {
 				case float64:
-					if pa > 20 {
+					if pa > MaxLimitPagesize {
 						errmsgs = append(errmsgs, "pagesize %d too large")
+						pagesize = MaxLimitPagesize
 					} else {
 						pagesize = int(pa)
 					}
