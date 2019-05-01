@@ -1493,7 +1493,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	query := o.getStringValue(r.Form, "q")
+	query := o.getStringValueDefault(r.Form, "q", "{}")
 	if o.Err != nil {
 		return
 	}
