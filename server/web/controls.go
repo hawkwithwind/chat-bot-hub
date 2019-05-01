@@ -1682,7 +1682,7 @@ function(key, values) {
 
 	retmap := bson.M{}
 	for _, result := range results {
-		objs := []bson.M{}
+		objs := []*bson.M{}
 
 		web.Info("unmarshal %s", result.Value)
 		
