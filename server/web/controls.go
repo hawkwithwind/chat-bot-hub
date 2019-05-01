@@ -1704,7 +1704,7 @@ function(key, values) {
   };
   return  JSON.stringify(
     Array.concat(l).sort(
-      (lhs, rhs) => {return lhs.timestamp < rhs.timestamp}
+      (lhs, rhs) => {return lhs.timestamp > rhs.timestamp}
     ).slice(0, 0+%d))}
 `, pagesize)
 
