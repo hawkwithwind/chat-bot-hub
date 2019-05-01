@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 	"io/ioutil"
+	"strings"
 
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
@@ -1603,6 +1604,14 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if mapkey == "chatusers" {
+		if _, ok := criteria["groupId"]; ok {
+			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
+		}
+		
+		criteria["groupId"] = bson.M{"$eq":""}
+	}
+
 	if sendat_p, ok := find["sendAt"]; ok == true {
 		switch sendat := sendat_p.(type) {
 		case map[string]interface{}:
@@ -1672,6 +1681,11 @@ function(key, values) {
 	}
 
 	web.Info("[MESSAGE SEARCH DEBUG] ret (%d):\n%s", len(results), o.ToJson(ret))
+
+	message := "success"
+	if len(errmsgs) > 0 {
+		message = strings.Join(errmsgs, ",\n")
+	}
 	
-	o.ok(w, "", results)
+	o.ok(w, message, results)
 }
