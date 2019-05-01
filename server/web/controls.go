@@ -1682,17 +1682,17 @@ function(key, values) {
 
 	retmap := bson.M{}
 	for _, result := range results {
-		obj := bson.M{}
+		objs := []bson.M{}
 
 		web.Info("unmarshal %s", result.Value)
 		
-		o.Err = bson.UnmarshalJSON([]byte(result.Value), obj)
+		o.Err = bson.UnmarshalJSON([]byte(result.Value), objs)
 		if o.Err != nil {
 			return
 		}
 
-		web.Info("unmarshaled %v", obj)
-		retmap[result.Id] = obj
+		web.Info("unmarshaled %v", objs)
+		retmap[result.Id] = objs
 	}
 
 	web.Info("[MESSAGE SEARCH DEBUG] ret (%d):\n%s", len(results), o.ToJson(ret))
