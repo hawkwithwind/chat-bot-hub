@@ -1680,6 +1680,16 @@ function(key, values) {
 		return
 	}
 
+	retmap := bson.M{}
+	for _, result := range results {
+		var obj interface{}
+		o.Err = bson.UnmarshalJSON([]byte(result.Value), obj)
+		if o.Err != nil {
+			return
+		}
+		retmap[result.Id] = obj
+	}
+
 	web.Info("[MESSAGE SEARCH DEBUG] ret (%d):\n%s", len(results), o.ToJson(ret))
 
 	message := "success"
@@ -1687,5 +1697,5 @@ function(key, values) {
 		message = strings.Join(errmsgs, ",\n")
 	}
 	
-	o.ok(w, message, results)
+	o.ok(w, message, retmap)
 }
