@@ -1707,8 +1707,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
   }
 `, pagesize)
 
-	web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
-	web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
+	//web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
+	//web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
 
 	job := &mgo.MapReduce{
 		Map: mapfunc,
@@ -1726,23 +1726,17 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	for _, result := range results {
 		objs := []bson.M{}
 
-		web.Info("unmarshal %s", result.Value)
-		
 		o.Err = bson.UnmarshalJSON([]byte(result.Value), &objs)
 		if o.Err != nil {
 			// maybe objs is single, then it is bson
-			web.Info("result.Value is %v", result.Value)
 			o.Err = nil
 			obj := bson.M{}
 			o.Err = bson.UnmarshalJSON([]byte(result.Value), &obj)
 			objs = append(objs, obj)
 		}
 
-		web.Info("unmarshaled %v", objs)
 		retmap[result.Id] = objs
 	}
-
-	web.Info("[MESSAGE SEARCH DEBUG] ret (%d):\n%s", len(results), o.ToJson(ret))
 
 	message := "success"
 	if len(errmsgs) > 0 {
