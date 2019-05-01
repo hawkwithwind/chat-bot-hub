@@ -1646,24 +1646,32 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	
 
-	job := &mgo.MapReduce{
-		Map: fmt.Sprintf(`function() {emit(this.%s, this)}`, mapkey),
-		Reduce: fmt.Sprintf(`
+	mapfunc := fmt.Sprintf(`function() {emit(this.%s, this)}`, mapkey)
+	reducefunc := fmt.Sprintf(`
 function(key, values) { 
   return  JSON.stringify(
     Array.concat(values).sort(
       (lhs, rhs) => {return lhs.timestamp < rhs.timestamp}
     ).slice(0, 0+%d))}
-`, pagesize),
+`, pagesize)
+
+	web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
+	web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
+
+	job := &mgo.MapReduce{
+		Map: mapfunc,
+		Reduce: reducefunc,
 	}
 
 	var results []struct {Id string "_id"; Value string}
-	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
+	var ret *mgo.MapReduceInfo
+	ret, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
 	if o.Err != nil {
 		return
 	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] ret (%d):\n%s", len(results), o.ToJson(ret))
 	
 	o.ok(w, "", results)
 }
