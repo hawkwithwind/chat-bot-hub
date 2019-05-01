@@ -1526,10 +1526,12 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	switch chatEntity {
 	case "chatusers":
 		chatuser := o.GetChatUserById(tx, chatEntityId)
-		if o.Err != nil {
-			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED, o.Err)
+		if o.Err != nil || chatuser == nil {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
 			return
 		}
+		
 		
 		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
 		if o.Err != nil {
@@ -1539,12 +1541,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
 			return
-		}
-
-		if chatuser == nil {
-			o.Err = fmt.Errorf("cannot find chatuser %s", chatEntityId)
-			return
-		}
+		}		
 
 		criteria["fromUser"] = bson.M{"$eq": chatuser.UserName}
 
@@ -1574,20 +1571,16 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 		}		
 		
 	case "chatgroups":
-		ret := o.CheckOwnerOfChatgroups(tx, accountName, []string{chatEntityId})
+		chatgroup := o.GetChatGroupById(tx, chatEntityId)
+		if o.Err != nil || chatgroup == nil {
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
+		}
+		
+		ret := o.CheckOwnerOfChatgroups(tx, accountName, []string{chatgroup.GroupName})
 		if len(ret) == 0 {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
-			return
-		}
-
-		chatgroup := o.GetChatGroupById(tx, chatEntityId)
-		if o.Err != nil {
-			return
-		}
-
-		if chatgroup == nil {
-			o.Err = fmt.Errorf("cannot find chatgroup %s", chatEntityId)
 			return
 		}
 
