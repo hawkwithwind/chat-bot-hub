@@ -5,7 +5,7 @@ import (
 	//"time"
 	"database/sql"
 
-	//"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 
@@ -345,10 +345,7 @@ func (o *ErrorHandler) CheckOwnerOfChatusers(q dbx.Queryable, accountName string
 		return []string{}
 	}
 
-	usernames := []string{}
-	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &usernames, 
-	`
+	query, args, err := sqlx.In(`
 SELECT distinct u.username
 FROM bots as b
 LEFT JOIN accounts as a on b.accountid = a.accountid
@@ -361,6 +358,15 @@ WHERE a.accountname=?
   AND b.deleteat is NULL
   AND c.deleteat is NULL`, accountName, ids)
 
+	o.Err = err
+	if o.Err != nil {
+		return []string{}
+	}
+	
+	usernames := []string{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &usernames, query, args ...)
+
 	return usernames
 }
 
@@ -369,10 +375,7 @@ func (o *ErrorHandler) CheckOwnerOfChatgroups(q dbx.Queryable, accountName strin
 		return []string{}
 	}
 
-	groupnames := []string{}
-	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &groupnames, 
-	`
+	query, args, err := sqlx.In(`
 SELECT distinct g.groupname
 FROM bots as b
 LEFT JOIN accounts as a on b.accountid = a.accountid
@@ -384,6 +387,15 @@ WHERE a.accountname=?
   AND a.deleteat is NULL
   AND b.deleteat is NULL
   AND c.deleteat is NULL`, accountName, ids)
+	
+	o.Err = err
+	if o.Err != nil {
+		return []string{}
+	}
+	
+	groupnames := []string{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &groupnames, query, args...)
 
 	return groupnames
 }
