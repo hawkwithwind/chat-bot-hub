@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"io/ioutil"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
@@ -18,8 +19,14 @@ const (
 	SDK         string = "SDK"
 	USER        string = "USER"
 	SDKCODE     string = "sdkbearer"
+	SDKCHILDCODE string = "childbearer"
 	REFRESHCODE string = "refresh"
 )
+
+type ChildUser struct {
+	AuthUrl string `json:"AuthUrl"`
+	Metadata string `json:"metadata"`
+}
 
 type User struct {
 	AccountName string         `json:"accountname"`
@@ -27,6 +34,7 @@ type User struct {
 	SdkCode     string         `json:"sdkcode"`
 	Secret      string         `json:"secret"`
 	ExpireAt    utils.JSONTime `json:"expireat"`
+	Child       *ChildUser     `json:"child,omitempty"`
 }
 
 type AuthError struct {
@@ -66,17 +74,29 @@ func (o *ErrorHandler) register(db *dbx.Database, name string, pass string, emai
 	o.SaveAccount(db.Conn, account)
 }
 
-func (o *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time) string {
+func (o *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time, child *ChildUser) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"accountname": name,
-		"sdkcode":     sdkcode,
-		"secret":      secret,
-		"expireat":    utils.JSONTime{expireAt},
-	})
+	var token *jwt.Token
+	
+	if child == nil {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"accountname": name,
+			"sdkcode":     sdkcode,
+			"secret":      secret,
+			"expireat":    utils.JSONTime{expireAt},
+		})
+	} else {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"accountname": name,
+			"sdkcode":     sdkcode,
+			"secret":      secret,
+			"expireat":    utils.JSONTime{expireAt},
+			"child":       child,
+		})
+	}
 
 	var tokenstring string
 	if tokenstring, o.Err = token.SignedString([]byte(s)); o.Err == nil {
@@ -91,10 +111,11 @@ func (o *ErrorHandler) authorize(s string, name string, secret string) string {
 		return ""
 	}
 
-	return o.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7))
+	return o.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7), nil)
 }
 
-func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires time.Duration, refreshExpires time.Duration) map[string]interface{} {
+
+func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires time.Duration, refreshExpires time.Duration, child *ChildUser) map[string]interface{} {
 	expireAt := time.Now().Add(expires)
 	refreshExpireAt := time.Now().Add(refreshExpires)
 
@@ -107,8 +128,15 @@ func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires t
 		return map[string]interface{}{}
 	}
 
-	tokenString := o.generateToken(web.Config.SecretPhrase, account.AccountName, SDKCODE, account.Secret, expireAt)
-	refreshToken := o.generateToken(web.Config.SecretPhrase, account.AccountName, REFRESHCODE, account.Secret, refreshExpireAt)
+	var sdkcode string
+	if child == nil {
+		sdkcode = SDKCODE
+	} else {
+		sdkcode = SDKCHILDCODE
+	}
+
+	tokenString := o.generateToken(web.Config.SecretPhrase, account.AccountName, sdkcode, account.Secret, expireAt, child)
+	refreshToken := o.generateToken(web.Config.SecretPhrase, account.AccountName, REFRESHCODE, account.Secret, refreshExpireAt, child)
 
 	if o.Err != nil {
 		return map[string]interface{}{}
@@ -135,7 +163,65 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30))
+	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30, nil))
+}
+
+func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	accountName := o.getAccountName(r)
+	if o.Err != nil {
+		return
+	}
+
+	var b []byte
+	b, o.Err = ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if o.Err !=nil {
+		o.Err = NewAuthError(o.Err)
+		return
+	}
+
+	querym := struct {
+		ExpireAt *utils.JSONTime `json:"expireAt"`
+		Metadata string `json:"metadata"`
+		AuthUrl  string `json:"authUrl"`
+	}{}
+
+	o.Err = json.Unmarshal(b, &querym)
+	if o.Err != nil {
+		o.Err = NewAuthError(o.Err)
+		return
+	}
+
+	if len(querym.AuthUrl) == 0 {
+		o.Err = NewAuthError(fmt.Errorf("authUrl must be set"))
+		return
+	}
+
+	if querym.ExpireAt != nil {
+		querym.ExpireAt = &utils.JSONTime{
+			Time: time.Now().Add(time.Hour*24*7),
+		}
+	}
+
+	now := time.Now()
+	
+	if querym.ExpireAt.After(now) == false {
+		o.Err = NewAuthError(fmt.Errorf("expireat must set after current time"))
+		return
+	}
+
+	expires := querym.ExpireAt.Sub(now)
+	refreshExpires := querym.ExpireAt.Sub(now) * 4
+
+	o.ok(w, "", o.genSdkToken(web, accountName, expires, refreshExpires, &ChildUser{
+		Metadata: querym.Metadata,
+		AuthUrl: querym.AuthUrl,
+	}))
 }
 
 func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
@@ -172,7 +258,7 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 				}
 
 				// pass validate
-				o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30))
+				o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30, nil))
 				return
 			}
 		} else {
