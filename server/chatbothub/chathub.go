@@ -165,7 +165,6 @@ func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[s
 	return body
 }
 
->>>>>>> dev
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
