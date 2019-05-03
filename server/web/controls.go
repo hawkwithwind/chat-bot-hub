@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"io/ioutil"
+	"strings"
 
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -1472,4 +1476,405 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.Err = fmt.Errorf("unknown domain %s", domain)
 		return
 	}
+}
+
+func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	chatEntity := vars["chatEntity"]
+	chatEntityId := vars["chatEntityId"]
+	
+	r.ParseForm()	
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := o.getStringValueDefault(r.Form, "q", "{}")
+	if o.Err != nil {
+		return
+	}
+
+	querym := o.FromJson(query)
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return
+	}
+
+	paging := utils.Paging{}
+	if pgquery, ok := querym["paging"]; !ok {
+		paging = utils.Paging{
+			Page: 1,
+			PageSize: 20,
+		}
+	} else {
+		o.Err = json.Unmarshal([]byte(o.ToJson(pgquery)), &paging)
+		if o.Err != nil {
+			o.Err = nil
+			paging = utils.Paging{
+				Page: 1,
+				PageSize: 20,
+			}
+		}
+
+		if paging.Page <= 0 {
+			paging.Page = 1
+		}
+	}
+
+	criteria := bson.M{}
+
+	switch chatEntity {
+	case "chatusers":
+		chatuser := o.GetChatUserById(tx, chatEntityId)
+		if o.Err != nil || chatuser == nil {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
+			return
+		}
+		
+		
+		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
+		if o.Err != nil {
+			return
+		}
+		if len(ret) == 0 {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
+			return
+		}		
+
+		criteria["fromUser"] = bson.M{"$eq": chatuser.UserName}
+
+		if findquery, ok := querym["find"]; ok {
+			switch findm := findquery.(type) {
+			case map[string]interface{}:
+				switch touser := findm["toUser"].(type) {
+				case string:
+					o.CheckBotOwner(tx, touser, accountName)
+					if o.Err != nil {
+						return
+					}
+					
+					criteria["toUser"] = bson.M{"$eq": touser}
+					criteria["groupId"] = bson.M{"$eq": ""}
+				default:
+					o.Err = utils.NewClientError(utils.PARAM_INVALID,
+						fmt.Errorf("criteria find.toUser must be type string ,not <%T>", touser))
+					return
+				}
+				
+			default:
+				o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+					fmt.Errorf("criteria find.toUser must be set for chatuser/message "))
+				return
+			}
+		}		
+		
+	case "chatgroups":
+		chatgroup := o.GetChatGroupById(tx, chatEntityId)
+		if o.Err != nil || chatgroup == nil {
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
+		}
+		
+		ret := o.CheckOwnerOfChatgroups(tx, accountName, []string{chatgroup.GroupName})
+		if len(ret) == 0 {
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
+			return
+		}
+
+		criteria["groupId"] = bson.M{"$eq": chatgroup.GroupName}
+		
+	default:
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
+			fmt.Errorf("get message for <%s> not supported", chatEntity))
+		return		
+	}
+
+	wms := o.GetWechatMessages(web.mongoDb.C(
+		domains.WechatMessageCollection,
+	).Find(criteria).Sort(
+		"-timestamp",
+	).Skip(
+		int((paging.Page-1) * paging.PageSize),
+	).Limit(int(paging.PageSize)))
+	
+	if o.Err != nil {
+		return
+	}
+	
+	o.ok(w, "", wms)
+}
+
+func (o *ErrorHandler) getListFromCriteria(criteria map[string]interface{}) []string {
+	res := []string{}
+	if in, ok := criteria["in"]; ok {
+		switch inlist := in.(type) {
+		case []interface{}:
+			for _, v := range inlist {
+				switch value := v.(type) {
+				case string:
+					res = append(res, value)
+				}
+			}
+		}
+	}
+
+	if eq, ok := criteria["equals"]; ok {
+		switch value := eq.(type) {
+		case string:
+			res = append(res, value)
+		}
+	}
+
+	return res
+}
+
+func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(r)
+	mapkey := vars["mapkey"]
+
+	const MaxLimitUsers int = 500
+	const MaxLimitPagesize int = 20
+	
+
+	switch mapkey {
+	case "chatusers":
+		mapkey = "fromUser"
+	case "chatgroups":
+		mapkey = "groupId"
+	default:
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
+			fmt.Errorf("message for <%s> not supported ", mapkey))
+		return
+	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] %s", mapkey)
+
+	r.ParseForm()	
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	query := o.getStringValue(r.Form, "q")
+	if o.Err != nil {
+		return
+	}
+	
+	if query == "" {
+		var b []byte
+		b, o.Err = ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		query = string(b)
+	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] %s", query)
+
+	querym := o.FromJson(query)
+	if o.Err != nil {
+		return
+	}
+
+	errmsgs := []string{}
+
+	find_p, ok := querym["find"]
+	if !ok {
+		o.Err = utils.NewClientError(utils.PARAM_REQUIRED, fmt.Errorf("criteria find must set"))
+		return
+	}
+
+	var find map[string]interface{}
+	switch find_m := find_p.(type) {
+	case map[string]interface{}:
+		find = find_m
+	default:
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("criteria find must be map[string]{ ... }"))
+		return
+	}
+
+	criteria := bson.M{}
+
+	for _, key := range []string{"fromUser", "toUser", "groupId"} {
+		if value, ok := find[key]; ok == true {
+			switch cond := value.(type) {
+			case map[string]interface{}:
+				vl := o.getListFromCriteria(cond)
+				var checkedlist []string
+				switch key {
+				case "fromUser":
+					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+				case "toUser":
+					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+				case "groupId":
+					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
+				}
+
+				if o.Err != nil {
+					return
+				}
+
+				if len(checkedlist) < len(vl) {
+					errmsgs = append(errmsgs, fmt.Sprintf("some %s(s) are filtered by access control", key))
+				}
+
+				if len(checkedlist) == 0 {
+					continue
+				}
+
+				if len(checkedlist) > MaxLimitUsers {
+					errmsgs = append(errmsgs, fmt.Sprintf("search entity exceeds limit %d", MaxLimitUsers))
+					checkedlist = checkedlist[:MaxLimitUsers]
+				}
+				
+				criteria[key] =  bson.M{"$in": checkedlist}
+			default:
+				o.Err = utils.NewClientError(utils.PARAM_INVALID,
+					fmt.Errorf("criteria find.%s should be map[string] {... }", key))
+				return
+			}
+		}
+	}
+
+	if mapkey == "fromUser" {
+		if _, ok := criteria["groupId"]; ok {
+			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
+		}
+		
+		criteria["groupId"] = bson.M{"$eq":""}
+
+		if _, fuok := criteria["fromUser"]; !fuok {
+			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+				fmt.Errorf("search for chatusers, criteria find.fromUser required"))
+			return
+		}
+	} else if mapkey == "groupId" {
+		if _, giok := criteria["groupId"]; !giok {
+			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
+				fmt.Errorf("search for groups, criteria find.groupId required"))
+			return
+		}
+	}
+
+	if sendat_p, ok := find["sendAt"]; ok == true {
+		switch sendat := sendat_p.(type) {
+		case map[string]interface{}:
+			ct := bson.M{}
+			for _, op := range []string{"gt", "gte", "lt", "lte"} {
+				if value, opok := sendat[op]; opok == true {
+					switch timestamp := value.(type) {
+					case float64:
+						ct[fmt.Sprintf("$%s", op)] = timestamp
+					default:
+						o.Err = utils.NewClientError(utils.PARAM_INVALID,
+							fmt.Errorf("unexpected criteria sendAt <%T> %v", timestamp, timestamp))
+						return
+					}
+				}
+			}
+			criteria["timestamp"] = ct
+		}
+	}
+
+	web.Info("[MESSAGE SEARCH DEBUG] CRITERIA \n %s", o.ToJson(criteria))
+
+	if o.Err != nil {
+		return
+	}
+
+	pagesize := 5
+	paging_p, ok := querym["paging"]
+	if ok {
+		switch paging := paging_p.(type) {
+		case map[string]interface{}:
+			if p, pok := paging["pagesize"]; pok {
+				switch pa := p.(type) {
+				case float64:
+					pai := int(pa)
+					if pai > MaxLimitPagesize {
+						errmsgs = append(errmsgs, "pagesize %d too large")
+						pagesize = MaxLimitPagesize
+					} else {
+						pagesize = pai
+					}
+				}
+			}
+		}
+	}
+
+	mapfunc := fmt.Sprintf(`function() {emit(this.%s, 
+      JSON.stringify({
+        msgId:     this.msgId,
+        msgType:   this.msgType,
+        mType:     this.mType,
+        subType:   this.subType,
+        imageId:   this.imageId,
+        groupId:   this.groupId,
+        fromUser:  this.fromUser,
+        toUser:    this.toUser,
+        timestamp: this.timestamp,
+        msgSource: this.msgSource,
+        content:   this.content,
+      })
+    )}`, mapkey)
+	
+	reducefunc := fmt.Sprintf(`
+  function(key, values) { 
+    let l = [];
+    for(var i in values) {
+       l.push(JSON.parse(values[i]));
+    };    
+    return JSON.stringify(l.sort((lhs, rhs) => {
+      return parseInt(rhs.timestamp['$numberLong']) - parseInt(lhs.timestamp['$numberLong'])
+    }).slice(0, 0+%d));
+  }
+`, pagesize)
+	
+	//web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
+	//web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
+
+	job := &mgo.MapReduce{
+		Map: mapfunc,
+		Reduce: reducefunc,
+	}
+
+	var results []struct {Id string "_id"; Value string}
+	//var ret *mgo.MapReduceInfo
+	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
+	if o.Err != nil {
+		return
+	}
+
+	retmap := bson.M{}
+	for _, result := range results {
+		objs := []bson.M{}
+
+		o.Err = bson.UnmarshalJSON([]byte(result.Value), &objs)
+		if o.Err != nil {
+			// maybe objs is single, then it is bson
+			o.Err = nil
+			obj := bson.M{}
+			o.Err = bson.UnmarshalJSON([]byte(result.Value), &obj)
+			objs = append(objs, obj)
+		}
+
+		retmap[result.Id] = objs
+	}
+
+	message := "success"
+	if len(errmsgs) > 0 {
+		message = strings.Join(errmsgs, ",\n")
+	}
+	
+	o.ok(w, message, retmap)
 }

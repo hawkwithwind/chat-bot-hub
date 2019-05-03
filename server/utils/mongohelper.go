@@ -1,13 +1,9 @@
 package utils
 
 import (
-	"context"
 	"fmt"
-	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"github.com/globalsign/mgo"
 )
 
 type MongoConfig struct {
@@ -15,30 +11,26 @@ type MongoConfig struct {
 	Port string
 }
 
-func (o *ErrorHandler) NewMongoConn(host string, port string) *mongo.Client {
+const (
+	MongoDatabase string = "mo-chathub"
+	WechatMessages string = ""
+)
+
+func (o *ErrorHandler) NewMongoConn(host string, port string) *mgo.Database {
 	if o.Err != nil {
 		return nil
 	}
 
-	var client *mongo.Client
-	client, o.Err = mongo.NewClient(options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s", host, port)))
+	var client *mgo.Session
+	client, o.Err = mgo.Dial(fmt.Sprintf("mongodb://%s:%s", host, port))
 	if o.Err != nil {
 		return nil
 	}
+	
+	mongoDb := client.DB(MongoDatabase)
+	
+	//createMessageIndexes(mongoDb)
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	o.Err = client.Connect(ctx)
-
-	if o.Err != nil {
-		return nil
-	}
-
-	ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
-	o.Err = client.Ping(ctx, readpref.Primary())
-
-	if o.Err != nil {
-		return nil
-	}
-
-	return client
+	return mongoDb
 }
+

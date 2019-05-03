@@ -7,6 +7,7 @@ config/config.yml
 frontend/node
 frontend/node_modules
 *.DS_Store
+.idea/*
 
 # Binaries for programs and plugins
 *.exe

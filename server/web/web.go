@@ -18,6 +18,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
+	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/mux"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
@@ -57,6 +58,7 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
+	mongoDb	     *mgo.Database
 }
 
 func (ctx *WebServer) init() error {
@@ -79,17 +81,19 @@ func (ctx *WebServer) init() error {
 	}
 
 	o := &ErrorHandler{}
-	client := o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+
 	if o.Err != nil {
 		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
 	} else {
-		if client != nil {
-			contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-			o.Err = client.Disconnect(contx)
-			if o.Err != nil {
-				ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
-			}
-		}
+		//if client != nil {
+		//	contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		//	o.Err = client.Disconnect(contx)
+		//	if o.Err != nil {
+		//		ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
+		//	}
+		//}
 	}
 
 	retryTimes := 7
@@ -377,7 +381,10 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
 	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
 
+	// search
 	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
+	r.HandleFunc("/{mapkey}/messages", ctx.validate(ctx.SearchMessage)).Methods("GET", "POST")
+	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", ctx.validate(ctx.GetChatMessage)).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
 

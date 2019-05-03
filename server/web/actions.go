@@ -654,9 +654,22 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+
+				if o.Err != nil {
+					return
+				}
+				o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
 			}
 		}
 
+	case chatbothub.IMAGEMESSAGE:
+		msg := o.getStringValue(r.Form, "body")
+		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+
+	case chatbothub.EMOJIMESSAGE:
+		msg := o.getStringValue(r.Form, "body")
+		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+		
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
 		debugstr := reqstr
