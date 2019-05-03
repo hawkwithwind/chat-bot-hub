@@ -202,7 +202,7 @@ func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if querym.ExpireAt != nil {
+	if querym.ExpireAt == nil {
 		querym.ExpireAt = &utils.JSONTime{
 			Time: time.Now().Add(time.Hour*24*7),
 		}
