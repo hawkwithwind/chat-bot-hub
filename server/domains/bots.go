@@ -424,22 +424,49 @@ WHERE login=?
   AND botid<>?
   AND deleteat is NULL`, login, botId)
 
+	if o.Err != nil {
+		return ""
+	}
+
 	if len(bots) == 0 {
 		return ""
 	}
 
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
-		// should migrate chatuser info, later with tasks
-
-		ctx, _ = o.DefaultContext()
-		_, o.Err = q.ExecContext(ctx,
-			`UPDATE bots SET deleteat=CURRENT_TIMESTAMP where botId=?`, botId)
+		
+		botsacc := []string{}
+		ctx, _ := o.DefaultContext()		
+		o.Err = q.SelectContext(ctx, &botsacc,
+			`
+SELECT a.accountname
+FROM bots as b
+LEFT JOIN accounts as a ON a.accountid = b.accountid
+WHERE botid=? OR botid=?`, botId, oldId)
 		if o.Err != nil {
 			return ""
 		}
 
-		return oldId
+		if len(botsacc) != 2 {
+			o.Err = fmt.Errorf("database change unexpected.fatal error")
+			return ""
+		}
+
+		if botsacc[0] == botsacc[1] {
+			// same account, should migrate chatuser info, later with tasks
+
+			ctx, _ = o.DefaultContext()
+			_, o.Err = q.ExecContext(ctx,
+				`UPDATE bots SET deleteat=CURRENT_TIMESTAMP where botId=?`, botId)
+			if o.Err != nil {
+				return ""
+			}			
+
+			return oldId
+		} else {
+			// different account, should not migrate
+			return ""
+		}
 	}
 
 	o.Err = fmt.Errorf("[BOT MIGRATE] multiple bot with login %s found, fatal error", login)
