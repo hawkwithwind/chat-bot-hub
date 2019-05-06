@@ -1713,9 +1713,9 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				var checkedlist []string
 				switch key {
 				case "fromUser":
-					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "toUser":
-					checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
+					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "groupId":
 					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
 				}
