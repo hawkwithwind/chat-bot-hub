@@ -1031,7 +1031,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 						appmsg.Title,
 						appmsg.Des,
 						appmsg.Action,
-						appmsg.Type,
+						33,
 						appmsg.ShowType,
 						appmsg.SoundType,
 						appmsg.MediaTagName,
