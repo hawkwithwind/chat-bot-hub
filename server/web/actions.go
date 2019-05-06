@@ -723,7 +723,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									localar.ActionType == chatbothub.SendImageMessage ||
 									localar.ActionType == chatbothub.SendImageResourceMessage {
 
-									msgId := o.FromMapString("msgId", result, "actionReply.result", false, "")
+									msgId := o.FromMapString("msgId", rdata, "actionReply.result.data", false, "")
 
 									ctx.Info("[SAVE DEBUG] 1 %s", msgId)
 									actionm := o.FromJson(localar.ActionBody)
