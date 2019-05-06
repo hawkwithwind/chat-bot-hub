@@ -722,7 +722,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									localar.ActionType == chatbothub.SendImageMessage ||
 									localar.ActionType == chatbothub.SendImageResourceMessage {
 
-									ctx.Info("[SAVE DEBUG] 1")
+									msgId := o.FromMapString("msgId", result, "actionReply.result", false, "")
+
+									ctx.Info("[SAVE DEBUG] 1 %s", msgId)
 									actionm := o.FromJson(localar.ActionBody)
 									if o.Err != nil {
 										return
@@ -757,15 +759,20 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									ctx.Info("[SAVE DEBUG] 5")
 
 									msg := map[string]interface{} {
+										"msgId": msgId,
 										"fromUser": localar.Login,
 										"toUser": toUser,
 										"groupId": groupId,
 										"content": content,
+										"timestamp": time.Now().Unix(),
 									}
 
 									ctx.Info("[SAVE DEBUG] 6 %#v", msg)
-
+									
 									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
+									if o.Err != nil {
+										ctx.Error("[SAVE DEBUG] update message error %s", o.Err.Error())
+									}
 								}
 								
 							}
