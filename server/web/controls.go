@@ -1537,15 +1537,15 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		
-		// ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
-		// if o.Err != nil {
-		// 	return
-		// }
-		// if len(ret) == 0 {
-		// 	o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
-		// 		fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
-		// 	return
-		// }
+		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
+		if o.Err != nil {
+			return
+		}
+		if len(ret) == 0 {
+			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
+			return
+		}
 		
 
 		criteria["fromUser"] = bson.M{"$eq": chatuser.UserName}
@@ -1555,13 +1555,24 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 			case map[string]interface{}:
 				switch touser := findm["toUser"].(type) {
 				case string:
-					// o.CheckBotOwner(tx, touser, accountName)
-					// if o.Err != nil {
-					// 	return
-					// }
+					o.CheckBotOwner(tx, touser, accountName)
+					if o.Err != nil {
+						return
+					}
 					
 					criteria["toUser"] = bson.M{"$eq": touser}
 					criteria["groupId"] = bson.M{"$eq": ""}
+
+					criteria = bson.M{
+						"$or": []bson.M{
+							criteria,
+							bson.M{
+								"fromUser": bson.M{"$eq": touser},
+								"groupId": bson.M{"$eq": ""},
+								"toUser": bson.M{"$eq": chatuser.UserName},
+							},
+						},
+					}
 				default:
 					o.Err = utils.NewClientError(utils.PARAM_INVALID,
 						fmt.Errorf("criteria find.toUser must be type string ,not <%T>", touser))
