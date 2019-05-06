@@ -707,9 +707,56 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						case map[string]interface{}:
 							status := int(o.FromMapFloat(
 								"status", rdata, "actionReply.result.data", false, 0))
+							
+							if o.Err != nil {
+								return
+							}
 
 							if status == 0 {
 								localar.Status = "Done"
+
+								if localar.ActionType == chatbothub.SendTextMessage ||
+									localar.ActionType == chatbothub.SendAppMessage ||
+									localar.ActionType == chatbothub.SendImageMessage ||
+									localar.ActionType == chatbothub.SendImageResourceMessage {
+
+									actionm := o.FromJson(localar.ActionBody)
+									if o.Err != nil {
+										return
+									}
+
+									var toUser, groupId, content string
+
+									if toUserNamep, ok := actionm["toUserName"]; ok {
+										switch toUserName := toUserNamep.(type) {
+										case string:
+											toUser = toUserName
+											var chatroom = regexp.MustCompile(`@chatroom$`)
+											if  chatroom.MatchString(toUserName) {
+												groupId = toUserName
+											} else {
+												groupId = ""
+											}
+										}
+									}
+
+									if contentp, ok := actionm["content"]; ok {
+										switch contentstr := contentp.(type) {
+										case string:
+											content = contentstr
+										}
+									}
+
+									msg := map[string]interface{} {
+										"fromUser": localar.Login,
+										"toUser": toUser,
+										"groupId": groupId,
+										"content": content,
+									}
+
+									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
+								}
+								
 							}
 						default:
 							if o.Err == nil {
@@ -1060,17 +1107,20 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 	if dayCount > daylimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+			fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
 		return nil
 	}
 
 	if hourCount > hourlimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+			fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
 		return nil
 	}
 
 	if minuteCount > minutelimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT, fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
+		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+			fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
 		return nil
 	}
 
