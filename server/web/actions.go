@@ -772,7 +772,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									
 									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
 									if o.Err != nil {
-										ctx.Error("[SAVE DEBUG] update message error %s", o.Err.Error())
+										ctx.Error(o.Err, "[SAVE DEBUG] update message error")
 									}
 								}
 								
