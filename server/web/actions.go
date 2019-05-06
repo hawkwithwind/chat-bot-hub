@@ -679,7 +679,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, debugstr)
-
+		
 		var awayar domains.ActionRequest
 		o.Err = json.Unmarshal([]byte(reqstr), &awayar)
 		localar := o.GetActionRequest(ctx.redispool, awayar.ActionRequestId)
@@ -693,8 +693,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		localar.ReplyAt = awayar.ReplyAt
 		localar.Result = awayar.Result
-
-		ctx.Info("result %#v", awayar.Result)
 
 		result := o.FromJson(awayar.Result)
 		success := false
@@ -725,19 +723,16 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 									msgId := o.FromMapString("msgId", rdata, "actionReply.result.data", false, "")
 
-									ctx.Info("[SAVE DEBUG] 1 %s", msgId)
 									actionm := o.FromJson(localar.ActionBody)
 									if o.Err != nil {
 										return
 									}
 
-									ctx.Info("[SAVE DEBUG] 2")
-									var toUser, groupId, content string
+									var toUser, groupId string
 
 									if toUserNamep, ok := actionm["toUserName"]; ok {
 										switch toUserName := toUserNamep.(type) {
 										case string:
-											ctx.Info("[SAVE DEBUG] 3 %s", toUser)
 											toUser = toUserName
 											var chatroom = regexp.MustCompile(`@chatroom$`)
 											if  chatroom.MatchString(toUserName) {
@@ -748,28 +743,19 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 										}
 									}
 
-									ctx.Info("[SAVE DEBUG] 4")
-
-									if contentp, ok := actionm["content"]; ok {
-										switch contentstr := contentp.(type) {
-										case string:
-											content = contentstr
-										}
-									}
-
-									ctx.Info("[SAVE DEBUG] 5")
-
+									content := o.FromMapString("content", actionm, true, "")
+									imageId := o.FromMapString("imageId", actionm, true, "")
+									
 									msg := map[string]interface{} {
 										"msgId": msgId,
 										"fromUser": localar.Login,
 										"toUser": toUser,
 										"groupId": groupId,
+										"imageId": imageId,
 										"content": content,
 										"timestamp": time.Now().Unix(),
 									}
 
-									ctx.Info("[SAVE DEBUG] 6 %#v", msg)
-									
 									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
 									if o.Err != nil {
 										ctx.Error(o.Err, "[SAVE DEBUG] update message error")
