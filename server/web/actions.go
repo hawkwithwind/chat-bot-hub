@@ -720,16 +720,19 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 									localar.ActionType == chatbothub.SendImageMessage ||
 									localar.ActionType == chatbothub.SendImageResourceMessage {
 
+									ctx.Info("[SAVE DEBUG] 1")
 									actionm := o.FromJson(localar.ActionBody)
 									if o.Err != nil {
 										return
 									}
 
+									ctx.Info("[SAVE DEBUG] 2")
 									var toUser, groupId, content string
 
 									if toUserNamep, ok := actionm["toUserName"]; ok {
 										switch toUserName := toUserNamep.(type) {
 										case string:
+											ctx.Info("[SAVE DEBUG] 3 %s", toUser)
 											toUser = toUserName
 											var chatroom = regexp.MustCompile(`@chatroom$`)
 											if  chatroom.MatchString(toUserName) {
@@ -740,6 +743,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 										}
 									}
 
+									ctx.Info("[SAVE DEBUG] 4")
+
 									if contentp, ok := actionm["content"]; ok {
 										switch contentstr := contentp.(type) {
 										case string:
@@ -747,12 +752,16 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 										}
 									}
 
+									ctx.Info("[SAVE DEBUG] 5")
+
 									msg := map[string]interface{} {
 										"fromUser": localar.Login,
 										"toUser": toUser,
 										"groupId": groupId,
 										"content": content,
 									}
+
+									ctx.Info("[SAVE DEBUG] 6 %#v", msg)
 
 									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
 								}
