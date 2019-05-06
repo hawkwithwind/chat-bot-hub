@@ -28,6 +28,7 @@ type ChatUser struct {
 	Signature  sql.NullString `db:"signature"`
 	Remark     sql.NullString `db:"remark"`
 	Label      sql.NullString `db:"label"`
+	Isgh       int            `db:"isgh"`
 	Ext        sql.NullString `db:"ext"`
 	LastSendAt mysql.NullTime `db:"lastsendat"`
 	CreateAt   mysql.NullTime `db:"createat"`
@@ -130,11 +131,17 @@ func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname str
 	if rid, ctx.Err = uuid.NewRandom(); ctx.Err != nil {
 		return nil
 	} else {
+		isgh := 0
+		if username[:3] == "gh_" {
+			isgh = 1
+		}
+		
 		return &ChatUser{
 			ChatUserId: rid.String(),
 			UserName:   username,
 			Type:       ctype,
 			NickName:   nickname,
+			Isgh:       isgh,
 		}
 	}
 }
