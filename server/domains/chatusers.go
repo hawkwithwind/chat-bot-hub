@@ -447,6 +447,7 @@ func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, 
 SELECT * 
 FROM chatusers
 WHERE deleteat is NULL
+  AND isgh=0
   %s /* username */
   %s /* nickname */
   %s /* type */
@@ -481,6 +482,7 @@ func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable, criteria ChatUserCriter
 	const query string = `
 SELECT COUNT(*) from chatusers
 WHERE deleteat is NULL
+  AND isgh=0
 %s /* username */
 %s /* nickname */
 %s /* type */
@@ -515,6 +517,7 @@ LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
 WHERE u.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
+  AND u.isgh=0
   %s /* username */
   %s /* nickname */
   %s /* type */
@@ -559,6 +562,7 @@ LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
 WHERE u.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
+  AND u.isgh=0
   %s /* username */
   %s /* nickname */
   %s /* type */
