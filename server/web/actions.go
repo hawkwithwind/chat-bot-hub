@@ -745,7 +745,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 									content := o.FromMapString("content", actionm, "actionReply.actionBody", true, "")
 									imageId := o.FromMapString("imageId", actionm, "actionReply.actionBody", true, "")
->>>>>>> dev
 									
 									msg := map[string]interface{} {
 										"msgId": msgId,
