@@ -693,6 +693,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		localar.ReplyAt = awayar.ReplyAt
 		localar.Result = awayar.Result
 
+		ctx.Info("result %#v", awayar.Result)
+
 		result := o.FromJson(awayar.Result)
 		success := false
 		if result != nil {
