@@ -21,7 +21,7 @@ var (
 		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
 	}
 
-	searchableOPS = map[string]func(*ErrorHandler, string, interface{}) string{
+	searchableOPS = map[string]func(*ErrorHandler, dbx.Searchable, string, interface{}) string{
 		"in":     (*ErrorHandler).AndIsIn,
 		"equals": (*ErrorHandler).AndEqual,
 		"gt":     (*ErrorHandler).AndGreaterThan,
@@ -48,6 +48,8 @@ func (o *ErrorHandler) SelectByCriteria(
 			fmt.Errorf("domain %s not found, or not searchable", domain))
 		return []interface{}{}, utils.Paging{}
 	}
+
+	sd := searchableDomains[domain](o)
 
 	whereclause := []string{}
 	orderclause := []string{}
@@ -77,7 +79,7 @@ func (o *ErrorHandler) SelectByCriteria(
 			case map[string]interface{}:
 				for op, rhs := range criteriaItem {
 					if clauseGener, ok := searchableOPS[op]; ok {
-						whereclause = append(whereclause, clauseGener(o, fieldName, rhs))
+						whereclause = append(whereclause, clauseGener(o, sd, fieldName, rhs))
 						switch righthandside := rhs.(type) {
 						case []interface{}:
 							whereparams = append(whereparams, righthandside...)
@@ -167,10 +169,9 @@ func (o *ErrorHandler) SelectByCriteria(
 		orderclauseString = "\nORDER BY " + strings.Join(orderclause, ", ")
 	}
 
-	fs := []string{}
-	sd := searchableDomains[domain](o)
+	fs := []string{}	
 	for _, field := range sd.Fields() {
-		fs = append(fs, fmt.Sprintf("`%s`.%s", field.Table, field.Name))
+		fs = append(fs, fmt.Sprintf("`%s`.`%s`", field.Table, field.Name))
 	}
 	selectFields := strings.Join(fs, ",")
 

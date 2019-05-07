@@ -4,7 +4,7 @@ import (
 	//"fmt"
 	//"time"
 	//"database/sql"
-	//"strings"
+	"strings"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -38,7 +38,7 @@ func (o *ErrorHandler) NewDefaultChatContactGroupExpand() dbx.Searchable {
 
 func (cg *ChatContactGroupExpand) Fields() []dbx.Field {
 	chatgroup := &ChatGroup{}
-	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTGROUPS, "botid as bid"}}, chatgroup.Fields()...)
+	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTGROUPS, "botid"}}, chatgroup.Fields()...)
 }
 
 func (cg *ChatContactGroupExpand) SelectFrom() string {
@@ -46,6 +46,19 @@ func (cg *ChatContactGroupExpand) SelectFrom() string {
 		" ON `chatcontactgroups`.`chatgroupid` = `chatgroups`.`chatgroupid` " +
 		" LEFT JOIN `bots` on `chatcontactgroups`.`botid` = `bots`.`botid` "
 }
+
+func (cg *ChatContactGroupExpand) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(cg, fieldname)
+}
+
 
 func (ctx *ErrorHandler) NewChatContactGroup(botId string, chatgroupid string) *ChatContactGroup {
 	if ctx.Err != nil {

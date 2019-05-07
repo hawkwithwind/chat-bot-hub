@@ -38,7 +38,7 @@ func (o *ErrorHandler) NewDefaultChatContactExpand() dbx.Searchable {
 
 func (cc *ChatContactExpand) Fields() []dbx.Field {
 	chatuser := &ChatUser{}
-	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTS, "botid as bid"}}, chatuser.Fields()...)
+	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTS, "botid"}}, chatuser.Fields()...)
 }
 
 func (cc *ChatContactExpand) SelectFrom() string {
@@ -46,6 +46,19 @@ func (cc *ChatContactExpand) SelectFrom() string {
 		" ON `chatcontacts`.`chatuserid` = `chatusers`.`chatuserid` " +
 		" LEFT JOIN `bots` ON `chatcontacts`.`botid` = `bots`.`botid` "
 }
+
+func (cc *ChatContactExpand) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(cc, fieldname)
+}
+
 
 func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatContact {
 	if ctx.Err != nil {

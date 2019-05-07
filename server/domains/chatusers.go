@@ -124,6 +124,18 @@ func (u *ChatUser) SelectFrom() string {
 		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontacts`.`botid` "
 }
 
+func (u *ChatUser) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(u, fieldname)
+}
+
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {
 	if ctx.Err != nil {
 		return nil

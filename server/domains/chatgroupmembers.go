@@ -65,6 +65,18 @@ func (gm *ChatGroupMemberExpand) SelectFrom() string {
 		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontactgroups`.`botid` "
 }
 
+func (gm *ChatGroupMemberExpand) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(gm, fieldname)
+}
+
 func (chatGroupMember *ChatGroupMember) SetInvitedBy(invitedby string) {
 	chatGroupMember.InvitedBy = sql.NullString{
 		String: invitedby,

@@ -56,6 +56,10 @@ type BotExpand struct {
 	LastSendAt     mysql.NullTime `db:"lastsendat"`
 }
 
+var (
+	TN_BOTS string = "bots"
+)
+
 func (o *ErrorHandler) NewBot(name string, bottype string, accountId string, login string) *Bot {
 	if o.Err != nil {
 		return nil
