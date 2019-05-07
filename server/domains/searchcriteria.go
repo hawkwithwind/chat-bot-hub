@@ -122,7 +122,14 @@ func (o *ErrorHandler) SelectByCriteria(
 					return []interface{}{}, utils.Paging{}
 				}
 
-				orderclause = append(orderclause, fmt.Sprintf("%s %s", fieldname, order))
+				var stfd dbx.Field
+				stfd, o.Err = sd.CriteriaAlias(fieldname)
+				if o.Err != nil {
+					return []interface{}{}, utils.Paging{}
+				}
+
+				orderclause = append(orderclause,
+					fmt.Sprintf("`%s`.`%s` %s", stfd.Table, stfd.Name, order))
 			default:
 				o.Err = utils.NewClientError(utils.PARAM_INVALID,
 					fmt.Errorf("query.sort should be map{string: string}"))
