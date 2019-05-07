@@ -56,10 +56,13 @@ func (gm *ChatGroupMemberExpand) Fields() []dbx.Field {
 }
 
 func (gm *ChatGroupMemberExpand) SelectFrom() string {
-	return "`chatgroupmembers` LEFT JOIN `chatusers` " +
-		"on `chatgroupmembers`.`chatmemberid` = `chatusers`.`chatuserid`" +
-		"LEFT JOIN `chatgroups` " +
-		"on `chatgroupmembers`.`chatgroupid` = `chatgroups`.`chatgroupid`"
+	return " `chatgroupmembers` LEFT JOIN `chatusers` " +
+		" ON `chatgroupmembers`.`chatmemberid` = `chatusers`.`chatuserid`" +
+		" LEFT JOIN `chatgroups` " +
+		" ON `chatgroupmembers`.`chatgroupid` = `chatgroups`.`chatgroupid`" +
+		" LEFT JOIN `chatcontactgroups` " +
+		" ON `chatcontactgroups`.`chatgroupid` = `chatgroups`.`chatgroupid` " +
+		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontactgroups`.`botid` "
 }
 
 func (chatGroupMember *ChatGroupMember) SetInvitedBy(invitedby string) {

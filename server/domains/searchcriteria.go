@@ -37,7 +37,8 @@ var (
 	}
 )
 
-func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain string) ([]interface{}, utils.Paging) {
+func (o *ErrorHandler) SelectByCriteria(
+	q dbx.Queryable, accountId string, query string, domain string) ([]interface{}, utils.Paging) {
 	if o.Err != nil {
 		return []interface{}{}, utils.Paging{}
 	}
@@ -65,6 +66,9 @@ func (o *ErrorHandler) SelectByCriteria(q dbx.Queryable, query string, domain st
 	}
 
 	whereparams := []interface{}{}
+
+	whereclause = append(whereclause, " AND `bots`.`accountid` = ? ")
+	whereparams = append(whereparams, accountId)
 
 	switch finds := findm.(type) {
 	case map[string]interface{}:

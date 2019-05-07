@@ -43,7 +43,8 @@ func (cc *ChatContactExpand) Fields() []dbx.Field {
 
 func (cc *ChatContactExpand) SelectFrom() string {
 	return "`chatcontacts` LEFT JOIN `chatusers` " +
-		"on `chatcontacts`.`chatuserid` = `chatusers`.`chatuserid`"
+		" ON `chatcontacts`.`chatuserid` = `chatusers`.`chatuserid` " +
+		" LEFT JOIN `bots` ON `chatcontacts`.`botid` = `bots`.`botid` "
 }
 
 func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatContact {
