@@ -42,8 +42,9 @@ func (cg *ChatContactGroupExpand) Fields() []dbx.Field {
 }
 
 func (cg *ChatContactGroupExpand) SelectFrom() string {
-	return "`chatcontactgroups` LEFT JOIN `chatgroups` " +
-		"on `chatcontactgroups`.`chatgroupid` = `chatgroups`.`chatgroupid`"
+	return " `chatcontactgroups` LEFT JOIN `chatgroups` " +
+		" ON `chatcontactgroups`.`chatgroupid` = `chatgroups`.`chatgroupid` " +
+		" LEFT JOIN `bots` on `chatcontactgroups`.`botid` = `bots`.`botid` "
 }
 
 func (ctx *ErrorHandler) NewChatContactGroup(botId string, chatgroupid string) *ChatContactGroup {

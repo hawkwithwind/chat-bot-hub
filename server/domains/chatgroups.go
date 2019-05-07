@@ -43,7 +43,9 @@ func (g *ChatGroup) Fields() []dbx.Field {
 }
 
 func (g *ChatGroup) SelectFrom() string {
-	return TN_CHATGROUPS
+	return " `chatgroups` LEFT JOIN `chatcontactgroups` " +
+		" ON `chatgroups`.`chatgroupid` = `chatcontactgroups`.`chatgroupid` " +
+		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontactgroups`.`botid` "
 }
 
 func (chatgroup *ChatGroup) SetAlias(alias string) {
@@ -199,17 +201,36 @@ type ChatGroupCriteria struct {
 	BotId     sql.NullString
 }
 
-func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
+func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, accountId string, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
 	if o.Err != nil {
 		return []ChatGroup{}
 	}
 
 	const query string = `
-SELECT * FROM chatgroups
-WHERE deleteat is NULL
+SELECT 
+g.chatgroupid
+, g.groupname
+, g.type
+, g.alias
+, g.nickname
+, g.owner
+, g.avatar
+, g.membercount
+, g.maxmembercount
+, g.ext
+, g.lastsendat
+, g.createat
+, g.updateat
+, g.deleteat
+FROM chatgroups as g
+LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
+LEFT JOIN bots as b ON c.botid = b.botid
+WHERE g.deleteat is NULL
+AND b.accountid = ?
 %s /* groupname */
 %s /* nickname */
 %s /* type */
+GROUP BY g.chatgroupid
 ORDER BY createat desc
 LIMIT ?, ?
 `
@@ -220,6 +241,7 @@ LIMIT ?, ?
 			o.AndEqualString("groupname", criteria.GroupName),
 			o.AndLikeString("nickname", criteria.NickName),
 			o.AndEqualString("type", criteria.Type)),
+		accountId,
 		criteria.GroupName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,

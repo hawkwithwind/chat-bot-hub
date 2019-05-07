@@ -51,7 +51,7 @@ func (m *Moment) Fields() []dbx.Field {
 }
 
 func (m *Moment) SelectFrom() string {
-	return TN_MOMENTS
+	return " `moments` LEFT JOIN `bots` ON `moments`.`botid` = `bots`.`botid` "
 }
 
 func (o *ErrorHandler) NewMoment(

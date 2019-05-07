@@ -119,7 +119,9 @@ func (u *ChatUser) Fields() []dbx.Field {
 }
 
 func (u *ChatUser) SelectFrom() string {
-	return TN_CHATUSERS
+	return " `chatusers` LEFT JOIN `chatcontacts` " +
+		" ON `chatusers`.`chatuserid` = `chatcontacts`.`chatuserid` " +
+		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontacts`.`botid` "
 }
 
 func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname string) *ChatUser {
@@ -438,19 +440,42 @@ type ChatUserCriteria struct {
 	BotId    sql.NullString
 }
 
-func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, criteria ChatUserCriteria, paging utils.Paging) []ChatUser {
+func (o *ErrorHandler) GetChatUsers(q dbx.Queryable, accountId string, criteria ChatUserCriteria, paging utils.Paging) []ChatUser {
 	if o.Err != nil {
 		return []ChatUser{}
 	}
 
 	const query string = `
-SELECT * 
-FROM chatusers
-WHERE deleteat is NULL
+SELECT 
+u.chatuserid
+, u.username
+, u.type
+, u.alias
+, u.nickname
+, u.avatar
+, u.sex
+, u.country
+, u.province
+, u.city
+, u.signature
+, u.remark
+, u.label
+, u.ext
+, u.lastsendat
+, u.createat
+, u.updateat
+, u.deleteat
+FROM chatusers as u
+LEFT JOIN chatcontacts as c on u.chatuserid = c.chatuserid
+LEFT JOIN bots as b on c.botid = b.botid
+WHERE u.deleteat is NULL
+  AND u.isgh=0
+  AND b.accountid = ?
   %s /* username */
   %s /* nickname */
   %s /* type */
-ORDER BY createat desc
+GROUP BY u.chatuserid
+ORDER BY u.createat desc
 LIMIT ?, ?
 `
 	chatusers := []ChatUser{}
@@ -460,6 +485,7 @@ LIMIT ?, ?
 			o.AndEqualString("username", criteria.UserName),
 			o.AndLikeString("nickname", criteria.NickName),
 			o.AndEqualString("type", criteria.Type)),
+		accountId,
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
@@ -481,6 +507,7 @@ func (o *ErrorHandler) GetChatUserCount(q dbx.Queryable, criteria ChatUserCriter
 	const query string = `
 SELECT COUNT(*) from chatusers
 WHERE deleteat is NULL
+  AND isgh=0
 %s /* username */
 %s /* nickname */
 %s /* type */
@@ -515,6 +542,7 @@ LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
 WHERE u.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
+  AND u.isgh=0
   %s /* username */
   %s /* nickname */
   %s /* type */
@@ -559,6 +587,7 @@ LEFT JOIN chatcontacts as c ON u.chatuserid = c.chatuserid
 WHERE u.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
+  AND u.isgh=0
   %s /* username */
   %s /* nickname */
   %s /* type */

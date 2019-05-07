@@ -306,6 +306,17 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
 	botid := ""
 	if botlogin != "" {
 		thebot := o.GetBotByLogin(tx, botlogin)
@@ -343,6 +354,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 			})
 	} else {
 		chatusers = o.GetChatUsers(tx,
+			account.AccountId,
 			criteria,
 			utils.Paging{
 				Page:     ipage,
@@ -446,6 +458,18 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(ctx.db)
 	defer o.CommitOrRollback(tx)
 
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
+
 	botid := ""
 	if botlogin != "" {
 		thebot := o.GetBotByLogin(tx, botlogin)
@@ -479,6 +503,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			})
 	} else {
 		chatgroups = o.GetChatGroups(tx,
+			account.AccountId,
 			criteria,
 			utils.Paging{
 				Page:     ipage,
@@ -1231,10 +1256,24 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	groupname := vars["groupname"]
 	domain := "chatgroupmembers"
 
-	o.getAccountName(r)
-
+	accountName := o.getAccountName(r)
+	if o.Err != nil {
+		return
+	}
+	
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
+
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
 
 	query := o.ToJson(map[string]interface{}{
 		"find": map[string]interface{}{
@@ -1248,7 +1287,7 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 
 	web.Info("search groupmembers\n%s\n", query)
 
-	rows, paging := o.SelectByCriteria(tx, query, domain)
+	rows, paging := o.SelectByCriteria(tx, account.AccountId, query, domain)
 	if o.Err != nil {
 		return
 	}
@@ -1304,12 +1343,23 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
 
-	o.getAccountName(r)
+	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	rows, paging := o.SelectByCriteria(tx, query, domain)
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
+	rows, paging := o.SelectByCriteria(tx, account.AccountId, query, domain)
 
 	if o.Err != nil {
 		return
@@ -1385,6 +1435,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		}
 		o.okWithPaging(w, "success", chatcontactvos, paging)
 		return
+		
 	case "moments":
 		var momentDomains []domains.Moment
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &momentDomains)
