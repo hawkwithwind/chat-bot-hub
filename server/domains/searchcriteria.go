@@ -170,7 +170,7 @@ func (o *ErrorHandler) SelectByCriteria(
 	fs := []string{}
 	sd := searchableDomains[domain](o)
 	for _, field := range sd.Fields() {
-		fs = append(fs, fmt.Sprintf("`%s`.`%s`", field.Table, field.Name))
+		fs = append(fs, fmt.Sprintf("`%s`.%s", field.Table, field.Name))
 	}
 	selectFields := strings.Join(fs, ",")
 

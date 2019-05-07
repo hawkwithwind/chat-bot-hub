@@ -38,7 +38,7 @@ func (o *ErrorHandler) NewDefaultChatContactGroupExpand() dbx.Searchable {
 
 func (cg *ChatContactGroupExpand) Fields() []dbx.Field {
 	chatgroup := &ChatGroup{}
-	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTGROUPS, "botid"}}, chatgroup.Fields()...)
+	return append([]dbx.Field{dbx.Field{TN_CHATCONTACTGROUPS, "botid as bid"}}, chatgroup.Fields()...)
 }
 
 func (cg *ChatContactGroupExpand) SelectFrom() string {
