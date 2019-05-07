@@ -3,6 +3,7 @@ package domains
 import (
 	"fmt"
 	"time"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gomodule/redigo/redis"
@@ -52,6 +53,18 @@ func (m *Moment) Fields() []dbx.Field {
 
 func (m *Moment) SelectFrom() string {
 	return " `moments` LEFT JOIN `bots` ON `moments`.`botid` = `bots`.`botid` "
+}
+
+func (m *Moment) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(m, fieldname)
 }
 
 func (o *ErrorHandler) NewMoment(

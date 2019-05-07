@@ -126,9 +126,9 @@ func (o *ErrorHandler) AndEqualString(fieldName string, field sql.NullString) st
 	}
 
 	if field.Valid {
-		return fmt.Sprintf("  AND %s=?", fieldName)
+		return fmt.Sprintf("  AND `%s`=?", fieldName)
 	} else {
-		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+		return fmt.Sprintf("  AND (1=1 OR `%s`=?)", fieldName)
 	}
 }
 
@@ -138,65 +138,101 @@ func (o *ErrorHandler) AndLikeString(fieldName string, field sql.NullString) str
 	}
 
 	if field.Valid {
-		return fmt.Sprintf("  AND %s like ? ", fieldName)
+		return fmt.Sprintf("  AND `%s` like ? ", fieldName)
 	} else {
-		return fmt.Sprintf("  AND (1=1 OR %s=?)", fieldName)
+		return fmt.Sprintf("  AND (1=1 OR `%s`=?)", fieldName)
 	}
 }
 
-func (o *ErrorHandler) AndEqual(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndEqual(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf(" AND %s = ?", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND `%s`.`%s` = ?", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndLike(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndLike(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf(" AND %s like ?", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND `%s`.`%s` like ?", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndGreaterThan(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndGreaterThan(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf("  AND %s > ? ", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf("  AND `%s`.`%s` > ? ", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndGreaterThanEqual(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndGreaterThanEqual(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf("  AND %s >= ? ", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf("  AND `%s`.`%s` >= ? ", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndLessThan(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndLessThan(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf("  AND %s < ? ", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf("  AND `%s`.`%s` < ? ", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndLessThanEqual(fieldName string, _ interface{}) string {
+func (o *ErrorHandler) AndLessThanEqual(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	return fmt.Sprintf("  AND %s <= ? ", fieldName)
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	return fmt.Sprintf("  AND `%s`.`%s` <= ? ", fn.Table, fn.Name)
 }
 
-func (o *ErrorHandler) AndIsIn(fieldName string, rhs interface{}) string {
+func (o *ErrorHandler) AndIsIn(s Searchable, fieldName string, rhs interface{}) string {
 	if o.Err != nil {
 		return ""
 	}
 
+	var fn Field
+	fn, o.Err = s.CriteriaAlias(fieldName)
+	if o.Err != nil {
+		return ""
+	}
+	
 	switch list := rhs.(type) {
 	case []interface{}:
 		var placeholders []string
@@ -204,7 +240,7 @@ func (o *ErrorHandler) AndIsIn(fieldName string, rhs interface{}) string {
 			placeholders = append(placeholders, "?")
 		}
 
-		return fmt.Sprintf("  AND %s in (%s) ", fieldName, strings.Join(placeholders, ","))
+		return fmt.Sprintf("  AND `%s`.`%s` IN (%s) ", fn.Table, fn.Name, strings.Join(placeholders, ","))
 	default:
 		o.Err = fmt.Errorf("where clause operator IN not support rhs type %T, should be list", rhs)
 		return ""

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+	"strings"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -47,6 +48,19 @@ func (g *ChatGroup) SelectFrom() string {
 		" ON `chatgroups`.`chatgroupid` = `chatcontactgroups`.`chatgroupid` " +
 		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontactgroups`.`botid` "
 }
+
+func (cc *ChatGroup) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+	
+	return dbx.NormalCriteriaAlias(cc, fieldname)
+}
+
 
 func (chatgroup *ChatGroup) SetAlias(alias string) {
 	chatgroup.Alias = sql.NullString{
