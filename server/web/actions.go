@@ -799,6 +799,60 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.UpdateFriendRequest(tx, &fr)
 					ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
 					// dont break, update all fr for the same rlogin
+
+					frm := o.FromJson(fr.RequestBody)
+					if o.Err != nil {
+						o.Err = nil
+						continue
+					}
+
+					if frm == nil {
+						continue
+					}
+
+					nickname := o.FromMapString("fromNickName", frm, "requestBody", false, "")
+					if o.Err != nil {
+						o.Err = nil 
+						continue
+					}
+
+					avatar := o.FromMapString("smallheadimgurl", frm, "requestBody", true, "")
+					alias  := o.FromMapString("alias", frm, "requestBody", true, "")
+					country := o.FromMapString("country", frm, "requestBody", true, "")
+					province := o.FromMapString("province", frm, "requestBody", true, "")
+					city := o.FromMapString("city", frm, "requestBody", true, "")
+					sign := o.FromMapString("sign", frm, "requestBody", true, "")
+					sex := o.FromMapString("sex", frm, "requestBody", true, "")
+
+					if o.Err != nil {
+						o.Err = nil 
+						continue
+					}
+
+					iSex := o.ParseInt(sex, 10, 64)
+					if o.Err != nil {
+						o.Err = nil 
+						iSex = 0
+					}
+
+					chatuser := o.NewChatUser(rlogin, thebotinfo.ClientType, nickname)
+					chatuser.Sex = iSex
+					chatuser.SetAlias(alias)
+					chatuser.SetAvatar(avatar)
+					chatuser.SetCountry(country)
+					chatuser.SetProvince(province)
+					chatuser.SetCity(city)
+					chatuser.SetSignature(sign)
+
+					if o.Err != nil {
+						o.Err = nil
+						continue
+					}
+
+					o.UpdateOrCreateChatUser(tx, chatuser)
+					if o.Err != nil {
+						return
+					}
 				}
 			}
 		case chatbothub.DeleteContact:
