@@ -836,7 +836,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					chatuser := o.NewChatUser(rlogin, thebotinfo.ClientType, nickname)
-					chatuser.Sex = iSex
+					chatuser.Sex = int(iSex)
 					chatuser.SetAlias(alias)
 					chatuser.SetAvatar(avatar)
 					chatuser.SetCountry(country)
