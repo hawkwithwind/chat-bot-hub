@@ -618,7 +618,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	}
 
 	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-	content := o.FromMapString("content", bodym, "actionbody", false, "")
+	content := o.FromMapString("object", bodym, "actionbody", false, "")
 	if o.Err != nil {
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
