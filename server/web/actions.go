@@ -853,6 +853,21 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					if o.Err != nil {
 						return
 					}
+
+					theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
+					if o.Err != nil {
+						return
+					}
+					if theuser == nil {
+						o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
+					}
+
+					o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
+					if o.Err != nil {
+						return
+					}
+
+					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
 				}
 			}
 		case chatbothub.DeleteContact:
