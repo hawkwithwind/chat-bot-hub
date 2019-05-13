@@ -273,7 +273,7 @@ WHERE botid=?`, botid)
 	}
 }
 
-func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) *Bot {
+func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string, accountId string) *Bot {
 	if o.Err != nil {
 		return nil
 	}
@@ -285,7 +285,8 @@ func (o *ErrorHandler) GetBotByLogin(q dbx.Queryable, login string) *Bot {
 SELECT *
 FROM bots
 WHERE login=?
-  AND deleteat is NULL`, login)
+  AND accountid=?
+  AND deleteat is NULL`, login, accountId)
 
 	if b := o.Head(bots, fmt.Sprintf("Bot %s", login)); b != nil {
 		return b.(*Bot)

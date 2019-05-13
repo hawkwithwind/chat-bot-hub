@@ -319,7 +319,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	botid := ""
 	if botlogin != "" {
-		thebot := o.GetBotByLogin(tx, botlogin)
+		thebot := o.GetBotByLogin(tx, botlogin, account.AccountId)
 		if o.Err != nil {
 			return
 		}
@@ -472,7 +472,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 
 	botid := ""
 	if botlogin != "" {
-		thebot := o.GetBotByLogin(tx, botlogin)
+		thebot := o.GetBotByLogin(tx, botlogin, account.AccountId)
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {

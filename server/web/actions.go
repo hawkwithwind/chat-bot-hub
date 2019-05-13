@@ -1142,9 +1142,24 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
 
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
 	accountName := o.getAccountName(r)
-	o.CheckBotOwner(ctx.db.Conn, login, accountName)
-	bot := o.GetBotByLogin(ctx.db.Conn, login)
+	o.CheckBotOwner(tx, login, accountName)
+
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
+	bot := o.GetBotByLogin(tx, login, account.AccountId)
 	if o.Err != nil {
 		return
 	}
