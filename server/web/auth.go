@@ -135,7 +135,7 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30))
+	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*365, time.Hour*24*365))
 }
 
 func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
