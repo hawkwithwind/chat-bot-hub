@@ -1776,7 +1776,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				var checkedlist []string
 				switch key {
 				case "fromUser":
-					checkdedlist = vl
+					checkedlist = vl
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "toUser":
 					checkedlist = vl					
@@ -1784,8 +1784,6 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				case "groupId":
 					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
 				}
-
-				
 				
 				if o.Err != nil {
 					return
@@ -1814,8 +1812,6 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if mapkey == "fromUser" {
-		web.Info("criteria %s", o.ToJson(criteria))
-		
 		if _, ok := criteria["groupId"]; ok {
 			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
 		}
