@@ -1776,13 +1776,17 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				var checkedlist []string
 				switch key {
 				case "fromUser":
+					checkdedlist = vl
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "toUser":
+					checkedlist = vl					
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "groupId":
 					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
 				}
 
+				
+				
 				if o.Err != nil {
 					return
 				}
