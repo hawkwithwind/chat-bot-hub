@@ -1810,6 +1810,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if mapkey == "fromUser" {
+		web.Info("criteria %s", o.ToJson(criteria))
+		
 		if _, ok := criteria["groupId"]; ok {
 			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
 		}
