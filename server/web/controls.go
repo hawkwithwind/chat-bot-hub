@@ -1803,6 +1803,9 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				}
 				
 				criteria[key] =  bson.M{"$in": checkedlist}
+
+				web.Info("criteria %s", o.ToJson(criteria))
+				
 			default:
 				o.Err = utils.NewClientError(utils.PARAM_INVALID,
 					fmt.Errorf("criteria find.%s should be map[string] {... }", key))
