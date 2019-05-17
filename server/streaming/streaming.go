@@ -72,10 +72,7 @@ func (n *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
 		ConnInitor : func(r *http.Request, conn engineio.Conn) {
 			token := r.Header.Get("X-AUTHORIZE")
-			if token == "" {
-				n.Info("didnt get token")	
-			} else {
-				n.Info("get token %s", token)
+			if token != "" {
 				conn.SetContext(Auth{token})
 			}
 		},
@@ -88,10 +85,11 @@ func (n *StreamingServer) StreamingServe() error {
 	}
 
 	server.OnConnect("/", func(s socketio.Conn) error {
-		n.Info("onconntect")
+		n.Info("onconnect")
 		
 		ctx := s.EioContext()
-				
+		n.Info("eio context %v", ctx)
+		
 		switch ca := ctx.(type) {
 		case *Auth:
 			if ca == nil {
