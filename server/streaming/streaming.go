@@ -59,6 +59,10 @@ func (s *StreamingServer) Serve() error {
 	return nil
 }
 
+type Auth struct {
+	Token string `json:"token"`
+}
+
 func (s *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
 		RequestChecker : func(r *http.Request) (http.Header, error) {
@@ -92,9 +96,9 @@ func (s *StreamingServer) StreamingServe() error {
 		return "recv " + msg
 	})
 
-	server.OnEvent("/", "authenticate", func(s socketio.Conn, msg string) string {
-		fmt.Println("auth:" + msg)		
-		return msg
+	server.OnEvent("/", "authenticate", func(s socketio.Conn, msg *Auth) {
+		fmt.Println("auth: " + msg.Token)
+		s.Emit("authenticated", msg.Token)
 	})
 
 	server.OnEvent("/", "bye", func(s socketio.Conn) string {
