@@ -109,13 +109,13 @@ func (n *StreamingServer) StreamingServe() error {
 
 		n.Info("unauthorized")
 		s.Emit("unauthorized", "no token found")
-		s.Emit("bye")
 		return nil
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
 		if s.Context() == nil {
 			n.Info("unauthorized , stop")
+			s.Close()
 			return
 		}
 
