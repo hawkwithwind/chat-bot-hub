@@ -140,7 +140,6 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 	raven.CaptureError(err, nil)
 }
 
-
 type WechatMsgSource struct {
 	AtUserList  string `xml:"atuserlist" json:"atUserList"`
 	Silence     int    `xml:"silence" json:"silence"`
@@ -203,7 +202,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
-				
+
 				if newbot.canReLogin() {
 					//relogin the bot
 					o := ErrorHandler{}
@@ -381,7 +380,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 					////////////////////
 
-					
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(
@@ -564,7 +562,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
-					
+
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
@@ -573,7 +571,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
 					emojiId := o.FromMapString("emojiId", bodym, "actionBody", false, "")
-					
+
 					if o.Err == nil {
 						bodym["imageId"] = emojiId
 					}
@@ -581,7 +579,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						bodym = o.ReplaceWechatMsgSource(bodym)
 					}
-					
+
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}

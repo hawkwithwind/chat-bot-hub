@@ -3,8 +3,8 @@ package domains
 import (
 	"database/sql"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -57,10 +57,9 @@ func (cc *ChatGroup) CriteriaAlias(fieldname string) (dbx.Field, error) {
 			TN_BOTS, "botid",
 		}, nil
 	}
-	
+
 	return dbx.NormalCriteriaAlias(cc, fieldname)
 }
-
 
 func (chatgroup *ChatGroup) SetAlias(alias string) {
 	chatgroup.Alias = sql.NullString{

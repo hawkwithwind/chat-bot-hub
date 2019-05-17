@@ -5,9 +5,9 @@ import (
 	//"time"
 	"database/sql"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -371,10 +371,10 @@ WHERE a.accountname=?
 	if o.Err != nil {
 		return []string{}
 	}
-	
+
 	usernames := []string{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &usernames, query, args ...)
+	o.Err = q.SelectContext(ctx, &usernames, query, args...)
 
 	return usernames
 }
@@ -400,19 +400,18 @@ WHERE a.accountname=?
   AND a.deleteat is NULL
   AND b.deleteat is NULL
   AND c.deleteat is NULL`, accountName, ids)
-	
+
 	o.Err = err
 	if o.Err != nil {
 		return []string{}
 	}
-	
+
 	groupnames := []string{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &groupnames, query, args...)
 
 	return groupnames
 }
-
 
 func (o *ErrorHandler) BotMigrate(q dbx.Queryable, botId string, login string) string {
 	if o.Err != nil {
@@ -439,9 +438,9 @@ WHERE login=?
 
 	if len(bots) == 1 {
 		oldId := bots[0].BotId
-		
+
 		botsacc := []string{}
-		ctx, _ := o.DefaultContext()		
+		ctx, _ := o.DefaultContext()
 		o.Err = q.SelectContext(ctx, &botsacc,
 			`
 SELECT a.accountname
@@ -465,7 +464,7 @@ WHERE botid=? OR botid=?`, botId, oldId)
 				`UPDATE bots SET deleteat=CURRENT_TIMESTAMP where botId=?`, botId)
 			if o.Err != nil {
 				return ""
-			}			
+			}
 
 			return oldId
 		} else {

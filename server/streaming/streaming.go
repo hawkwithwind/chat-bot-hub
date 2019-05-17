@@ -10,11 +10,11 @@ import (
 	"github.com/hawkwithwind/logger"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type ErrorHandler struct {
-	utils.ErrorHandler
+	domains.ErrorHandler
 }
 
 type StreamingConfig struct {
@@ -25,7 +25,7 @@ type StreamingConfig struct {
 
 type StreamingServer struct {
 	*logger.Logger
-	
+
 	Config StreamingConfig
 	chmsg  chan *pb.EventReply
 }
@@ -34,7 +34,7 @@ func (s *StreamingServer) init() {
 	s.Logger = logger.New()
 	s.Logger.SetPrefix("[STREAMING]")
 	s.Logger.Init()
-	
+
 	s.chmsg = make(chan *pb.EventReply, 1000)
 }
 
@@ -70,14 +70,24 @@ type Auth struct {
 
 func (n *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
-		ConnInitor : func(r *http.Request, conn engineio.Conn) {
+		ConnInitor: func(r *http.Request, conn engineio.Conn) {
+			o := &ErrorHandler{}
+			defer func(o *ErrorHandler) {
+				if o.Err != nil {
+					n.Error(o.Err, "backend failed")
+				}
+			}(o)
+			
 			token := r.Header.Get("X-AUTHORIZE")
 			if token != "" {
-				conn.SetContext(&Auth{token})
+				user := o.ValidateJWTToken("", token)
+				if user != nil {
+					conn.SetContext(&Auth{token})
+				}
 			}
 		},
 	}
-	
+
 	server, err := socketio.NewServer(&opts)
 	if err != nil {
 		n.Error(err, "init socketio failed")
@@ -105,7 +115,7 @@ func (n *StreamingServer) StreamingServe() error {
 			n.Info("unauthorized , stop")
 			return
 		}
-		
+
 		n.Info("notice: %s", msg)
 		s.Emit("reply", "have "+msg)
 	})

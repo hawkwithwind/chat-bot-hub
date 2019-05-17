@@ -176,7 +176,7 @@ func (o *ErrorHandler) SelectByCriteria(
 		orderclauseString = "\nORDER BY " + strings.Join(orderclause, ", ")
 	}
 
-	fs := []string{}	
+	fs := []string{}
 	for _, field := range sd.Fields() {
 		fs = append(fs, fmt.Sprintf("`%s`.`%s`", field.Table, field.Name))
 	}

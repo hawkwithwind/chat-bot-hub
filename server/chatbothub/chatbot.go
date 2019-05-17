@@ -630,7 +630,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 
 	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
 		"toUserName": toUserName,
-		"content": contentm,
+		"content":    contentm,
 	}))
 
 	return o.Err

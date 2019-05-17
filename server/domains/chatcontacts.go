@@ -55,10 +55,9 @@ func (cc *ChatContactExpand) CriteriaAlias(fieldname string) (dbx.Field, error) 
 			TN_BOTS, "botid",
 		}, nil
 	}
-	
+
 	return dbx.NormalCriteriaAlias(cc, fieldname)
 }
-
 
 func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatContact {
 	if ctx.Err != nil {

@@ -172,7 +172,7 @@ func (f *PlainFilter) Fill(msg string) error {
 		//timestamp := int64(o.FromMapFloat("timestamp", body, "eventRequest.body", false, 0))
 		//tm := o.BJTimeFromUnix(timestamp)
 		mtype := int64(o.FromMapFloat("mType", body, "body", false, 0))
-		
+
 		switch content := contentptr.(type) {
 		case string:
 			brief = content

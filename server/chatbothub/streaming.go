@@ -87,8 +87,7 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 				}
 				newsnode.Sub(subs)
 				////////////////////
-				
-				
+
 				hub.SetStreamingNode(in.ClientId, newsnode)
 				hub.Info("s[%s] registered [%s]", in.ClientType, in.ClientId)
 			}

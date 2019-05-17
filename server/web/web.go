@@ -15,10 +15,10 @@ import (
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
-	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/mux"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
@@ -58,7 +58,7 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
-	mongoDb	     *mgo.Database
+	mongoDb      *mgo.Database
 }
 
 func (ctx *WebServer) init() error {
@@ -193,7 +193,7 @@ func (o *ErrorHandler) WebError(w http.ResponseWriter) {
 	switch err := o.Err.(type) {
 	case *utils.ClientError:
 		o.complain(w, err.ErrorCode(), err.Error())
-	case *AuthError:
+	case *utils.AuthError:
 		o.deny(w, err.Error())
 	case nil:
 		// do nothing
