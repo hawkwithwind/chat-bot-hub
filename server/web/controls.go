@@ -319,7 +319,7 @@ func (ctx *WebServer) getChatUsers(w http.ResponseWriter, r *http.Request) {
 
 	botid := ""
 	if botlogin != "" {
-		thebot := o.GetBotByLogin(tx, botlogin)
+		thebot := o.GetBotByLogin(tx, botlogin, account.AccountId)
 		if o.Err != nil {
 			return
 		}
@@ -472,7 +472,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 
 	botid := ""
 	if botlogin != "" {
-		thebot := o.GetBotByLogin(tx, botlogin)
+		thebot := o.GetBotByLogin(tx, botlogin, account.AccountId)
 		if thebot != nil {
 			botid = thebot.BotId
 		} else {
@@ -1776,13 +1776,15 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				var checkedlist []string
 				switch key {
 				case "fromUser":
+					checkedlist = vl
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "toUser":
+					checkedlist = vl					
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "groupId":
 					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
 				}
-
+				
 				if o.Err != nil {
 					return
 				}
@@ -1801,6 +1803,9 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 				}
 				
 				criteria[key] =  bson.M{"$in": checkedlist}
+
+				web.Info("criteria %s", o.ToJson(criteria))
+				
 			default:
 				o.Err = utils.NewClientError(utils.PARAM_INVALID,
 					fmt.Errorf("criteria find.%s should be map[string] {... }", key))

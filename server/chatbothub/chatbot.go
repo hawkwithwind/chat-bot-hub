@@ -608,12 +608,31 @@ func (bot *ChatBot) GetRoomQRCode(actionType string, arId string, body string) e
 }
 
 func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) error {
+	_ = actionType
+
 	o := &ErrorHandler{}
-	params := []ActionParam{
-		NewActionParam("toUserName", false, ""),
-		NewActionParam("xml", false, ""),
+
+	bodym := o.FromJson(body)
+	if o.Err != nil {
+		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
-	o.CommonActionDispatch(bot, arId, body, actionType, params)
+
+	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+	content := o.FromMapString("object", bodym, "actionbody", false, "")
+	if o.Err != nil {
+		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+	}
+
+	contentm := o.FromJson(content)
+	if o.Err != nil {
+		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+	}
+
+	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
+		"toUserName": toUserName,
+		"content": contentm,
+	}))
+
 	return o.Err
 }
 
@@ -1031,7 +1050,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 						appmsg.Title,
 						appmsg.Des,
 						appmsg.Action,
-						33,
+						"33",
 						appmsg.ShowType,
 						appmsg.SoundType,
 						appmsg.MediaTagName,

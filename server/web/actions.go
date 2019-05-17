@@ -799,6 +799,75 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					o.UpdateFriendRequest(tx, &fr)
 					ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
 					// dont break, update all fr for the same rlogin
+
+					frm := o.FromJson(fr.RequestBody)
+					if o.Err != nil {
+						o.Err = nil
+						continue
+					}
+
+					if frm == nil {
+						continue
+					}
+
+					nickname := o.FromMapString("fromNickName", frm, "requestBody", false, "")
+					if o.Err != nil {
+						o.Err = nil 
+						continue
+					}
+
+					avatar := o.FromMapString("smallheadimgurl", frm, "requestBody", true, "")
+					alias  := o.FromMapString("alias", frm, "requestBody", true, "")
+					country := o.FromMapString("country", frm, "requestBody", true, "")
+					province := o.FromMapString("province", frm, "requestBody", true, "")
+					city := o.FromMapString("city", frm, "requestBody", true, "")
+					sign := o.FromMapString("sign", frm, "requestBody", true, "")
+					sex := o.FromMapString("sex", frm, "requestBody", true, "")
+
+					if o.Err != nil {
+						o.Err = nil 
+						continue
+					}
+
+					iSex := o.ParseInt(sex, 10, 64)
+					if o.Err != nil {
+						o.Err = nil 
+						iSex = 0
+					}
+
+					chatuser := o.NewChatUser(rlogin, thebotinfo.ClientType, nickname)
+					chatuser.Sex = int(iSex)
+					chatuser.SetAlias(alias)
+					chatuser.SetAvatar(avatar)
+					chatuser.SetCountry(country)
+					chatuser.SetProvince(province)
+					chatuser.SetCity(city)
+					chatuser.SetSignature(sign)
+
+					if o.Err != nil {
+						o.Err = nil
+						continue
+					}
+
+					o.UpdateOrCreateChatUser(tx, chatuser)
+					if o.Err != nil {
+						return
+					}
+
+					theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
+					if o.Err != nil {
+						return
+					}
+					if theuser == nil {
+						o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
+					}
+
+					o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
+					if o.Err != nil {
+						return
+					}
+
+					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
 				}
 			}
 		case chatbothub.DeleteContact:
@@ -1073,9 +1142,24 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
 
+	tx := o.Begin(ctx.db)
+	defer o.CommitOrRollback(tx)
+
 	accountName := o.getAccountName(r)
-	o.CheckBotOwner(ctx.db.Conn, login, accountName)
-	bot := o.GetBotByLogin(ctx.db.Conn, login)
+	o.CheckBotOwner(tx, login, accountName)
+
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
+	bot := o.GetBotByLogin(tx, login, account.AccountId)
 	if o.Err != nil {
 		return
 	}
