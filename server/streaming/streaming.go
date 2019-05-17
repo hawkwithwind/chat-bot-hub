@@ -73,7 +73,7 @@ func (n *StreamingServer) StreamingServe() error {
 		ConnInitor : func(r *http.Request, conn engineio.Conn) {
 			token := r.Header.Get("X-AUTHORIZE")
 			if token != "" {
-				conn.SetContext(Auth{token})
+				conn.SetContext(&Auth{token})
 			}
 		},
 	}
