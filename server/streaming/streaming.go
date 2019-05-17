@@ -109,7 +109,7 @@ func (n *StreamingServer) StreamingServe() error {
 
 		n.Info("unauthorized")
 		s.Emit("unauthorized", "no token found")
-		s.Close()
+		s.Emit("bye")
 		return nil
 	})
 
