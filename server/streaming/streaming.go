@@ -28,6 +28,7 @@ type StreamingServer struct {
 func (s *StreamingServer) init() {
 	s.Logger = logger.New()
 	s.Logger.SetPrefix("[STREAMING]")
+	s.Logger.Init()
 	
 	s.chmsg = make(chan *pb.EventReply, 1000)
 }
