@@ -85,25 +85,16 @@ func (n *StreamingServer) StreamingServe() error {
 	}
 
 	server.OnConnect("/", func(s socketio.Conn) error {
-		n.Info("onconnect")
-		
 		ctx := s.EioContext()
-		n.Info("eio context %v", ctx)
-		
 		switch ca := ctx.(type) {
 		case *Auth:
 			if ca == nil {
 				s.Emit("unauthorized", "no token found")
-				s.Close()
 				return nil
 			}
 			
-			n.Info("connected: %v %s", ca.Token, s.ID())
 			return nil
 		}
-
-		s.Emit("unauthorized", "no token found")
-		s.Close()
 		return nil
 	})
 
