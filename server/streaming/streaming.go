@@ -63,12 +63,18 @@ type Auth struct {
 	Token string `json:"token"`
 }
 
-func (s *StreamingServer) StreamingServe() error {
+func (n *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
 		RequestChecker : func(r *http.Request) (http.Header, error) {
-			// for k, v := range r.Header {
-			// 	s.Info("Header %q : %q", k, v)
-			// }
+			for k, v := range r.Header {
+			 	n.Info("Header %q : %q", k, v)
+			}
+
+			token := r.Header.Get("X-AUTHORIZE")
+			if token == "" {
+				return nil, fmt.Errorf("authorization failed")
+			}
+			
 			return nil, nil
 		},
 	}
@@ -96,11 +102,6 @@ func (s *StreamingServer) StreamingServe() error {
 		return "recv " + msg
 	})
 
-	server.OnEvent("/", "authenticate", func(s socketio.Conn, msg *Auth) {
-		fmt.Println("auth: " + msg.Token)
-		s.Emit("authenticated", msg.Token)
-	})
-
 	server.OnEvent("/", "bye", func(s socketio.Conn) string {
 		last := s.Context().(string)
 		s.Emit("bye", last)
@@ -121,8 +122,8 @@ func (s *StreamingServer) StreamingServe() error {
 
 	http.Handle("/socket.io/", server)
 	http.Handle("/", http.FileServer(http.Dir("./aset")))
-	s.Info("Serving at %s:%s...", s.Config.Host, s.Config.Port)
-	err = http.ListenAndServe(fmt.Sprintf("%s:%s", s.Config.Host, s.Config.Port), nil)
+	n.Info("Serving at %s:%s...", n.Config.Host, n.Config.Port)
+	err = http.ListenAndServe(fmt.Sprintf("%s:%s", n.Config.Host, n.Config.Port), nil)
 	if err != nil {
 		return err
 	}
