@@ -68,6 +68,7 @@ func (n *StreamingServer) StreamingServe() error {
 		RequestChecker : func(r *http.Request) (http.Header, error) {
 			token := r.Header.Get("X-AUTHORIZE")
 			if token == "" {
+				n.Info("didnt get token")
 				return nil, fmt.Errorf("authorization failed")
 			} else {
 				n.Info("get token %s", token)
