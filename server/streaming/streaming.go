@@ -85,7 +85,7 @@ func (n *StreamingServer) StreamingServe() error {
 
 	server.OnConnect("/", func(s socketio.Conn) error {
 		s.SetContext("")
-		n.Info("connected:", s.ID())
+		n.Info("connected: %v", s.ID())
 		return nil
 	})
 
