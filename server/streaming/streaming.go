@@ -88,14 +88,15 @@ func (n *StreamingServer) StreamingServe() error {
 		ctx := s.EioContext()
 		switch ca := ctx.(type) {
 		case *Auth:
-			if ca == nil {
-				s.Emit("unauthorized", "no token found")
+			if ca != nil {
+				n.Info("authorized")
 				return nil
 			}
-			
-			return nil
 		}
-		return nil
+
+		n.Info("unauthorized")
+		s.Emit("unauthorized", "no token found")
+		return nil		
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
