@@ -2,12 +2,12 @@ package streaming
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
-	"github.com/getsentry/raven-go"
+	//"github.com/getsentry/raven-go"
 	"github.com/googollee/go-socket.io"
+	"github.com/googollee/go-engine.io"
+	"github.com/hawkwithwind/logger"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
@@ -19,23 +19,16 @@ type StreamingConfig struct {
 }
 
 type StreamingServer struct {
+	*logger.Logger
+	
 	Config StreamingConfig
-	logger *log.Logger
 	chmsg  chan *pb.EventReply
 }
 
-func (ctx *StreamingServer) Info(msg string, v ...interface{}) {
-	ctx.logger.Printf(msg, v...)
-}
-
-func (ctx *StreamingServer) Error(err error, msg string, v ...interface{}) {
-	ctx.logger.Printf(msg, v...)
-	ctx.logger.Printf("Error %v", err)
-	raven.CaptureError(err, nil)
-}
-
 func (s *StreamingServer) init() {
-	s.logger = log.New(os.Stdout, "[STREAMING] ", log.Ldate|log.Ltime)
+	s.Logger = logger.New()
+	s.Logger.SetPrefix("[STREAMING]")
+	
 	s.chmsg = make(chan *pb.EventReply, 1000)
 }
 
@@ -66,7 +59,16 @@ func (s *StreamingServer) Serve() error {
 }
 
 func (s *StreamingServer) StreamingServe() error {
-	server, err := socketio.NewServer(nil)
+	opts := engineio.Options{
+		RequestChecker : func(r *http.Request) (http.Header, error) {
+			for k, v := range r.Header {
+				s.Info("Header %q : %q", k, v)
+			}
+			return nil, nil
+		},
+	}
+	
+	server, err := socketio.NewServer(&opts)
 	if err != nil {
 		s.Error(err, "init socketio failed")
 		return err
