@@ -62,9 +62,9 @@ func (s *StreamingServer) Serve() error {
 func (s *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
 		RequestChecker : func(r *http.Request) (http.Header, error) {
-			for k, v := range r.Header {
-				s.Info("Header %q : %q", k, v)
-			}
+			// for k, v := range r.Header {
+			// 	s.Info("Header %q : %q", k, v)
+			// }
 			return nil, nil
 		},
 	}
