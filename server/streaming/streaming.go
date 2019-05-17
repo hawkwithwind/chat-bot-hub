@@ -79,7 +79,10 @@ func (n *StreamingServer) StreamingServe() error {
 				conn.SetContext("12345")
 
 				o := &ErrorHandler{}
-				n.Info("conn init %s", o.ToJson(conn))
+				n.Info("conn init %#v %s", conn, o.ToJson(conn))
+
+				cc := conn.Context()
+				n.Info("conn context is %v", cc)
 			}
 		},
 	}
@@ -96,7 +99,7 @@ func (n *StreamingServer) StreamingServe() error {
 		
 		ctx := s.Context()
 		n.Info("connected ctx %v", ctx)
-		n.Info("thie conn is %s", o.ToJson(s))
+		n.Info("this conn is %#v %s", s, o.ToJson(s))
 		
 		switch ca := ctx.(type) {
 		case *Auth:
