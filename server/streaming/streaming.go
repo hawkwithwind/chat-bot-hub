@@ -10,7 +10,12 @@ import (
 	"github.com/hawkwithwind/logger"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
+
+type ErrorHandler struct {
+	utils.ErrorHandler
+}
 
 type StreamingConfig struct {
 	Host     string
