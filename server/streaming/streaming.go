@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	//"github.com/getsentry/raven-go"
-	"github.com/googollee/go-socket.io"
 	"github.com/googollee/go-engine.io"
+	"github.com/hawkwithwind/go-socket.io"
 	"github.com/hawkwithwind/logger"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -76,13 +76,7 @@ func (n *StreamingServer) StreamingServe() error {
 				n.Info("didnt get token")	
 			} else {
 				n.Info("get token %s", token)
-				conn.SetContext("12345")
-
-				o := &ErrorHandler{}
-				n.Info("conn init %#v %s", conn, o.ToJson(conn))
-
-				cc := conn.Context()
-				n.Info("conn context is %v", cc)
+				conn.SetContext(Auth{token})
 			}
 		},
 	}
@@ -95,12 +89,9 @@ func (n *StreamingServer) StreamingServe() error {
 
 	server.OnConnect("/", func(s socketio.Conn) error {
 		n.Info("onconntect")
-		o := &ErrorHandler{}
 		
-		ctx := s.Context()
-		n.Info("connected ctx %v", ctx)
-		n.Info("this conn is %#v %s", s, o.ToJson(s))
-		
+		ctx := s.EioContext()
+				
 		switch ca := ctx.(type) {
 		case *Auth:
 			if ca == nil {
