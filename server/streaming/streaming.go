@@ -85,7 +85,11 @@ func (n *StreamingServer) StreamingServe() error {
 	}
 
 	server.OnConnect("/", func(s socketio.Conn) error {
+		n.Info("onconntect")
+		
 		ctx := s.Context()
+		n.Info("connected ctx %v", ctx)
+		
 		switch ca := ctx.(type) {
 		case *Auth:
 			n.Info("connected: %v %s", ca.Token, s.ID())
