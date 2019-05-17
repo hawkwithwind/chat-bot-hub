@@ -91,8 +91,10 @@ func (n *StreamingServer) StreamingServe() error {
 			n.Info("connected: %v %s", ca.Token, s.ID())
 			return nil
 		}
-		
-		return fmt.Errorf("unauthorized")
+
+		s.Emit("unauthorized", "no token found")
+		s.Close()
+		return nil
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
