@@ -71,9 +71,7 @@ func (n *StreamingServer) StreamingServe() error {
 				n.Info("didnt get token")	
 			} else {
 				n.Info("get token %s", token)
-				conn.SetContext(&Auth{
-					Token: token,
-				})
+				conn.SetContext("12345")
 			}
 		},
 	}
@@ -89,6 +87,7 @@ func (n *StreamingServer) StreamingServe() error {
 		
 		ctx := s.Context()
 		n.Info("connected ctx %v", ctx)
+		n.Info("thie conn is %v", s)
 		
 		switch ca := ctx.(type) {
 		case *Auth:
