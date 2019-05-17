@@ -65,13 +65,15 @@ type Auth struct {
 
 func (n *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
-		RequestChecker : func(r *http.Request) (http.Header, error) {
+		ConnInitor : func(r *http.Request, conn Conn) {
 			token := r.Header.Get("X-AUTHORIZE")
 			if token == "" {
-				n.Info("didnt get token")
-				return nil, fmt.Errorf("authorization failed")
+				n.Info("didnt get token")	
 			} else {
 				n.Info("get token %s", token)
+				conn.SetContext(&Auth{
+					Token: token,
+				})
 			}
 			
 			return nil, nil
@@ -85,9 +87,14 @@ func (n *StreamingServer) StreamingServe() error {
 	}
 
 	server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		n.Info("connected: %v", s.ID())
-		return nil
+		ctx := s.Context()
+		switch ca := ctx.(type) {
+		case *Auth:
+			n.Info("connected: %v %s", ca.Token, s.ID())
+			return nil
+		}
+		
+		return fmt.Errorf("unauthorized")
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
