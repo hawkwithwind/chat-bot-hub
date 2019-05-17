@@ -92,9 +92,9 @@ func (s *StreamingServer) StreamingServe() error {
 		return "recv " + msg
 	})
 
-	server.OnEvent("/", "authenticate", func(s socketio.Conn, msg string) {
-		fmt.Println("auth:" + msg)
-		s.Emit("authenticated", msg)
+	server.OnEvent("/", "authenticate", func(s socketio.Conn, msg string) string {
+		fmt.Println("auth:" + msg)		
+		return msg
 	})
 
 	server.OnEvent("/", "bye", func(s socketio.Conn) string {
