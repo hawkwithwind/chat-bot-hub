@@ -66,10 +66,6 @@ type Auth struct {
 func (n *StreamingServer) StreamingServe() error {
 	opts := engineio.Options{
 		RequestChecker : func(r *http.Request) (http.Header, error) {
-			for k, v := range r.Header {
-			 	n.Info("Header %q : %q", k, v)
-			}
-
 			token := r.Header.Get("X-AUTHORIZE")
 			if token == "" {
 				return nil, fmt.Errorf("authorization failed")
