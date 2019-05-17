@@ -115,7 +115,7 @@ func (n *StreamingServer) StreamingServe() error {
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
 		if s.Context() == nil {
 			n.Info("unauthorized , stop")
-			s.Close()
+			s.Emit("unauthorized", "no token found")
 			return
 		}
 
@@ -135,7 +135,7 @@ func (n *StreamingServer) StreamingServe() error {
 		s.Close()
 		return last
 	})
-
+	
 	server.OnError("/", func(e error) {
 		n.Error(e, "meet error")
 	})
