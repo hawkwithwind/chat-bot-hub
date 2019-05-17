@@ -94,7 +94,7 @@ func (n *StreamingServer) StreamingServe() error {
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
-		n.Info("notice:", msg)
+		n.Info("notice: %s", msg)
 		s.Emit("reply", "have "+msg)
 	})
 
