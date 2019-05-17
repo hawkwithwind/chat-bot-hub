@@ -73,6 +73,8 @@ func (n *StreamingServer) StreamingServe() error {
 			token := r.Header.Get("X-AUTHORIZE")
 			if token == "" {
 				return nil, fmt.Errorf("authorization failed")
+			} else {
+				n.Info("get token %s", token)
 			}
 			
 			return nil, nil
@@ -81,23 +83,23 @@ func (n *StreamingServer) StreamingServe() error {
 	
 	server, err := socketio.NewServer(&opts)
 	if err != nil {
-		s.Error(err, "init socketio failed")
+		n.Error(err, "init socketio failed")
 		return err
 	}
 
 	server.OnConnect("/", func(s socketio.Conn) error {
 		s.SetContext("")
-		fmt.Println("connected:", s.ID())
+		n.Info("connected:", s.ID())
 		return nil
 	})
 
 	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
-		fmt.Println("notice:", msg)
+		n.Info("notice:", msg)
 		s.Emit("reply", "have "+msg)
 	})
 
 	server.OnEvent("/chat", "msg", func(s socketio.Conn, msg string) string {
-		fmt.Println("/chat msg %s", msg)
+		n.Info("/chat msg %s", msg)
 		s.SetContext(msg)
 		return "recv " + msg
 	})
@@ -110,11 +112,11 @@ func (n *StreamingServer) StreamingServe() error {
 	})
 
 	server.OnError("/", func(e error) {
-		fmt.Println("meet error:", e)
+		n.Error(e, "meet error")
 	})
 
 	server.OnDisconnect("/", func(s socketio.Conn, msg string) {
-		fmt.Println("closed", msg)
+		n.Info("closed %s", msg)
 	})
 
 	go server.Serve()
