@@ -87,6 +87,7 @@ func (s *StreamingServer) StreamingServe() error {
 	})
 
 	server.OnEvent("/chat", "msg", func(s socketio.Conn, msg string) string {
+		fmt.Println("/chat msg %s", msg)
 		s.SetContext(msg)
 		return "recv " + msg
 	})
