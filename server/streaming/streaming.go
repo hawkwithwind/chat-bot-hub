@@ -72,6 +72,9 @@ func (n *StreamingServer) StreamingServe() error {
 			} else {
 				n.Info("get token %s", token)
 				conn.SetContext("12345")
+
+				o := &ErrorHandler{}
+				n.Info("conn init %s", o.ToJson(conn))
 			}
 		},
 	}
@@ -84,10 +87,11 @@ func (n *StreamingServer) StreamingServe() error {
 
 	server.OnConnect("/", func(s socketio.Conn) error {
 		n.Info("onconntect")
+		o := &ErrorHandler{}
 		
 		ctx := s.Context()
 		n.Info("connected ctx %v", ctx)
-		n.Info("thie conn is %v", s)
+		n.Info("thie conn is %s", o.ToJson(s))
 		
 		switch ca := ctx.(type) {
 		case *Auth:
