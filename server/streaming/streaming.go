@@ -96,25 +96,14 @@ func (n *StreamingServer) StreamingServe() error {
 		return err
 	}
 
-	server.On("connection", func(s socketio.Conn) {
-		server.Info("on connection")
+	server.OnConnect("/", func(s socketio.Conn) error {
 		ctx := s.EioContext()
 		switch ca := ctx.(type) {
 		case *Auth:
 			if ca != nil {
 				n.Info("authorized")
 				s.SetContext("username")
-
-				s.Join("chat")
-				s.On("chat message", func(msg string) {
-					server.Info("chat %s", msg)
-					s.Emit("chat message", fmt.Sprintf("server receive %s", msg))
-				})
-
-				s.On("disconnection", func() {
-					server.Info("disconnected")
-				})
-				return
+				return nil
 			}
 		}
 
@@ -122,9 +111,36 @@ func (n *StreamingServer) StreamingServe() error {
 		s.Emit("unauthorized", "no token found")
 		return nil
 	})
-	
-	server.On("error", func(e error) {
+
+	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
+		if s.Context() == nil {
+			n.Info("unauthorized , stop")
+			return
+		}
+
+		n.Info("notice: %s", msg)
+		s.Emit("reply", "have "+msg)
+	})
+
+	server.OnEvent("/chat", "msg", func(s socketio.Conn, msg string) string {
+		n.Info("/chat msg %s", msg)
+		s.SetContext(msg)
+		return "recv " + msg
+	})
+
+	server.OnEvent("/", "bye", func(s socketio.Conn) string {
+		last := s.Context().(string)
+		s.Emit("bye", last)
+		s.Close()
+		return last
+	})
+
+	server.OnError("/", func(e error) {
 		n.Error(e, "meet error")
+	})
+
+	server.OnDisconnect("/", func(s socketio.Conn, msg string) {
+		n.Info("closed %s", msg)
 	})
 
 	go server.Serve()
