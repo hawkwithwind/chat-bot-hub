@@ -138,6 +138,8 @@ func main() {
 				Config: config.Streaming,
 			}
 
+			server.Config.SecretPhrase = config.Web.SecretPhrase
+
 			err := server.Serve()
 			if err != nil {
 				wg.Done()

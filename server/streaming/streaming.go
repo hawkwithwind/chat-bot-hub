@@ -20,12 +20,14 @@ type ErrorHandler struct {
 type StreamingConfig struct {
 	Host     string
 	Port     string
+	SecretPhrase string
+	
 	Chathubs []string
 }
 
 type StreamingServer struct {
 	*logger.Logger
-
+	
 	Config StreamingConfig
 	chmsg  chan *pb.EventReply
 }
@@ -80,7 +82,7 @@ func (n *StreamingServer) StreamingServe() error {
 			
 			token := r.Header.Get("X-AUTHORIZE")
 			if token != "" {
-				user := o.ValidateJWTToken("", token)
+				user := o.ValidateJWTToken(n.Config.SecretPhrase, token)
 				if user != nil {
 					conn.SetContext(&Auth{token})
 				}
