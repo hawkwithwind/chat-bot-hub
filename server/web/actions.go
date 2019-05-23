@@ -776,7 +776,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if o.Err != nil {
-			ctx.Info("result is %s", result)
+			ctx.Info("result is %s", awayar.Result)
 			return
 		}
 

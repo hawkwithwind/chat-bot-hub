@@ -14,8 +14,7 @@ DB_PATH="mysql://$DB_USER:$DB_PASSWORD@tcp($DB_ALIAS)/$DB_NAME"
 
 case $1 in
 init*)
-    datapath=$2 && \
-	echo "create mysql data volume on $datapath" && \
+    echo "create mysql data volume " && \
 	read -s -p "root password: " rootpass && \
 	echo "" && \
 	read -p "db_name: " db_name && \
@@ -24,11 +23,7 @@ init*)
 	echo "" && \
 	echo -e "DB_NAME=$db_name\nDB_USER=$db_user\nDB_PASSWORD=$db_password\nDB_ALIAS=$DB_ALIAS" > mysql.env && \
 	echo -e "\nDB_PARAMS=charset=utf8mb4&collation=utf8mb4_unicode_ci\n" >> mysql.env
-	docker volume create --driver local \
-	       --opt type=none \
-	       --opt device=$datapath \
-	       --opt o=bind \
-	       chatbothub-mysql && \
+    docker volume create chatbothub-mysql && \
 	docker run --rm -d \
 	       --name chatbothub_mysql_init \
 	       -e MYSQL_ROOT_PASSWORD=$rootpass \
@@ -46,8 +41,6 @@ create*)
     docker run --rm \
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
-	   -e LOCAL_USER_ID=`id -u` \
-	   -e LOCAL_GROUP_ID=`id -g` \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   create -dir /migrations/ -ext sql -seq -digits 4 "${@:2}"
@@ -57,8 +50,6 @@ up*)
     docker run --rm \
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
-	   -e LOCAL_USER_ID=`id -u` \
-	   -e LOCAL_GROUP_ID=`id -g` \
 	   -e DBPATH=$DB_PATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
@@ -70,8 +61,6 @@ down*)
     docker run --rm \
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
-	   -e LOCAL_USER_ID=`id -u` \
-	   -e LOCAL_GROUP_ID=`id -g` \
 	   -e DBPATH=$DB_PATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
@@ -83,8 +72,6 @@ cmd*)
     docker run \
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
-	   -e LOCAL_USER_ID=`id -u` \
-	   -e LOCAL_GROUP_ID=`id -g` \
 	   -e DBPATH=$DB_PATH \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
@@ -95,6 +82,6 @@ cmd*)
 *)
     echo "./migrate.sh create NAME"
     echo "./migrate.sh up [DIGIT]"
-    echo "./migrate.sh init path/to/mysql/data"
+    echo "./migrate.sh init "
     ;;
 esac

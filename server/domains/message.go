@@ -3,7 +3,7 @@ package domains
 import (
 	"encoding/json"
 	"time"
-
+	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -75,6 +75,7 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 		wechatMessage := WechatMessage{}
 		o.Err = json.Unmarshal([]byte(message), &wechatMessage)
 		if o.Err != nil {
+			fmt.Printf("[save message debug] unmarshal json failed %s\n", message)
 			return
 		}
 
@@ -84,6 +85,7 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 			var cjson []byte
 			cjson, o.Err = bson.MarshalJSON(content)
 			if o.Err != nil {
+				fmt.Printf("[save message debug] marshal json failed %s\n", content)
 				return
 			}
 			wechatMessage.Content = string(cjson)
@@ -95,11 +97,13 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 			var srcjson []byte
 			srcjson, o.Err = bson.MarshalJSON(src)
 			if o.Err != nil {
+				fmt.Printf("[save message debug] marshal json failed %s\n", src)
 				return
 			}
 			o.Err = json.Unmarshal(srcjson, &msgsource)
 			if o.Err != nil {
-				return
+				fmt.Printf("[save message debug] unmarshal json failed %s\n", srcjson)
+				return 
 			}
 			wechatMessage.MsgSource = &msgsource
 		}
