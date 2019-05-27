@@ -23,7 +23,7 @@ type MainConfig struct {
 	Web       web.WebConfig
 	Redis     utils.RedisConfig
 	Fluent    utils.FluentConfig
-	Streaming streaming.StreamingConfig
+	Streaming streaming.Config
 }
 
 var (
@@ -134,7 +134,7 @@ func main() {
 			wg.Add(1)
 			defer wg.Done()
 
-			server := streaming.StreamingServer{
+			server := streaming.Server{
 				Config: config.Streaming,
 			}
 
