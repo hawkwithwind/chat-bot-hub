@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.hawkwithwind.chatbothub.streaming";
+option java_outer_classname = "ChatBotHubStreamingProto";
+
+package chatbothubstreaming;
+
+service ChatBotHubStreaming {
+    rpc messageTunnel (stream MessageTunnelRequest) returns (stream MessageTunnelResponse) {}
+}
+
+message MessageTunnelRequest {
+    uint32 seq = 1;
+    bool needAck = 2;
+    string eventName = 3;
+    string payload = 4;
+}
+
+message MessageTunnelResponseError {
+    int64 code = 1;
+    string message = 2;
+}
+
+message MessageTunnelResponse {
+    uint32 ack = 1;
+    string payload = 2;
+    MessageTunnelResponseError error = 3;
+}
