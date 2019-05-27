@@ -921,7 +921,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if info.UserName == "" {
-				ctx.Info("search user name empty, ignore")
+				ctx.Info("search user name empty, ignore. body:\n %s\n", localar.Result)
 				return
 			}
 
