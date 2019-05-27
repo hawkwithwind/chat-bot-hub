@@ -940,7 +940,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			chatuser.SetSignature(info.Signature)
 			chatuser.SetRemark(info.Remark)
 			chatuser.SetLabel(info.Label)
-			chatuser.SetExt(acresult.Data.(string))
+			chatuser.SetExt(o.ToJson(acresult.Data))
 
 			o.UpdateOrCreateChatUser(tx, chatuser)
 			ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)
