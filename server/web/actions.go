@@ -451,11 +451,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// consider transaction, we use new errorhandler here
 
 		// now call search user to get self profile
-		a_o := &ErrorHandler{}
-		ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
-			"userId": bot.Login,
-		}), "NEW")
-		a_o.CreateAndRunAction(ctx, ar)
+		// EDIT: should not call search user with wxid
+		// a_o := &ErrorHandler{}
+		// ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
+		// 	"userId": bot.Login,
+		// }), "NEW")
+		// a_o.CreateAndRunAction(ctx, ar)
 
 		re_o := &ErrorHandler{}
 		// now, initailize bot's filter, and call chathub to create intances and get connected
