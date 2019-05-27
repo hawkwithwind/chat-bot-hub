@@ -7,6 +7,7 @@ import (
 	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	any "github.com/golang/protobuf/ptypes/any"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,11 +25,79 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
+//
+//拉取聊天室历史记录
+//@direction
+//- new: 从 fromMessageId 起，获取更新消息，不包含 fromMessageId；如果 fromMessageId 为空，则拉取最新一页历史记录
+//- old: 从 fromMessageId 起，获取更老的信息，不包含 fromMessageId；fromMessageId 不允许为空
+type GetMessageHistoriesRequest struct {
+	GroupId              string   `protobuf:"bytes,1,opt,name=groupId,proto3" json:"groupId,omitempty"`
+	UserId               string   `protobuf:"bytes,2,opt,name=userId,proto3" json:"userId,omitempty"`
+	FromMessageId        string   `protobuf:"bytes,3,opt,name=fromMessageId,proto3" json:"fromMessageId,omitempty"`
+	Direction            string   `protobuf:"bytes,4,opt,name=direction,proto3" json:"direction,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetMessageHistoriesRequest) Reset()         { *m = GetMessageHistoriesRequest{} }
+func (m *GetMessageHistoriesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetMessageHistoriesRequest) ProtoMessage()    {}
+func (*GetMessageHistoriesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2e8ceba11142904, []int{0}
+}
+
+func (m *GetMessageHistoriesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetMessageHistoriesRequest.Unmarshal(m, b)
+}
+func (m *GetMessageHistoriesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetMessageHistoriesRequest.Marshal(b, m, deterministic)
+}
+func (m *GetMessageHistoriesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetMessageHistoriesRequest.Merge(m, src)
+}
+func (m *GetMessageHistoriesRequest) XXX_Size() int {
+	return xxx_messageInfo_GetMessageHistoriesRequest.Size(m)
+}
+func (m *GetMessageHistoriesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetMessageHistoriesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetMessageHistoriesRequest proto.InternalMessageInfo
+
+func (m *GetMessageHistoriesRequest) GetGroupId() string {
+	if m != nil {
+		return m.GroupId
+	}
+	return ""
+}
+
+func (m *GetMessageHistoriesRequest) GetUserId() string {
+	if m != nil {
+		return m.UserId
+	}
+	return ""
+}
+
+func (m *GetMessageHistoriesRequest) GetFromMessageId() string {
+	if m != nil {
+		return m.FromMessageId
+	}
+	return ""
+}
+
+func (m *GetMessageHistoriesRequest) GetDirection() string {
+	if m != nil {
+		return m.Direction
+	}
+	return ""
+}
+
 type MessageTunnelRequest struct {
 	Seq                  uint32   `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
 	NeedAck              bool     `protobuf:"varint,2,opt,name=needAck,proto3" json:"needAck,omitempty"`
 	EventName            string   `protobuf:"bytes,3,opt,name=eventName,proto3" json:"eventName,omitempty"`
-	Payload              string   `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	Payload              *any.Any `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -38,7 +107,7 @@ func (m *MessageTunnelRequest) Reset()         { *m = MessageTunnelRequest{} }
 func (m *MessageTunnelRequest) String() string { return proto.CompactTextString(m) }
 func (*MessageTunnelRequest) ProtoMessage()    {}
 func (*MessageTunnelRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f2e8ceba11142904, []int{0}
+	return fileDescriptor_f2e8ceba11142904, []int{1}
 }
 
 func (m *MessageTunnelRequest) XXX_Unmarshal(b []byte) error {
@@ -80,11 +149,11 @@ func (m *MessageTunnelRequest) GetEventName() string {
 	return ""
 }
 
-func (m *MessageTunnelRequest) GetPayload() string {
+func (m *MessageTunnelRequest) GetPayload() *any.Any {
 	if m != nil {
 		return m.Payload
 	}
-	return ""
+	return nil
 }
 
 type MessageTunnelResponseError struct {
@@ -99,7 +168,7 @@ func (m *MessageTunnelResponseError) Reset()         { *m = MessageTunnelRespons
 func (m *MessageTunnelResponseError) String() string { return proto.CompactTextString(m) }
 func (*MessageTunnelResponseError) ProtoMessage()    {}
 func (*MessageTunnelResponseError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f2e8ceba11142904, []int{1}
+	return fileDescriptor_f2e8ceba11142904, []int{2}
 }
 
 func (m *MessageTunnelResponseError) XXX_Unmarshal(b []byte) error {
@@ -136,7 +205,7 @@ func (m *MessageTunnelResponseError) GetMessage() string {
 
 type MessageTunnelResponse struct {
 	Ack                  uint32                      `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
-	Payload              string                      `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	Payload              *any.Any                    `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
 	Error                *MessageTunnelResponseError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
 	XXX_unrecognized     []byte                      `json:"-"`
@@ -147,7 +216,7 @@ func (m *MessageTunnelResponse) Reset()         { *m = MessageTunnelResponse{} }
 func (m *MessageTunnelResponse) String() string { return proto.CompactTextString(m) }
 func (*MessageTunnelResponse) ProtoMessage()    {}
 func (*MessageTunnelResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f2e8ceba11142904, []int{2}
+	return fileDescriptor_f2e8ceba11142904, []int{3}
 }
 
 func (m *MessageTunnelResponse) XXX_Unmarshal(b []byte) error {
@@ -175,11 +244,11 @@ func (m *MessageTunnelResponse) GetAck() uint32 {
 	return 0
 }
 
-func (m *MessageTunnelResponse) GetPayload() string {
+func (m *MessageTunnelResponse) GetPayload() *any.Any {
 	if m != nil {
 		return m.Payload
 	}
-	return ""
+	return nil
 }
 
 func (m *MessageTunnelResponse) GetError() *MessageTunnelResponseError {
@@ -189,36 +258,292 @@ func (m *MessageTunnelResponse) GetError() *MessageTunnelResponseError {
 	return nil
 }
 
+type TextMessage struct {
+	FromUser             string                    `protobuf:"bytes,1,opt,name=fromUser,proto3" json:"fromUser,omitempty"`
+	ToUser               string                    `protobuf:"bytes,2,opt,name=toUser,proto3" json:"toUser,omitempty"`
+	GroupId              string                    `protobuf:"bytes,3,opt,name=groupId,proto3" json:"groupId,omitempty"`
+	Content              string                    `protobuf:"bytes,10,opt,name=content,proto3" json:"content,omitempty"`
+	MsgSource            *TextMessageMessageSource `protobuf:"bytes,11,opt,name=msgSource,proto3" json:"msgSource,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
+}
+
+func (m *TextMessage) Reset()         { *m = TextMessage{} }
+func (m *TextMessage) String() string { return proto.CompactTextString(m) }
+func (*TextMessage) ProtoMessage()    {}
+func (*TextMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2e8ceba11142904, []int{4}
+}
+
+func (m *TextMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TextMessage.Unmarshal(m, b)
+}
+func (m *TextMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TextMessage.Marshal(b, m, deterministic)
+}
+func (m *TextMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextMessage.Merge(m, src)
+}
+func (m *TextMessage) XXX_Size() int {
+	return xxx_messageInfo_TextMessage.Size(m)
+}
+func (m *TextMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TextMessage proto.InternalMessageInfo
+
+func (m *TextMessage) GetFromUser() string {
+	if m != nil {
+		return m.FromUser
+	}
+	return ""
+}
+
+func (m *TextMessage) GetToUser() string {
+	if m != nil {
+		return m.ToUser
+	}
+	return ""
+}
+
+func (m *TextMessage) GetGroupId() string {
+	if m != nil {
+		return m.GroupId
+	}
+	return ""
+}
+
+func (m *TextMessage) GetContent() string {
+	if m != nil {
+		return m.Content
+	}
+	return ""
+}
+
+func (m *TextMessage) GetMsgSource() *TextMessageMessageSource {
+	if m != nil {
+		return m.MsgSource
+	}
+	return nil
+}
+
+type TextMessageMessageSource struct {
+	AtUseList            []string `protobuf:"bytes,1,rep,name=atUseList,proto3" json:"atUseList,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TextMessageMessageSource) Reset()         { *m = TextMessageMessageSource{} }
+func (m *TextMessageMessageSource) String() string { return proto.CompactTextString(m) }
+func (*TextMessageMessageSource) ProtoMessage()    {}
+func (*TextMessageMessageSource) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2e8ceba11142904, []int{5}
+}
+
+func (m *TextMessageMessageSource) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TextMessageMessageSource.Unmarshal(m, b)
+}
+func (m *TextMessageMessageSource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TextMessageMessageSource.Marshal(b, m, deterministic)
+}
+func (m *TextMessageMessageSource) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextMessageMessageSource.Merge(m, src)
+}
+func (m *TextMessageMessageSource) XXX_Size() int {
+	return xxx_messageInfo_TextMessageMessageSource.Size(m)
+}
+func (m *TextMessageMessageSource) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextMessageMessageSource.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TextMessageMessageSource proto.InternalMessageInfo
+
+func (m *TextMessageMessageSource) GetAtUseList() []string {
+	if m != nil {
+		return m.AtUseList
+	}
+	return nil
+}
+
+type ImageMessage struct {
+	FromUser             string   `protobuf:"bytes,1,opt,name=fromUser,proto3" json:"fromUser,omitempty"`
+	ToUser               string   `protobuf:"bytes,2,opt,name=toUser,proto3" json:"toUser,omitempty"`
+	GroupId              string   `protobuf:"bytes,3,opt,name=groupId,proto3" json:"groupId,omitempty"`
+	ImageId              string   `protobuf:"bytes,10,opt,name=imageId,proto3" json:"imageId,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ImageMessage) Reset()         { *m = ImageMessage{} }
+func (m *ImageMessage) String() string { return proto.CompactTextString(m) }
+func (*ImageMessage) ProtoMessage()    {}
+func (*ImageMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2e8ceba11142904, []int{6}
+}
+
+func (m *ImageMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImageMessage.Unmarshal(m, b)
+}
+func (m *ImageMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImageMessage.Marshal(b, m, deterministic)
+}
+func (m *ImageMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImageMessage.Merge(m, src)
+}
+func (m *ImageMessage) XXX_Size() int {
+	return xxx_messageInfo_ImageMessage.Size(m)
+}
+func (m *ImageMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImageMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImageMessage proto.InternalMessageInfo
+
+func (m *ImageMessage) GetFromUser() string {
+	if m != nil {
+		return m.FromUser
+	}
+	return ""
+}
+
+func (m *ImageMessage) GetToUser() string {
+	if m != nil {
+		return m.ToUser
+	}
+	return ""
+}
+
+func (m *ImageMessage) GetGroupId() string {
+	if m != nil {
+		return m.GroupId
+	}
+	return ""
+}
+
+func (m *ImageMessage) GetImageId() string {
+	if m != nil {
+		return m.ImageId
+	}
+	return ""
+}
+
+type RichFormatMessage struct {
+	FromUser             string   `protobuf:"bytes,1,opt,name=fromUser,proto3" json:"fromUser,omitempty"`
+	ToUser               string   `protobuf:"bytes,2,opt,name=toUser,proto3" json:"toUser,omitempty"`
+	GroupId              string   `protobuf:"bytes,3,opt,name=groupId,proto3" json:"groupId,omitempty"`
+	Content              *any.Any `protobuf:"bytes,10,opt,name=content,proto3" json:"content,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RichFormatMessage) Reset()         { *m = RichFormatMessage{} }
+func (m *RichFormatMessage) String() string { return proto.CompactTextString(m) }
+func (*RichFormatMessage) ProtoMessage()    {}
+func (*RichFormatMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f2e8ceba11142904, []int{7}
+}
+
+func (m *RichFormatMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RichFormatMessage.Unmarshal(m, b)
+}
+func (m *RichFormatMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RichFormatMessage.Marshal(b, m, deterministic)
+}
+func (m *RichFormatMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RichFormatMessage.Merge(m, src)
+}
+func (m *RichFormatMessage) XXX_Size() int {
+	return xxx_messageInfo_RichFormatMessage.Size(m)
+}
+func (m *RichFormatMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_RichFormatMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RichFormatMessage proto.InternalMessageInfo
+
+func (m *RichFormatMessage) GetFromUser() string {
+	if m != nil {
+		return m.FromUser
+	}
+	return ""
+}
+
+func (m *RichFormatMessage) GetToUser() string {
+	if m != nil {
+		return m.ToUser
+	}
+	return ""
+}
+
+func (m *RichFormatMessage) GetGroupId() string {
+	if m != nil {
+		return m.GroupId
+	}
+	return ""
+}
+
+func (m *RichFormatMessage) GetContent() *any.Any {
+	if m != nil {
+		return m.Content
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterType((*GetMessageHistoriesRequest)(nil), "chatbothubstreaming.GetMessageHistoriesRequest")
 	proto.RegisterType((*MessageTunnelRequest)(nil), "chatbothubstreaming.MessageTunnelRequest")
 	proto.RegisterType((*MessageTunnelResponseError)(nil), "chatbothubstreaming.MessageTunnelResponseError")
 	proto.RegisterType((*MessageTunnelResponse)(nil), "chatbothubstreaming.MessageTunnelResponse")
+	proto.RegisterType((*TextMessage)(nil), "chatbothubstreaming.TextMessage")
+	proto.RegisterType((*TextMessageMessageSource)(nil), "chatbothubstreaming.TextMessageMessageSource")
+	proto.RegisterType((*ImageMessage)(nil), "chatbothubstreaming.ImageMessage")
+	proto.RegisterType((*RichFormatMessage)(nil), "chatbothubstreaming.RichFormatMessage")
 }
 
 func init() { proto.RegisterFile("streaming.proto", fileDescriptor_f2e8ceba11142904) }
 
 var fileDescriptor_f2e8ceba11142904 = []byte{
-	// 312 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xdf, 0x4a, 0xc3, 0x30,
-	0x14, 0xc6, 0xcd, 0x36, 0xff, 0xec, 0xc8, 0x50, 0x32, 0x85, 0x30, 0xbc, 0x18, 0x05, 0xa1, 0x7a,
-	0x51, 0x65, 0x3e, 0x81, 0x1b, 0x03, 0x11, 0x94, 0x11, 0x7d, 0x81, 0xb4, 0x3d, 0xac, 0xa3, 0x6b,
-	0xb2, 0x35, 0xa9, 0x45, 0x6f, 0xbd, 0xf3, 0xa9, 0x25, 0x19, 0x9d, 0x55, 0x2a, 0xec, 0xee, 0x9c,
-	0x1e, 0xbe, 0xef, 0xfc, 0xbe, 0xe6, 0xc0, 0x89, 0x36, 0x39, 0x8a, 0x6c, 0x21, 0xe7, 0xc1, 0x2a,
-	0x57, 0x46, 0xd1, 0x7e, 0x94, 0x08, 0x13, 0x2a, 0x93, 0x14, 0xe1, 0x76, 0xe4, 0x7d, 0xc0, 0xd9,
-	0x13, 0x6a, 0x2d, 0xe6, 0xf8, 0x5a, 0x48, 0x89, 0x4b, 0x8e, 0xeb, 0x02, 0xb5, 0xa1, 0xa7, 0xd0,
-	0xd6, 0xb8, 0x66, 0x64, 0x48, 0xfc, 0x1e, 0xb7, 0x25, 0x65, 0x70, 0x28, 0x11, 0xe3, 0xfb, 0x28,
-	0x65, 0xad, 0x21, 0xf1, 0x8f, 0x78, 0xd5, 0xd2, 0x0b, 0xe8, 0xe2, 0x1b, 0x4a, 0xf3, 0x2c, 0x32,
-	0x64, 0xed, 0x21, 0xf1, 0xbb, 0xfc, 0xe7, 0x83, 0xd5, 0xad, 0xc4, 0xfb, 0x52, 0x89, 0x98, 0x75,
-	0xdc, 0xac, 0x6a, 0xbd, 0x47, 0x18, 0xfc, 0xd9, 0xad, 0x57, 0x4a, 0x6a, 0x9c, 0xe6, 0xb9, 0xca,
-	0x29, 0x85, 0x4e, 0xa4, 0x62, 0x74, 0x08, 0x6d, 0xee, 0x6a, 0xeb, 0x95, 0x6d, 0x14, 0x8e, 0xa1,
-	0xcb, 0xab, 0xd6, 0xfb, 0x22, 0x70, 0xde, 0x68, 0x66, 0x93, 0x88, 0x28, 0xad, 0x92, 0x88, 0x28,
-	0xad, 0x13, 0xb5, 0x7e, 0x11, 0xd1, 0x29, 0xec, 0xa3, 0x5d, 0xee, 0x52, 0x1c, 0x8f, 0x6e, 0x82,
-	0x86, 0x5f, 0x16, 0xfc, 0xcf, 0xcc, 0x37, 0xea, 0xd1, 0x27, 0x81, 0xfe, 0x24, 0x11, 0x66, 0xac,
-	0xcc, 0x43, 0x11, 0xbe, 0x54, 0x4a, 0xba, 0x84, 0x5e, 0x56, 0x17, 0xd3, 0xab, 0x5d, 0x16, 0xb8,
-	0x07, 0x19, 0x5c, 0xef, 0xce, 0xe2, 0xed, 0xf9, 0xe4, 0x96, 0x8c, 0x27, 0x70, 0x29, 0xd1, 0x04,
-	0x89, 0x28, 0xd3, 0x72, 0x61, 0x92, 0x72, 0x21, 0xe3, 0x9a, 0x47, 0xb0, 0x35, 0x19, 0xb3, 0x06,
-	0xd6, 0x99, 0x3d, 0x99, 0x19, 0x09, 0x0f, 0xdc, 0xed, 0xdc, 0x7d, 0x07, 0x00, 0x00, 0xff, 0xff,
-	0x46, 0x02, 0x93, 0xc4, 0x4e, 0x02, 0x00, 0x00,
+	// 545 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0xdb, 0x6e, 0xd3, 0x30,
+	0x18, 0xc6, 0xeb, 0xd8, 0xe1, 0x2f, 0x13, 0xe0, 0x0d, 0x64, 0x2a, 0x2e, 0xa6, 0x08, 0xa4, 0x81,
+	0x44, 0x8a, 0xca, 0x0d, 0xb7, 0xeb, 0x34, 0x58, 0x39, 0x69, 0xca, 0xb6, 0x07, 0x70, 0x93, 0x7f,
+	0x49, 0xd4, 0xc6, 0xee, 0x6c, 0x67, 0xa5, 0xd7, 0xbc, 0x00, 0xf0, 0x04, 0x3c, 0x0b, 0x4f, 0x86,
+	0xec, 0x38, 0x3d, 0xa0, 0x56, 0xea, 0x05, 0x5c, 0x25, 0xdf, 0x7f, 0xf2, 0xf7, 0xfd, 0xfe, 0x0c,
+	0xf7, 0xb5, 0x51, 0xc8, 0x8b, 0x5c, 0xa4, 0xe1, 0x48, 0x49, 0x23, 0xe9, 0x7e, 0x9c, 0x71, 0xd3,
+	0x97, 0x26, 0x2b, 0xfb, 0xd3, 0x54, 0xeb, 0x49, 0x2a, 0x65, 0x3a, 0xc4, 0xb6, 0x2b, 0xe9, 0x97,
+	0xd7, 0x6d, 0x2e, 0x26, 0x55, 0x7d, 0xf0, 0x93, 0x40, 0xeb, 0x3d, 0x9a, 0xcf, 0xa8, 0x35, 0x4f,
+	0xf1, 0x2c, 0xd7, 0x46, 0xaa, 0x1c, 0x75, 0x84, 0x37, 0x25, 0x6a, 0x43, 0x19, 0x6c, 0xa7, 0x4a,
+	0x96, 0xa3, 0x5e, 0xc2, 0xc8, 0x21, 0x39, 0xda, 0x8d, 0x6a, 0x48, 0x1f, 0xc3, 0x56, 0xa9, 0x51,
+	0xf5, 0x12, 0xb6, 0xe1, 0x12, 0x1e, 0xd1, 0x67, 0xb0, 0x77, 0xad, 0x64, 0xe1, 0x07, 0xf6, 0x12,
+	0xd6, 0x70, 0xe9, 0xc5, 0x20, 0x7d, 0x0a, 0xbb, 0x49, 0xae, 0x30, 0x36, 0xb9, 0x14, 0x6c, 0xd3,
+	0x55, 0xcc, 0x02, 0xc1, 0x77, 0x02, 0x07, 0xbe, 0xf6, 0xb2, 0x14, 0x02, 0x87, 0x35, 0x9d, 0x07,
+	0xd0, 0xd0, 0x78, 0xe3, 0xa8, 0xec, 0x45, 0xf6, 0xd7, 0x12, 0x14, 0x88, 0xc9, 0x71, 0x3c, 0x70,
+	0x3c, 0x76, 0xa2, 0x1a, 0xda, 0x23, 0xf0, 0x16, 0x85, 0xf9, 0xc2, 0x0b, 0xf4, 0x24, 0x66, 0x01,
+	0x1a, 0xc2, 0xf6, 0x88, 0x4f, 0x86, 0x92, 0x27, 0xee, 0xf8, 0x66, 0xe7, 0x20, 0xac, 0x96, 0x14,
+	0xd6, 0x4b, 0x0a, 0x8f, 0xc5, 0x24, 0xaa, 0x8b, 0x82, 0x0f, 0xd0, 0xfa, 0x8b, 0x91, 0x1e, 0x49,
+	0xa1, 0xf1, 0x54, 0x29, 0xa9, 0x28, 0x85, 0xcd, 0x58, 0x26, 0xe8, 0x88, 0x35, 0x22, 0xf7, 0x6f,
+	0x99, 0x15, 0x55, 0x87, 0xdf, 0x50, 0x0d, 0x83, 0x5f, 0x04, 0x1e, 0x2d, 0x1d, 0x66, 0xf5, 0xf1,
+	0x78, 0x50, 0xeb, 0xe3, 0xf1, 0x60, 0x9e, 0xe7, 0xc6, 0x1a, 0x3c, 0xe9, 0x29, 0xdc, 0x45, 0x4b,
+	0xc9, 0x29, 0x6e, 0x76, 0xda, 0xe1, 0x12, 0x3f, 0x84, 0xab, 0x95, 0x44, 0x55, 0x77, 0xf0, 0x9b,
+	0x40, 0xf3, 0x12, 0xbf, 0xd6, 0xbe, 0xa0, 0x2d, 0xd8, 0xb1, 0x17, 0x78, 0xa5, 0x51, 0x79, 0x23,
+	0x4c, 0xb1, 0x75, 0x82, 0x91, 0x2e, 0xe3, 0x9d, 0x50, 0xa1, 0x79, 0xef, 0x34, 0x16, 0xbd, 0xc3,
+	0x60, 0x3b, 0x96, 0xc2, 0xa0, 0x30, 0x0c, 0xaa, 0x8c, 0x87, 0xf4, 0x23, 0xec, 0x16, 0x3a, 0xbd,
+	0x90, 0xa5, 0x8a, 0x91, 0x35, 0x9d, 0x84, 0x57, 0x4b, 0x25, 0xcc, 0x91, 0xf3, 0x9f, 0xaa, 0x29,
+	0x9a, 0xf5, 0x07, 0x6f, 0x81, 0xad, 0x2a, 0xb3, 0xee, 0xe0, 0xe6, 0x4a, 0xe3, 0xa7, 0x5c, 0x1b,
+	0x46, 0x0e, 0x1b, 0xd6, 0x1d, 0xd3, 0x40, 0x70, 0x0b, 0xf7, 0x7a, 0xc5, 0xac, 0xe7, 0xdf, 0xcb,
+	0xcf, 0x8b, 0xea, 0x71, 0x78, 0xf9, 0x1e, 0x06, 0x3f, 0x08, 0x3c, 0x8c, 0xf2, 0x38, 0x7b, 0x27,
+	0x55, 0xc1, 0xff, 0xd3, 0xf2, 0xc3, 0xc5, 0xe5, 0xaf, 0x74, 0x94, 0x2f, 0xea, 0x7c, 0x23, 0xb0,
+	0x7f, 0x92, 0x71, 0xd3, 0x95, 0xe6, 0xac, 0xec, 0x5f, 0xd4, 0x37, 0x40, 0x87, 0xb0, 0x57, 0xcc,
+	0xfb, 0x88, 0xbe, 0x58, 0xc7, 0x6b, 0xee, 0x1d, 0xb7, 0x5e, 0xae, 0x6f, 0xcb, 0xe0, 0xce, 0x11,
+	0x79, 0x4d, 0xba, 0x27, 0xf0, 0x5c, 0xa0, 0x09, 0x33, 0x3e, 0x1e, 0x8c, 0x73, 0x93, 0x8d, 0x73,
+	0x91, 0xcc, 0xcd, 0x08, 0xa7, 0x43, 0xba, 0x6c, 0x09, 0xd7, 0x73, 0x2b, 0xec, 0x9c, 0xf4, 0xb7,
+	0x9c, 0xc2, 0x37, 0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0x48, 0x04, 0x5d, 0xe3, 0x36, 0x05, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -233,7 +558,6 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ChatBotHubStreamingClient interface {
-	// 双向 tunnel
 	MessageTunnel(ctx context.Context, opts ...grpc.CallOption) (ChatBotHubStreaming_MessageTunnelClient, error)
 }
 
@@ -278,7 +602,6 @@ func (x *chatBotHubStreamingMessageTunnelClient) Recv() (*MessageTunnelResponse,
 
 // ChatBotHubStreamingServer is the server API for ChatBotHubStreaming service.
 type ChatBotHubStreamingServer interface {
-	// 双向 tunnel
 	MessageTunnel(ChatBotHubStreaming_MessageTunnelServer) error
 }
 

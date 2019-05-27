@@ -6,15 +6,30 @@ option java_outer_classname = "ChatBotHubStreamingProto";
 
 package chatbothubstreaming;
 
+import "google/protobuf/any.proto";
+
 service ChatBotHubStreaming {
     rpc messageTunnel (stream MessageTunnelRequest) returns (stream MessageTunnelResponse) {}
+}
+
+/*
+	拉取聊天室历史记录
+	@direction
+	- new: 从 fromMessageId 起，获取更新消息，不包含 fromMessageId；如果 fromMessageId 为空，则拉取最新一页历史记录
+	- old: 从 fromMessageId 起，获取更老的信息，不包含 fromMessageId；fromMessageId 不允许为空
+*/
+message GetMessageHistoriesRequest {
+    string groupId = 1;
+    string userId = 2;
+    string fromMessageId = 3;
+    string direction = 4;   // new, old
 }
 
 message MessageTunnelRequest {
     uint32 seq = 1;
     bool needAck = 2;
     string eventName = 3;
-    string payload = 4;
+    google.protobuf.Any payload = 4;
 }
 
 message MessageTunnelResponseError {
@@ -24,6 +39,39 @@ message MessageTunnelResponseError {
 
 message MessageTunnelResponse {
     uint32 ack = 1;
-    string payload = 2;
+    google.protobuf.Any payload = 2;
     MessageTunnelResponseError error = 3;
+}
+
+/*
+    各种消息体
+*/
+
+message TextMessage {
+    string fromUser = 1;
+    string toUser = 2;
+    string groupId = 3;
+
+    string content = 10;
+    TextMessageMessageSource msgSource = 11;
+}
+
+message TextMessageMessageSource {
+    repeated string atUseList = 1;
+}
+
+message ImageMessage {
+    string fromUser = 1;
+    string toUser = 2;
+    string groupId = 3;
+
+    string imageId = 10;
+}
+
+message RichFormatMessage {
+    string fromUser = 1;
+    string toUser = 2;
+    string groupId = 3;
+
+    google.protobuf.Any content = 10;
 }

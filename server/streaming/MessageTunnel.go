@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"google.golang.org/grpc/metadata"
 	"io"
@@ -38,14 +39,28 @@ func createNewConnection(user *utils.AuthUser, stream *proto.ChatBotHubStreaming
 	return result
 }
 
-func (connection *MessageTunnelConnection) onEvent(eventName string, handler MessageTunnelEventHandler) {
+func (connection *MessageTunnelConnection) createResponseForRequest(event *proto.MessageTunnelRequest, payload *any.Any, error *proto.MessageTunnelResponseError) *proto.MessageTunnelResponse {
+	return &proto.MessageTunnelResponse{Ack: event.Seq, Payload: payload, Error: error}
+}
+
+func (connection *MessageTunnelConnection) on(eventName string, handler MessageTunnelEventHandler) {
 	connection.eventHandlers[eventName] = handler
 }
 
 func (connection *MessageTunnelConnection) setupEventHandlers() {
-	//connection.onEvent("connection", func (request *proto.MessageTunnelRequest) *proto.MessageTunnelResponse {
-	//
-	//})
+	connection.on("get_conversation_messages", func(request *proto.MessageTunnelRequest) *proto.MessageTunnelResponse {
+		// TODO
+		return nil
+	})
+
+	connection.on("get_user_unread_messages", func(request *proto.MessageTunnelRequest) *proto.MessageTunnelResponse {
+		// TODO
+		return nil
+	})
+
+	connection.on("send_message", func(request *proto.MessageTunnelRequest) *proto.MessageTunnelResponse {
+		return nil
+	})
 }
 
 func (connection *MessageTunnelConnection) handleEvent(event *proto.MessageTunnelRequest) error {
@@ -78,25 +93,25 @@ func (connection *MessageTunnelConnection) sendResponse(event *proto.MessageTunn
 	}
 }
 
-func (streamingServer *StreamingServer) MessageTunnel(stream proto.ChatBotHubStreaming_MessageTunnelServer) error {
+func (server *Server) MessageTunnel(stream proto.ChatBotHubStreaming_MessageTunnelServer) error {
 	md, ok := metadata.FromIncomingContext(stream.Context())
 	if !ok {
 		return &MessageTunnelError{description: "can not get stream context"}
 	}
 
 	token := md.Get("token")[0]
-	user, err := streamingServer.ValidateToken(token)
+	user, err := server.ValidateToken(token)
 
 	// validate token fail, close connection immediately
 	if err != nil {
-		streamingServer.Error(err, "unauthorized, close connection: ", token)
+		server.Error(err, "unauthorized, close connection: ", token)
 		return err
 	}
 
 	// new connection
 	connection := createNewConnection(user, &stream)
 
-	streamingServer.Debug("new connection established:", connection.user.AccountName)
+	server.Debug("new connection established:", connection.user.AccountName)
 
 	go func() {
 		for {
@@ -104,10 +119,10 @@ func (streamingServer *StreamingServer) MessageTunnel(stream proto.ChatBotHubStr
 
 			if err != nil {
 				if err == io.EOF {
-					streamingServer.Debug("close stream eof")
+					server.Debug("close stream eof")
 
 				} else if err != nil {
-					streamingServer.Error(err, "close stream error")
+					server.Error(err, "close stream error")
 				}
 
 				connection.close(err)
@@ -117,7 +132,7 @@ func (streamingServer *StreamingServer) MessageTunnel(stream proto.ChatBotHubStr
 			go func() {
 				err = connection.handleEvent(event)
 				if err != nil {
-					streamingServer.Error(err, "Error occurred while handling event")
+					server.Error(err, "Error occurred while handling event")
 				}
 			}()
 		}
