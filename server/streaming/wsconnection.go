@@ -1,7 +1,7 @@
 package streaming
 
 import (
-	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"net/http"
@@ -49,6 +49,21 @@ func (wsConnection *WsConnection) SendWithAck(event *WsEvent, ack WsEventAckFunc
 	wsConnection.addACK(event.Seq, &ack)
 }
 
+func (wsConnection *WsConnection) Close() error {
+	server := wsConnection.server
+
+	if _, ok := server.websocketConnections.Load(wsConnection); ok {
+		server.websocketConnections.Delete(wsConnection)
+	}
+
+	_ = wsConnection.writeMessage(websocket.CloseMessage, nil)
+	result := wsConnection.conn.Close()
+
+	_, _ = wsConnection.emitEvent("close", nil, false)
+
+	return result
+}
+
 /***********************************************************************************************************************
  * private methods
  */
@@ -79,20 +94,30 @@ func (wsConnection *WsConnection) writeJSON(v interface{}) error {
 	return wsConnection.conn.WriteJSON(v)
 }
 
-func (wsConnection *WsConnection) close() error {
-	server := wsConnection.server
+func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{}, needAck bool) (*WsEvent, error) {
+	val, ok := wsConnection.eventHandlers.Load(eventType)
 
-	if _, ok := server.websocketConnections[wsConnection]; ok {
-		delete(server.websocketConnections, wsConnection)
+	if !ok {
+		err := fmt.Errorf("no handler for event with name: %s\n", eventType)
+		wsConnection.server.Error(err, "")
+		return nil, err
 	}
 
-	_ = wsConnection.writeMessage(websocket.CloseMessage, nil)
-	return wsConnection.conn.Close()
+	eventHandler := val.(*WsEventEventHandlerFunc)
+	response := (*eventHandler)(payload)
+	if needAck && response == nil {
+		err := fmt.Errorf("no repsonse return while needAck: %s", eventType)
+		wsConnection.server.Error(err, "")
+
+		return nil, err
+	}
+
+	return response, nil
 }
 
 func (wsConnection *WsConnection) listen() {
 	defer func() {
-		_ = wsConnection.close()
+		_ = wsConnection.Close()
 	}()
 
 	_wsConn := wsConnection.conn
@@ -111,6 +136,8 @@ func (wsConnection *WsConnection) listen() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				wsConnection.server.Error(err, "error while reading message")
 			}
+
+			_, _ = wsConnection.emitEvent("error", err, false)
 			break
 		}
 
@@ -125,26 +152,16 @@ func (wsConnection *WsConnection) listen() {
 		} else {
 			// request
 			processRequest := func() {
-				val, ok := wsConnection.eventHandlers.Load(event.EventType)
+				response, err := wsConnection.emitEvent(event.EventType, event.Payload, event.NeedAck)
 
-				if !ok {
-					err := errors.New("")
-					wsConnection.server.Error(err, "can not handle event with name:", event.EventType)
+				if err != nil {
+					_, _ = wsConnection.emitEvent("error", err, false)
 
-					response := event.CreateErrorResponse(-1, "event handler not found")
+					response := event.CreateErrorResponse(-1, err.Error())
 					_ = wsConnection.writeJSON(response)
-					return
-				}
 
-				eventHandler := val.(*WsEventEventHandlerFunc)
-				response := (*eventHandler)(event.Payload)
-				if event.NeedAck {
-					if response == nil {
-						err := errors.New("")
-						wsConnection.server.Error(err, "can not handle event with name:", event.EventType)
-					} else {
-						_ = wsConnection.writeJSON(response)
-					}
+				} else if response != nil {
+					_ = wsConnection.writeJSON(response)
 				}
 			}
 
@@ -156,16 +173,18 @@ func (wsConnection *WsConnection) listen() {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	// 解决跨域问题
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
-// serveWs handles websocket requests from the peer.
-func ServerWsConnection(server *Server, w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("X-AUTHORIZE")
+func acceptWebsocketConnection(server *Server, w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
 	user, err := server.ValidateToken(token)
 	if err != nil {
 		server.Error(err, "auth failed")
 		w.WriteHeader(403)
-		_ = r.Body.Close()
 		return
 	}
 
@@ -176,7 +195,28 @@ func ServerWsConnection(server *Server, w http.ResponseWriter, r *http.Request) 
 	}
 
 	wsConnection := newWsConnection(server, conn, user)
-	server.websocketConnections[wsConnection] = true
+	server.websocketConnections.Store(wsConnection, true)
+	server.onNewConnectionChan <- wsConnection
 
 	go wsConnection.listen()
+}
+
+func (server *Server) ServeWebsocketServer() error {
+	server.Info("websocket server starts....")
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		acceptWebsocketConnection(server, w, r)
+	})
+
+	addr := fmt.Sprintf("%s:%s", server.Config.Host, server.Config.Port)
+	server.Info("websocket server listening to %s\n", addr)
+
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		server.Error(err, "websocket server fail to serve")
+		return err
+	}
+
+	server.Info("websocket server serve ends without error")
+
+	return nil
 }

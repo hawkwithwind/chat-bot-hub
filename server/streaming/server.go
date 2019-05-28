@@ -1,15 +1,13 @@
 package streaming
 
 import (
-	"fmt"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/logger"
 	"github.com/pkg/errors"
-	"net/http"
+	"sync"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
-	"github.com/hawkwithwind/chat-bot-hub/server/streaming/websocket"
 )
 
 type ErrorHandler struct {
@@ -17,11 +15,11 @@ type ErrorHandler struct {
 }
 
 type Config struct {
-	Host         string
-	Port         string
-	SecretPhrase string
+	Host string
+	Port string
 
-	Chathubs []string
+	Chathubs   []string
+	ChathubWeb string
 }
 
 type Server struct {
@@ -30,7 +28,9 @@ type Server struct {
 	Config Config
 	chmsg  chan *pb.EventReply
 
-	websocketConnections map[*WsConnection]bool
+	websocketConnections *sync.Map
+
+	onNewConnectionChan chan *WsConnection
 }
 
 func (server *Server) init() {
@@ -39,6 +39,8 @@ func (server *Server) init() {
 	_ = server.Logger.Init()
 
 	server.chmsg = make(chan *pb.EventReply, 1000)
+	server.websocketConnections = &sync.Map{}
+	server.onNewConnectionChan = make(chan *WsConnection)
 }
 
 func (server *Server) ValidateToken(token string) (*utils.AuthUser, error) {
@@ -46,11 +48,8 @@ func (server *Server) ValidateToken(token string) (*utils.AuthUser, error) {
 		return nil, errors.New("auth fail, no token supplied")
 	}
 
-	o := &ErrorHandler{}
-	user := o.ValidateJWTToken(server.Config.SecretPhrase, token)
-	if o.Err != nil {
-		return nil, o.Err
-	}
+	// TODO: call web token validation
+	user := &utils.AuthUser{}
 
 	return user, nil
 }
@@ -71,35 +70,12 @@ func (server *Server) Serve() error {
 		server.Select()
 	}()
 
-	server.Info("BEGIN SOCKET.IO ...")
-	if err := server.serveWebsocketServer(); err != nil {
-		server.Error(err, "socket.io stopped")
-	} else {
-		server.Info("socket.io stopped with out error")
-	}
+	go func() {
+		for {
+			connection := <-server.onNewConnectionChan
+			server.onNewConnection(connection)
+		}
+	}()
 
-	return nil
-}
-
-type Auth struct {
-	Token string `json:"token"`
-}
-
-func (server *Server) serveWebsocketServer() error {
-	server.Info("streaming websocket server starts....")
-
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		ServerWsConnection(server, w, r)
-	})
-
-	addr := fmt.Sprintf("%server:%server", server.Config.Host, server.Config.Port)
-	server.Info("listening to ", addr)
-
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		server.Error(err, "fail to serve")
-	}
-
-	server.Info("streaming websocket serve ends")
-
-	return nil
+	return server.ServeWebsocketServer()
 }

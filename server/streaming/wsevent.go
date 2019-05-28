@@ -30,7 +30,7 @@ type WsEvent struct {
 }
 
 type WsEventAckFunc = func(payload *json.RawMessage, err error)
-type WsEventEventHandlerFunc = func(payload *json.RawMessage) *WsEvent
+type WsEventEventHandlerFunc = func(payload interface{}) *WsEvent
 
 type WsEventAckWrapper struct {
 	ack   *WsEventAckFunc

@@ -58,7 +58,7 @@ func (server *Server) Listen(client pb.ChatBotHubClient) error {
 
 		switch in.EventType {
 		case "PONG":
-			server.Info("IGNORE PONG")
+			//server.Info("IGNORE PONG")
 		default:
 			server.Info("RECV [%s] and write to channel ...", in.EventType)
 			server.chmsg <- in
