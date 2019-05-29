@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"strconv"
 
 	"github.com/getsentry/raven-go"
 	"gopkg.in/yaml.v2"
@@ -55,7 +56,16 @@ func loadConfig(configPath string) (MainConfig, error) {
 	dbname := os.Getenv("DB_NAME")
 	dblink := os.Getenv("DB_ALIAS")
 	dbparams := os.Getenv("DB_PARAMS")
+	dbmaxconn := os.Getenv("DB_MAXCONN")
+	
 	c.Web.Database.DataSourceName = fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", dbuser, dbpassword, dblink, dbname, dbparams)
+
+	if dbmaxconn != "" {
+		maxconn, err := strconv.Atoi(dbmaxconn)
+		if err == nil {
+			c.Web.Database.MaxConnectNum = maxconn
+		}
+	}
 
 	return c, nil
 }
