@@ -104,7 +104,9 @@ func main() {
 					Config:     config.Hub,
 					Webhost:    "web",
 					Webport:    config.Web.Port,
-					WebBaseUrl: config.Web.Baseurl}
+					WebBaseUrl: config.Web.Baseurl,
+					SecretPhrase: config.Web.SecretPhrase,
+				}
 				hub.Serve()
 			}, nil)
 		}()
@@ -136,9 +138,7 @@ func main() {
 
 			server := streaming.StreamingServer{
 				Config: config.Streaming,
-			}
-
-			server.Config.SecretPhrase = config.Web.SecretPhrase
+			}			
 
 			err := server.Serve()
 			if err != nil {

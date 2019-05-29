@@ -18,6 +18,7 @@ import (
 const (
 	SDK          string = "SDK"
 	USER         string = "USER"
+	STREAMING    string = "STREAMING"
 	SDKCODE      string = "sdkbearer"
 	SDKCHILDCODE string = "childbearer"
 	REFRESHCODE  string = "refresh"
@@ -266,6 +267,38 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	} else {
 		o.Err = utils.NewAuthError(fmt.Errorf("用户名密码不匹配"))
 	}
+}
+
+func (web *WebServer) streamingCtrl(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	bearerToken := req.Header.Get("X-AUTHORIZE")
+	clientType := req.Header.Get("X-CLIENT-TYPE")
+
+	if clientType != STREAMING {
+		o.Err = NewAuthError(fmt.Errorf("malfaled request"))
+		return
+	}
+
+	user := o.ValidateJWTToken(web.Config.SecretPhrase, bearerToken)
+	if o.Err != nil {
+		return
+	}
+
+	if user == nil {
+		o.Err = NewAuthError(fmt.Error("failed to parse user"))
+		return
+	}
+
+	if user.Child == nil {
+		o.Err = NewAuthError(fmt.Error("failed to parse user.Child"))
+		return
+	}
+
+	// TODO
+
+	o.ok(w, "", nil)
 }
 
 func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {

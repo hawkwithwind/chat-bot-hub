@@ -64,6 +64,7 @@ type ChatHub struct {
 	Webhost      string
 	Webport      string
 	WebBaseUrl   string
+	WebSecretPhrase string
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
 

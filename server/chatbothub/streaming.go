@@ -36,6 +36,16 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 	subs := []string{}
 	unsubs := []string{}
 
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "metadata is null")
+	}
+
+	token, ok := md["token"]
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "metadata[token] is not set")
+	}
+
 	for _, res := range req.Resources {
 		at := StreamingActionType(res.ActionType)
 		switch at {
@@ -45,6 +55,8 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 			unsubs = append(unsubs, res.BotId)
 		}
 	}
+
+	
 
 	snode.UnSub(unsubs)
 	snode.Sub(subs)
