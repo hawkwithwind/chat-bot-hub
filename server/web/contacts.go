@@ -127,7 +127,7 @@ func (web *WebServer) processUsers() {
 		if (len(users) > sectionLength) || (isTimeout && len(users) > 0) {
 			err := web.saveChatUsers(users)
 			if err != nil {
-				web.Error(err, "[Contacts group debug] save chatusers failed")
+				web.Error(err, "[Contacts debug] save chatusers failed")
 			}
 			users = []ProcessUserInfo{}
 		}
@@ -148,7 +148,7 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	o := &ErrorHandler{}
 	
 	tx := o.Begin(web.db)
-	o.CommitOrRollback(tx)
+	defer o.CommitOrRollback(tx)
 
 	chatusers := []*domains.ChatUser{}
 	for _, cc := range users {
