@@ -107,6 +107,29 @@ VALUES
 	_, o.Err = q.NamedExecContext(ctx, query, chatcontact)
 }
 
+func (o *ErrorHandler) SaveIgnoreChatContacts(q dbx.Queryable, chatcontacts []*ChatContact) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+INSERT IGNORE INTO chatcontacts
+(chatcontactid, botid, chatuserid)
+VALUES
+`
+	valuetuples := []string{}
+	params := []interface{}{}
+	for _, cc := range chatcontacts {
+		valuetuples = append(valuetuples, `(:chatcontactid, :botid, :chatuserid)`)
+		params = append(params, cc.ChatContactId, cc.BotId, cc.ChatUserId)
+	}
+
+	query += strings.Join(valuetuples, ",\n")
+	
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, query, params...)
+}
+
 func (o *ErrorHandler) DeleteChatContact(q dbx.Queryable, botId string, username string) {
 	if o.Err != nil {
 		return
