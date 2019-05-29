@@ -33,6 +33,7 @@ type ErrorHandler struct {
 type DatabaseConfig struct {
 	DriverName     string
 	DataSourceName string
+	MaxConnectNum  int
 }
 
 type WebConfig struct {
@@ -113,6 +114,11 @@ func (ctx *WebServer) init() error {
 				return o.Err
 			}
 		}
+	}
+
+	if ctx.Config.Database.MaxConnectNum > 0 {
+		ctx.Info("set database max conn %d", ctx.Config.Database.MaxConnectNum)
+		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
 	}
 
 	ctx.contactParser = NewContactParser()
