@@ -67,8 +67,6 @@ func loadConfig(configPath string) (MainConfig, error) {
 		}
 	}
 
-	fmt.Println("[MAIN] dbmaxconn ", dbmaxconn)
-
 	return c, nil
 }
 
