@@ -15,18 +15,18 @@ type WsEventError struct {
 }
 
 func (error *WsEventError) Error() string {
-	return fmt.Sprintf("WsEventError, code %ld , message: %s\n", error.Code, error.Message)
+	return fmt.Sprintf("WsEventError, code %d , message: %s\n", error.Code, error.Message)
 }
 
 type WsEvent struct {
-	Seq     int64 `json:"seq"`
-	Ack     int64 `json:"ack"`
-	NeedAck bool  `json:"needAck"`
+	Seq     int64 `json:"seq,omitempty"`
+	Ack     int64 `json:"ack,omitempty"`
+	NeedAck bool  `json:"needAck,omitempty"`
 
-	EventType string           `json:"eventType"`
-	Payload   *json.RawMessage `json:"payload"`
+	EventType string           `json:"eventType,omitempty"`
+	Payload   *json.RawMessage `json:"payload,omitempty"`
 
-	error *WsEventError
+	Error *WsEventError `json:"error,omitempty"`
 }
 
 type WsEventAckFunc = func(payload *json.RawMessage, err error)
@@ -45,8 +45,8 @@ func (wsConnection *WsConnection) nextEventSeq() int64 {
 	return result
 }
 
-func (wsConnection *WsConnection) CreateRequest(eventType string, payload *json.RawMessage, needAck bool) *WsEvent {
-	return &WsEvent{Seq: wsConnection.nextEventSeq(), NeedAck: needAck, EventType: eventType, Payload: payload}
+func (wsConnection *WsConnection) CreateRequest(eventType string, payload *json.RawMessage) *WsEvent {
+	return &WsEvent{Seq: wsConnection.nextEventSeq(), EventType: eventType, Payload: payload}
 }
 
 func (wsConnection *WsConnection) addACK(seq int64, ack *WsEventAckFunc) {
@@ -54,19 +54,19 @@ func (wsConnection *WsConnection) addACK(seq int64, ack *WsEventAckFunc) {
 	wrapper.ack = ack
 
 	// ack 默认 timeout 20 秒
-	wrapper.timer = time.NewTimer(20)
+	wrapper.timer = time.NewTimer(20 * time.Second)
 
 	go func() {
 		for {
 			<-wrapper.timer.C
-			_ = wsConnection.finishAck(seq, nil, errors.New("ACK Timeout"))
+			_ = wsConnection.invokeAckCallback(seq, nil, errors.New("ACK Timeout"))
 		}
 	}()
 
 	wsConnection.ackCallbacks.Store(seq, wrapper)
 }
 
-func (wsConnection *WsConnection) finishAck(seq int64, payload *json.RawMessage, err error) error {
+func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload *json.RawMessage, err error) error {
 	val, ok := wsConnection.ackCallbacks.Load(seq)
 	if !ok {
 		err := errors.New("ack not found for seq:" + strconv.FormatInt(seq, 10))
@@ -91,7 +91,7 @@ func (wsEvent *WsEvent) CreateResponse(payload *json.RawMessage) *WsEvent {
 func (wsEvent *WsEvent) CreateErrorResponse(code int64, message string) *WsEvent {
 	request := wsEvent
 	result := &WsEvent{Ack: request.Seq, EventType: request.EventType}
-	result.error = &WsEventError{Code: code, Message: message}
+	result.Error = &WsEventError{Code: code, Message: message}
 
 	return result
 }

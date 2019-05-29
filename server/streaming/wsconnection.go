@@ -14,7 +14,7 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pingWait = 60 * time.Second
 )
 
 type WsConnection struct {
@@ -27,6 +27,8 @@ type WsConnection struct {
 
 	eventHandlers *sync.Map
 	ackCallbacks  *sync.Map
+
+	eventsToWriteChan chan WsEvent
 }
 
 /***********************************************************************************************************************
@@ -39,12 +41,13 @@ func (wsConnection *WsConnection) On(eventName string, eventHandler WsEventEvent
 
 func (wsConnection *WsConnection) Send(event *WsEvent) {
 	event.NeedAck = false
-	_ = wsConnection.writeJSON(event)
+
+	wsConnection.writeEvent(event)
 }
 
 func (wsConnection *WsConnection) SendWithAck(event *WsEvent, ack WsEventAckFunc) {
 	event.NeedAck = true
-	_ = wsConnection.writeJSON(event)
+	wsConnection.writeEvent(event)
 
 	wsConnection.addACK(event.Seq, &ack)
 }
@@ -56,7 +59,8 @@ func (wsConnection *WsConnection) Close() error {
 		server.websocketConnections.Delete(wsConnection)
 	}
 
-	_ = wsConnection.writeMessage(websocket.CloseMessage, nil)
+	close(wsConnection.eventsToWriteChan)
+
 	result := wsConnection.conn.Close()
 
 	_, _ = wsConnection.emitEvent("close", nil, false)
@@ -74,24 +78,21 @@ func newWsConnection(server *Server, wsConnection *websocket.Conn, user *utils.A
 	result.eventSeq = 1
 	result.eventHandlers = &sync.Map{}
 	result.ackCallbacks = &sync.Map{}
+	result.eventsToWriteChan = make(chan WsEvent, 128)
 
 	return result
 }
 
-func (wsConnection *WsConnection) writeMessage(messageType int, payload []byte) error {
+func (wsConnection *WsConnection) writeJSON(payload interface{}) error {
 	if err := wsConnection.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		return err
 	}
 
-	return wsConnection.conn.WriteMessage(messageType, payload)
+	return wsConnection.conn.WriteJSON(payload)
 }
 
-func (wsConnection *WsConnection) writeJSON(v interface{}) error {
-	if err := wsConnection.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-		return err
-	}
-
-	return wsConnection.conn.WriteJSON(v)
+func (wsConnection *WsConnection) writeEvent(event *WsEvent) {
+	wsConnection.eventsToWriteChan <- *event
 }
 
 func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{}, needAck bool) (*WsEvent, error) {
@@ -105,14 +106,19 @@ func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{
 
 	eventHandler := val.(*WsEventEventHandlerFunc)
 	response := (*eventHandler)(payload)
-	if needAck && response == nil {
-		err := fmt.Errorf("no repsonse return while needAck: %s", eventType)
-		wsConnection.server.Error(err, "")
 
-		return nil, err
+	if needAck {
+		if response == nil {
+			err := fmt.Errorf("no repsonse return while needAck: %s", eventType)
+			wsConnection.server.Error(err, "")
+
+			return nil, err
+		} else {
+			return response, nil
+		}
 	}
 
-	return response, nil
+	return nil, nil
 }
 
 func (wsConnection *WsConnection) listen() {
@@ -122,14 +128,21 @@ func (wsConnection *WsConnection) listen() {
 
 	_wsConn := wsConnection.conn
 
-	// setup ping
-	_ = _wsConn.SetReadDeadline(time.Now().Add(pongWait))
-	_wsConn.SetPingHandler(func(appData string) error {
-		_ = _wsConn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
-	})
+	go func() {
+		for {
+			event, ok := <-wsConnection.eventsToWriteChan
+			if !ok {
+				break
+			}
+
+			_ = wsConnection.writeJSON(event)
+		}
+	}()
 
 	for {
+		// pingWait 之内得必须有包从客户端发过来，可以是数据包，也可以是 ping 包
+		_ = _wsConn.SetReadDeadline(time.Now().Add(pingWait))
+
 		event := WsEvent{}
 		err := _wsConn.ReadJSON(&event)
 		if err != nil {
@@ -145,23 +158,31 @@ func (wsConnection *WsConnection) listen() {
 			// response
 			processResponse := func() {
 				response := event
-				_ = wsConnection.finishAck(response.Ack, response.Payload, response.error)
+				_ = wsConnection.invokeAckCallback(response.Ack, response.Payload, response.Error)
 			}
 
 			go processResponse()
 		} else {
 			// request
 			processRequest := func() {
+				// 特殊处理 ping
+				if event.EventType == "ping" {
+					response := event.CreateResponse(event.Payload)
+					response.EventType = "pong"
+					wsConnection.writeEvent(response)
+					return
+				}
+
 				response, err := wsConnection.emitEvent(event.EventType, event.Payload, event.NeedAck)
 
 				if err != nil {
 					_, _ = wsConnection.emitEvent("error", err, false)
 
 					response := event.CreateErrorResponse(-1, err.Error())
-					_ = wsConnection.writeJSON(response)
+					wsConnection.writeEvent(response)
 
 				} else if response != nil {
-					_ = wsConnection.writeJSON(response)
+					wsConnection.writeEvent(response)
 				}
 			}
 

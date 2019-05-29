@@ -159,5 +159,9 @@ func (s *StreamingNode) register(clientId string, clientType string, tunnel pb.C
 }
 
 func NewStreamingNode() *StreamingNode {
-	return &StreamingNode{}
+	result := &StreamingNode{}
+
+	result.SubBots = make(map[string]int)
+
+	return result
 }
