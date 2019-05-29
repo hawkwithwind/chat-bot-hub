@@ -156,10 +156,6 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	}
 
 	web.Info("[Contacts debug] ready to save chatusers [%d]", len(chatusers))
-	if len(chatusers) < 90 {
-		web.Info("[Contacts debug] %s", o.ToJson(chatusers))
-	}
-	
 	dbusers := o.FindOrCreateChatUsers(tx, chatusers)
 	findm := map[string]string{}
 	for _, dbu := range dbusers {
