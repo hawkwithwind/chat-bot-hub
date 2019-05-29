@@ -156,19 +156,27 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	}
 
 	web.Info("[Contacts debug] ready to save chatusers [%d]", len(chatusers))
-	if len(chatusers) < 50 {
+	if len(chatusers) < 90 {
 		web.Info("[Contacts debug] %s", o.ToJson(chatusers))
 	}
 	
-	o.UpdateOrCreateChatUsers(tx, chatusers)
+	dbusers := o.FindOrCreateChatUsers(tx, chatusers)
+	findm := map[string]string{}
+	for _, dbu := range dbusers {
+		findm[dbu.UserName] = dbu.ChatUserId
+	}
 	
 	if o.Err != nil {
 		web.Error(o.Err, "[Contacts debug] failed to save users [%d]", len(users))
 	} else {
 		ccs := []*domains.ChatContact{}
 		for _, uu := range users {
-			cc := o.NewChatContact(uu.botId, uu.chatuser.ChatUserId)
-			ccs = append(ccs, cc)
+			if chatuserid, ok := findm[uu.chatuser.UserName]; ok {
+				cc := o.NewChatContact(uu.botId, chatuserid)
+				ccs = append(ccs, cc)
+			} else {
+				web.Info("[Contacts debug] failed to save %s", uu.chatuser.UserName)
+			}
 		}
 
 		o.SaveIgnoreChatContacts(tx, ccs)
