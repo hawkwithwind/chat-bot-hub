@@ -88,12 +88,12 @@ type WechatGroupMember struct {
 	UserName         string `json:"userName"`
 }
 
+type ProcessUserInfo struct{
+	botId    string
+	chatuser *domains.ChatUser
+}
+
 func (web *WebServer) processUsers() {
-	type ProcessUserInfo struct{
-		botId    string
-		chatuser *domains.ChatUser
-	}
-	
 	users := []ProcessUserInfo{}
 	
 	const sectionLength int = 100
@@ -117,7 +117,7 @@ func (web *WebServer) processUsers() {
 			chatuser.SetSignature(info.Signature)
 			chatuser.SetRemark(info.Remark)
 			chatuser.SetLabel(info.Label)
-			chatuser.SetExt(o.ToJson(ccinfo))
+			chatuser.SetExt(o.ToJson(info))
 			users = append(users, ProcessUserInfo{thebotinfo.BotId, chatuser})
 
 		case <- time.After(timeout):
@@ -125,34 +125,10 @@ func (web *WebServer) processUsers() {
 		}
 		
 		if (len(users) > sectionLength) || (isTimeout && len(users) > 0) {
-			tx := o.Begin(web.db)
-
-			chatusers := []*domains.ChatUser{}
-			for _, cc := range users {
-				chatusers = append(chatusers, cc.chatuser)
+			err := web.saveChatUsers(users)
+			if err != nil {
+				web.Error(err, "[Contacts group debug] save chatusers failed")
 			}
-						
-			o.UpdateOrCreateChatUsers(tx, chatusers)
-			
-			if o.Err != nil {
-				web.Error(o.Err, "[Contacts debug] failed to save users [%d]", len(users))
-			} else {
-				ccs := []*domains.ChatContact{}
-				for _, uu := range users {
-					cc := o.NewChatContact(uu.botId, uu.chatuser.ChatUserId)
-					ccs = append(ccs, cc)
-				}
-
-				o.SaveIgnoreChatContacts(tx, ccs)
-				if o.Err != nil {
-					web.Error(o.Err, "[Contacts debug] failed to save chatcontacts[%d]", len(ccs))
-				} else {
-					web.Info("[Contacts debug] saved chatuser [%d]", len(users))
-				}
-			}
-
-			o.CommitOrRollback(tx)
-			
 			users = []ProcessUserInfo{}
 		}
 	}
@@ -166,6 +142,48 @@ func (web *WebServer) processGroups() {
 			web.Error(err, "[Contacts group debug] save one group failed")
 		}
 	}
+}
+
+func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
+	o := &ErrorHandler{}
+	
+	tx := o.Begin(web.db)
+	o.CommitOrRollback(tx)
+
+	chatusers := []*domains.ChatUser{}
+	for _, cc := range users {
+		chatusers = append(chatusers, cc.chatuser)
+	}
+
+	web.Info("[Contacts debug] ready to save chatusers [%d]", len(chatusers))
+	if len(chatusers) < 50 {
+		web.Info("[Contacts debug] %s", o.ToJson(chatusers))
+	}
+	
+	o.UpdateOrCreateChatUsers(tx, chatusers)
+	
+	if o.Err != nil {
+		web.Error(o.Err, "[Contacts debug] failed to save users [%d]", len(users))
+	} else {
+		ccs := []*domains.ChatContact{}
+		for _, uu := range users {
+			cc := o.NewChatContact(uu.botId, uu.chatuser.ChatUserId)
+			ccs = append(ccs, cc)
+		}
+
+		o.SaveIgnoreChatContacts(tx, ccs)
+		if o.Err != nil {
+			web.Error(o.Err, "[Contacts debug] failed to save chatcontacts[%d]", len(ccs))
+		} else {
+			web.Info("[Contacts debug] saved chatuser [%d]", len(users))
+		}
+	}
+
+	if o.Err != nil {
+		return o.Err
+	}
+
+	return nil
 }
 
 func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsInfo) error {
