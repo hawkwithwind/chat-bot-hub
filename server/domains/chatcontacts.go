@@ -120,7 +120,7 @@ VALUES
 	valuetuples := []string{}
 	params := []interface{}{}
 	for _, cc := range chatcontacts {
-		valuetuples = append(valuetuples, `(:chatcontactid, :botid, :chatuserid)`)
+		valuetuples = append(valuetuples, `(?, ?, ?)`)
 		params = append(params, cc.ChatContactId, cc.BotId, cc.ChatUserId)
 	}
 
