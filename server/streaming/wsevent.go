@@ -1,7 +1,6 @@
 package streaming
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"strconv"
@@ -23,14 +22,14 @@ type WsEvent struct {
 	Ack     int64 `json:"ack,omitempty"`
 	NeedAck bool  `json:"needAck,omitempty"`
 
-	EventType string           `json:"eventType,omitempty"`
-	Payload   *json.RawMessage `json:"payload,omitempty"`
+	EventType string      `json:"eventType,omitempty"`
+	Payload   interface{} `json:"payload,omitempty"`
 
 	Error *WsEventError `json:"error,omitempty"`
 }
 
-type WsEventAckFunc = func(payload *json.RawMessage, err error)
-type WsEventEventHandlerFunc = func(payload interface{}) *WsEvent
+type WsEventAckFunc = func(payload interface{}, err error)
+type WsEventEventHandlerFunc = func(payload interface{}) interface{}
 
 type WsEventAckWrapper struct {
 	ack   *WsEventAckFunc
@@ -45,7 +44,7 @@ func (wsConnection *WsConnection) nextEventSeq() int64 {
 	return result
 }
 
-func (wsConnection *WsConnection) CreateRequest(eventType string, payload *json.RawMessage) *WsEvent {
+func (wsConnection *WsConnection) CreateRequest(eventType string, payload interface{}) *WsEvent {
 	return &WsEvent{Seq: wsConnection.nextEventSeq(), EventType: eventType, Payload: payload}
 }
 
@@ -66,7 +65,7 @@ func (wsConnection *WsConnection) addACK(seq int64, ack *WsEventAckFunc) {
 	wsConnection.ackCallbacks.Store(seq, wrapper)
 }
 
-func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload *json.RawMessage, err error) error {
+func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload interface{}, err error) error {
 	val, ok := wsConnection.ackCallbacks.Load(seq)
 	if !ok {
 		err := errors.New("ack not found for seq:" + strconv.FormatInt(seq, 10))
@@ -83,15 +82,12 @@ func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload *json.Raw
 	return nil
 }
 
-func (wsEvent *WsEvent) CreateResponse(payload *json.RawMessage) *WsEvent {
+func (wsEvent *WsEvent) CreateResponse(payload interface{}) *WsEvent {
 	request := wsEvent
-	return &WsEvent{Ack: request.Seq, EventType: request.EventType, Payload: payload}
+	return &WsEvent{Ack: request.Seq, Payload: payload}
 }
 
 func (wsEvent *WsEvent) CreateErrorResponse(code int64, message string) *WsEvent {
 	request := wsEvent
-	result := &WsEvent{Ack: request.Seq, EventType: request.EventType}
-	result.Error = &WsEventError{Code: code, Message: message}
-
-	return result
+	return &WsEvent{Ack: request.Seq, Error: &WsEventError{Code: code, Message: message}}
 }

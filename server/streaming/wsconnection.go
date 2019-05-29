@@ -63,7 +63,7 @@ func (wsConnection *WsConnection) Close() error {
 
 	result := wsConnection.conn.Close()
 
-	_, _ = wsConnection.emitEvent("close", nil, false)
+	_, _ = wsConnection.emitEvent("close", nil)
 
 	return result
 }
@@ -95,7 +95,7 @@ func (wsConnection *WsConnection) writeEvent(event *WsEvent) {
 	wsConnection.eventsToWriteChan <- *event
 }
 
-func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{}, needAck bool) (*WsEvent, error) {
+func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{}) (interface{}, error) {
 	val, ok := wsConnection.eventHandlers.Load(eventType)
 
 	if !ok {
@@ -105,20 +105,9 @@ func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{
 	}
 
 	eventHandler := val.(*WsEventEventHandlerFunc)
-	response := (*eventHandler)(payload)
+	responsePayload := (*eventHandler)(payload)
 
-	if needAck {
-		if response == nil {
-			err := fmt.Errorf("no repsonse return while needAck: %s", eventType)
-			wsConnection.server.Error(err, "")
-
-			return nil, err
-		} else {
-			return response, nil
-		}
-	}
-
-	return nil, nil
+	return responsePayload, nil
 }
 
 func (wsConnection *WsConnection) listen() {
@@ -150,7 +139,7 @@ func (wsConnection *WsConnection) listen() {
 				wsConnection.server.Error(err, "error while reading message")
 			}
 
-			_, _ = wsConnection.emitEvent("error", err, false)
+			_, _ = wsConnection.emitEvent("error", err)
 			break
 		}
 
@@ -173,15 +162,21 @@ func (wsConnection *WsConnection) listen() {
 					return
 				}
 
-				response, err := wsConnection.emitEvent(event.EventType, event.Payload, event.NeedAck)
+				responsePayload, err := wsConnection.emitEvent(event.EventType, event.Payload)
+
+				if event.NeedAck {
+
+				}
 
 				if err != nil {
-					_, _ = wsConnection.emitEvent("error", err, false)
+					_, _ = wsConnection.emitEvent("error", err)
 
-					response := event.CreateErrorResponse(-1, err.Error())
-					wsConnection.writeEvent(response)
-
-				} else if response != nil {
+					if event.NeedAck {
+						response := event.CreateErrorResponse(-1, err.Error())
+						wsConnection.writeEvent(response)
+					}
+				} else {
+					response := event.CreateResponse(responsePayload)
 					wsConnection.writeEvent(response)
 				}
 			}
