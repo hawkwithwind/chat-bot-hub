@@ -531,7 +531,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						go func() {
 							for _, snode := range hub.streamingNodes {
 								if _, ok := snode.SubBots[bot.BotId]; ok {
-									err := snode.SendMsg(in.EventType, msg)
+									err := snode.SendMsg(in.EventType, bot.ClientId, bot.ClientType, msg)
 									if err != nil {
 										hub.Error(err, "send msg failed, continue")
 									}

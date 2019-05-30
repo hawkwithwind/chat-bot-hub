@@ -6,6 +6,10 @@ import (
 	"io"
 	"sync"
 
+	// "google.golang.org/grpc/status"
+	// "google.golang.org/grpc/codes"
+	// "google.golang.org/grpc/metadata"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
@@ -36,15 +40,15 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 	subs := []string{}
 	unsubs := []string{}
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "metadata is null")
-	}
+	// md, ok := metadata.FromIncomingContext(ctx)
+	// if !ok {
+	// 	return nil, status.Error(codes.PermissionDenied, "metadata is null")
+	// }
 
-	token, ok := md["token"]
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "metadata[token] is not set")
-	}
+	// token, ok := md["token"]
+	// if !ok {
+	// 	return nil, status.Error(codes.PermissionDenied, "metadata[token] is not set")
+	// }
 
 	for _, res := range req.Resources {
 		at := StreamingActionType(res.ActionType)
@@ -55,8 +59,6 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 			unsubs = append(unsubs, res.BotId)
 		}
 	}
-
-	
 
 	snode.UnSub(unsubs)
 	snode.Sub(subs)
@@ -110,8 +112,16 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 	}
 }
 
-func (s *StreamingNode) SendMsg(eventType string, msgbody string) error {
-	msg := pb.EventReply{EventType: eventType, Body: msgbody, ClientType: s.NodeType, ClientId: s.NodeId}
+func (s *StreamingNode) SendMsg(eventType string, botClientId string, botClientType string, msgbody string) error {
+	msg := pb.EventReply{
+		EventType: eventType,
+		Body: msgbody,
+		BotClientId: botClientId,
+		BotClientType: botClientType,
+		ClientType: s.NodeType,
+		ClientId: s.NodeId,
+	}
+	
 	if err := s.tunnel.Send(&msg); err != nil {
 		chathub.Error(err, "send %s to s[%s][%s] failed %s\n%s", eventType, s.NodeType, s.NodeId, err.Error(), msgbody)
 		return err

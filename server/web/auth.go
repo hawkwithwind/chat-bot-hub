@@ -269,7 +269,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (web *WebServer) streamingCtrl(w http.ResponseWriter, r *http.Request) {
+func (web *WebServer) streamingCtrl(w http.ResponseWriter, req *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
@@ -277,7 +277,7 @@ func (web *WebServer) streamingCtrl(w http.ResponseWriter, r *http.Request) {
 	clientType := req.Header.Get("X-CLIENT-TYPE")
 
 	if clientType != STREAMING {
-		o.Err = NewAuthError(fmt.Errorf("malfaled request"))
+		o.Err = utils.NewAuthError(fmt.Errorf("malfaled request"))
 		return
 	}
 
@@ -287,12 +287,12 @@ func (web *WebServer) streamingCtrl(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user == nil {
-		o.Err = NewAuthError(fmt.Error("failed to parse user"))
+		o.Err = utils.NewAuthError(fmt.Errorf("failed to parse user"))
 		return
 	}
 
 	if user.Child == nil {
-		o.Err = NewAuthError(fmt.Error("failed to parse user.Child"))
+		o.Err = utils.NewAuthError(fmt.Errorf("failed to parse user.Child"))
 		return
 	}
 

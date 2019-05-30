@@ -82,8 +82,10 @@ message EventRequest {
 message EventReply {
   string eventType = 1;
   string body = 2;
-  string clientId = 3;
-  string clientType = 4;
+  string botClientId = 3;
+  string botClientType = 4;
+  string clientId = 5;
+  string clientType = 6;
 }
 
 message BotsRequest {
