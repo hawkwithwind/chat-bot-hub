@@ -33,6 +33,7 @@ type ErrorHandler struct {
 type DatabaseConfig struct {
 	DriverName     string
 	DataSourceName string
+	MaxConnectNum  int
 }
 
 type WebConfig struct {
@@ -58,7 +59,8 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
-	mongoDb      *mgo.Database
+	mongoDb	     *mgo.Database
+	contactParser *ContactParser
 }
 
 func (ctx *WebServer) init() error {
@@ -112,6 +114,15 @@ func (ctx *WebServer) init() error {
 			}
 		}
 	}
+
+	if ctx.Config.Database.MaxConnectNum > 0 {
+		ctx.Info("set database max conn %d", ctx.Config.Database.MaxConnectNum)
+		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
+	}
+
+	ctx.contactParser = NewContactParser()
+	ctx.ProcessContactsServe()
+	ctx.Info("begin serve process contacts ...")
 
 	return nil
 }
