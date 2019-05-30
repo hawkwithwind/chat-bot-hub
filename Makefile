@@ -103,7 +103,8 @@ gen:
 	$(RUNTIME_IMAGE):build-golang sh -c \
 	"go get -u github.com/golang/protobuf/protoc-gen-go && \
 	   cd proto && \
-	   protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub"
+	   protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub && \
+	   protoc -I streaming/ streaming/streaming.proto --go_out=plugins=grpc:streaming"
 
 
 

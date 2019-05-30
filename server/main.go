@@ -24,7 +24,7 @@ type MainConfig struct {
 	Web       web.WebConfig
 	Redis     utils.RedisConfig
 	Fluent    utils.FluentConfig
-	Streaming streaming.StreamingConfig
+	Streaming streaming.Config
 }
 
 var (
@@ -68,6 +68,8 @@ func loadConfig(configPath string) (MainConfig, error) {
 			c.Web.Database.MaxConnectNum = maxconn
 		}
 	}
+	
+	c.Streaming.Mongo = c.Web.Mongo
 
 	return c, nil
 }
@@ -145,10 +147,10 @@ func main() {
 			wg.Add(1)
 			defer wg.Done()
 
-			server := streaming.StreamingServer{
+			server := streaming.Server{
 				Config: config.Streaming,
-			}			
-
+			}
+			
 			err := server.Serve()
 			if err != nil {
 				wg.Done()
