@@ -92,6 +92,12 @@ func (wsConnection *WsConnection) writeJSON(payload interface{}) error {
 }
 
 func (wsConnection *WsConnection) writeEvent(event *WsEvent) {
+	defer func() {
+		if err := recover(); err != nil {
+			wsConnection.server.Error(fmt.Errorf("%s", err), "error while writeEvent")
+		}
+	}()
+
 	wsConnection.eventsToWriteChan <- *event
 }
 
