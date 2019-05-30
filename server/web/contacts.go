@@ -134,7 +134,9 @@ func (web *WebServer) processUsers() {
 			}
 			users = []ProcessUserInfo{}
 		} else {
-			web.Info("[contacts debug] stock %d", len(users))
+			if len(users) > 0 {
+				web.Info("[contacts debug] stock %d", len(users))
+			}
 		}
 	}
 }
