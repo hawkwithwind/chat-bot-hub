@@ -456,6 +456,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
+		ctx.Info("[contacts debug] received raw")
+
 	case chatbothub.GROUPINFO:
 		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
@@ -963,7 +965,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err != nil {
 			return
-		}
+		}		
 		o.SaveActionRequest(ctx.redispool, localar)
 
 		go func() {
@@ -979,6 +981,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 	}
+
+	o.ok(w, "success", nil)
 }
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
