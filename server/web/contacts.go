@@ -105,6 +105,8 @@ func (web *WebServer) processUsers() {
 		
 		select {
 		case ccinfo := <- web.contactParser.userPipe:
+			web.Info("[contacts debug] receive user info")
+			
 			info := ccinfo.body
 			thebotinfo := ccinfo.bot
 			
@@ -125,11 +127,14 @@ func (web *WebServer) processUsers() {
 		}
 		
 		if (len(users) > sectionLength) || (isTimeout && len(users) > 0) {
+			web.Info("[contacts debug] process %d", len(users))
 			err := web.saveChatUsers(users)
 			if err != nil {
 				web.Error(err, "[Contacts debug] save chatusers failed")
 			}
 			users = []ProcessUserInfo{}
+		} else {
+			web.Info("[contacts debug] stock %d", len(users))
 		}
 	}
 }
@@ -258,6 +263,7 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 func (web *WebServer) processContacts() {
 	for {
 		raw := <- web.contactParser.rawPipe
+		web.Info("[contacts debug] receive raw")
 		
 		o := &ErrorHandler{}
 		
