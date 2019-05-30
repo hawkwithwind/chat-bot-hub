@@ -197,60 +197,6 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
-type WechatContactInfo struct {
-	Id              int      `json:"id"`
-	MType           int      `json:"mType"`
-	MsgType         int      `json:"msgType"`
-	Continue        int      `json:"continue"`
-	Status          int      `json:"Status"`
-	Source          int      `json:"source"`
-	Uin             int64    `json:"uin"`
-	UserName        string   `json:"userName"`
-	NickName        string   `json:"nickName"`
-	PyInitial       string   `json:"pyInitial"`
-	QuanPin         string   `json:"quanPin"`
-	Stranger        string   `json:"stranger"`
-	BigHead         string   `json:"bigHead"`
-	SmallHead       string   `json:"smallHead"`
-	BitMask         int64    `json:"bitMask"`
-	BitValue        int64    `json:"bitValue"`
-	ImageFlag       int      `json:"imageFlag"`
-	Sex             int      `json:"sex"`
-	Intro           string   `json:"intro"`
-	Country         string   `json:"country"`
-	Provincia       string   `json:"provincia"`
-	City            string   `json:"city"`
-	Label           string   `json:"label"`
-	Remark          string   `json:"remark"`
-	RemarkPyInitial string   `json:"remarkPyInitial"`
-	RemarkQuanPin   string   `json:"remarkQuanPin"`
-	Level           int      `json:"level"`
-	Signature       string   `json:"signature"`
-	ChatRoomId      int64    `json:"chatroomId"`
-	ChatRoomOwner   string   `json:"chatroomOwner"`
-	Member          []string `json:"member"`
-	MaxMemberCount  int      `json:"maxMemberCount"`
-	MemberCount     int      `json:"memberCount"`
-}
-
-type WechatGroupInfo struct {
-	ChatRoomId int                 `json:"chatroomId"`
-	Count      int                 `json:"count"`
-	Member     []WechatGroupMember `json:"member"`
-	Message    string              `json:"message"`
-	Status     int                 `json:"status"`
-	UserName   string              `json:"userName"`
-}
-
-type WechatGroupMember struct {
-	BigHead          string `json:"bigHead"`
-	ChatRoomNickName string `json:"chatroomNickName"`
-	InvitedBy        string `json:"invitedBy"`
-	NickName         string `json:"nickName"`
-	SmallHead        string `json:"smallHead"`
-	UserName         string `json:"userName"`
-}
-
 type WechatSnsMoment struct {
 	CreateTime  int    `json:"createTime" msg:"createTime"`
 	Description string `json:"description" msg:"description"`
@@ -451,11 +397,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// consider transaction, we use new errorhandler here
 
 		// now call search user to get self profile
-		a_o := &ErrorHandler{}
-		ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
-			"userId": bot.Login,
-		}), "NEW")
-		a_o.CreateAndRunAction(ctx, ar)
+		// EDIT: should not call search user with wxid
+		// a_o := &ErrorHandler{}
+		// ar := a_o.NewActionRequest(bot.Login, "SearchUser", o.ToJson(map[string]interface{}{
+		// 	"userId": bot.Login,
+		// }), "NEW")
+		// a_o.CreateAndRunAction(ctx, ar)
 
 		re_o := &ErrorHandler{}
 		// now, initailize bot's filter, and call chathub to create intances and get connected
@@ -506,107 +453,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	case chatbothub.CONTACTINFO:
 		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
-			info := WechatContactInfo{}
-			o.Err = json.Unmarshal([]byte(bodystr), &info)
-			if o.Err != nil {
-				return
-			}
-
-			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
-			if len(info.UserName) == 0 {
-				ctx.Info("username not found, ignoring %s", bodystr)
-				return
-			}
-
-			// insert or update contact for this contact
-			if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
-				// group
-				// find or create owner
-				if len(info.ChatRoomOwner) == 0 {
-					ctx.Info("group[%s] member count 0, ignore", info.UserName)
-					return
-				}
-
-				owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.ChatRoomOwner)
-				if o.Err != nil {
-					return
-				} else if owner == nil {
-					o.Err = fmt.Errorf("cannot find either create room owner %s", info.ChatRoomOwner)
-					return
-				}
-
-				// create and save group
-				chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, owner.ChatUserId, info.MemberCount, info.MaxMemberCount)
-				chatgroup.SetAvatar(info.SmallHead)
-				chatgroup.SetExt(bodystr)
-
-				o.UpdateOrCreateChatGroup(tx, chatgroup)
-				chatgroup = o.GetChatGroupByName(tx, thebotinfo.ClientType, info.UserName)
-				if o.Err != nil {
-					return
-				} else if chatgroup == nil {
-					o.Err = fmt.Errorf("cannot find either create chatgroup %s", info.UserName)
-					return
-				}
-
-				chatusers := make([]*domains.ChatUser, 0, len(info.Member))
-				for _, member := range info.Member {
-					chatusers = append(chatusers, o.NewChatUser(member, thebotinfo.ClientType, ""))
-				}
-
-				members := o.FindOrCreateChatUsers(tx, chatusers)
-				if o.Err != nil {
-					return
-				} else if len(members) != len(info.Member) {
-					o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d", info.UserName, len(info.Member), len(members))
-					return
-				}
-
-				var chatgroupMembers []*domains.ChatGroupMember
-				for _, member := range members {
-					chatgroupMembers = append(chatgroupMembers,
-						o.NewChatGroupMember(chatgroup.ChatGroupId, member.ChatUserId, 1))
-				}
-
-				if len(chatgroupMembers) > 0 {
-					o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
-				}
-				if o.Err != nil {
-					return
-				}
-				o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
-				if o.Err != nil {
-					return
-				}
-				ctx.Info("save group info [%s]%s done", info.UserName, info.NickName)
-			} else {
-				// user
-				// create or update user
-				chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
-				chatuser.Sex = info.Sex
-				chatuser.SetAvatar(info.SmallHead)
-				chatuser.SetCountry(info.Country)
-				chatuser.SetProvince(info.Provincia)
-				chatuser.SetCity(info.City)
-				chatuser.SetSignature(info.Signature)
-				chatuser.SetRemark(info.Remark)
-				chatuser.SetLabel(info.Label)
-				chatuser.SetExt(bodystr)
-
-				o.UpdateOrCreateChatUser(tx, chatuser)
-				theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
-				if o.Err != nil {
-					return
-				} else if theuser == nil {
-					o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
-					return
-				}
-				o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
-				if o.Err != nil {
-					return
-				}
-				ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)
-			}
+			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
 	case chatbothub.GROUPINFO:
@@ -921,7 +768,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if info.UserName == "" {
-				ctx.Info("search user name empty, ignore")
+				ctx.Info("search user name empty, ignore. body:\n %s\n", localar.Result)
 				return
 			}
 
@@ -940,7 +787,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			chatuser.SetSignature(info.Signature)
 			chatuser.SetRemark(info.Remark)
 			chatuser.SetLabel(info.Label)
-			chatuser.SetExt(acresult.Data.(string))
+			chatuser.SetExt(o.ToJson(acresult.Data))
 
 			o.UpdateOrCreateChatUser(tx, chatuser)
 			ctx.Info("save user info [%s]%s done", info.UserName, info.NickName)

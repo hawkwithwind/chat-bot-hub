@@ -58,7 +58,9 @@ type WebServer struct {
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
-	mongoDb      *mgo.Database
+	mongoDb	     *mgo.Database
+
+	contactParser *ContactParser
 }
 
 func (ctx *WebServer) init() error {
@@ -112,6 +114,10 @@ func (ctx *WebServer) init() error {
 			}
 		}
 	}
+
+	ctx.contactParser = NewContactParser()
+	ctx.ProcessContactsServe()
+	ctx.Info("begin serve process contacts ...")
 
 	return nil
 }
