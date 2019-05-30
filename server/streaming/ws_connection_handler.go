@@ -24,14 +24,17 @@ type GetConversationMessagesParams struct {
 	FromMessageId string `json:"fromMessageId"` // 以 fromMessageId 为界限获取消息。direction 为 old 必填；new 选填，空则返回最新一页数据，非空则可表示短信重连后获取更新数据
 }
 
-func (server *Server) onNewConnection(connection *WsConnection) {
+func (wsConnection *WsConnection) onConnect() {
+	c := wsConnection
+	server := c.server
+
 	server.Debug("websocket new connection")
 
-	connection.On("close", func(payload interface{}) (interface{}, error) {
+	c.On("close", func(payload interface{}) (interface{}, error) {
 		return nil, nil
 	})
 
-	connection.On("error", func(payload interface{}) (interface{}, error) {
+	c.On("error", func(payload interface{}) (interface{}, error) {
 		err := payload.(error)
 
 		server.Error(err, "")
@@ -39,12 +42,12 @@ func (server *Server) onNewConnection(connection *WsConnection) {
 		return nil, nil
 	})
 
-	connection.On("send_message", func(payload interface{}) (interface{}, error) {
+	c.On("send_message", func(payload interface{}) (interface{}, error) {
 		// TODO:
 		return payload, nil
 	})
 
-	connection.On("get_conversation_messages", func(payload interface{}) (interface{}, error) {
+	c.On("get_conversation_messages", func(payload interface{}) (interface{}, error) {
 		params := &GetConversationMessagesParams{}
 		if err := mapstructure.Decode(payload, params); err != nil {
 			return nil, err
@@ -143,7 +146,7 @@ func (server *Server) onNewConnection(connection *WsConnection) {
 		return result, nil
 	})
 
-	connection.On("get_user_unread_messages", func(payload interface{}) (interface{}, error) {
+	c.On("get_user_unread_messages", func(payload interface{}) (interface{}, error) {
 		// TODO:
 		return payload, nil
 	})

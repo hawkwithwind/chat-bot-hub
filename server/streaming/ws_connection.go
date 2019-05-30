@@ -1,11 +1,13 @@
 package streaming
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	"net/http"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -188,53 +190,48 @@ func (wsConnection *WsConnection) listen() {
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	// 解决跨域问题
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+func (wsConnection *WsConnection) nextEventSeq() int64 {
+	result := wsConnection.eventSeq
+
+	atomic.AddInt64(&wsConnection.eventSeq, 1)
+
+	return result
 }
 
-func acceptWebsocketConnection(server *Server, w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	user, err := server.ValidateToken(token)
-	if err != nil {
-		server.Error(err, "auth failed")
-		w.WriteHeader(403)
-		return
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		server.Error(err, "Error occurred while upgrading connection")
-		return
-	}
-
-	wsConnection := newWsConnection(server, conn, user)
-	server.websocketConnections.Store(wsConnection, true)
-	server.onNewConnectionChan <- wsConnection
-
-	go wsConnection.listen()
+func (wsConnection *WsConnection) CreateRequest(eventType string, payload interface{}) *WsEvent {
+	return &WsEvent{Seq: wsConnection.nextEventSeq(), EventType: eventType, Payload: payload}
 }
 
-func (server *Server) ServeWebsocketServer() error {
-	server.Info("websocket server starts....")
+func (wsConnection *WsConnection) addACK(seq int64, ack *WsEventAckFunc) {
+	wrapper := &WsEventAckWrapper{}
+	wrapper.ack = ack
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		acceptWebsocketConnection(server, w, r)
-	})
+	// ack 默认 timeout 20 秒
+	wrapper.timer = time.NewTimer(20 * time.Second)
 
-	addr := fmt.Sprintf("%s:%s", server.Config.Host, server.Config.Port)
-	server.Info("websocket server listening to %s\n", addr)
+	go func() {
+		for {
+			<-wrapper.timer.C
+			_ = wsConnection.invokeAckCallback(seq, nil, errors.New("ACK Timeout"))
+		}
+	}()
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		server.Error(err, "websocket server fail to serve")
+	wsConnection.ackCallbacks.Store(seq, wrapper)
+}
+
+func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload interface{}, err error) error {
+	val, ok := wsConnection.ackCallbacks.Load(seq)
+	if !ok {
+		err := errors.New("ack not found for seq:" + strconv.FormatInt(seq, 10))
+		wsConnection.server.Error(err, "ack not found for seq: ", seq)
 		return err
 	}
 
-	server.Info("websocket server serve ends without error")
+	wsConnection.ackCallbacks.Delete(seq)
+
+	wrapper := val.(*WsEventAckWrapper)
+	wrapper.timer.Stop()
+	(*wrapper.ack)(payload, err)
 
 	return nil
 }

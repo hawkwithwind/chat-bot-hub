@@ -82,12 +82,5 @@ func (server *Server) Serve() error {
 		server.Select()
 	}()
 
-	go func() {
-		for {
-			connection := <-server.onNewConnectionChan
-			server.onNewConnection(connection)
-		}
-	}()
-
 	return server.ServeWebsocketServer()
 }
