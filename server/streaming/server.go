@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/logger"
 	"github.com/pkg/errors"
@@ -20,6 +21,8 @@ type Config struct {
 
 	Chathubs   []string
 	ChathubWeb string
+
+	Mongo utils.MongoConfig
 }
 
 type Server struct {
@@ -31,6 +34,8 @@ type Server struct {
 	websocketConnections *sync.Map
 
 	onNewConnectionChan chan *WsConnection
+
+	mongoDb *mgo.Database
 }
 
 func (server *Server) init() {
@@ -41,6 +46,13 @@ func (server *Server) init() {
 	server.chmsg = make(chan *pb.EventReply, 1000)
 	server.websocketConnections = &sync.Map{}
 	server.onNewConnectionChan = make(chan *WsConnection)
+
+	o := &ErrorHandler{}
+	server.mongoDb = o.NewMongoConn(server.Config.Mongo.Host, server.Config.Mongo.Port)
+
+	if o.Err != nil {
+		server.Error(o.Err, "connect to mongo failed %s", o.Err)
+	}
 }
 
 func (server *Server) ValidateToken(token string) (*utils.AuthUser, error) {

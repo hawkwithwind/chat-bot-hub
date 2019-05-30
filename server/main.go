@@ -59,6 +59,8 @@ func loadConfig(configPath string) (MainConfig, error) {
 	dbparams := os.Getenv("DB_PARAMS")
 	c.Web.Database.DataSourceName = fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", dbuser, dbpassword, dblink, dbname, dbparams)
 
+	c.Streaming.Mongo = c.Web.Mongo
+
 	return c, nil
 }
 

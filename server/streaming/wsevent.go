@@ -29,7 +29,7 @@ type WsEvent struct {
 }
 
 type WsEventAckFunc = func(payload interface{}, err error)
-type WsEventEventHandlerFunc = func(payload interface{}) interface{}
+type WsEventEventHandlerFunc = func(payload interface{}) (interface{}, error)
 
 type WsEventAckWrapper struct {
 	ack   *WsEventAckFunc

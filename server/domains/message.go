@@ -2,10 +2,10 @@ package domains
 
 import (
 	"encoding/json"
-	"time"
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"time"
 )
 
 type MsgSource struct {
@@ -50,6 +50,17 @@ func (o *ErrorHandler) GetWechatMessages(query *mgo.Query) []WechatMessage {
 	}
 
 	return wm
+}
+
+func (o *ErrorHandler) GetWechatMessageWithMsgId(db *mgo.Database, msgId string) *WechatMessage {
+	result := &WechatMessage{}
+
+	o.Err = db.C(WechatMessageCollection).Find(bson.M{"msgId": msgId}).One(result)
+	if o.Err != nil {
+		return nil
+	}
+
+	return result
 }
 
 func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
@@ -103,7 +114,7 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 			o.Err = json.Unmarshal(srcjson, &msgsource)
 			if o.Err != nil {
 				fmt.Printf("[save message debug] unmarshal json failed %s\n", srcjson)
-				return 
+				return
 			}
 			wechatMessage.MsgSource = &msgsource
 		}

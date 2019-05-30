@@ -105,9 +105,9 @@ func (wsConnection *WsConnection) emitEvent(eventType string, payload interface{
 	}
 
 	eventHandler := val.(*WsEventEventHandlerFunc)
-	responsePayload := (*eventHandler)(payload)
+	responsePayload, err := (*eventHandler)(payload)
 
-	return responsePayload, nil
+	return responsePayload, err
 }
 
 func (wsConnection *WsConnection) listen() {
@@ -164,10 +164,6 @@ func (wsConnection *WsConnection) listen() {
 
 				responsePayload, err := wsConnection.emitEvent(event.EventType, event.Payload)
 
-				if event.NeedAck {
-
-				}
-
 				if err != nil {
 					_, _ = wsConnection.emitEvent("error", err)
 
@@ -175,7 +171,7 @@ func (wsConnection *WsConnection) listen() {
 						response := event.CreateErrorResponse(-1, err.Error())
 						wsConnection.writeEvent(response)
 					}
-				} else {
+				} else if event.NeedAck {
 					response := event.CreateResponse(responsePayload)
 					wsConnection.writeEvent(response)
 				}
