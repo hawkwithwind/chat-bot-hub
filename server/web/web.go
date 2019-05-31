@@ -54,6 +54,9 @@ type WebServer struct {
 	Config       WebConfig
 	Hubport      string
 	Hubhost      string
+	
+	wrapper      *GRPCWrapper
+	
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
 	redispool    *redis.Pool
@@ -61,7 +64,8 @@ type WebServer struct {
 	store        *sessions.CookieStore
 	mongoDb	     *mgo.Database
 
-	contactParser *ContactParser	
+	contactParser *ContactParser
+	
 }
 
 func (ctx *WebServer) init() error {
@@ -70,7 +74,7 @@ func (ctx *WebServer) init() error {
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
-	ctx.db = &dbx.Database{}
+	ctx.db = &dbx.Database{}	
 
 	var err error
 	ctx.fluentLogger, err = fluent.New(fluent.Config{
@@ -81,7 +85,7 @@ func (ctx *WebServer) init() error {
 
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
-	}
+	}	
 
 	o := &ErrorHandler{}
 	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
@@ -124,6 +128,8 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
+
+	ctx.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	return nil
 }

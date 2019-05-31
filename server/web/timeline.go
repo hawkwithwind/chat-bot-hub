@@ -16,7 +16,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 
 	actionReplys := []pb.BotActionReply{}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{})
@@ -55,8 +55,8 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 	web.Info("notify crawl timeline tail")
 
 	actionReplys := []pb.BotActionReply{}
-
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{})

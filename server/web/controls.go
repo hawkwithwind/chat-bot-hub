@@ -41,6 +41,17 @@ func (w *GRPCWrapper) Cancel() {
 	}
 }
 
+func NewGRPCWrapper(wrapper *GRPCWrapper) *GRPCWrapper {
+	gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	
+	return &GRPCWrapper{
+		conn: wrapper.conn,
+		client: wrapper.client,
+		context: gctx,
+		cancel: cancel,
+	}
+}
+
 func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
 	if ctx.Err != nil {
 		return nil
@@ -202,7 +213,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := NewGRPCWrapper(ctx.wrapper)
 	defer wrapper.Cancel()
 
 	bot := o.GetBotByIdNull(tx, botId)
@@ -583,7 +594,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := NewGRPCWrapper(ctx.wrapper)
 	defer wrapper.Cancel()
 
 	bs := []BotsInfo{}
@@ -718,7 +729,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.SaveBot(tx, bot)
 	o.CommitOrRollback(tx)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := NewGRPCWrapper(ctx.wrapper)
 	defer wrapper.Cancel()
 
 	if o.Err != nil {
@@ -768,7 +779,7 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
@@ -806,7 +817,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
@@ -938,7 +949,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := NewGRPCWrapper(ctx.wrapper)
 	defer wrapper.Cancel()
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{

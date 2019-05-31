@@ -264,7 +264,7 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -318,7 +318,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper := NewGRPCWrapper(ctx.wrapper)
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -1074,11 +1074,9 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
 			fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
 		return nil
-	}
+	}	
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
-	defer wrapper.Cancel()
-
+	wrapper := NewGRPCWrapper(web.wrapper)
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
 		return nil
@@ -1113,7 +1111,7 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	o.rebuildMsgFilters(web, bot, web.db.Conn, wrapper)
@@ -1171,7 +1169,7 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper := NewGRPCWrapper(web.wrapper)
 	defer wrapper.Cancel()
 
 	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)
