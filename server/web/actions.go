@@ -437,6 +437,18 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		ctx.Info("save friend request %v", fr)
 
+	case chatbothub.CONTACTSYNCDONE:
+		ctx.Info("c[%s] contactsync done", thebotinfo.ClientType)
+
+		go func() {
+			if bot.Callback.Valid {
+				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
+					bot, eventType, ""), 5, 1); err != nil {
+						ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
+				}
+			}
+		}()		
+
 	case chatbothub.STATUSMESSAGE:
 		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)

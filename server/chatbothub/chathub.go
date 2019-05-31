@@ -117,6 +117,7 @@ const (
 	FRIENDREQUEST string = "FRIENDREQUEST"
 	CONTACTINFO   string = "CONTACTINFO"
 	GROUPINFO     string = "GROUPINFO"
+	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
 	BOTACTION     string = "BOTACTION"
 	ACTIONREPLY   string = "ACTIONREPLY"
 )
@@ -507,6 +508,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 					}()
 				}
+				
+			case CONTACTSYNCDONE:
+				go func() {
+					if _, err := httpx.RestfulCallRetry(
+						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
+							hub.Error(err, "webnotify contactsync done failed\n")
+					}
+				}()
 
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
