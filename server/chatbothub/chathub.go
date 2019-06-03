@@ -510,6 +510,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				
 			case CONTACTSYNCDONE:
+				hub.Info("contact sync done")
+				
 				go func() {
 					if _, err := httpx.RestfulCallRetry(
 						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
