@@ -61,19 +61,19 @@ func (g *GRPCWrapper) Reconnect() error {
 	return nil
 }
 
-// func (w *GRPCWrapper) Cancel() {
-// 	if w == nil {
-// 		return
-// 	}
+func (w *GRPCWrapper) Cancel() {
+	if w == nil {
+		return
+	}
 
-// 	if w.cancel != nil {
-// 		w.cancel()
-// 	}
+	if w.cancel != nil {
+		w.cancel()
+	}
 
-// 	if w.conn != nil {
-// 		w.conn.Close()
-// 	}
-// }
+	// if w.conn != nil {
+	// 	w.conn.Close()
+	// }
+}
 
 func NewGRPCWrapper(wrapper *GRPCWrapper) (*GRPCWrapper, error) {
 	err := wrapper.Reconnect()
