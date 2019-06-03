@@ -1,6 +1,8 @@
 package streaming
 
 import (
+	"fmt"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"io"
 	"time"
 
@@ -10,7 +12,7 @@ import (
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
-func (server *Server) Listen(client pb.ChatBotHubClient) error {
+func (server *Server) listen(client pb.ChatBotHubClient) error {
 	ctx := context.Background()
 
 	stream, err := client.StreamingTunnel(ctx)
@@ -68,7 +70,7 @@ func (server *Server) Listen(client pb.ChatBotHubClient) error {
 	return nil
 }
 
-func (server *Server) Select() {
+func (server *Server) _select() {
 	server.Info("chathubs %#v", server.Config.Chathubs)
 
 	for _, addr := range server.Config.Chathubs {
@@ -84,11 +86,40 @@ func (server *Server) Select() {
 
 				client := pb.NewChatBotHubClient(conn)
 				server.Info("listening grpc %s", addr)
-				err = server.Listen(client)
+				err = server.listen(client)
 
 				server.Info("grpc connection failed {%v}, restarting in 2 secs", err)
 				time.Sleep(2000 * time.Millisecond)
 			}
 		}(addr)
 	}
+}
+
+/***********************************************************************************************************************
+ * public methods
+ */
+
+func (server *Server) StartHubClient() {
+	go func() {
+		server.Info("BEGIN READ CHANNEL")
+		for {
+			in := <-server.chmsg
+			server.Info("RECV [%server] from channel", in.EventType)
+
+			server.onHubEvent(in)
+		}
+	}()
+
+	go func() {
+		server.Info("BEGIN SELECT GRPC ...")
+		server._select()
+	}()
+}
+
+func (server *Server) SendHubBotAction(botLogin string, actionType string, actionBody string) (*httpx.RestfulResponse, error) {
+	request := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", server.Config.WebBaseUrl, "/botaction/"+botLogin))
+	request.Params["actionType"] = actionType
+	request.Params["actionBody"] = actionBody
+
+	return httpx.RestfulCallRetry(request, 3, 1)
 }

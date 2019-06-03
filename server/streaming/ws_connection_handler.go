@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -24,6 +25,13 @@ type GetConversationMessagesParams struct {
 	FromMessageId string `json:"fromMessageId"` // 以 fromMessageId 为界限获取消息。direction 为 old 必填；new 选填，空则返回最新一页数据，非空则可表示短信重连后获取更新数据
 }
 
+type SendMessageParams struct {
+	BotLogin   string `json:"botLogin"`
+	ToUserName string `json:"toUserName"`
+	Content    string `json:"content"`
+	AtList     string `json:"atList"`
+}
+
 func (wsConnection *WsConnection) onConnect() {
 	c := wsConnection
 	server := c.server
@@ -43,8 +51,18 @@ func (wsConnection *WsConnection) onConnect() {
 	})
 
 	c.On("send_message", func(payload interface{}) (interface{}, error) {
-		// TODO:
-		return payload, nil
+		request := &SendMessageParams{}
+		if err := mapstructure.Decode(payload, request); err != nil {
+			return nil, err
+		}
+
+		jsonstr, _ := json.Marshal(request)
+
+		if _, err := server.SendHubBotAction(request.BotLogin, "SendTextMessage", string(jsonstr)); err != nil {
+			return nil, err
+		}
+
+		return "success", nil
 	})
 
 	c.On("get_conversation_messages", func(payload interface{}) (interface{}, error) {

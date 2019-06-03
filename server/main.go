@@ -70,6 +70,7 @@ func loadConfig(configPath string) (MainConfig, error) {
 	}
 	
 	c.Streaming.Mongo = c.Web.Mongo
+	c.Streaming.WebBaseUrl = c.Web.Baseurl
 
 	return c, nil
 }

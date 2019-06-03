@@ -23,6 +23,8 @@ type Config struct {
 	ChathubWeb string
 
 	Mongo utils.MongoConfig
+
+	WebBaseUrl string
 }
 
 type Server struct {
@@ -69,18 +71,7 @@ func (server *Server) ValidateToken(token string) (*utils.AuthUser, error) {
 func (server *Server) Serve() error {
 	server.init()
 
-	go func() {
-		server.Info("BEGIN READ CHANNEL")
-		for {
-			in := <-server.chmsg
-			server.Info("RECV [%server] from channel", in.EventType)
-		}
-	}()
-
-	go func() {
-		server.Info("BEGIN SELECT GRPC ...")
-		server.Select()
-	}()
+	server.StartHubClient()
 
 	return server.ServeWebsocketServer()
 }

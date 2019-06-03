@@ -165,6 +165,19 @@ func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[s
 	return body
 }
 
+func (hub *ChatHub) sendEventToSubStreamingNodes(bot *ChatBot, inEvent *pb.EventRequest) {
+	go func() {
+		for _, snode := range hub.streamingNodes {
+			if _, ok := snode.SubBots[bot.BotId]; ok {
+				err := snode.SendMsg(inEvent.EventType, bot.ClientId, bot.ClientType, inEvent.Body)
+				if err != nil {
+					hub.Error(err, "send msg failed, continue")
+				}
+			}
+		}
+	}()
+}
+
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 	for {
 		in, err := tunnel.Recv()
@@ -528,16 +541,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						go func() {
-							for _, snode := range hub.streamingNodes {
-								if _, ok := snode.SubBots[bot.BotId]; ok {
-									err := snode.SendMsg(in.EventType, bot.ClientId, bot.ClientType, msg)
-									if err != nil {
-										hub.Error(err, "send msg failed, continue")
-									}
-								}
-							}
-						}()
+						hub.sendEventToSubStreamingNodes(bot, in)
 					}
 
 				} else {
@@ -562,6 +566,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
+					}
+
+					if o.Err == nil {
+						hub.sendEventToSubStreamingNodes(bot, in)
 					}
 
 				} else {
@@ -590,6 +598,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							httpx.RestfulCallRetry(
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
+					}
+
+					if o.Err == nil {
+						hub.sendEventToSubStreamingNodes(bot, in)
 					}
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
