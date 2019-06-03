@@ -129,3 +129,39 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 		}
 	}
 }
+
+/**
+ * 单聊：fromUser + toUser
+ * 群聊: groupId
+ * 两者互斥
+ */
+func (o *ErrorHandler) GetChatUnreadMessages(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) []WechatMessage {
+	criteria := bson.M{}
+
+	if fromMessageId != "" {
+		fromMessage := o.GetWechatMessageWithMsgId(db, fromMessageId)
+
+		if fromMessage != nil {
+			criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
+		}
+	}
+
+	if groupId != "" {
+		criteria["groupId"] = groupId
+	} else if fromUser != "" && toUser != "" {
+		criteria["toUser"] = toUser
+		criteria["fromUser"] = fromUser
+	} else {
+		o.Err = fmt.Errorf("GetChatUnreadMessages: groupid or fromUser/toUser is required")
+	}
+
+	query := db.C(
+		WechatMessageCollection,
+	).Find(
+		criteria,
+	).Sort(
+		"-updatedAt",
+	).Limit(1)
+
+	return o.GetWechatMessages(query)
+}
