@@ -16,7 +16,12 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 
 	actionReplys := []pb.BotActionReply{}
 
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{})
@@ -51,12 +56,17 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 	defer o.BackEndError(web)
-
+	
 	web.Info("notify crawl timeline tail")
 
 	actionReplys := []pb.BotActionReply{}
 	
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{})

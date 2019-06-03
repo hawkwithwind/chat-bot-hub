@@ -25,6 +25,28 @@ type GRPCWrapper struct {
 	client  pb.ChatBotHubClient
 	context context.Context
 	cancel  context.CancelFunc
+
+	lastActive time.Time
+	factory    func () (*grpc.ClientConn, error)
+}
+
+func (g *GRPCWrapper) Reconnect() error {
+	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
+		g.conn.Close()
+		g.conn = nil
+	}
+
+	if g.conn == nil {
+		var err error
+		g.conn, err = g.factory()
+		if err != nil {
+			g.conn = nil
+			return err
+		}
+	}
+
+	g.lastActive = time.Now()
+	return nil
 }
 
 func (w *GRPCWrapper) Cancel() {
@@ -41,15 +63,22 @@ func (w *GRPCWrapper) Cancel() {
 	}
 }
 
-func NewGRPCWrapper(wrapper *GRPCWrapper) *GRPCWrapper {
+func NewGRPCWrapper(wrapper *GRPCWrapper) (*GRPCWrapper, error) {
+	err := wrapper.Reconnect()
+	if err != nil {
+		return nil, err
+	}
+	
 	gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	
 	return &GRPCWrapper{
 		conn: wrapper.conn,
-		client: wrapper.client,
+		client: pb.NewChatBotHubClient(wrapper.conn),
 		context: gctx,
 		cancel: cancel,
-	}
+		lastActive: wrapper.lastActive,
+		factory: wrapper.factory,
+	}, nil
 }
 
 func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
@@ -57,19 +86,11 @@ func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
 		return nil
 	}
 
-	if conn, err := grpc.Dial(target, grpc.WithInsecure()); err != nil {
-		ctx.Err = err
-		return nil
-	} else {
-		client := pb.NewChatBotHubClient(conn)
-		gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-		return &GRPCWrapper{
-			conn:    conn,
-			client:  client,
-			context: gctx,
-			cancel:  cancel,
-		}
+	return &GRPCWrapper{
+		lastActive: time.Now(),
+		factory: func() (*grpc.ClientConn, error) {
+			return grpc.Dial(target, grpc.WithInsecure())
+		},
 	}
 }
 
@@ -213,7 +234,12 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	bot := o.GetBotByIdNull(tx, botId)
@@ -594,7 +620,12 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	bs := []BotsInfo{}
@@ -729,7 +760,12 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.SaveBot(tx, bot)
 	o.CommitOrRollback(tx)
 
-	wrapper := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	if o.Err != nil {
@@ -779,7 +815,12 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
@@ -817,7 +858,12 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
@@ -949,7 +995,12 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
-	wrapper := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{

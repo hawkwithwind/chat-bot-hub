@@ -264,7 +264,11 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -318,7 +322,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -1076,7 +1084,12 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}	
 
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return nil
+	}
+
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
 		return nil
@@ -1111,7 +1124,12 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	o.rebuildMsgFilters(web, bot, web.db.Conn, wrapper)
@@ -1169,7 +1187,12 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := NewGRPCWrapper(web.wrapper)
+	wrapper, err := NewGRPCWrapper(web.wrapper)
+	if err != nil {
+		o.Err = err
+		return
+	}
+	
 	defer wrapper.Cancel()
 
 	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)
