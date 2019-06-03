@@ -1976,8 +1976,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
   }
 `, pagesize)
 	
-	//web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
-	//web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
+	web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
+	web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
 
 	job := &mgo.MapReduce{
 		Map: mapfunc,
