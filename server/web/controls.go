@@ -1964,7 +1964,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
     for(var i in values) {
         let o = JSON.parse(values[i])
 	    if(Array.isArray(o)) {
-            l.concat(o);
+            l = l.concat(o);
         } else {
             l.push(o);
         }
