@@ -70,9 +70,9 @@ func (w *GRPCWrapper) Cancel() {
 		w.cancel()
 	}
 
-	if w.conn != nil {
-		w.conn.Close()
-	}
+	// if w.conn != nil {
+	// 	w.conn.Close()
+	// }
 }
 
 func NewGRPCWrapper(wrapper *GRPCWrapper) (*GRPCWrapper, error) {
