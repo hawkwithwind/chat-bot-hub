@@ -31,26 +31,14 @@ type GRPCWrapper struct {
 }
 
 func (g *GRPCWrapper) Reconnect() error {
-	fmt.Println("WRAPPER RECONNECT...")
-	
 	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
-		fmt.Println("WRAPPER CLOSE IF TOO OLD...")
 		g.conn.Close()
 		g.conn = nil
 	}
 
 	if g.conn == nil {
-		fmt.Println("WRAPPER RECONNECT...")
 		var err error
 		g.conn, err = g.factory()
-		if err != nil {
-			fmt.Println("WRAPPER RECONNECT FAILED ...", err)
-		}
-
-		if g.conn == nil {
-			fmt.Println("WRAPPER RECONNECT FAILED, conn is null")
-		}
-		
 		if err != nil {
 			g.conn = nil
 			return err
