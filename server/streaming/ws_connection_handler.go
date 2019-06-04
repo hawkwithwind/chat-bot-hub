@@ -155,15 +155,15 @@ func (wsConnection *WsConnection) getConversationMessages(payload interface{}) (
 	return result, nil
 }
 
-func (wsConnection *WsConnection) getUnreadMessages(payload interface{}) (interface{}, error) {
+func (wsConnection *WsConnection) getUnreadMessagesMeta(payload interface{}) (interface{}, error) {
 	params := make([]GetBotUnreadMessagesParams, 0)
-	if err := mapstructure.Decode(payload, params); err != nil {
+	if err := mapstructure.Decode(payload, &params); err != nil {
 		return nil, err
 	}
 
 	o := &ErrorHandler{}
 
-	result := make([][]domains.WechatMessage, 0)
+	result := make([]*domains.UnreadMessageMeta, len(params))
 
 	wg := sync.WaitGroup{}
 
@@ -180,18 +180,16 @@ func (wsConnection *WsConnection) getUnreadMessages(payload interface{}) (interf
 		} else if p.GroupChat != nil {
 			groupId = p.GroupChat.GroupId
 		} else {
-			return nil, fmt.Errorf("getUnreadMessages SingleChat or GroupChat params is required")
+			return nil, fmt.Errorf("getUnreadMessagesMeta SingleChat or GroupChat params is required")
 		}
 
 		wg.Add(1)
 
+		index := i
+
 		go func() {
 			defer wg.Done()
-
-			messages := o.GetChatUnreadMessages(wsConnection.server.mongoDb, fromUser, toUser, groupId, p.FromMessageId)
-			if messages != nil {
-				result = append(result, messages)
-			}
+			result[index] = o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, fromUser, toUser, groupId, p.FromMessageId)
 		}()
 
 	}
@@ -221,5 +219,5 @@ func (wsConnection *WsConnection) onConnect() {
 
 	c.On("send_message", c.sendMessage)
 	c.On("get_conversation_messages", c.getConversationMessages)
-	c.On("get_unread_messages", c.getUnreadMessages)
+	c.On("get_unread_messages_meta", c.getUnreadMessagesMeta)
 }

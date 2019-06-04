@@ -33,6 +33,11 @@ type WechatMessage struct {
 	UpdatedAt   time.Time   `json:"updateAt" bson:"updatedAt"`
 }
 
+type UnreadMessageMeta struct {
+	LatestMessage *WechatMessage `json:"latestMessage,omitempty"`
+	Count         int            `json:"count"`
+}
+
 const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
@@ -130,19 +135,14 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 	}
 }
 
-/**
- * 单聊：fromUser + toUser
- * 群聊: groupId
- * 两者互斥
- */
-func (o *ErrorHandler) GetChatUnreadMessages(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) []WechatMessage {
+func (o *ErrorHandler) buildGetUnreadMessageCriteria(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *bson.M {
 	criteria := bson.M{}
 
 	if fromMessageId != "" {
 		fromMessage := o.GetWechatMessageWithMsgId(db, fromMessageId)
 
 		if fromMessage != nil {
-			criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
+			criteria["updatedAt"] = bson.M{"$gt": fromMessage.UpdatedAt}
 		}
 	}
 
@@ -155,6 +155,12 @@ func (o *ErrorHandler) GetChatUnreadMessages(db *mgo.Database, fromUser string, 
 		o.Err = fmt.Errorf("GetChatUnreadMessages: groupid or fromUser/toUser is required")
 	}
 
+	return &criteria
+}
+
+func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *WechatMessage {
+	criteria := o.buildGetUnreadMessageCriteria(db, fromUser, toUser, groupId, fromMessageId)
+
 	query := db.C(
 		WechatMessageCollection,
 	).Find(
@@ -163,5 +169,51 @@ func (o *ErrorHandler) GetChatUnreadMessages(db *mgo.Database, fromUser string, 
 		"-updatedAt",
 	).Limit(1)
 
-	return o.GetWechatMessages(query)
+	messages := o.GetWechatMessages(query)
+
+	if messages != nil && len(messages) == 1 {
+		return &messages[0]
+	} else {
+		return nil
+	}
+}
+
+func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) int {
+	criteria := o.buildGetUnreadMessageCriteria(db, fromUser, toUser, groupId, fromMessageId)
+
+	count, err := db.C(
+		WechatMessageCollection,
+	).Find(
+		criteria,
+	).Count()
+
+	if err != nil {
+		o.Err = err
+		return -1
+	} else {
+		return count
+	}
+}
+
+/**
+ * 单聊：fromUser + toUser
+ * 群聊: groupId
+ * 两者互斥
+ */
+func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *UnreadMessageMeta {
+	lastMessage := o.getChatLatestUnreadMessage(db, fromUser, toUser, groupId, fromMessageId)
+	if o.Err != nil {
+		return nil
+	}
+
+	count := o.getChatUnreadMessagesCount(db, fromUser, toUser, groupId, fromMessageId)
+	if o.Err != nil {
+		return nil
+	}
+
+	result := &UnreadMessageMeta{}
+	result.LatestMessage = lastMessage
+	result.Count = count
+
+	return result
 }
