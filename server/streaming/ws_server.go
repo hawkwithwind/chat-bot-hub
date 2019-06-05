@@ -3,6 +3,8 @@ package streaming
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -15,9 +17,21 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (server *Server) validateToken(token string) (*utils.AuthUser, error) {
+	if token == "" {
+		return nil, errors.New("auth fail, no token supplied")
+	}
+
+	// TODO: call web token validation
+	user := &utils.AuthUser{}
+	user.AccountName = "haoda"
+
+	return user, nil
+}
+
 func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
-	user, err := server.ValidateToken(token)
+	user, err := server.validateToken(token)
 	if err != nil {
 		server.Error(err, "auth failed")
 		w.WriteHeader(403)
@@ -30,7 +44,12 @@ func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	wsConnection := newWsConnection(server, conn, user)
+	wsConnection, err := server.CreateWsConnection(conn, user)
+	if err != nil {
+		server.Error(err, "Create new WsConnection failed")
+		return
+	}
+
 	server.websocketConnections.Store(wsConnection, true)
 	server.onNewConnectionChan <- wsConnection
 

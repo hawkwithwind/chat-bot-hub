@@ -60,13 +60,13 @@ func (hub *ChatHub) init() {
 }
 
 type ChatHub struct {
-	Config       ChatHubConfig
-	Webhost      string
-	Webport      string
-	WebBaseUrl   string
+	Config          ChatHubConfig
+	Webhost         string
+	Webport         string
+	WebBaseUrl      string
 	WebSecretPhrase string
-	logger       *log.Logger
-	fluentLogger *fluent.Fluent
+	logger          *log.Logger
+	fluentLogger    *fluent.Fluent
 
 	muxBots sync.Mutex
 	bots    map[string]*ChatBot
@@ -167,9 +167,15 @@ func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[s
 
 func (hub *ChatHub) sendEventToSubStreamingNodes(bot *ChatBot, inEvent *pb.EventRequest) {
 	go func() {
+		var msg string
+		if err := json.Unmarshal([]byte(inEvent.Body), &msg); err != nil {
+			hub.Error(err, "Error while unmarshal event's body")
+			return
+		}
+
 		for _, snode := range hub.streamingNodes {
 			if _, ok := snode.SubBots[bot.BotId]; ok {
-				err := snode.SendMsg(inEvent.EventType, bot.ClientId, bot.ClientType, inEvent.Body)
+				err := snode.SendMsg(inEvent.EventType, bot.BotId, bot.ClientId, bot.ClientType, msg)
 				if err != nil {
 					hub.Error(err, "send msg failed, continue")
 				}

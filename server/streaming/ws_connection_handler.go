@@ -39,7 +39,7 @@ type GetBotUnreadMessagesParams struct {
 	FromMessageId string                                   `json:"fromMessageId"`
 }
 
-func (wsConnection *WsConnection) sendMessage(payload interface{}) (interface{}, error) {
+func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{}, error) {
 	params := &SendMessageParams{}
 	if err := mapstructure.Decode(payload, params); err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (wsConnection *WsConnection) sendMessage(payload interface{}) (interface{},
 	return "success", nil
 }
 
-func (wsConnection *WsConnection) getConversationMessages(payload interface{}) (interface{}, error) {
+func (wsConnection *WsConnection) onGetConversationMessages(payload interface{}) (interface{}, error) {
 	server := wsConnection.server
 
 	params := &GetConversationMessagesParams{}
@@ -155,7 +155,7 @@ func (wsConnection *WsConnection) getConversationMessages(payload interface{}) (
 	return result, nil
 }
 
-func (wsConnection *WsConnection) getUnreadMessagesMeta(payload interface{}) (interface{}, error) {
+func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (interface{}, error) {
 	params := make([]GetBotUnreadMessagesParams, 0)
 	if err := mapstructure.Decode(payload, &params); err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func (wsConnection *WsConnection) getUnreadMessagesMeta(payload interface{}) (in
 		} else if p.GroupChat != nil {
 			groupId = p.GroupChat.GroupId
 		} else {
-			return nil, fmt.Errorf("getUnreadMessagesMeta SingleChat or GroupChat params is required")
+			return nil, fmt.Errorf("onGetUnreadMessagesMeta SingleChat or GroupChat params is required")
 		}
 
 		wg.Add(1)
@@ -217,7 +217,7 @@ func (wsConnection *WsConnection) onConnect() {
 		return nil, nil
 	})
 
-	c.On("send_message", c.sendMessage)
-	c.On("get_conversation_messages", c.getConversationMessages)
-	c.On("get_unread_messages_meta", c.getUnreadMessagesMeta)
+	c.On("send_message", c.onSendMessage)
+	c.On("get_conversation_messages", c.onGetConversationMessages)
+	c.On("get_unread_messages_meta", c.onGetUnreadMessagesMeta)
 }

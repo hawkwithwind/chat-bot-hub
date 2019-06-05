@@ -2,9 +2,10 @@ package streaming
 
 import (
 	"github.com/globalsign/mgo"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/web"
 	"github.com/hawkwithwind/logger"
-	"github.com/pkg/errors"
 	"sync"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -22,7 +23,8 @@ type Config struct {
 	Chathubs   []string
 	ChathubWeb string
 
-	Mongo utils.MongoConfig
+	Mongo    utils.MongoConfig
+	Database web.DatabaseConfig
 
 	WebBaseUrl string
 }
@@ -38,9 +40,10 @@ type Server struct {
 	onNewConnectionChan chan *WsConnection
 
 	mongoDb *mgo.Database
+	db      *dbx.Database
 }
 
-func (server *Server) init() {
+func (server *Server) init() error {
 	server.Logger = logger.New()
 	server.Logger.SetPrefix("[STREAMING]")
 	_ = server.Logger.Init()
@@ -50,26 +53,27 @@ func (server *Server) init() {
 	server.onNewConnectionChan = make(chan *WsConnection)
 
 	o := &ErrorHandler{}
-	server.mongoDb = o.NewMongoConn(server.Config.Mongo.Host, server.Config.Mongo.Port)
 
+	server.Debug("connecting to mongo, host:%s port:%s\n", server.Config.Mongo.Host, server.Config.Mongo.Port)
+	server.mongoDb = o.NewMongoConn(server.Config.Mongo.Host, server.Config.Mongo.Port)
 	if o.Err != nil {
 		server.Error(o.Err, "connect to mongo failed %s", o.Err)
-	}
-}
-
-func (server *Server) ValidateToken(token string) (*utils.AuthUser, error) {
-	if token == "" {
-		return nil, errors.New("auth fail, no token supplied")
+		return o.Err
 	}
 
-	// TODO: call web token validation
-	user := &utils.AuthUser{}
+	server.db = &dbx.Database{}
+	if o.Connect(server.db, "mysql", server.Config.Database.DataSourceName); o.Err != nil {
+		server.Error(o.Err, "connect to database failed")
+		return o.Err
+	}
 
-	return user, nil
+	return nil
 }
 
 func (server *Server) Serve() error {
-	server.init()
+	if err := server.init(); err != nil {
+		return err
+	}
 
 	server.StartHubClient()
 

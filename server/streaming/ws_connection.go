@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"strconv"
 	"sync"
@@ -24,6 +25,7 @@ type WsConnection struct {
 	conn   *websocket.Conn
 
 	user *utils.AuthUser
+	bots []domains.BotExpand
 
 	eventSeq int64
 
@@ -74,15 +76,22 @@ func (wsConnection *WsConnection) Close() error {
  * private methods
  */
 
-func newWsConnection(server *Server, wsConnection *websocket.Conn, user *utils.AuthUser) *WsConnection {
+func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, user *utils.AuthUser) (*WsConnection, error) {
+	o := &ErrorHandler{}
+	bots := o.GetBotsByAccountName(server.db.Conn, user.AccountName)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
 	result := &WsConnection{server: server, conn: wsConnection, user: user}
 
 	result.eventSeq = 1
 	result.eventHandlers = &sync.Map{}
 	result.ackCallbacks = &sync.Map{}
 	result.eventsToWriteChan = make(chan WsEvent, 128)
+	result.bots = bots
 
-	return result
+	return result, nil
 }
 
 func (wsConnection *WsConnection) writeJSON(payload interface{}) error {
@@ -155,7 +164,11 @@ func (wsConnection *WsConnection) listen() {
 			// response
 			processResponse := func() {
 				response := event
-				_ = wsConnection.invokeAckCallback(response.Ack, response.Payload, response.Error)
+				var err error = nil
+				if response.Error != nil {
+					err = response.Error
+				}
+				_ = wsConnection.invokeAckCallback(response.Ack, response.Payload, err)
 			}
 
 			go processResponse()

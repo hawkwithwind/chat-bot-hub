@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 
 	"github.com/getsentry/raven-go"
 	"gopkg.in/yaml.v2"
@@ -59,7 +59,7 @@ func loadConfig(configPath string) (MainConfig, error) {
 	dblink := os.Getenv("DB_ALIAS")
 	dbparams := os.Getenv("DB_PARAMS")
 	dbmaxconn := os.Getenv("DB_MAXCONN")
-	
+
 	c.Web.Database.DataSourceName = fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", dbuser, dbpassword, dblink, dbname, dbparams)
 
 	if dbmaxconn != "" {
@@ -68,7 +68,8 @@ func loadConfig(configPath string) (MainConfig, error) {
 			c.Web.Database.MaxConnectNum = maxconn
 		}
 	}
-	
+
+	c.Streaming.Database = c.Web.Database
 	c.Streaming.Mongo = c.Web.Mongo
 	c.Streaming.WebBaseUrl = c.Web.Baseurl
 
@@ -99,7 +100,7 @@ func main() {
 			config.Web.Fluent = config.Fluent
 			webserver := web.WebServer{
 				Config:  config.Web,
-				Hubhost: "hub",
+				Hubhost: "127.0.0.1",
 				Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
@@ -151,7 +152,7 @@ func main() {
 			server := streaming.Server{
 				Config: config.Streaming,
 			}
-			
+
 			err := server.Serve()
 			if err != nil {
 				wg.Done()

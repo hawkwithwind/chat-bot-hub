@@ -112,16 +112,17 @@ func (hub *ChatHub) StreamingTunnel(tunnel pb.ChatBotHub_StreamingTunnelServer) 
 	}
 }
 
-func (s *StreamingNode) SendMsg(eventType string, botClientId string, botClientType string, msgbody string) error {
+func (s *StreamingNode) SendMsg(eventType string, botId string, botClientId string, botClientType string, msgbody string) error {
 	msg := pb.EventReply{
-		EventType: eventType,
-		Body: msgbody,
-		BotClientId: botClientId,
+		EventType:     eventType,
+		Body:          msgbody,
+		BotClientId:   botClientId,
 		BotClientType: botClientType,
-		ClientType: s.NodeType,
-		ClientId: s.NodeId,
+		BotId:         botId,
+		ClientType:    s.NodeType,
+		ClientId:      s.NodeId,
 	}
-	
+
 	if err := s.tunnel.Send(&msg); err != nil {
 		chathub.Error(err, "send %s to s[%s][%s] failed %s\n%s", eventType, s.NodeType, s.NodeId, err.Error(), msgbody)
 		return err
