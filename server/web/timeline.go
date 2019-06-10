@@ -16,7 +16,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 
 	actionReplys := []pb.BotActionReply{}
 
-	wrapper, err := NewGRPCWrapper(web.wrapper)
+	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -61,7 +61,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 
 	actionReplys := []pb.BotActionReply{}
 
-	wrapper, err := NewGRPCWrapper(web.wrapper)
+	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return

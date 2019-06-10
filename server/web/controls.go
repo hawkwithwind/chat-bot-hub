@@ -30,7 +30,7 @@ type GRPCWrapper struct {
 	factory    func() (*grpc.ClientConn, error)
 }
 
-func (g *GRPCWrapper) Reconnect() error {
+func (g *GRPCWrapper) Reconnect() error {	
 	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
 		g.conn.Close()
 		g.conn = nil
@@ -63,7 +63,17 @@ func (w *GRPCWrapper) Cancel() {
 	// }
 }
 
-func NewGRPCWrapper(wrapper *GRPCWrapper) (*GRPCWrapper, error) {
+func (web *WebServer) NewGRPCWrapper() (*GRPCWrapper, error) {
+	if web.wrapper == nil {
+		o := &ErrorHandler{}
+		web.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+
+		if o.Err != nil {
+			return nil, o.Err
+		}
+	}
+
+	wrapper := web.wrapper
 	err := wrapper.Reconnect()
 	if err != nil {
 		return nil, err
@@ -234,7 +244,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -619,7 +629,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -759,7 +769,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.SaveBot(tx, bot)
 	o.CommitOrRollback(tx)
 
-	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -814,7 +824,7 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper, err := NewGRPCWrapper(web.wrapper)
+	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -857,7 +867,7 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper, err := NewGRPCWrapper(web.wrapper)
+	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
@@ -994,7 +1004,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
-	wrapper, err := NewGRPCWrapper(ctx.wrapper)
+	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
