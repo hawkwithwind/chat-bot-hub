@@ -98,28 +98,28 @@ const (
 )
 
 const (
-	PING          string = "PING"
-	PONG          string = "PONG"
-	REGISTER      string = "REGISTER"
-	LOGIN         string = "LOGIN"
-	LOGOUT        string = "LOGOUT"
-	SHUTDOWN      string = "SHUTDOWN"
-	LOGINSCAN     string = "LOGINSCAN"
-	LOGINDONE     string = "LOGINDONE"
-	LOGINFAILED   string = "LOGINFAILED"
-	LOGOUTDONE    string = "LOGOUTDONE"
-	BOTMIGRATE    string = "BOTMIGRATE"
-	UPDATETOKEN   string = "UPDATETOKEN"
-	MESSAGE       string = "MESSAGE"
-	IMAGEMESSAGE  string = "IMAGEMESSAGE"
-	EMOJIMESSAGE  string = "EMOJIMESSAGE"
-	STATUSMESSAGE string = "STATUSMESSAGE"
-	FRIENDREQUEST string = "FRIENDREQUEST"
-	CONTACTINFO   string = "CONTACTINFO"
-	GROUPINFO     string = "GROUPINFO"
+	PING            string = "PING"
+	PONG            string = "PONG"
+	REGISTER        string = "REGISTER"
+	LOGIN           string = "LOGIN"
+	LOGOUT          string = "LOGOUT"
+	SHUTDOWN        string = "SHUTDOWN"
+	LOGINSCAN       string = "LOGINSCAN"
+	LOGINDONE       string = "LOGINDONE"
+	LOGINFAILED     string = "LOGINFAILED"
+	LOGOUTDONE      string = "LOGOUTDONE"
+	BOTMIGRATE      string = "BOTMIGRATE"
+	UPDATETOKEN     string = "UPDATETOKEN"
+	MESSAGE         string = "MESSAGE"
+	IMAGEMESSAGE    string = "IMAGEMESSAGE"
+	EMOJIMESSAGE    string = "EMOJIMESSAGE"
+	STATUSMESSAGE   string = "STATUSMESSAGE"
+	FRIENDREQUEST   string = "FRIENDREQUEST"
+	CONTACTINFO     string = "CONTACTINFO"
+	GROUPINFO       string = "GROUPINFO"
 	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
-	BOTACTION     string = "BOTACTION"
-	ACTIONREPLY   string = "ACTIONREPLY"
+	BOTACTION       string = "BOTACTION"
+	ACTIONREPLY     string = "ACTIONREPLY"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -508,14 +508,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 					}()
 				}
-				
+
 			case CONTACTSYNCDONE:
 				hub.Info("contact sync done")
-				
+
 				go func() {
 					if _, err := httpx.RestfulCallRetry(
 						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
-							hub.Error(err, "webnotify contactsync done failed\n")
+						hub.Error(err, "webnotify contactsync done failed\n")
 					}
 				}()
 
@@ -626,7 +626,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
-					
+
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
@@ -635,7 +635,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					bodym := o.FromJson(in.Body)
 					emojiId := o.FromMapString("emojiId", bodym, "actionBody", false, "")
-					
+
 					if o.Err == nil {
 						bodym["imageId"] = emojiId
 					}
@@ -643,7 +643,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						bodym = o.ReplaceWechatMsgSource(bodym)
 					}
-					
+
 					if o.Err == nil && bot.filter != nil {
 						o.Err = bot.filter.Fill(o.ToJson(bodym))
 					}

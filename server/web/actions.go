@@ -452,10 +452,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if bot.Callback.Valid {
 				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
 					bot, eventType, ""), 5, 1); err != nil {
-						ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
+					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
 				}
 			}
-		}()		
+		}()
 
 	case chatbothub.STATUSMESSAGE:
 		bodystr := o.getStringValue(r.Form, "body")
@@ -539,7 +539,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	case chatbothub.EMOJIMESSAGE:
 		msg := o.getStringValue(r.Form, "body")
 		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
-		
+
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
 		debugstr := reqstr
@@ -548,7 +548,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, debugstr)
-		
+
 		var awayar domains.ActionRequest
 		o.Err = json.Unmarshal([]byte(reqstr), &awayar)
 		localar := o.GetActionRequest(ctx.redispool, awayar.ActionRequestId)
@@ -577,7 +577,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 						case map[string]interface{}:
 							status := int(o.FromMapFloat(
 								"status", rdata, "actionReply.result.data", false, 0))
-							
+
 							if o.Err != nil {
 								return
 							}
@@ -604,7 +604,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 										case string:
 											toUser = toUserName
 											var chatroom = regexp.MustCompile(`@chatroom$`)
-											if  chatroom.MatchString(toUserName) {
+											if chatroom.MatchString(toUserName) {
 												groupId = toUserName
 											} else {
 												groupId = ""
@@ -614,14 +614,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 									content := o.FromMapString("content", actionm, "actionReply.actionBody", true, "")
 									imageId := o.FromMapString("imageId", actionm, "actionReply.actionBody", true, "")
-									
-									msg := map[string]interface{} {
-										"msgId": msgId,
-										"fromUser": localar.Login,
-										"toUser": toUser,
-										"groupId": groupId,
-										"imageId": imageId,
-										"content": content,
+
+									msg := map[string]interface{}{
+										"msgId":     msgId,
+										"fromUser":  localar.Login,
+										"toUser":    toUser,
+										"groupId":   groupId,
+										"imageId":   imageId,
+										"content":   content,
 										"timestamp": time.Now().Unix(),
 									}
 
@@ -630,7 +630,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 										ctx.Error(o.Err, "[SAVE DEBUG] update message error")
 									}
 								}
-								
+
 							}
 						default:
 							if o.Err == nil {
@@ -681,12 +681,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 					nickname := o.FromMapString("fromNickName", frm, "requestBody", false, "")
 					if o.Err != nil {
-						o.Err = nil 
+						o.Err = nil
 						continue
 					}
 
 					avatar := o.FromMapString("smallheadimgurl", frm, "requestBody", true, "")
-					alias  := o.FromMapString("alias", frm, "requestBody", true, "")
+					alias := o.FromMapString("alias", frm, "requestBody", true, "")
 					country := o.FromMapString("country", frm, "requestBody", true, "")
 					province := o.FromMapString("province", frm, "requestBody", true, "")
 					city := o.FromMapString("city", frm, "requestBody", true, "")
@@ -694,13 +694,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					sex := o.FromMapString("sex", frm, "requestBody", true, "")
 
 					if o.Err != nil {
-						o.Err = nil 
+						o.Err = nil
 						continue
 					}
 
 					iSex := o.ParseInt(sex, 10, 64)
 					if o.Err != nil {
-						o.Err = nil 
+						o.Err = nil
 						iSex = 0
 					}
 
@@ -985,7 +985,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err != nil {
 			return
-		}		
+		}
 		o.SaveActionRequest(ctx.redispool, localar)
 
 		go func() {
@@ -1082,7 +1082,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
 			fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
 		return nil
-	}	
+	}
 
 	wrapper, err := NewGRPCWrapper(web.wrapper)
 	if err != nil {
@@ -1192,7 +1192,7 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 		o.Err = err
 		return
 	}
-	
+
 	defer wrapper.Cancel()
 
 	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)

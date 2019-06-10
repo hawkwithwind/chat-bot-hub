@@ -2,9 +2,9 @@ package domains
 
 import (
 	"encoding/json"
-	"time"
 	"fmt"
-	
+	"time"
+
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -57,11 +57,11 @@ func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
 	col := db.C(WechatMessageCollection)
 	for _, key := range []string{"msgId", "fromUser", "toUser", "groupId", "timestamp"} {
 		o.Err = col.EnsureIndex(mgo.Index{
-			Key: []string{key},
-			Unique: true,
-			DropDups: true,
+			Key:        []string{key},
+			Unique:     true,
+			DropDups:   true,
 			Background: true,
-			Sparse: true,
+			Sparse:     true,
 		})
 		if o.Err != nil {
 			return
@@ -72,7 +72,7 @@ func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
 func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string) {
 	col := db.C(WechatMessageCollection)
 
- 	for _, message := range messages {
+	for _, message := range messages {
 		wechatMessage := WechatMessage{}
 		o.Err = json.Unmarshal([]byte(message), &wechatMessage)
 		if o.Err != nil {
@@ -84,14 +84,14 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 		switch content := wechatMessage.Content.(type) {
 		case map[string]interface{}:
 			var cjson []byte
-			cjson , o.Err = bson.MarshalJSON(content)
+			cjson, o.Err = bson.MarshalJSON(content)
 			if o.Err != nil {
 				fmt.Printf("[save message debug] marshal json failed %s\n", content)
 				return
 			}
 			wechatMessage.Content = string(cjson)
 		}
-		
+
 		switch src := wechatMessage.MsgSource.(type) {
 		case map[string]interface{}:
 			var msgsource MsgSource
@@ -104,7 +104,7 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string)
 			o.Err = json.Unmarshal(srcjson, &msgsource)
 			if o.Err != nil {
 				fmt.Printf("[save message debug] unmarshal json failed %s\n", srcjson)
-				return 
+				return
 			}
 			wechatMessage.MsgSource = &msgsource
 		}

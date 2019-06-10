@@ -132,7 +132,7 @@ func (u *ChatUser) CriteriaAlias(fieldname string) (dbx.Field, error) {
 			TN_BOTS, "botid",
 		}, nil
 	}
-	
+
 	return dbx.NormalCriteriaAlias(u, fieldname)
 }
 
@@ -149,7 +149,7 @@ func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname str
 		if username[:3] == "gh_" {
 			isgh = 1
 		}
-		
+
 		return &ChatUser{
 			ChatUserId: rid.String(),
 			UserName:   username,

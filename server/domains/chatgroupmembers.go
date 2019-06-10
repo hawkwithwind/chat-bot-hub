@@ -73,7 +73,7 @@ func (gm *ChatGroupMemberExpand) CriteriaAlias(fieldname string) (dbx.Field, err
 			TN_BOTS, "botid",
 		}, nil
 	}
-	
+
 	return dbx.NormalCriteriaAlias(gm, fieldname)
 }
 

@@ -15,10 +15,10 @@ import (
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
-	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/mux"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
@@ -51,21 +51,20 @@ type WebConfig struct {
 }
 
 type WebServer struct {
-	Config       WebConfig
-	Hubport      string
-	Hubhost      string
-	
-	wrapper      *GRPCWrapper
-	
+	Config  WebConfig
+	Hubport string
+	Hubhost string
+
+	wrapper *GRPCWrapper
+
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
 	redispool    *redis.Pool
 	db           *dbx.Database
 	store        *sessions.CookieStore
-	mongoDb	     *mgo.Database
+	mongoDb      *mgo.Database
 
 	contactParser *ContactParser
-	
 }
 
 func (ctx *WebServer) init() error {
@@ -74,7 +73,7 @@ func (ctx *WebServer) init() error {
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),
 		ctx.Config.Redis.Db, ctx.Config.Redis.Password)
 	ctx.store = sessions.NewCookieStore([]byte(ctx.Config.SecretPhrase)[:64])
-	ctx.db = &dbx.Database{}	
+	ctx.db = &dbx.Database{}
 
 	var err error
 	ctx.fluentLogger, err = fluent.New(fluent.Config{
@@ -85,7 +84,7 @@ func (ctx *WebServer) init() error {
 
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
-	}	
+	}
 
 	o := &ErrorHandler{}
 	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)

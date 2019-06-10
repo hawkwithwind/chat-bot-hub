@@ -56,11 +56,11 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 	defer o.BackEndError(web)
-	
+
 	web.Info("notify crawl timeline tail")
 
 	actionReplys := []pb.BotActionReply{}
-	
+
 	wrapper, err := NewGRPCWrapper(web.wrapper)
 	if err != nil {
 		o.Err = err

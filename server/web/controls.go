@@ -4,16 +4,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
 	"io/ioutil"
+	"net/http"
 	"strings"
+	"time"
 
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/hawkwithwind/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -27,7 +27,7 @@ type GRPCWrapper struct {
 	cancel  context.CancelFunc
 
 	lastActive time.Time
-	factory    func () (*grpc.ClientConn, error)
+	factory    func() (*grpc.ClientConn, error)
 }
 
 func (g *GRPCWrapper) Reconnect() error {
@@ -68,16 +68,16 @@ func NewGRPCWrapper(wrapper *GRPCWrapper) (*GRPCWrapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	
+
 	return &GRPCWrapper{
-		conn: wrapper.conn,
-		client: pb.NewChatBotHubClient(wrapper.conn),
-		context: gctx,
-		cancel: cancel,
+		conn:       wrapper.conn,
+		client:     pb.NewChatBotHubClient(wrapper.conn),
+		context:    gctx,
+		cancel:     cancel,
 		lastActive: wrapper.lastActive,
-		factory: wrapper.factory,
+		factory:    wrapper.factory,
 	}, nil
 }
 
@@ -505,7 +505,6 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf("account not exists"))
 		return
 	}
-
 
 	botid := ""
 	if botlogin != "" {
@@ -1322,7 +1321,7 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -1497,7 +1496,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		}
 		o.okWithPaging(w, "success", chatcontactvos, paging)
 		return
-		
+
 	case "moments":
 		var momentDomains []domains.Moment
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &momentDomains)
@@ -1599,8 +1598,8 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	chatEntity := vars["chatEntity"]
 	chatEntityId := vars["chatEntityId"]
-	
-	r.ParseForm()	
+
+	r.ParseForm()
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -1620,7 +1619,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	paging := utils.Paging{}
 	if pgquery, ok := querym["paging"]; !ok {
 		paging = utils.Paging{
-			Page: 1,
+			Page:     1,
 			PageSize: 20,
 		}
 	} else {
@@ -1628,7 +1627,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 		if o.Err != nil {
 			o.Err = nil
 			paging = utils.Paging{
-				Page: 1,
+				Page:     1,
 				PageSize: 20,
 			}
 		}
@@ -1644,22 +1643,20 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	case "chatusers":
 		chatuser := o.GetChatUserById(tx, chatEntityId)
 		if o.Err != nil || chatuser == nil {
-			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
 			return
 		}
-		
-		
+
 		ret := o.CheckOwnerOfChatusers(tx, accountName, []string{chatuser.UserName})
 		if o.Err != nil {
 			return
 		}
 		if len(ret) == 0 {
-			o.Err =  utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatuser %s access denied, or not found", chatEntityId))
 			return
 		}
-		
 
 		criteria["fromUser"] = bson.M{"$eq": chatuser.UserName}
 
@@ -1672,7 +1669,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 					if o.Err != nil {
 						return
 					}
-					
+
 					criteria["toUser"] = bson.M{"$eq": touser}
 					criteria["groupId"] = bson.M{"$eq": ""}
 
@@ -1681,8 +1678,8 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 							criteria,
 							bson.M{
 								"fromUser": bson.M{"$eq": touser},
-								"groupId": bson.M{"$eq": ""},
-								"toUser": bson.M{"$eq": chatuser.UserName},
+								"groupId":  bson.M{"$eq": ""},
+								"toUser":   bson.M{"$eq": chatuser.UserName},
 							},
 						},
 					}
@@ -1691,21 +1688,21 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 						fmt.Errorf("criteria find.toUser must be type string ,not <%T>", touser))
 					return
 				}
-				
+
 			default:
 				o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
 					fmt.Errorf("criteria find.toUser must be set for chatuser/message "))
 				return
 			}
-		}		
-		
+		}
+
 	case "chatgroups":
 		chatgroup := o.GetChatGroupById(tx, chatEntityId)
 		if o.Err != nil || chatgroup == nil {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
 				fmt.Errorf("chatgroup %s access denied, or not found", chatEntityId))
 		}
-		
+
 		ret := o.CheckOwnerOfChatgroups(tx, accountName, []string{chatgroup.GroupName})
 		if len(ret) == 0 {
 			o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
@@ -1714,11 +1711,11 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		criteria["groupId"] = bson.M{"$eq": chatgroup.GroupName}
-		
+
 	default:
 		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
 			fmt.Errorf("get message for <%s> not supported", chatEntity))
-		return		
+		return
 	}
 
 	wms := o.GetWechatMessages(web.mongoDb.C(
@@ -1726,13 +1723,13 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	).Find(criteria).Sort(
 		"-timestamp",
 	).Skip(
-		int((paging.Page-1) * paging.PageSize),
+		int((paging.Page - 1) * paging.PageSize),
 	).Limit(int(paging.PageSize)))
-	
+
 	if o.Err != nil {
 		return
 	}
-	
+
 	o.ok(w, "", wms)
 }
 
@@ -1770,7 +1767,6 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 
 	const MaxLimitUsers int = 500
 	const MaxLimitPagesize int = 20
-	
 
 	switch mapkey {
 	case "chatusers":
@@ -1785,7 +1781,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 
 	web.Info("[MESSAGE SEARCH DEBUG] %s", mapkey)
 
-	r.ParseForm()	
+	r.ParseForm()
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -1795,7 +1791,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	if query == "" {
 		var b []byte
 		b, o.Err = ioutil.ReadAll(r.Body)
@@ -1841,12 +1837,12 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 					checkedlist = vl
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "toUser":
-					checkedlist = vl					
+					checkedlist = vl
 					//checkedlist = o.CheckOwnerOfChatusers(tx, accountName, vl)
 				case "groupId":
 					checkedlist = o.CheckOwnerOfChatgroups(tx, accountName, vl)
 				}
-				
+
 				if o.Err != nil {
 					return
 				}
@@ -1863,11 +1859,11 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 					errmsgs = append(errmsgs, fmt.Sprintf("search entity exceeds limit %d", MaxLimitUsers))
 					checkedlist = checkedlist[:MaxLimitUsers]
 				}
-				
-				criteria[key] =  bson.M{"$in": checkedlist}
+
+				criteria[key] = bson.M{"$in": checkedlist}
 
 				web.Info("criteria %s", o.ToJson(criteria))
-				
+
 			default:
 				o.Err = utils.NewClientError(utils.PARAM_INVALID,
 					fmt.Errorf("criteria find.%s should be map[string] {... }", key))
@@ -1880,8 +1876,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		if _, ok := criteria["groupId"]; ok {
 			errmsgs = append(errmsgs, `setting criteria.groupId to "" from chatuser message search`)
 		}
-		
-		criteria["groupId"] = bson.M{"$eq":""}
+
+		criteria["groupId"] = bson.M{"$eq": ""}
 
 		if _, fuok := criteria["fromUser"]; !fuok {
 			o.Err = utils.NewClientError(utils.PARAM_REQUIRED,
@@ -1957,7 +1953,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
         content:   this.content,
       })
     )}`, mapkey)
-	
+
 	reducefunc := fmt.Sprintf(`
   function(key, values) { 
     let l = [];
@@ -1975,16 +1971,19 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
     }).slice(0, 0+%d));
   }
 `, pagesize)
-	
-	web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
-	web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
+
+	//web.Info("[MESSAGE SEARCH DEBUG] mapfunc:\n%s", mapfunc)
+	//web.Info("[MESSAGE SEARCH DEBUG] reducefunc:\n%s", reducefunc)
 
 	job := &mgo.MapReduce{
-		Map: mapfunc,
+		Map:    mapfunc,
 		Reduce: reducefunc,
 	}
 
-	var results []struct {Id string "_id"; Value string}
+	var results []struct {
+		Id    string "_id"
+		Value string
+	}
 	//var ret *mgo.MapReduceInfo
 	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
 	if o.Err != nil {
@@ -2011,6 +2010,6 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	if len(errmsgs) > 0 {
 		message = strings.Join(errmsgs, ",\n")
 	}
-	
+
 	o.ok(w, message, retmap)
 }

@@ -2,8 +2,8 @@ package domains
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gomodule/redigo/redis"
@@ -63,7 +63,7 @@ func (m *Moment) CriteriaAlias(fieldname string) (dbx.Field, error) {
 			TN_BOTS, "botid",
 		}, nil
 	}
-	
+
 	return dbx.NormalCriteriaAlias(m, fieldname)
 }
 

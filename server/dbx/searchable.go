@@ -1,9 +1,9 @@
 package dbx
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
-	"fmt"
 )
 
 type Field struct {
@@ -48,7 +48,7 @@ func NormalCriteriaAlias(s Searchable, fieldname string) (Field, error) {
 	if err != nil {
 		return Field{}, err
 	}
-	
+
 	fds := s.Fields()
 	for _, fd := range fds {
 		if fd.Name == fn {

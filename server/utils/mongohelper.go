@@ -12,7 +12,7 @@ type MongoConfig struct {
 }
 
 const (
-	MongoDatabase string = "mo-chathub"
+	MongoDatabase  string = "mo-chathub"
 	WechatMessages string = ""
 )
 
@@ -26,11 +26,10 @@ func (o *ErrorHandler) NewMongoConn(host string, port string) *mgo.Database {
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	mongoDb := client.DB(MongoDatabase)
-	
+
 	//createMessageIndexes(mongoDb)
 
 	return mongoDb
 }
-

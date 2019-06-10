@@ -232,7 +232,7 @@ func (o *ErrorHandler) AndIsIn(s Searchable, fieldName string, rhs interface{}) 
 	if o.Err != nil {
 		return ""
 	}
-	
+
 	switch list := rhs.(type) {
 	case []interface{}:
 		var placeholders []string
