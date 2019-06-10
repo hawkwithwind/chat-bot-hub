@@ -28,9 +28,9 @@ type ContactParser struct {
 
 func NewContactParser() *ContactParser {
 	return &ContactParser{
-		rawPipe:   make(chan ContactRawInfo, 1000),
-		userPipe:  make(chan ContactProcessInfo, 1000),
-		groupPipe: make(chan ContactProcessInfo, 1000),
+		rawPipe:   make(chan ContactRawInfo, 5000),
+		userPipe:  make(chan ContactProcessInfo, 5000),
+		groupPipe: make(chan ContactProcessInfo, 5000),
 	}
 }
 
@@ -96,7 +96,7 @@ type ProcessUserInfo struct {
 func (web *WebServer) processUsers() {
 	users := []ProcessUserInfo{}
 
-	const sectionLength int = 100
+	const sectionLength int = 1000
 	const timeout time.Duration = 300 * time.Millisecond
 
 	for {
