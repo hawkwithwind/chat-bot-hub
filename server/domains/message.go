@@ -3,9 +3,9 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"time"
 )
 
 type MsgSource struct {

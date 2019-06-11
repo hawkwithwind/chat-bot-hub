@@ -124,7 +124,7 @@ VALUES
 	}
 
 	query += strings.Join(valuetuples, ",\n")
-	
+
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.ExecContext(ctx, query, params...)
 }

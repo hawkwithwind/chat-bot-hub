@@ -264,7 +264,11 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -306,6 +310,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	ctx.Info("botNotify %s", botId)
 
 	tx := o.Begin(ctx.db)
+	if o.Err != nil {
+		return
+	}
 	defer o.CommitOrRollback(tx)
 
 	bot := o.GetBotById(tx, botId)
@@ -318,7 +325,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
@@ -437,6 +448,18 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		ctx.Info("save friend request %v", fr)
 
+	case chatbothub.CONTACTSYNCDONE:
+		ctx.Info("c[%s] contactsync done", thebotinfo.ClientType)
+
+		go func() {
+			if bot.Callback.Valid {
+				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
+					bot, eventType, ""), 5, 1); err != nil {
+					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
+				}
+			}
+		}()
+
 	case chatbothub.STATUSMESSAGE:
 		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
@@ -473,6 +496,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if body != nil {
 				fromUser := o.FromMapString("fromUser", body, "body", false, "")
 				groupId := o.FromMapString("groupId", body, "body", true, "")
+				msgId := o.FromMapString("msgId", body, "body", false, "")
 				timestamp := int64(o.FromMapFloat("timestamp", body, "body", false, 0))
 				tm := o.BJTimeFromUnix(timestamp)
 				if o.Err != nil {
@@ -485,6 +509,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 				if chatuser != nil {
 					chatuser.SetLastSendAt(tm)
+					chatuser.SetLastMsgId(msgId)
 					o.UpdateChatUser(tx, chatuser)
 					if o.Err != nil {
 						return
@@ -498,6 +523,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 					if chatgroup != nil {
 						chatgroup.SetLastSendAt(tm)
+						chatgroup.SetLastMsgId(msgId)
 						o.UpdateChatGroup(tx, chatgroup)
 						if o.Err != nil {
 							return
@@ -965,7 +991,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err != nil {
 			return
-		}		
+		}
 		o.SaveActionRequest(ctx.redispool, localar)
 
 		go func() {
@@ -1064,8 +1090,11 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
-	defer wrapper.Cancel()
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return nil
+	}
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
@@ -1101,7 +1130,12 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	o.rebuildMsgFilters(web, bot, web.db.Conn, wrapper)
@@ -1159,7 +1193,12 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	}
 
 	bot := o.GetBotById(web.db.Conn, botId)
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	o.rebuildMomentFilters(web, bot, web.db.Conn, wrapper)

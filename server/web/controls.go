@@ -25,6 +25,28 @@ type GRPCWrapper struct {
 	client  pb.ChatBotHubClient
 	context context.Context
 	cancel  context.CancelFunc
+
+	lastActive time.Time
+	factory    func() (*grpc.ClientConn, error)
+}
+
+func (g *GRPCWrapper) Reconnect() error {	
+	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
+		g.conn.Close()
+		g.conn = nil
+	}
+
+	if g.conn == nil {
+		var err error
+		g.conn, err = g.factory()
+		if err != nil {
+			g.conn = nil
+			return err
+		}
+	}
+
+	g.lastActive = time.Now()
+	return nil
 }
 
 func (w *GRPCWrapper) Cancel() {
@@ -36,9 +58,37 @@ func (w *GRPCWrapper) Cancel() {
 		w.cancel()
 	}
 
-	if w.conn != nil {
-		w.conn.Close()
+	// if w.conn != nil {
+	// 	w.conn.Close()
+	// }
+}
+
+func (web *WebServer) NewGRPCWrapper() (*GRPCWrapper, error) {
+	if web.wrapper == nil {
+		o := &ErrorHandler{}
+		web.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+
+		if o.Err != nil {
+			return nil, o.Err
+		}
 	}
+
+	wrapper := web.wrapper
+	err := wrapper.Reconnect()
+	if err != nil {
+		return nil, err
+	}
+
+	gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	return &GRPCWrapper{
+		conn:       wrapper.conn,
+		client:     pb.NewChatBotHubClient(wrapper.conn),
+		context:    gctx,
+		cancel:     cancel,
+		lastActive: wrapper.lastActive,
+		factory:    wrapper.factory,
+	}, nil
 }
 
 func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
@@ -46,19 +96,11 @@ func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
 		return nil
 	}
 
-	if conn, err := grpc.Dial(target, grpc.WithInsecure()); err != nil {
-		ctx.Err = err
-		return nil
-	} else {
-		client := pb.NewChatBotHubClient(conn)
-		gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-		return &GRPCWrapper{
-			conn:    conn,
-			client:  client,
-			context: gctx,
-			cancel:  cancel,
-		}
+	return &GRPCWrapper{
+		lastActive: time.Now(),
+		factory: func() (*grpc.ClientConn, error) {
+			return grpc.Dial(target, grpc.WithInsecure())
+		},
 	}
 }
 
@@ -202,7 +244,12 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	bot := o.GetBotByIdNull(tx, botId)
@@ -582,7 +629,12 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	bs := []BotsInfo{}
@@ -717,7 +769,12 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 	o.SaveBot(tx, bot)
 	o.CommitOrRollback(tx)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	if o.Err != nil {
@@ -767,7 +824,12 @@ func (web *WebServer) botLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	opreply := o.BotLogout(wrapper, &pb.BotLogoutRequest{
@@ -805,7 +867,12 @@ func (web *WebServer) deleteBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
@@ -937,7 +1004,12 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 
 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
 
-	wrapper := o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
 	defer wrapper.Cancel()
 
 	loginreply := o.BotLogin(wrapper, &pb.BotLoginRequest{
@@ -1896,8 +1968,14 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
   function(key, values) { 
     let l = [];
     for(var i in values) {
-       l.push(JSON.parse(values[i]));
-    };    
+        let o = JSON.parse(values[i])
+	    if(Array.isArray(o)) {
+            l = l.concat(o);
+        } else {
+            l.push(o);
+        }
+    };
+
     return JSON.stringify(l.sort((lhs, rhs) => {
       return parseInt(rhs.timestamp['$numberLong']) - parseInt(lhs.timestamp['$numberLong'])
     }).slice(0, 0+%d));

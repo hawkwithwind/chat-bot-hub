@@ -51,9 +51,12 @@ type WebConfig struct {
 }
 
 type WebServer struct {
-	Config       WebConfig
-	Hubport      string
-	Hubhost      string
+	Config  WebConfig
+	Hubport string
+	Hubhost string
+
+	wrapper *GRPCWrapper
+
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
 	redispool    *redis.Pool
@@ -123,6 +126,8 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
+
+	ctx.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	return nil
 }

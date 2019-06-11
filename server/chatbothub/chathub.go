@@ -108,27 +108,28 @@ const (
 )
 
 const (
-	PING          string = "PING"
-	PONG          string = "PONG"
-	REGISTER      string = "REGISTER"
-	LOGIN         string = "LOGIN"
-	LOGOUT        string = "LOGOUT"
-	SHUTDOWN      string = "SHUTDOWN"
-	LOGINSCAN     string = "LOGINSCAN"
-	LOGINDONE     string = "LOGINDONE"
-	LOGINFAILED   string = "LOGINFAILED"
-	LOGOUTDONE    string = "LOGOUTDONE"
-	BOTMIGRATE    string = "BOTMIGRATE"
-	UPDATETOKEN   string = "UPDATETOKEN"
-	MESSAGE       string = "MESSAGE"
-	IMAGEMESSAGE  string = "IMAGEMESSAGE"
-	EMOJIMESSAGE  string = "EMOJIMESSAGE"
-	STATUSMESSAGE string = "STATUSMESSAGE"
-	FRIENDREQUEST string = "FRIENDREQUEST"
-	CONTACTINFO   string = "CONTACTINFO"
-	GROUPINFO     string = "GROUPINFO"
-	BOTACTION     string = "BOTACTION"
-	ACTIONREPLY   string = "ACTIONREPLY"
+	PING            string = "PING"
+	PONG            string = "PONG"
+	REGISTER        string = "REGISTER"
+	LOGIN           string = "LOGIN"
+	LOGOUT          string = "LOGOUT"
+	SHUTDOWN        string = "SHUTDOWN"
+	LOGINSCAN       string = "LOGINSCAN"
+	LOGINDONE       string = "LOGINDONE"
+	LOGINFAILED     string = "LOGINFAILED"
+	LOGOUTDONE      string = "LOGOUTDONE"
+	BOTMIGRATE      string = "BOTMIGRATE"
+	UPDATETOKEN     string = "UPDATETOKEN"
+	MESSAGE         string = "MESSAGE"
+	IMAGEMESSAGE    string = "IMAGEMESSAGE"
+	EMOJIMESSAGE    string = "EMOJIMESSAGE"
+	STATUSMESSAGE   string = "STATUSMESSAGE"
+	FRIENDREQUEST   string = "FRIENDREQUEST"
+	CONTACTINFO     string = "CONTACTINFO"
+	GROUPINFO       string = "GROUPINFO"
+	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
+	BOTACTION       string = "BOTACTION"
+	ACTIONREPLY     string = "ACTIONREPLY"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -462,6 +463,16 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}()
 				}
 
+			case CONTACTSYNCDONE:
+				hub.Info("contact sync done")
+
+				go func() {
+					if _, err := httpx.RestfulCallRetry(
+						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
+						hub.Error(err, "webnotify contactsync done failed\n")
+					}
+				}()
+
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
@@ -577,7 +588,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						hub.sendEventToSubStreamingNodes(bot, in)
 					}
-
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}

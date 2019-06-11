@@ -25,6 +25,7 @@ type ChatGroup struct {
 	MemberCount    int            `db:"membercount"`
 	MaxMemberCount int            `db:"maxmembercount"`
 	Ext            sql.NullString `db:"ext"`
+	LastMsgId      sql.NullString `db:"lastmsgid"`
 	LastSendAt     mysql.NullTime `db:"lastsendat"`
 	CreateAt       mysql.NullTime `db:"createat"`
 	UpdateAt       mysql.NullTime `db:"updateat"`
@@ -89,6 +90,14 @@ func (chatgroup *ChatGroup) SetLastSendAt(sendAt time.Time) {
 	}
 }
 
+func (chatgroup *ChatGroup) SetLastMsgId(msgId string) {
+	chatgroup.LastMsgId = sql.NullString{
+		String:  msgId,
+		Valid: true,
+	}
+}
+
+
 func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname string, owner string, membercount int, maxmembercount int) *ChatGroup {
 	if ctx.Err != nil {
 		return nil
@@ -118,10 +127,10 @@ func (o *ErrorHandler) SaveChatGroup(q dbx.Queryable, chatgroup *ChatGroup) {
 	query := `
 INSERT INTO chatgroups
 (chatgroupid, groupname, type, alias, nickname, owner, avatar, membercount, maxmembercount, 
-ext, lastsendat)
+ext, lastsendat, lastmsgid)
 VALUES
 (:chatgroupid, :groupname, :type, :alias, :nickname, :owner, :avatar, :membercount, :maxmembercount, 
-:ext, :lastsendat)
+:ext, :lastsendat, :lastmsgid)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
@@ -166,6 +175,7 @@ SET alias = :alias
 , maxmembercount = :maxmembercount
 , ext = :ext
 , lastsendat = :lastsendat
+, lastmsgid = :lastmsgid
 WHERE chatgroupid = :chatgroupid
 `
 	ctx, _ := o.DefaultContext()
@@ -232,6 +242,7 @@ g.chatgroupid
 , g.maxmembercount
 , g.ext
 , g.lastsendat
+, g.lastmsgid
 , g.createat
 , g.updateat
 , g.deleteat

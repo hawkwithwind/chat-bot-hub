@@ -164,6 +164,10 @@ func NewHttpClient() *http.Client {
 
 func RestfulCall(req *RestfulRequest) (*RestfulResponse, error) {
 	client := NewHttpClient()
+	return RestfulCallCore(client, req)
+}
+
+func RestfulCallCore(client *http.Client, req *RestfulRequest) (*RestfulResponse, error) {
 	client.Jar = req.CookieJar
 
 	requestBody := url.Values{}

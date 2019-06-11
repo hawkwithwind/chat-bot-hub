@@ -94,7 +94,9 @@ func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
 		return
 	}
 	if o.Err != nil {
-		tx.Rollback()
+		if tx != nil {
+			tx.Rollback()
+		}
 	} else {
 		o.Err = tx.Commit()
 	}

@@ -1,13 +1,13 @@
 package web
 
 import (
-	"fmt"
-	"time"
-	"regexp"
 	"encoding/json"
+	"fmt"
+	"regexp"
+	"time"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type ContactRawInfo struct {
@@ -17,20 +17,20 @@ type ContactRawInfo struct {
 
 type ContactProcessInfo struct {
 	body WechatContactInfo
-	bot *pb.BotsInfo
+	bot  *pb.BotsInfo
 }
 
 type ContactParser struct {
-	rawPipe chan ContactRawInfo
-	userPipe chan ContactProcessInfo
+	rawPipe   chan ContactRawInfo
+	userPipe  chan ContactProcessInfo
 	groupPipe chan ContactProcessInfo
 }
 
-func NewContactParser() *ContactParser{
+func NewContactParser() *ContactParser {
 	return &ContactParser{
-		rawPipe: make(chan ContactRawInfo, 1000),
-		userPipe: make(chan ContactProcessInfo, 1000),
-		groupPipe: make(chan ContactProcessInfo, 1000),
+		rawPipe:   make(chan ContactRawInfo, 5000),
+		userPipe:  make(chan ContactProcessInfo, 5000),
+		groupPipe: make(chan ContactProcessInfo, 5000),
 	}
 }
 
@@ -88,28 +88,28 @@ type WechatGroupMember struct {
 	UserName         string `json:"userName"`
 }
 
-type ProcessUserInfo struct{
+type ProcessUserInfo struct {
 	botId    string
 	chatuser *domains.ChatUser
 }
 
 func (web *WebServer) processUsers() {
 	users := []ProcessUserInfo{}
-	
-	const sectionLength int = 100
+
+	const sectionLength int = 1000
 	const timeout time.Duration = 300 * time.Millisecond
-	
+
 	for {
 		o := &ErrorHandler{}
 		isTimeout := false
-		
+
 		select {
-		case ccinfo := <- web.contactParser.userPipe:
+		case ccinfo := <-web.contactParser.userPipe:
 			web.Info("[contacts debug] receive user info")
-			
+
 			info := ccinfo.body
 			thebotinfo := ccinfo.bot
-			
+
 			chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
 			chatuser.Sex = info.Sex
 			chatuser.SetAvatar(info.SmallHead)
@@ -122,10 +122,10 @@ func (web *WebServer) processUsers() {
 			chatuser.SetExt(o.ToJson(info))
 			users = append(users, ProcessUserInfo{thebotinfo.BotId, chatuser})
 
-		case <- time.After(timeout):
+		case <-time.After(timeout):
 			isTimeout = true
 		}
-		
+
 		if (len(users) > sectionLength) || (isTimeout && len(users) > 0) {
 			web.Info("[contacts debug] process %d", len(users))
 			err := web.saveChatUsers(users)
@@ -143,7 +143,7 @@ func (web *WebServer) processUsers() {
 
 func (web *WebServer) processGroups() {
 	for {
-		cpinfo := <- web.contactParser.groupPipe
+		cpinfo := <-web.contactParser.groupPipe
 		err := web.saveOneGroup(cpinfo.body, cpinfo.bot)
 		if err != nil {
 			web.Error(err, "[Contacts group debug] save one group failed")
@@ -153,7 +153,7 @@ func (web *WebServer) processGroups() {
 
 func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	o := &ErrorHandler{}
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -168,7 +168,7 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	for _, dbu := range dbusers {
 		findm[dbu.UserName] = dbu.ChatUserId
 	}
-	
+
 	if o.Err != nil {
 		web.Error(o.Err, "[Contacts debug] failed to save users [%d]", len(users))
 	} else {
@@ -203,7 +203,7 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-	
+
 	owner := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, info.ChatRoomOwner)
 	if o.Err != nil {
 		return o.Err
@@ -248,27 +248,26 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 	if len(chatgroupMembers) > 0 {
 		o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 	}
-	
+
 	if o.Err != nil {
-		return  o.Err
+		return o.Err
 	}
 	o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(thebotinfo.BotId, chatgroup.ChatGroupId))
 	if o.Err != nil {
-		return  o.Err
+		return o.Err
 	}
 	web.Info("save group info [%s]%s done", info.UserName, info.NickName)
 
 	return nil
 }
 
-
 func (web *WebServer) processContacts() {
 	for {
-		raw := <- web.contactParser.rawPipe
+		raw := <-web.contactParser.rawPipe
 		web.Info("[contacts debug] receive raw")
-		
+
 		o := &ErrorHandler{}
-		
+
 		info := WechatContactInfo{}
 		o.Err = json.Unmarshal([]byte(raw.raw), &info)
 		if o.Err != nil {
@@ -286,7 +285,7 @@ func (web *WebServer) processContacts() {
 			if len(info.ChatRoomOwner) == 0 {
 				return
 			}
-			
+
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
 			web.contactParser.userPipe <- ContactProcessInfo{info, raw.bot}
