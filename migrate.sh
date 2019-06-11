@@ -41,6 +41,8 @@ create*)
     docker run --rm \
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
+           -e LOCAL_USER_ID=`id -u` \
+	   -e LOCAL_GROUP_ID=`id -g` \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   create -dir /migrations/ -ext sql -seq -digits 4 "${@:2}"
@@ -51,6 +53,8 @@ up*)
 	   --network=$LOCALNETWORK \
 	   -v `pwd`/migrate:/migrations \
 	   -e DBPATH=$DB_PATH \
+           -e LOCAL_USER_ID=`id -u` \
+	   -e LOCAL_GROUP_ID=`id -g` \
 	   $MIGRATE_IMAGE \
 	   -path=/migrations/ \
 	   -database $DB_PATH \

@@ -496,6 +496,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			if body != nil {
 				fromUser := o.FromMapString("fromUser", body, "body", false, "")
 				groupId := o.FromMapString("groupId", body, "body", true, "")
+				msgId := o.FromMapString("msgId", body, "body", false, "")
 				timestamp := int64(o.FromMapFloat("timestamp", body, "body", false, 0))
 				tm := o.BJTimeFromUnix(timestamp)
 				if o.Err != nil {
@@ -508,6 +509,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 				if chatuser != nil {
 					chatuser.SetLastSendAt(tm)
+					chatuser.SetLastMsgId(msgId)
 					o.UpdateChatUser(tx, chatuser)
 					if o.Err != nil {
 						return
@@ -521,6 +523,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 					if chatgroup != nil {
 						chatgroup.SetLastSendAt(tm)
+						chatgroup.SetLastMsgId(msgId)
 						o.UpdateChatGroup(tx, chatgroup)
 						if o.Err != nil {
 							return

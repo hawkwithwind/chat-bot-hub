@@ -30,6 +30,7 @@ type ChatUser struct {
 	Label      sql.NullString `db:"label"`
 	Isgh       int            `db:"isgh"`
 	Ext        sql.NullString `db:"ext"`
+	LastMsgId  sql.NullString `db:"lastmsgid"`
 	LastSendAt mysql.NullTime `db:"lastsendat"`
 	CreateAt   mysql.NullTime `db:"createat"`
 	UpdateAt   mysql.NullTime `db:"updateat"`
@@ -110,6 +111,13 @@ func (chatuser *ChatUser) SetLastSendAt(sendAt time.Time) {
 	}
 }
 
+func (chatuser *ChatUser) SetLastMsgId(msgId string) {
+	chatuser.LastMsgId = sql.NullString{
+		String: msgId,
+		Valid: true,
+	}	
+}
+
 func (o *ErrorHandler) NewDefaultChatUser() dbx.Searchable {
 	return &ChatUser{}
 }
@@ -168,10 +176,10 @@ func (o *ErrorHandler) SaveChatUser(q dbx.Queryable, chatuser *ChatUser) {
 	query := `
 INSERT INTO chatusers
 (chatuserid, username, type, alias, nickname, avatar, 
-sex, country, province, city, signature, remark, label, ext, lastsendat)
+sex, country, province, city, signature, remark, label, ext, lastsendat, lastmsgid)
 VALUES
 (:chatuserid, :username, :type, :alias, :nickname, :avatar, 
-:sex, :country, :province, :city, :signature, :remark, :label, :ext, :lastsendat)
+:sex, :country, :province, :city, :signature, :remark, :label, :ext, :lastsendat, :lastmsgid)
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatuser)
@@ -195,6 +203,7 @@ SET alias = :alias
 , label = :label
 , ext = :ext
 , lastsendat = :lastsendat
+, lastmsgid = :lastmsgid
 WHERE chatuserid = :chatuserid
 `
 	ctx, _ := o.DefaultContext()
@@ -474,6 +483,7 @@ u.chatuserid
 , u.label
 , u.ext
 , u.lastsendat
+, u.lastmsgid
 , u.createat
 , u.updateat
 , u.deleteat
