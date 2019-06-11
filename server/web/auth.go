@@ -141,6 +141,7 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(ctx)
 
 	bearerToken := req.Header.Get("X-AUTHORIZE-REFRESH")
 	clientType := req.Header.Get("X-CLIENT-TYPE")
@@ -156,7 +157,12 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 		var user User
 		utils.DecodeMap(token.Claims, &user)
 
-		if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
+		validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+		if o.Err != nil {
+			return
+		}
+		
+		if validated == true {
 			if user.ExpireAt.Before(time.Now()) {
 				o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 				return
