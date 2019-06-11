@@ -309,6 +309,32 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	ctx.Info("botNotify %s", botId)
 
+	wrapper, err := ctx.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+	defer wrapper.Cancel()
+
+	thebotinfo := o.getTheBot(wrapper, botId)
+	if o.Err != nil {
+		return
+	}
+
+	r.ParseForm()
+	eventType := o.getStringValue(r.Form, "event")
+	ctx.Info("notify event %s", eventType)
+
+	if eventType == "CONTACTINFO" {
+		bodystr := o.getStringValue(r.Form, "body")
+		if thebotinfo.ClientType == "WECHATBOT" {
+			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
+		}
+
+		ctx.Info("[contacts debug] received raw")
+		o.ok(w, "success", nil)
+	}
+	
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
 		return
@@ -325,22 +351,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wrapper, err := ctx.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return
-	}
-	defer wrapper.Cancel()
-
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return
-	}
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
-
-	r.ParseForm()
-	eventType := o.getStringValue(r.Form, "event")
-	ctx.Info("notify event %s", eventType)
 
 	var localmap map[string]interface{}
 	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
@@ -471,15 +482,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
 				}
 			}
-		}()
-
-	case chatbothub.CONTACTINFO:
-		bodystr := o.getStringValue(r.Form, "body")
-		if thebotinfo.ClientType == "WECHATBOT" {
-			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
-		}
-
-		ctx.Info("[contacts debug] received raw")
+		}()	
 
 	case chatbothub.GROUPINFO:
 		bodystr := o.getStringValue(r.Form, "body")
