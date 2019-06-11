@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"reflect"
@@ -487,6 +488,8 @@ type WebTrigger struct {
 	BaseFilter
 	NextFilter Filter    `json:"next"`
 	Action     WebAction `json:"action"`
+
+	restfulclient *http.Client
 }
 
 func (f *WebTrigger) String() string {
@@ -494,8 +497,8 @@ func (f *WebTrigger) String() string {
 	return string(jsonstr)
 }
 
-func NewWebTrigger(filterId string, filterName string) *WebTrigger {
-	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web")}
+func NewWebTrigger(client *http.Client, filterId string, filterName string) *WebTrigger {
+	return &WebTrigger{BaseFilter: NewBaseFilter(filterId, filterName, "触发器:Web"), restfulclient: client}
 }
 
 func (f *WebTrigger) Fill(msg string) error {
@@ -527,7 +530,7 @@ func (f *WebTrigger) Fill(msg string) error {
 		rr.Params["msg"] = msg
 		rr.CookieJar = jar
 
-		if resp, err := httpx.RestfulCallRetry(rr, 5, 1); err != nil {
+		if resp, err := httpx.RestfulCallRetry(f.restfulclient, rr, 5, 1); err != nil {
 			fmt.Printf("[WebTrigger] failed %s\n%v\n", err, resp)
 		} else {
 			//save cookies

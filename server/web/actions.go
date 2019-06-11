@@ -441,7 +441,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				httpx.RestfulCallRetry(webCallbackRequest(
+				httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
 					bot, eventType, eh.FriendRequestToJson(fr)), 5, 1)
 			}
 		}()
@@ -453,7 +453,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			if bot.Callback.Valid {
-				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
 					bot, eventType, ""), 5, 1); err != nil {
 					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
 				}
@@ -466,7 +466,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			if bot.Callback.Valid {
-				if resp, err := httpx.RestfulCallRetry(webCallbackRequest(
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
 					bot, eventType, bodystr), 5, 1); err != nil {
 					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
 				}
@@ -997,7 +997,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(
+				if _, err := httpx.RestfulCallRetry(ctx.restfulclient, 
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
 				}
