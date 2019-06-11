@@ -310,6 +310,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	ctx.Info("botNotify %s", botId)
 
 	tx := o.Begin(ctx.db)
+	if o.Err != nil {
+		return
+	}
 	defer o.CommitOrRollback(tx)
 
 	bot := o.GetBotById(tx, botId)
