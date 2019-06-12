@@ -333,6 +333,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		ctx.Info("[contacts debug] received raw")
 		o.ok(w, "success", nil)
+		return
 	}
 	
 	tx := o.Begin(ctx.db)
