@@ -43,7 +43,7 @@ func (hub *ChatHub) CreateFilterByType(
 			return filter, fmt.Errorf("config.fluent.tags.msg not found")
 		}
 	case WEBTRIGGER:
-		filter = NewWebTrigger(filterId, filterName)
+		filter = NewWebTrigger(hub.restfulclient, filterId, filterName)
 	case KVROUTER:
 		filter = NewKVRouter(filterId, filterName)
 	case REGEXROUTER:

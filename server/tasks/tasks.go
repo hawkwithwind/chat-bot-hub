@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"net/http"
 
 	"github.com/robfig/cron"
 
@@ -21,6 +22,7 @@ type Tasks struct {
 	Webport    string
 	WebBaseUrl string
 	logger     *log.Logger
+	restfulclient *http.Client
 }
 
 func (ctx *Tasks) Info(msg string, v ...interface{}) {
@@ -33,6 +35,7 @@ func (ctx *Tasks) Error(err error, msg string, v ...interface{}) {
 }
 
 func (tasks *Tasks) init() {
+	tasks.restfulclient = httpx.NewHttpClient()
 	tasks.logger = log.New(os.Stdout, "[TASKS] ", log.Ldate|log.Ltime)
 	tasks.cron = cron.New()
 }
@@ -53,7 +56,7 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimeline() {
 
 	tasks.Info("trigger crawl timeline ...")
 
-	if ret, err := httpx.RestfulCallRetry(
+	if ret, err := httpx.RestfulCallRetry(tasks.restfulclient,
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
 		tasks.Error(err, "call crawltimeline failed")
@@ -69,7 +72,7 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimelineTail() {
 
 	tasks.Info("trigger crawl timeline tail...")
 
-	if ret, err := httpx.RestfulCallRetry(
+	if ret, err := httpx.RestfulCallRetry(tasks.restfulclient,
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
 		tasks.Error(err, "call crawltimelinetail failed")

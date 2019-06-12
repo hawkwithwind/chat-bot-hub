@@ -238,12 +238,12 @@ func RestfulCallCore(client *http.Client, req *RestfulRequest) (*RestfulResponse
 	}
 }
 
-func RestfulCallRetry(req *RestfulRequest, retryTimes int, sleepSeconds int) (*RestfulResponse, error) {
+func RestfulCallRetry(client *http.Client, req *RestfulRequest, retryTimes int, sleepSeconds int) (*RestfulResponse, error) {
 	var resp *RestfulResponse
 	var err error
 
 	for i := 0; i < retryTimes; i = i + 1 {
-		resp, err = RestfulCall(req)
+		resp, err = RestfulCallCore(client, req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return resp, nil
 		} else {

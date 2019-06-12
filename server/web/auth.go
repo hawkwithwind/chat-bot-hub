@@ -203,6 +203,7 @@ func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(ctx)
 
 	bearerToken := req.Header.Get("X-AUTHORIZE-REFRESH")
 	clientType := req.Header.Get("X-CLIENT-TYPE")

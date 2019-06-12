@@ -3,9 +3,11 @@ package streaming
 import (
 	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
 	"github.com/hawkwithwind/logger"
+	"net/http"
 	"sync"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -41,6 +43,8 @@ type Server struct {
 
 	mongoDb *mgo.Database
 	db      *dbx.Database
+
+	restfulclient *http.Client
 }
 
 func (server *Server) init() error {
@@ -66,6 +70,8 @@ func (server *Server) init() error {
 		server.Error(o.Err, "connect to database failed")
 		return o.Err
 	}
+
+	server.restfulclient = httpx.NewHttpClient()
 
 	return nil
 }

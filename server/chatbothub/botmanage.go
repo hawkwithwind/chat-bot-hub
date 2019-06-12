@@ -70,6 +70,8 @@ func (hub *ChatHub) DropBot(clientid string) {
 	defer hub.muxBots.Unlock()
 
 	delete(hub.bots, clientid)
+
+	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
 }
 
 func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {

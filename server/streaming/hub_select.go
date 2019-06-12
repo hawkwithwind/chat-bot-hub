@@ -121,5 +121,5 @@ func (server *Server) SendHubBotAction(botLogin string, actionType string, actio
 	request.Params["actionType"] = actionType
 	request.Params["actionBody"] = actionBody
 
-	return httpx.RestfulCallRetry(request, 3, 1)
+	return httpx.RestfulCallRetry(server.restfulclient, request, 3, 1)
 }

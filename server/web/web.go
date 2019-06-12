@@ -24,6 +24,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ErrorHandler struct {
@@ -56,6 +57,7 @@ type WebServer struct {
 	Hubhost string
 
 	wrapper *GRPCWrapper
+	restfulclient *http.Client
 
 	logger       *log.Logger
 	fluentLogger *fluent.Fluent
@@ -67,6 +69,8 @@ type WebServer struct {
 }
 
 func (ctx *WebServer) init() error {
+	ctx.restfulclient = httpx.NewHttpClient()
+	
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
 	ctx.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),

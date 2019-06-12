@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -38,6 +39,8 @@ var (
 )
 
 func (hub *ChatHub) init() {
+	hub.restfulclient = httpx.NewHttpClient()
+
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
 	var err error
 	hub.fluentLogger, err = fluent.New(fluent.Config{
@@ -64,6 +67,7 @@ type ChatHub struct {
 	Webhost         string
 	Webport         string
 	WebBaseUrl      string
+	restfulclient   *http.Client
 	WebSecretPhrase string
 	logger          *log.Logger
 	fluentLogger    *fluent.Fluent
@@ -308,7 +312,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 
 						var resp *httpx.RestfulResponse
-						resp, o.Err = httpx.RestfulCallRetry(
+						resp, o.Err = httpx.RestfulCallRetry(hub.restfulclient,
 							httpx.NewRestfulRequest(
 								"post",
 								fmt.Sprintf("%s/bots/%s/loginstage", hub.WebBaseUrl, bot.BotId)),
@@ -403,7 +407,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							if _, err := httpx.RestfulCallRetry(
+							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
 								hub.Error(err, "webnotify logindone failed\n")
 							}
@@ -444,7 +448,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				if o.Err == nil {
 					go func() {
-						if _, err := httpx.RestfulCallRetry(
+						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 							thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
 							hub.Error(err, "webnotify updatetoken failed\n")
 						}
@@ -456,7 +460,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				reqstr, o.Err = bot.friendRequest(in.Body)
 				if o.Err == nil {
 					go func() {
-						if _, err := httpx.RestfulCallRetry(
+						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
 							hub.Error(err, "webnotify friendrequest failed\n")
 						}
@@ -467,7 +471,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("contact sync done")
 
 				go func() {
-					if _, err := httpx.RestfulCallRetry(
+					if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
 						hub.Error(err, "webnotify contactsync done failed\n")
 					}
@@ -520,7 +524,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(
+							httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(
 									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
 										ActionRequestId: actionRequestId,
@@ -552,7 +556,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(
+							httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, o.ToJson(body)), 5, 1)
 						}()
 					}
@@ -580,7 +584,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(
+							httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
@@ -611,7 +615,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							httpx.RestfulCallRetry(
+							httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
 						}()
 					}
@@ -638,7 +642,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							if _, err := httpx.RestfulCallRetry(
+							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
 								hub.Error(err, "webnotify statusmessage failed\n")
 							}
@@ -655,7 +659,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							if _, err := httpx.RestfulCallRetry(
+							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
 								hub.Error(err, "webnotify contact info failed\n")
 							}
@@ -672,7 +676,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						go func() {
-							if _, err := httpx.RestfulCallRetry(
+							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
 								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
 								hub.Error(err, "webnotify group info failed\n")
 							}
