@@ -611,7 +611,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 type BotsInfo struct {
 	pb.BotsInfo
 	BotName        string          `json:"botName"`
-	BotId          string          `json:"botId"`
+	//BotId        string          `json:"botId"`
 	FilterId       string          `json:"filterId"`
 	MomentFilterId string          `json:"momentFilterId"`
 	WxaappId       string          `json:"wxaappId"`
@@ -655,7 +655,6 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 			if info := findDevice(botsreply.BotsInfo, b.BotId); info != nil {
 				bs = append(bs, BotsInfo{
 					BotsInfo:       *info,
-					BotId:          b.BotId,
 					BotName:        b.BotName,
 					FilterId:       b.FilterId.String,
 					MomentFilterId: b.MomentFilterId.String,
@@ -682,8 +681,8 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 						ClientType: b.ChatbotType,
 						Login:      b.Login,
 						Status:     0,
+						BotId:      b.BotId,
 					},
-					BotId:          b.BotId,
 					BotName:        b.BotName,
 					FilterId:       b.FilterId.String,
 					MomentFilterId: b.MomentFilterId.String,
