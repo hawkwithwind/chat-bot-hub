@@ -134,6 +134,8 @@ func (web *WebServer) processUsers() {
 			}
 			users = []ProcessUserInfo{}
 		} else {
+			web.Info("timeout is %v, uses [%d]", isTimeout, len(users))
+			
 			if len(users) > 0 {
 				web.Info("[contacts debug] stock %d", len(users))
 			}
