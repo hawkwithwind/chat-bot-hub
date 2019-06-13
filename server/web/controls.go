@@ -615,6 +615,7 @@ type BotsInfo struct {
 }
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
+	ctx.Info("[GETBOTS] begin")
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
@@ -702,6 +703,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.ok(w, "", bs)
+	ctx.Info("[GetBots] return")
 }
 
 func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {

@@ -754,6 +754,7 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 }
 
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
+	hub.Info("[GETBOTS] begin")
 	o := &ErrorHandler{}
 
 	botm := make(map[string]*pb.BotsInfo)
@@ -781,6 +782,7 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 		bots = append(bots, v)
 	}
 
+	hub.Info("[GETBOTS] return")
 	return &pb.BotsReply{BotsInfo: bots}, nil
 }
 
