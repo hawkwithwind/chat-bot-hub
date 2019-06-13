@@ -134,8 +134,6 @@ func (web *WebServer) processUsers() {
 			}
 			users = []ProcessUserInfo{}
 		} else {
-			web.Info("timeout is %v, uses [%d]", isTimeout, len(users))
-			
 			if len(users) > 0 {
 				web.Info("[contacts debug] stock %d", len(users))
 			}
@@ -284,14 +282,12 @@ func (web *WebServer) processContacts() {
 
 		// insert or update contact for this contact
 		if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
-			web.Info("receive group")
 			if len(info.ChatRoomOwner) == 0 {
 				return
 			}
 
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
-			web.Info("receive user")
 			web.contactParser.userPipe <- ContactProcessInfo{info, raw.bot}
 		}
 	}
