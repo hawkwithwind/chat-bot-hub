@@ -193,7 +193,7 @@ LEFT JOIN accounts as a on b.accountid = a.accountid
 LEFT JOIN ( SELECT * FROM chatusers
 WHERE (type, username) IN (SELECT b1.chatbottype, b1.login
 FROM bots as b1 
-LEFT JOIN accounts as a1 on b1.accountid = a1.accountid
+LEFT JOIN accounts as a1 on b1.accountid = a1.accountid)
 ) as c on c.username = b.login
 WHERE a.accountname=? 
   AND a.deleteat is NULL
