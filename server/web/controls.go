@@ -260,12 +260,6 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(botsreply.BotsInfo) > 0 {
-		ctx.Info("[GET BOT] returned %#v", botsreply.BotsInfo[0])
-	} else {
-		ctx.Info("[GET BOT] returned []")
-	}
-
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 1 {
 			bi := BotsInfo{
@@ -278,7 +272,6 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 			if bot.DeleteAt.Valid {
 				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
 			}
-			ctx.Info("[GET BOT] botsinfo %#v", bi)
 			o.ok(w, "", bi)
 			return
 		} else if len(botsreply.BotsInfo) == 0 {
@@ -623,7 +616,6 @@ type BotsInfo struct {
 }
 
 func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
-	ctx.Info("[GETBOTS] begin")
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 
@@ -638,7 +630,6 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx.Info("[GETBOTS] new wrapper")
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
@@ -649,7 +640,6 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 
 	bs := []BotsInfo{}
 
-	ctx.Info("[GETBOTS] getbots ...")
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{}}); botsreply != nil {
 		for _, b := range bots {
 			if info := findDevice(botsreply.BotsInfo, b.BotId); info != nil {
@@ -712,7 +702,6 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.ok(w, "", bs)
-	ctx.Info("[GetBots] return")
 }
 
 func (ctx *WebServer) createBot(w http.ResponseWriter, r *http.Request) {
