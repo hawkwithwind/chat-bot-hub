@@ -227,6 +227,7 @@ func (ctx *WebServer) echo(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(w)
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
@@ -259,7 +260,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx.Info("[GET BOT] %#v", botsreply)
+	ctx.Info("[GET BOT] returned %#v", botsreply)
 
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 1 {
