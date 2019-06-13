@@ -260,7 +260,11 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx.Info("[GET BOT] returned %#v", botsreply)
+	if len(botsreply.BotsInfo) > 0 {
+		ctx.Info("[GET BOT] returned %#v", botsreply.BotsInfo[0])
+	} else {
+		ctx.Info("[GET BOT] returned []")
+	}
 
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 1 {
