@@ -259,6 +259,8 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx.Info("[GET BOT] %#v", botsreply)
+
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 1 {
 			bi := BotsInfo{
