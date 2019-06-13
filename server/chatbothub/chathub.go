@@ -769,6 +769,8 @@ func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsR
 		if len(req.BotIds) > 0 {
 			if o.FindFromLines(req.BotIds, v.BotId) {
 				botm[v.ClientId] = NewBotsInfo(v)
+
+				hub.Info("[GET BOT] %#v\n%#v", v, botm[v.ClientId])
 			}
 		}
 
