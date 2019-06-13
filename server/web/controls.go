@@ -630,6 +630,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx.Info("[GETBOTS] new wrapper")
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
@@ -640,6 +641,7 @@ func (ctx *WebServer) getBots(w http.ResponseWriter, r *http.Request) {
 
 	bs := []BotsInfo{}
 
+	ctx.Info("[GETBOTS] getbots ...")
 	if botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{}}); botsreply != nil {
 		for _, b := range bots {
 			if info := findDevice(botsreply.BotsInfo, b.BotId); info != nil {
