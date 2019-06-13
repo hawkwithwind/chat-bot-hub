@@ -278,6 +278,7 @@ func (ctx *WebServer) getBotById(w http.ResponseWriter, r *http.Request) {
 			if bot.DeleteAt.Valid {
 				bi.DeleteAt = &utils.JSONTime{Time: bot.DeleteAt.Time}
 			}
+			ctx.Info("[GET BOT] botsinfo %#v", bi)
 			o.ok(w, "", bi)
 			return
 		} else if len(botsreply.BotsInfo) == 0 {
