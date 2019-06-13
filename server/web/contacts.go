@@ -284,12 +284,14 @@ func (web *WebServer) processContacts() {
 
 		// insert or update contact for this contact
 		if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
+			web.Info("receive group")
 			if len(info.ChatRoomOwner) == 0 {
 				return
 			}
 
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
+			web.Info("receive user")
 			web.contactParser.userPipe <- ContactProcessInfo{info, raw.bot}
 		}
 	}
