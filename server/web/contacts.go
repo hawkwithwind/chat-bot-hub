@@ -134,6 +134,8 @@ func (web *WebServer) processUsers() {
 			}
 			users = []ProcessUserInfo{}
 		} else {
+			web.Info("[contacts debug] isTimeout %v, users[%d]", isTimeout, len(users))
+			
 			if len(users) > 0 {
 				web.Info("[contacts debug] stock %d", len(users))
 			}
@@ -231,6 +233,8 @@ func (web *WebServer) processGroups() {
 			
 			groups = []ProcessGroupInfo{}
 		} else {
+			web.Info("[contacts debug] isTimeout %v, groups[%d]", isTimeout, len(groups))
+			
 			if len(groups) > 0 {
 				web.Info("[contact groups debug] stock %d", len(groups))
 			}
