@@ -3,6 +3,8 @@ package chatbothub
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/globalsign/mgo"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"io"
 	"log"
 	"net"
@@ -24,7 +26,7 @@ import (
 )
 
 type ErrorHandler struct {
-	utils.ErrorHandler
+	domains.ErrorHandler
 }
 
 type ChatHubConfig struct {
@@ -32,6 +34,9 @@ type ChatHubConfig struct {
 	Port   string
 	Fluent utils.FluentConfig
 	Redis  utils.RedisConfig
+
+	Mongo    utils.MongoConfig
+	Database utils.DatabaseConfig
 }
 
 var (
@@ -54,6 +59,21 @@ func (hub *ChatHub) init() {
 	hub.bots = make(map[string]*ChatBot)
 	hub.streamingNodes = make(map[string]*StreamingNode)
 	hub.filters = make(map[string]Filter)
+
+	o := &ErrorHandler{}
+
+	hub.mongoDb = o.NewMongoConn(hub.Config.Mongo.Host, hub.Config.Mongo.Port)
+	if o.Err != nil {
+		hub.Error(o.Err, "connect to mongo failed")
+		return
+	}
+
+	hub.db = &dbx.Database{}
+	if o.Connect(hub.db, "mysql", hub.Config.Database.DataSourceName); o.Err != nil {
+		hub.Error(o.Err, "connect to database failed")
+		return
+	}
+
 	hub.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
@@ -85,6 +105,8 @@ type ChatHub struct {
 	botsSubs    map[string]string
 
 	redispool *redis.Pool
+	mongoDb   *mgo.Database
+	db        *dbx.Database
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {

@@ -14,6 +14,8 @@
 
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 option java_multiple_files = true;
 option java_package = "net.hawkwithwind.chatbothub";
 option java_outer_classname = "ChatBotHubProto";
@@ -32,6 +34,8 @@ service ChatBotHub {
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
   rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
+  rpc GetBotChatRooms (GetBotChatRoomsRequest) returns (GetBotChatRoomsResponse) {}
+
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
@@ -47,6 +51,29 @@ service ChatBotHub {
 message BotFilterRequest {
   string botId = 1;
   string filterId = 2;
+}
+
+message GetBotChatRoomsRequest {
+  string botId = 1;
+  string fromRoomId = 2;
+  int32 limit = 3;
+}
+
+message GetBotChatRoomsResponse {
+  repeated ChatRoom items = 1;
+}
+
+message ChatRoom {
+  // @inject_tag: bson:"botId"
+  string botId = 1;
+  // @inject_tag: bson:"peerId"
+  string peerId = 2;
+  // @inject_tag: bson:"lastMsgId"
+  string lastMsgId = 3;
+  // @inject_tag: bson:"createdAt"
+  google.protobuf.Timestamp createdAt = 4;
+  // @inject_tag: bson:"updatedAt"
+  google.protobuf.Timestamp updatedAt = 5;
 }
 
 message FilterCreateRequest {

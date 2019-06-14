@@ -23,18 +23,12 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
 	domains.ErrorHandler
-}
-
-type DatabaseConfig struct {
-	DriverName     string
-	DataSourceName string
-	MaxConnectNum  int
 }
 
 type WebConfig struct {
@@ -45,7 +39,7 @@ type WebConfig struct {
 	Fluent       utils.FluentConfig
 	Mongo        utils.MongoConfig
 	SecretPhrase string
-	Database     DatabaseConfig
+	Database     utils.DatabaseConfig
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
@@ -56,21 +50,21 @@ type WebServer struct {
 	Hubport string
 	Hubhost string
 
-	wrapper *GRPCWrapper
+	wrapper       *GRPCWrapper
 	restfulclient *http.Client
 
-	logger       *log.Logger
-	fluentLogger *fluent.Fluent
-	redispool    *redis.Pool
-	db           *dbx.Database
-	store        *sessions.CookieStore
-	mongoDb	     *mgo.Database
+	logger        *log.Logger
+	fluentLogger  *fluent.Fluent
+	redispool     *redis.Pool
+	db            *dbx.Database
+	store         *sessions.CookieStore
+	mongoDb       *mgo.Database
 	contactParser *ContactParser
 }
 
 func (ctx *WebServer) init() error {
 	ctx.restfulclient = httpx.NewHttpClient()
-	
+
 	ctx.logger = log.New(os.Stdout, "[WEB] ", log.Ldate|log.Ltime)
 	ctx.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", ctx.Config.Redis.Host, ctx.Config.Redis.Port),

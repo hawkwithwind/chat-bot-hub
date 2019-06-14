@@ -5,7 +5,6 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	"github.com/hawkwithwind/chat-bot-hub/server/web"
 	"github.com/hawkwithwind/logger"
 	"net/http"
 	"sync"
@@ -26,7 +25,7 @@ type Config struct {
 	ChathubWeb string
 
 	Mongo    utils.MongoConfig
-	Database web.DatabaseConfig
+	Database utils.DatabaseConfig
 
 	WebBaseUrl string
 }
