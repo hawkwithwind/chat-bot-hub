@@ -141,20 +141,13 @@ func (web *WebServer) processUsers() {
 	}
 }
 
-func (web *WebServer) processGroups() {
-	for {
-		cpinfo := <-web.contactParser.groupPipe
-		err := web.saveOneGroup(cpinfo.body, cpinfo.bot)
-		if err != nil {
-			web.Error(err, "[Contacts group debug] save one group failed")
-		}
-	}
-}
-
 func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	o := &ErrorHandler{}
 
 	tx := o.Begin(web.db)
+	if o.Err != nil {
+		return o.Err
+	}
 	defer o.CommitOrRollback(tx)
 
 	chatusers := []*domains.ChatUser{}
@@ -194,6 +187,151 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 		return o.Err
 	}
 
+	return nil
+}
+
+type ProcessGroupInfo struct {
+	chatgroup *domains.ChatGroup
+	bot       *pb.BotsInfo
+	members   []string
+}
+
+func (web *WebServer) processGroups() {
+	groups := []ProcessGroupInfo{}
+	
+	const sectionLength int = 200
+	const timeout time.Duration = 300 * time.Millisecond
+
+	for {
+		o := &ErrorHandler{}
+		isTimeout := false
+		
+		select {
+		case cpinfo := <-web.contactParser.groupPipe:
+			info := cpinfo.body
+			thebotinfo := cpinfo.bot
+
+			// temporarily put owner username to group
+			// later will save owner and update this field with chatuserid
+			chatgroup := o.NewChatGroup(info.UserName, thebotinfo.ClientType, info.NickName, info.ChatRoomOwner, info.MemberCount, info.MaxMemberCount)
+			chatgroup.SetAvatar(info.SmallHead)
+			chatgroup.SetExt(o.ToJson(info))
+			groups = append(groups, ProcessGroupInfo{chatgroup, thebotinfo, info.Member})
+			
+		case  <-time.After(timeout):
+			isTimeout = true
+		}
+
+		if (len(groups) > sectionLength) || (isTimeout && len(groups) > 0) {
+			web.Info("[contact groups debug] process %d", len(groups))
+			err := web.saveGroups(groups)
+			if err != nil {
+				web.Error(err, "[Contacts debug] save chatusers failed")
+			}
+			
+			groups = []ProcessGroupInfo{}
+		} else {
+			if len(groups) > 0 {
+				web.Info("[contact groups debug] stock %d", len(groups))
+			}
+		}	
+	}
+}
+
+func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
+	o := &ErrorHandler{}
+	defer o.BackEndError(web)
+
+	tx := o.Begin(web.db)
+	if o.Err != nil {
+		return o.Err
+	}
+	defer o.CommitOrRollback(tx)
+
+	// 1. save group owners
+	owners := make([]*domains.ChatUser, 0, len(groups))
+	for _, cg := range groups {
+		owners = append(owners, o.NewChatUser(cg.chatgroup.Owner, cg.bot.ClientType, ""))
+	}
+	theowners := o.FindOrCreateChatUsers(tx, owners)
+	if o.Err != nil {
+		return o.Err
+	}
+	
+	// 2. save groups
+	savegroups := []*domains.ChatGroup{}
+	for _, cg := range groups {
+		found := false
+		for _, owner := range theowners {
+			if owner.UserName == cg.chatgroup.Owner {
+				cg.chatgroup.Owner = owner.ChatUserId
+				found = true
+				break
+			}
+		}
+
+		if found == true {
+			savegroups = append(savegroups, cg.chatgroup)
+		} else {
+			web.Info("save group %s owner %s failed", cg.chatgroup.GroupName, cg.chatgroup.Owner)
+		}
+	}
+
+	savedgroups := o.FindOrCreateChatGroups(tx, savegroups)
+	if o.Err != nil {
+		return o.Err
+	}
+	
+	// 3. save group contacts and members
+	savecontactgroups := []*domains.ChatContactGroup{}
+	savegroupusers    := []*domains.ChatUser{}
+	for _, cg := range groups {
+		for _, gg := range savedgroups {
+			if gg.GroupName == cg.chatgroup.GroupName {
+				savecontactgroups = append(savecontactgroups,
+					o.NewChatContactGroup(cg.bot.BotId, gg.ChatGroupId))
+				for _, mm := range cg.members {
+					savegroupusers = append(savegroupusers,
+						o.NewChatUser(mm, cg.bot.ClientType, ""))
+				}
+				break
+			}
+		}
+	}
+
+	o.SaveIgnoreChatContactGroups(tx, savecontactgroups)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	members := o.FindOrCreateChatUsers(tx, savegroupusers)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	savegroupmembers  := []*domains.ChatGroupMember{}
+	for _, cg := range groups {
+		for _, gg := range savedgroups {
+			if gg.GroupName == cg.chatgroup.GroupName {
+				for _, mm := range cg.members {
+					for _, cu := range members {
+						if cu.UserName == mm {
+							savegroupmembers = append(savegroupmembers,
+								o.NewChatGroupMember(gg.ChatGroupId, cu.ChatUserId, 1))
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(savegroupmembers) > 0 {
+		o.UpdateOrCreateGroupMembers(tx, savegroupmembers)
+	}
+
+	if o.Err != nil {
+		return o.Err
+	}
 	return nil
 }
 

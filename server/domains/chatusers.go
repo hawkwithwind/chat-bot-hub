@@ -387,7 +387,7 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, chatusers []*ChatU
 		return []ChatUser{}
 	}
 
-	uns := make([]string, 0, len(chatusers))
+	uns := []string{}
 	for _, cun := range chatusers {
 		uns = append(uns, cun.UserName)
 	}
