@@ -55,7 +55,7 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, fromRoomId s
 	return result
 }
 
-func (o *ErrorHandler) updateOrCreateChatRoom(db *mgo.Database, botId string, peerId string, lastMsgId string) {
+func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, peerId string, lastMsgId string) {
 	now := time.Now()
 
 	updatePayload := bson.M{

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
@@ -192,23 +193,153 @@ func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[s
 	return body
 }
 
-func (hub *ChatHub) sendEventToSubStreamingNodes(bot *ChatBot, inEvent *pb.EventRequest) {
+func (hub *ChatHub) saveMessageToDB(bot *ChatBot, msgJSON map[string]interface{}) {
 	go func() {
-		var msg string
-		if err := json.Unmarshal([]byte(inEvent.Body), &msg); err != nil {
-			hub.Error(err, "Error while unmarshal event's body")
-			return
-		}
+		o := &ErrorHandler{}
+		messages := []map[string]interface{}{msgJSON}
+		o.UpdateWechatMessages(hub.mongoDb, messages)
+	}()
+}
 
+func (hub *ChatHub) sendEventToSubStreamingNodes(bot *ChatBot, eventType string, msgString string) {
+	go func() {
 		for _, snode := range hub.streamingNodes {
 			if _, ok := snode.SubBots[bot.BotId]; ok {
-				err := snode.SendMsg(inEvent.EventType, bot.BotId, bot.ClientId, bot.ClientType, msg)
+				err := snode.SendMsg(eventType, bot.BotId, bot.ClientId, bot.ClientType, msgString)
 				if err != nil {
 					hub.Error(err, "send msg failed, continue")
 				}
 			}
 		}
 	}()
+}
+
+func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{}) {
+	go func() {
+		o := &ErrorHandler{}
+
+		// 别人发给你 和 你发给别人 的消息都会收到
+		var peerId string
+		if peerId = msgJson["fromUser"].(string); peerId == bot.Login {
+			peerId = msgJson["toUser"].(string)
+		}
+
+		o.UpdateOrCreateChatRoom(hub.mongoDb, bot.BotId, peerId, msgJson["msgId"].(string))
+	}()
+}
+
+func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
+	o := ErrorHandler{}
+
+	bodyString := inEvent.Body
+
+	if inEvent.EventType == MESSAGE {
+		var msgStr string
+		err := json.Unmarshal([]byte(inEvent.Body), &msgStr)
+		if err != nil {
+			hub.Error(o.Err, "cannot parse %s", inEvent.Body)
+			return nil, err
+		}
+		bodyString = msgStr
+	}
+
+	bodyJSON := o.FromJson(bodyString)
+	if o.Err != nil {
+		hub.Error(o.Err, "event body is not json format: %s", bodyString)
+		return nil, o.Err
+	}
+
+	if inEvent.EventType == IMAGEMESSAGE {
+		o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "image message must contains imageId", bodyString)
+			return nil, o.Err
+		}
+	} else if inEvent.EventType == EMOJIMESSAGE {
+		emojiId := o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "emoji message must contains emojiId", bodyString)
+			return nil, o.Err
+		}
+
+		bodyJSON["imageId"] = emojiId
+	}
+
+	bodyJSON = o.ReplaceWechatMsgSource(bodyJSON)
+	return bodyJSON, nil
+}
+
+func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) error {
+	bodyJSON, err := hub.verifyMessage(bot, inEvent)
+	if err != nil {
+		return err
+	}
+
+	o := ErrorHandler{}
+	newBodyStr := o.ToJson(bodyJSON)
+
+	// process concurrently
+	hub.saveMessageToDB(bot, bodyJSON)
+	hub.sendEventToSubStreamingNodes(bot, inEvent.EventType, newBodyStr)
+	hub.updateChatRoom(bot, bodyJSON)
+
+	if bot.filter != nil {
+		if err := bot.filter.Fill(newBodyStr); err != nil {
+			return err
+		}
+	}
+
+	go func() {
+		_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+	}()
+
+	return nil
+}
+
+func (hub *ChatHub) onSendMessage(bot *ChatBot, actionBody map[string]interface{}, result map[string]interface{}) {
+	o := ErrorHandler{}
+
+	// result.success is faulse
+	if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
+		if o.Err != nil || !scsptr.(bool) {
+			return
+		}
+	}
+
+	if rdataptr := o.FromMap("data", result, "actionReply.result", nil); rdataptr != nil {
+		switch resultData := rdataptr.(type) {
+		case map[string]interface{}:
+			status := int(o.FromMapFloat("status", resultData, "actionReply.result.data", false, 0))
+			if o.Err != nil || status != 0 {
+				return
+			}
+
+			msgId := o.FromMapString("msgId", resultData, "actionReply.result.data", false, "")
+
+			bodyJSON := o.FromJson(actionBody["body"].(string))
+			toUser := o.FromMapString("toUserName", bodyJSON, "actionBody.toUserName", false, "")
+			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
+			imageId := o.FromMapString("imageId", bodyJSON, "actionReply.actionBody", true, "")
+
+			groupId := ""
+			if regexp.MustCompile(`@chatroom$`).MatchString(toUser) {
+				groupId = toUser
+			}
+
+			msg := map[string]interface{}{
+				"msgId":     msgId,
+				"fromUser":  bot.Login,
+				"toUser":    toUser,
+				"groupId":   groupId,
+				"imageId":   imageId,
+				"content":   content,
+				"timestamp": time.Now().Unix(),
+			}
+
+			hub.saveMessageToDB(bot, msg)
+			hub.updateChatRoom(bot, msg)
+		}
+	}
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -544,6 +675,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
 					}
 
+					actionType := actionBody["actionType"]
+					if actionType == SendTextMessage || actionType == SendAppMessage || actionType == SendImageMessage || actionType == SendImageResourceMessage {
+						hub.onSendMessage(bot, actionBody, result)
+					}
+
 					if o.Err == nil {
 						go func() {
 							httpx.RestfulCallRetry(hub.restfulclient,
@@ -557,94 +693,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
-			case MESSAGE:
+			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
-					var msg string
-					o.Err = json.Unmarshal([]byte(in.Body), &msg)
-					if o.Err != nil {
-						hub.Error(o.Err, "cannot parse %s", in.Body)
-					}
-
-					body := o.FromJson(msg)
-					if o.Err == nil {
-						if o.Err == nil {
-							body = o.ReplaceWechatMsgSource(body)
-						}
-					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(body))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, o.ToJson(body)), 5, 1)
-						}()
-					}
-
-					if o.Err == nil {
-						hub.sendEventToSubStreamingNodes(bot, in)
-					}
-
-				} else {
-					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
-				}
-
-			case IMAGEMESSAGE:
-				if bot.ClientType == WECHATBOT {
-					bodym := o.FromJson(in.Body)
-					o.FromMapString("imageId", bodym, "actionBody", false, "")
-
-					if o.Err == nil {
-						bodym = o.ReplaceWechatMsgSource(bodym)
-					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(bodym))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
-						}()
-					}
-
-					if o.Err == nil {
-						hub.sendEventToSubStreamingNodes(bot, in)
-					}
-				} else {
-					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
-				}
-
-			case EMOJIMESSAGE:
-				if bot.ClientType == WECHATBOT {
-					bodym := o.FromJson(in.Body)
-					emojiId := o.FromMapString("emojiId", bodym, "actionBody", false, "")
-
-					if o.Err == nil {
-						bodym["imageId"] = emojiId
-					}
-
-					if o.Err == nil {
-						bodym = o.ReplaceWechatMsgSource(bodym)
-					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(bodym))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
-						}()
-					}
-
-					if o.Err == nil {
-						hub.sendEventToSubStreamingNodes(bot, in)
-					}
+					o.Err = hub.onReceiveMessage(bot, in)
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}

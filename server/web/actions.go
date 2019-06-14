@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
-	"time"
 
 	"github.com/hawkwithwind/mux"
 
@@ -334,7 +332,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		ctx.Info("[contacts debug] received raw")
 		o.ok(w, "success", nil)
 	}
-	
+
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
 		return
@@ -482,7 +480,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
 				}
 			}
-		}()	
+		}()
 
 	case chatbothub.GROUPINFO:
 		bodystr := o.getStringValue(r.Form, "body")
@@ -537,17 +535,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				if o.Err != nil {
 					return
 				}
-				o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
 			}
 		}
 
-	case chatbothub.IMAGEMESSAGE:
-		msg := o.getStringValue(r.Form, "body")
-		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+	//case chatbothub.IMAGEMESSAGE:
 
-	case chatbothub.EMOJIMESSAGE:
-		msg := o.getStringValue(r.Form, "body")
-		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+	//case chatbothub.EMOJIMESSAGE:
 
 	case chatbothub.ACTIONREPLY:
 		reqstr := o.getStringValue(r.Form, "body")
@@ -593,53 +586,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 							if status == 0 {
 								localar.Status = "Done"
-
-								if localar.ActionType == chatbothub.SendTextMessage ||
-									localar.ActionType == chatbothub.SendAppMessage ||
-									localar.ActionType == chatbothub.SendImageMessage ||
-									localar.ActionType == chatbothub.SendImageResourceMessage {
-
-									msgId := o.FromMapString("msgId", rdata, "actionReply.result.data", false, "")
-
-									actionm := o.FromJson(localar.ActionBody)
-									if o.Err != nil {
-										return
-									}
-
-									var toUser, groupId string
-
-									if toUserNamep, ok := actionm["toUserName"]; ok {
-										switch toUserName := toUserNamep.(type) {
-										case string:
-											toUser = toUserName
-											var chatroom = regexp.MustCompile(`@chatroom$`)
-											if chatroom.MatchString(toUserName) {
-												groupId = toUserName
-											} else {
-												groupId = ""
-											}
-										}
-									}
-
-									content := o.FromMapString("content", actionm, "actionReply.actionBody", true, "")
-									imageId := o.FromMapString("imageId", actionm, "actionReply.actionBody", true, "")
-
-									msg := map[string]interface{}{
-										"msgId":     msgId,
-										"fromUser":  localar.Login,
-										"toUser":    toUser,
-										"groupId":   groupId,
-										"imageId":   imageId,
-										"content":   content,
-										"timestamp": time.Now().Unix(),
-									}
-
-									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
-									if o.Err != nil {
-										ctx.Error(o.Err, "[SAVE DEBUG] update message error")
-									}
-								}
-
 							}
 						default:
 							if o.Err == nil {
@@ -933,13 +879,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					if len(foundms) == 0 {
-						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-							if err := ctx.fluentLogger.Post(tag, m); err != nil {
-								ctx.Error(err, "push moment to fluentd failed")
-							}
-						} else {
-							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
-						}
+						//if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+						//	if err := ctx.fluentLogger.Post(tag, m); err != nil {
+						//		ctx.Error(err, "push moment to fluentd failed")
+						//	}
+						//} else {
+						//	ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
+						//}
 					}
 
 					if o.Err != nil {
@@ -1000,7 +946,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(ctx.restfulclient, 
+				if _, err := httpx.RestfulCallRetry(ctx.restfulclient,
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
 				}

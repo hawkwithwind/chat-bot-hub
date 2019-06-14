@@ -3,9 +3,10 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/mitchellh/mapstructure"
+	"time"
 )
 
 type MsgSource struct {
@@ -84,12 +85,13 @@ func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []string) {
+func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []map[string]interface{}) {
 	col := db.C(WechatMessageCollection)
 
 	for _, message := range messages {
 		wechatMessage := WechatMessage{}
-		o.Err = json.Unmarshal([]byte(message), &wechatMessage)
+		o.Err = mapstructure.Decode(message, &wechatMessage)
+
 		if o.Err != nil {
 			fmt.Printf("[save message debug] unmarshal json failed %s\n", message)
 			return
