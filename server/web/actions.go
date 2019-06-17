@@ -331,7 +331,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
-		ctx.Info("[contacts debug] received raw")
+		ctx.Info("[contacts debug] bot notify received raw")
 		o.ok(w, "success", nil)
 		return
 	}

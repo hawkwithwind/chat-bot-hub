@@ -235,7 +235,7 @@ func (web *WebServer) processGroups() {
 			
 			groups = []ProcessGroupInfo{}
 		} else {
-			web.Info("[contacts groups debug] isTimeout %v, groups[%d]", isTimeout, len(groups))
+			//web.Info("[contacts groups debug] isTimeout %v, groups[%d]", isTimeout, len(groups))
 			
 			if len(groups) > 0 {
 				web.Info("[contact groups debug] stock group %d", len(groups))
@@ -408,26 +408,27 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 func (web *WebServer) processContacts() {
 	for {
 		raw := <-web.contactParser.rawPipe
-		web.Info("[contacts debug] receive raw")
+		web.Info("[contacts debug] get raw")
 		o := &ErrorHandler{}
 
 		info := WechatContactInfo{}
 		o.Err = json.Unmarshal([]byte(raw.raw), &info)
 		if o.Err != nil {
-			return
+			web.Error(o.Err, "parse failed %s", raw.raw)
+			continue
 		}
 
 		//ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
 		if len(info.UserName) == 0 {
 			web.Info("username not found, ignoring %s", raw.raw)
-			return
+			continue
 		}
 
 		// insert or update contact for this contact
 		if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
 			web.Info("[contacts debug] receive raw groups")
 			if len(info.ChatRoomOwner) == 0 {
-				return
+				continue
 			}
 
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
