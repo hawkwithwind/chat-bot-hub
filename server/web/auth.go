@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 const (
@@ -177,11 +177,11 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 		if foundcount == 1 {
 			validated = true
 		}
-		
+
 		if o.Err != nil {
 			return
 		}
-		
+
 		if validated == true {
 			if user.ExpireAt.Before(time.Now()) {
 				o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
@@ -360,9 +360,9 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 }
 
 type Accounts struct {
-	accounts   []domains.Account
-	mux        sync.Mutex
-	updateAt   time.Time	
+	accounts []domains.Account
+	mux      sync.Mutex
+	updateAt time.Time
 }
 
 func (web *WebServer) UpdateAccounts() error {
@@ -373,7 +373,7 @@ func (web *WebServer) UpdateAccounts() error {
 	web.accounts.mux.Lock()
 	defer web.accounts.mux.Unlock()
 
-	if web.accounts.updateAt.After(time.Now().Add(-10*time.Minute)) {
+	if web.accounts.updateAt.After(time.Now().Add(-10 * time.Minute)) {
 		return nil
 	}
 
@@ -381,9 +381,9 @@ func (web *WebServer) UpdateAccounts() error {
 	if o.Err != nil {
 		return o.Err
 	}
-	
+
 	defer o.CommitOrRollback(tx)
-	
+
 	accounts := o.GetAccounts(tx)
 	if o.Err != nil {
 		return o.Err
@@ -393,6 +393,6 @@ func (web *WebServer) UpdateAccounts() error {
 
 	web.accounts.accounts = accounts
 	web.accounts.updateAt = time.Now()
-	
-	return nil	
+
+	return nil
 }

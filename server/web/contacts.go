@@ -135,7 +135,7 @@ func (web *WebServer) processUsers() {
 			users = []ProcessUserInfo{}
 		} else {
 			//web.Info("[contacts debug] isTimeout %v, users[%d]", isTimeout, len(users))
-			
+
 			if len(users) > 0 {
 				web.Info("[contacts debug] stock user %d", len(users))
 			}
@@ -200,18 +200,18 @@ type ProcessGroupInfo struct {
 
 func (web *WebServer) processGroups() {
 	groups := []ProcessGroupInfo{}
-	
+
 	const sectionLength int = 200
 	const timeout time.Duration = 300 * time.Millisecond
 
 	for {
 		o := &ErrorHandler{}
 		isTimeout := false
-		
+
 		select {
 		case cpinfo := <-web.contactParser.groupPipe:
 			web.Info("[contacts group debug] receive group info")
-			
+
 			info := cpinfo.body
 			thebotinfo := cpinfo.bot
 
@@ -221,8 +221,8 @@ func (web *WebServer) processGroups() {
 			chatgroup.SetAvatar(info.SmallHead)
 			chatgroup.SetExt(o.ToJson(info))
 			groups = append(groups, ProcessGroupInfo{chatgroup, thebotinfo, info.Member})
-			
-		case  <-time.After(timeout):
+
+		case <-time.After(timeout):
 			isTimeout = true
 		}
 
@@ -232,15 +232,15 @@ func (web *WebServer) processGroups() {
 			if err != nil {
 				web.Error(err, "[Contacts debug] save chatusers failed")
 			}
-			
+
 			groups = []ProcessGroupInfo{}
 		} else {
 			//web.Info("[contacts groups debug] isTimeout %v, groups[%d]", isTimeout, len(groups))
-			
+
 			if len(groups) > 0 {
 				web.Info("[contact groups debug] stock group %d", len(groups))
 			}
-		}	
+		}
 	}
 }
 
@@ -263,7 +263,7 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 	if o.Err != nil {
 		return o.Err
 	}
-	
+
 	// 2. save groups
 	savegroups := []*domains.ChatGroup{}
 	for _, cg := range groups {
@@ -287,10 +287,10 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 	if o.Err != nil {
 		return o.Err
 	}
-	
+
 	// 3. save group contacts and members
 	savecontactgroups := []*domains.ChatContactGroup{}
-	savegroupusers    := []*domains.ChatUser{}
+	savegroupusers := []*domains.ChatUser{}
 	for _, cg := range groups {
 		for _, gg := range savedgroups {
 			if gg.GroupName == cg.chatgroup.GroupName {
@@ -315,7 +315,7 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 		return o.Err
 	}
 
-	savegroupmembers  := []*domains.ChatGroupMember{}
+	savegroupmembers := []*domains.ChatGroupMember{}
 	for _, cg := range groups {
 		for _, gg := range savedgroups {
 			if gg.GroupName == cg.chatgroup.GroupName {

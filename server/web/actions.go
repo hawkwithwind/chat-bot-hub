@@ -335,7 +335,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		o.ok(w, "success", nil)
 		return
 	}
-	
+
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
 		return
@@ -483,7 +483,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
 				}
 			}
-		}()	
+		}()
 
 	case chatbothub.GROUPINFO:
 		bodystr := o.getStringValue(r.Form, "body")
@@ -1001,7 +1001,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(ctx.restfulclient, 
+				if _, err := httpx.RestfulCallRetry(ctx.restfulclient,
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
 				}

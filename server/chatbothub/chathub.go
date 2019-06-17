@@ -6,10 +6,10 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"sync"
 	"time"
-	"net/http"
 
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
@@ -41,7 +41,7 @@ var (
 
 func (hub *ChatHub) init() {
 	hub.restfulclient = httpx.NewHttpClient()
-	
+
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
 	var err error
 	hub.fluentLogger, err = fluent.New(fluent.Config{
@@ -63,21 +63,21 @@ func (hub *ChatHub) init() {
 }
 
 type ChatHub struct {
-	Config       ChatHubConfig
+	Config ChatHubConfig
 
-	Webhost      string
-	Webport      string
-	WebBaseUrl   string
+	Webhost       string
+	Webport       string
+	WebBaseUrl    string
 	restfulclient *http.Client
-	
+
 	logger       *log.Logger
-	fluentLogger *fluent.Fluent	
-	
-	muxBots      sync.Mutex
-	bots         map[string]*ChatBot
-	muxFilters   sync.Mutex
-	filters      map[string]Filter
-	redispool    *redis.Pool
+	fluentLogger *fluent.Fluent
+
+	muxBots    sync.Mutex
+	bots       map[string]*ChatBot
+	muxFilters sync.Mutex
+	filters    map[string]Filter
+	redispool  *redis.Pool
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {

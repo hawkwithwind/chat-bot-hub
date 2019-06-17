@@ -30,7 +30,7 @@ type GRPCWrapper struct {
 	factory    func() (*grpc.ClientConn, error)
 }
 
-func (g *GRPCWrapper) Reconnect() error {	
+func (g *GRPCWrapper) Reconnect() error {
 	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
 		g.conn.Close()
 		g.conn = nil
@@ -603,7 +603,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 
 type BotsInfo struct {
 	pb.BotsInfo
-	BotName        string          `json:"botName"`
+	BotName string `json:"botName"`
 	//BotId        string          `json:"botId"`
 	FilterId       string          `json:"filterId"`
 	MomentFilterId string          `json:"momentFilterId"`

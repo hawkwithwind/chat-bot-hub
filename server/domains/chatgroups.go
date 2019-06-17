@@ -92,11 +92,10 @@ func (chatgroup *ChatGroup) SetLastSendAt(sendAt time.Time) {
 
 func (chatgroup *ChatGroup) SetLastMsgId(msgId string) {
 	chatgroup.LastMsgId = sql.NullString{
-		String:  msgId,
-		Valid: true,
+		String: msgId,
+		Valid:  true,
 	}
 }
-
 
 func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname string, owner string, membercount int, maxmembercount int) *ChatGroup {
 	if ctx.Err != nil {
@@ -160,7 +159,7 @@ ON DUPLICATE KEY UPDATE
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
 }
 
-func (o *ErrorHandler) FindOrCreateChatGroups(q dbx.Queryable, chatgroups []*ChatGroup) []ChatGroup{
+func (o *ErrorHandler) FindOrCreateChatGroups(q dbx.Queryable, chatgroups []*ChatGroup) []ChatGroup {
 	if o.Err != nil {
 		return []ChatGroup{}
 	}
@@ -211,7 +210,7 @@ WHERE chatgroupid = :chatgroupid
 
 func (o *ErrorHandler) UpdateOrCreateChatGroups(q dbx.Queryable, chatgroups []*ChatGroup) {
 	if o.Err != nil {
-		return 
+		return
 	}
 
 	query := `
@@ -252,7 +251,6 @@ ON DUPLICATE KEY UPDATE
 			chatgroup.Owner,
 			chatgroup.MemberCount,
 			chatgroup.MaxMemberCount,
-			
 		)
 
 		if chatgroup.Alias.Valid {
