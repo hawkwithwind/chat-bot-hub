@@ -234,7 +234,8 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 
 	foundcount := 0
 	for _, acc := range ctx.accounts.accounts {
-		if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+		secret := utils.HexString(utils.CheckSum([]byte(user.Password)))
+		if acc.AccountName == user.AccountName && acc.Secret == secret {
 			foundcount += 0
 		}
 	}
@@ -244,7 +245,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		validated = true
 	}
 
-	// o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password)
+	//o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password)
 	if validated {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
