@@ -169,7 +169,7 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 		foundcount := 0
 		for _, acc := range ctx.accounts.accounts {
 			if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
-				foundcount += 0
+				foundcount += 1
 			}
 		}
 
@@ -236,7 +236,7 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	for _, acc := range ctx.accounts.accounts {
 		secret := utils.HexString(utils.CheckSum([]byte(user.Password)))
 		if acc.AccountName == user.AccountName && acc.Secret == secret {
-			foundcount += 0
+			foundcount += 1
 		}
 	}
 
@@ -320,7 +320,7 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				foundcount := 0
 				for _, acc := range ctx.accounts.accounts {
 					if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
-						foundcount += 0
+						foundcount += 1
 					}
 				}
 
