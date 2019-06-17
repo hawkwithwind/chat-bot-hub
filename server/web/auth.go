@@ -227,8 +227,25 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		o.Err = NewAuthError(o.Err)
 	}
 
-	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
+	o.Err = ctx.UpdateAccounts()
+	if o.Err != nil {
+		return
+	}
 
+	foundcount := 0
+	for _, acc := range ctx.accounts.accounts {
+		if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+			foundcount += 0
+		}
+	}
+
+	validated := false
+	if foundcount == 1 {
+		validated = true
+	}
+
+	// o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password)
+	if validated {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)
@@ -294,7 +311,25 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				var user User
 				utils.DecodeMap(token.Claims, &user)
 
-				if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
+				o.Err = ctx.UpdateAccounts()
+				if o.Err != nil {
+					return
+				}
+
+				foundcount := 0
+				for _, acc := range ctx.accounts.accounts {
+					if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+						foundcount += 0
+					}
+				}
+
+				validated := false
+				if foundcount == 1 {
+					validated = true
+				}
+
+				//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+				if validated {
 					if user.ExpireAt.Before(time.Now()) {
 						o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 						return
