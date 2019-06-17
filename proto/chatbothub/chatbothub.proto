@@ -14,8 +14,6 @@
 
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
-
 option java_multiple_files = true;
 option java_package = "net.hawkwithwind.chatbothub";
 option java_outer_classname = "ChatBotHubProto";
@@ -57,6 +55,7 @@ message GetBotChatRoomsRequest {
   string botId = 1;
   string fromRoomId = 2;
   int32 limit = 3;
+  string chatType = 4;
 }
 
 message GetBotChatRoomsResponse {
@@ -64,16 +63,20 @@ message GetBotChatRoomsResponse {
 }
 
 message ChatRoom {
-  // @inject_tag: bson:"botId"
-  string botId = 1;
-  // @inject_tag: bson:"peerId"
-  string peerId = 2;
-  // @inject_tag: bson:"lastMsgId"
-  string lastMsgId = 3;
-  // @inject_tag: bson:"createdAt"
-  uint64 createdAt = 4;
-  // @inject_tag: bson:"updatedAt"
-  uint64 updatedAt = 5;
+   // @inject_tag: bson:"_id"
+   bytes id = 1;
+   // @inject_tag: bson:"botId"
+   string botId = 2;
+   // @inject_tag: bson:"peerId"
+   string peerId = 3;
+   // @inject_tag: bson:"lastMsgId"
+   string lastMsgId = 4;
+   // @inject_tag: bson:"createdAt"
+   uint64 createdAt = 5;
+   // @inject_tag: bson:"updatedAt"
+   uint64 updatedAt = 6;
+   // @inject_tag: bson:"chatType"
+   string chatType = 7;
 }
 
 message FilterCreateRequest {

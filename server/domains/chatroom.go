@@ -4,6 +4,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"strings"
 	"time"
 )
 
@@ -16,9 +17,18 @@ func (o *ErrorHandler) EnsureChatRoomIndexes(db *mgo.Database) {
 
 	indexes := []map[string]interface{}{
 		{
-			"Key":    []string{"botId", "peerId"},
-			"Unique": true,
-		}, {
+			"Key":    []string{"botId"},
+			"Unique": false,
+		},
+		{
+			"Key":    []string{"peerId"},
+			"Unique": false,
+		},
+		{
+			"Key":    []string{"chatType"},
+			"Unique": false,
+		},
+		{
 			"Key":    []string{"createdAt"},
 			"Unique": false,
 		}, {
@@ -47,7 +57,7 @@ func (o *ErrorHandler) getChatRoom(db *mgo.Database, roomId string) *pb.ChatRoom
 	return result
 }
 
-func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, fromRoomId string, limit int32) []*pb.ChatRoom {
+func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType string, fromRoomId string, limit int32) []*pb.ChatRoom {
 	criteria := bson.M{}
 
 	//o.EnsureChatRoomIndexes(db)
@@ -61,6 +71,10 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, fromRoomId s
 	}
 
 	criteria["botId"] = botId
+
+	if chatType != "" && chatType != "all" {
+		criteria["type"] = chatType
+	}
 
 	query := db.C(ChatRoomCollection).Find(criteria).Sort("-updatedAt").Limit(int(limit))
 
@@ -79,6 +93,13 @@ func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, pe
 	if lastMsgId != "" {
 		updatePayload["lastMsgId"] = lastMsgId
 	}
+
+	chatType := "single"
+	if strings.Index(peerId, "@chatroom") != -1 {
+		chatType = "group"
+	}
+
+	updatePayload["type"] = chatType
 
 	_, o.Err = db.C(ChatRoomCollection).Upsert(bson.M{
 		"botId":  botId,
