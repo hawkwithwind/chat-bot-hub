@@ -13,11 +13,25 @@ const (
 
 func (o *ErrorHandler) EnsureChatRoomIndexes(db *mgo.Database) {
 	col := db.C(ChatRoomCollection)
-	for _, key := range []string{"botId", "peerId", "createdAt", "updatedAt"} {
+
+	indexes := []map[string]interface{}{
+		{
+			"Key":    []string{"botId", "peerId"},
+			"Unique": true,
+		}, {
+			"Key":    []string{"createdAt"},
+			"Unique": false,
+		}, {
+			"Key":    []string{"updatedAt"},
+			"Unique": false,
+		},
+	}
+
+	for _, obj := range indexes {
 		o.Err = col.EnsureIndex(mgo.Index{
-			Key:        []string{key},
-			Unique:     true,
-			DropDups:   true,
+			Key:        obj["Key"].([]string),
+			Unique:     obj["Unique"].(bool),
+			DropDups:   obj["Unique"].(bool),
 			Background: true,
 			Sparse:     true,
 		})
@@ -56,7 +70,7 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, fromRoomId s
 }
 
 func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, peerId string, lastMsgId string) {
-	now := time.Now()
+	now := time.Now().UnixNano() / 1e6
 
 	updatePayload := bson.M{
 		"updatedAt": now,

@@ -71,9 +71,9 @@ message ChatRoom {
   // @inject_tag: bson:"lastMsgId"
   string lastMsgId = 3;
   // @inject_tag: bson:"createdAt"
-  google.protobuf.Timestamp createdAt = 4;
+  uint64 createdAt = 4;
   // @inject_tag: bson:"updatedAt"
-  google.protobuf.Timestamp updatedAt = 5;
+  uint64 updatedAt = 5;
 }
 
 message FilterCreateRequest {
