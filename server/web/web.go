@@ -67,6 +67,7 @@ type WebServer struct {
 	mongoDb      *mgo.Database
 
 	contactParser *ContactParser
+	accounts      Accounts
 }
 
 func (ctx *WebServer) init() error {

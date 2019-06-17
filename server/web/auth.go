@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"sync"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 const (
@@ -157,7 +159,25 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 		var user User
 		utils.DecodeMap(token.Claims, &user)
 
-		validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+		//validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+
+		o.Err = ctx.UpdateAccounts()
+		if o.Err != nil {
+			return
+		}
+
+		foundcount := 0
+		for _, acc := range ctx.accounts.accounts {
+			if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+				foundcount += 0
+			}
+		}
+
+		validated := false
+		if foundcount == 1 {
+			validated = true
+		}
+		
 		if o.Err != nil {
 			return
 		}
@@ -301,4 +321,42 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 	})
+}
+
+type Accounts struct {
+	accounts   []domains.Account
+	mux        sync.Mutex
+	updateAt   time.Time	
+}
+
+func (web *WebServer) UpdateAccounts() error {
+	o := &ErrorHandler{}
+
+	o.BackEndError(web)
+
+	web.accounts.mux.Lock()
+	defer web.accounts.mux.Unlock()
+
+	if web.accounts.updateAt.After(time.Now().Add(-10*time.Minute)) {
+		return nil
+	}
+
+	tx := o.Begin(web.db)
+	if o.Err != nil {
+		return o.Err
+	}
+	
+	defer o.CommitOrRollback(tx)
+	
+	accounts := o.GetAccounts(tx)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	web.Info("[cache accounts debug] updated %d accounts", len(accounts))
+
+	web.accounts.accounts = accounts
+	web.accounts.updateAt = time.Now()
+	
+	return nil	
 }
