@@ -224,7 +224,7 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 			peerId = msgJson["toUser"].(string)
 		}
 
-		o.UpdateOrCreateChatRoom(hub.mongoDb, bot.BotId, peerId, msgJson["msgId"].(string))
+		o.UpdateOrCreateChatRoom(hub.mongoDb, bot.BotId, peerId)
 	}()
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/mitchellh/mapstructure"
+	"strings"
 	"time"
 )
 
@@ -137,8 +138,42 @@ func (o *ErrorHandler) UpdateWechatMessages(db *mgo.Database, messages []map[str
 	}
 }
 
-func (o *ErrorHandler) buildGetUnreadMessageCriteria(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *bson.M {
+func (o *ErrorHandler) buildGetMessagesCriteria(userId string, peerId string) bson.M {
 	criteria := bson.M{}
+
+	if userId == "" {
+		o.Err = fmt.Errorf("userId is required")
+		return nil
+	}
+
+	if peerId == "" {
+		o.Err = fmt.Errorf("peerId is required")
+		return nil
+	}
+
+	if strings.Index(peerId, "@chatroom") != -1 {
+		criteria["groupId"] = peerId
+	} else {
+		criteria["$or"] = []bson.M{
+			{
+				"toUser":   userId,
+				"fromUser": peerId,
+			},
+			{
+				"toUser":   peerId,
+				"fromUser": userId,
+			},
+		}
+	}
+
+	return criteria
+}
+
+func (o *ErrorHandler) buildGetUnreadMessageCriteria(db *mgo.Database, userId string, peerId string, fromMessageId string) bson.M {
+	criteria := o.buildGetMessagesCriteria(userId, peerId)
+	if o.Err != nil {
+		return nil
+	}
 
 	if fromMessageId != "" {
 		fromMessage := o.GetWechatMessageWithMsgId(db, fromMessageId)
@@ -148,20 +183,15 @@ func (o *ErrorHandler) buildGetUnreadMessageCriteria(db *mgo.Database, fromUser 
 		}
 	}
 
-	if groupId != "" {
-		criteria["groupId"] = groupId
-	} else if fromUser != "" && toUser != "" {
-		criteria["toUser"] = toUser
-		criteria["fromUser"] = fromUser
-	} else {
-		o.Err = fmt.Errorf("GetChatUnreadMessages: groupid or fromUser/toUser is required")
-	}
-
-	return &criteria
+	return criteria
 }
 
-func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *WechatMessage {
-	criteria := o.buildGetUnreadMessageCriteria(db, fromUser, toUser, groupId, fromMessageId)
+func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, userId string, peerId string, fromMessageId string) *WechatMessage {
+	criteria := o.buildGetUnreadMessageCriteria(db, userId, peerId, fromMessageId)
+
+	if o.Err != nil {
+		return nil
+	}
 
 	query := db.C(
 		WechatMessageCollection,
@@ -180,8 +210,12 @@ func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, fromUser str
 	}
 }
 
-func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) int {
-	criteria := o.buildGetUnreadMessageCriteria(db, fromUser, toUser, groupId, fromMessageId)
+func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, userId string, peerId string, fromMessageId string) int {
+	criteria := o.buildGetUnreadMessageCriteria(db, userId, peerId, fromMessageId)
+
+	if o.Err != nil {
+		return 0
+	}
 
 	count, err := db.C(
 		WechatMessageCollection,
@@ -202,13 +236,13 @@ func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, fromUser str
  * 群聊: groupId
  * 两者互斥
  */
-func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, fromUser string, toUser string, groupId string, fromMessageId string) *UnreadMessageMeta {
-	lastMessage := o.getChatLatestUnreadMessage(db, fromUser, toUser, groupId, fromMessageId)
+func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, userId string, peerId string, fromMessageId string) *UnreadMessageMeta {
+	lastMessage := o.getChatLatestUnreadMessage(db, userId, peerId, fromMessageId)
 	if o.Err != nil {
 		return nil
 	}
 
-	count := o.getChatUnreadMessagesCount(db, fromUser, toUser, groupId, fromMessageId)
+	count := o.getChatUnreadMessagesCount(db, userId, peerId, fromMessageId)
 	if o.Err != nil {
 		return nil
 	}
@@ -216,6 +250,97 @@ func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, fromUser stri
 	result := &UnreadMessageMeta{}
 	result.LatestMessage = lastMessage
 	result.Count = count
+
+	return result
+}
+
+func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, peerId string, direction string, fromMessageId string) []WechatMessage {
+	criteria := o.buildGetMessagesCriteria(userId, peerId)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	var fromMessage *WechatMessage
+	if fromMessageId != "" {
+		fromMessage = o.GetWechatMessageWithMsgId(db, fromMessageId)
+
+		if o.Err != nil {
+			o.Err = fmt.Errorf("message with id: %s not exsits\n", fromMessageId)
+			return nil
+		}
+	}
+
+	var result []WechatMessage
+
+	// 默认 page size 40 条
+	const pageSize = 40
+
+	if direction == "new" {
+		if fromMessage != nil {
+			criteria["updatedAt"] = bson.M{"$gt": fromMessage.UpdatedAt}
+
+			query := db.C(
+				WechatMessageCollection,
+			).Find(
+				criteria,
+			).Sort(
+				"updatedAt",
+			).Limit(pageSize)
+
+			result = o.GetWechatMessages(query)
+			if o.Err != nil {
+				return nil
+			}
+		} else {
+			query := db.C(
+				WechatMessageCollection,
+			).Find(
+				criteria,
+			).Sort(
+				"-updatedAt",
+			).Limit(pageSize)
+
+			result = o.GetWechatMessages(query)
+
+			if o.Err != nil {
+				return nil
+			}
+
+			// reverse
+			for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	} else if direction == "old" {
+		if fromMessage == nil {
+			o.Err = fmt.Errorf("fromMessageId is not supplied")
+			return nil
+		}
+
+		criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
+
+		query := db.C(
+			WechatMessageCollection,
+		).Find(
+			criteria,
+		).Sort(
+			"-updatedAt",
+		).Limit(pageSize)
+
+		result = o.GetWechatMessages(query)
+		if o.Err != nil {
+			return nil
+		}
+
+		// reverse
+		for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+			result[i], result[j] = result[j], result[i]
+		}
+	} else {
+		o.Err = fmt.Errorf("illegal direction: %s\n", direction)
+		return nil
+	}
 
 	return result
 }

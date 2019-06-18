@@ -3,24 +3,15 @@ package streaming
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/globalsign/mgo/bson"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	"sync"
 )
 
-type GetConversationMessagesParamsSingleChat struct {
-	FromUser string `json:"fromUser"`
-	ToUser   string `json:"toUser"`
-}
-
-type GetConversationMessagesParamsGroupChat struct {
-	GroupId string `json:"groupId"`
-}
-
 type GetConversationMessagesParams struct {
-	SingleChat *GetConversationMessagesParamsSingleChat `json:"singleChat"`
-	GroupChat  *GetConversationMessagesParamsGroupChat  `json:"groupChat"`
+	BotId  string `json:"botId"`
+	PeerId string `json:"peerId"`
 
 	Direction     string `json:"direction"`     // new, old
 	FromMessageId string `json:"fromMessageId"` // 以 fromMessageId 为界限获取消息。direction 为 old 必填；new 选填，空则返回最新一页数据，非空则可表示短信重连后获取更新数据
@@ -34,9 +25,30 @@ type SendMessageParams struct {
 }
 
 type GetBotUnreadMessagesParams struct {
-	SingleChat    *GetConversationMessagesParamsSingleChat `json:"singleChat"`
-	GroupChat     *GetConversationMessagesParamsGroupChat  `json:"groupChat"`
-	FromMessageId string                                   `json:"fromMessageId"`
+	BotId         string `json:"botId"`
+	PeerId        string `json:"peerId"`
+	FromMessageId string `json:"fromMessageId"`
+}
+
+type UpdateChatParams struct {
+	BotId         string `json:"botId"`
+	PeerId        string `json:"peerId"`
+	LastReadMsgId string `json:"lastReadMsgId"`
+}
+
+func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error) {
+	o := &ErrorHandler{}
+
+	bot := o.GetBotById(wsConnection.server.db.Conn, botId)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	if bot == nil {
+		return nil, fmt.Errorf("Can not find bot with id: %s\n", botId)
+	}
+
+	return bot, nil
 }
 
 func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{}, error) {
@@ -64,101 +76,32 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 
 	o := &ErrorHandler{}
 
-	criteria := bson.M{}
-	if params.GroupChat != nil {
-		criteria["groupId"] = params.GroupChat.GroupId
-	} else if params.SingleChat != nil {
-		criteria["toUser"] = params.SingleChat.ToUser
-		criteria["fromUser"] = params.SingleChat.FromUser
-	} else {
-		return nil, fmt.Errorf("either single chat or group chat params is not suppiled")
+	bot, err := wsConnection.getBotById(params.BotId)
+	if err != nil {
+		return nil, err
 	}
 
-	var fromMessage *domains.WechatMessage
-	if params.FromMessageId != "" {
-		fromMessage = o.GetWechatMessageWithMsgId(server.mongoDb, params.FromMessageId)
-
-		if o.Err != nil {
-			return nil, fmt.Errorf("message with id: %s not exsits\n", params.FromMessageId)
-		}
-	}
-
-	var result []domains.WechatMessage
-
-	// 默认 page size 40 条
-	const pageSize = 40
-
-	if params.Direction == "new" {
-		if fromMessage != nil {
-			criteria["updatedAt"] = bson.M{"$gt": fromMessage.UpdatedAt}
-
-			query := server.mongoDb.C(
-				domains.WechatMessageCollection,
-			).Find(
-				criteria,
-			).Sort(
-				"updatedAt",
-			).Limit(pageSize) //
-
-			result = o.GetWechatMessages(query)
-			if o.Err != nil {
-				return nil, o.Err
-			}
-		} else {
-			query := server.mongoDb.C(
-				domains.WechatMessageCollection,
-			).Find(
-				criteria,
-			).Sort(
-				"-updatedAt",
-			).Limit(pageSize)
-
-			result = o.GetWechatMessages(query)
-
-			if o.Err != nil {
-				return nil, o.Err
-			}
-
-			// reverse
-			for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	} else if params.Direction == "old" {
-		if fromMessage == nil {
-			return nil, fmt.Errorf("fromMessageId is not supplied")
-		}
-
-		criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
-
-		query := server.mongoDb.C(
-			domains.WechatMessageCollection,
-		).Find(
-			criteria,
-		).Sort(
-			"-updatedAt",
-		).Limit(pageSize)
-
-		result = o.GetWechatMessages(query)
-		if o.Err != nil {
-			return nil, o.Err
-		}
-
-		// reverse
-		for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
-			result[i], result[j] = result[j], result[i]
-		}
-	} else {
-		return nil, fmt.Errorf("illegal direction: %s\n", params.Direction)
-	}
-
-	return result, nil
+	messages := o.GetMessagesHistories(server.mongoDb, bot.Login, params.PeerId, params.Direction, params.FromMessageId)
+	return messages, o.Err
 }
 
 func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (interface{}, error) {
 	params := make([]GetBotUnreadMessagesParams, 0)
 	if err := mapstructure.Decode(payload, &params); err != nil {
 		return nil, err
+	}
+
+	botLoginCache := make(map[string]string)
+
+	for _, p := range params {
+		if botLoginCache[p.BotId] == "" {
+			bot, err := wsConnection.getBotById(p.BotId)
+			if err != nil {
+				return nil, err
+			}
+
+			botLoginCache[p.BotId] = bot.Login
+		}
 	}
 
 	o := &ErrorHandler{}
@@ -170,26 +113,13 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 	for i := range params {
 		p := params[i]
 
-		var fromUser string
-		var toUser string
-		var groupId string
-
-		if p.SingleChat != nil {
-			fromUser = p.SingleChat.FromUser
-			toUser = p.SingleChat.ToUser
-		} else if p.GroupChat != nil {
-			groupId = p.GroupChat.GroupId
-		} else {
-			return nil, fmt.Errorf("onGetUnreadMessagesMeta SingleChat or GroupChat params is required")
-		}
-
 		wg.Add(1)
 
 		index := i
-
 		go func() {
 			defer wg.Done()
-			result[index] = o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, fromUser, toUser, groupId, p.FromMessageId)
+
+			result[index] = o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
 		}()
 
 	}
@@ -197,6 +127,21 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 	wg.Wait()
 
 	return result, nil
+}
+func (wsConnection *WsConnection) onUpdateChat(payload interface{}) (interface{}, error) {
+	updateChatParams := &UpdateChatParams{}
+	if err := mapstructure.Decode(payload, updateChatParams); err != nil {
+		return nil, err
+	}
+
+	if updateChatParams.LastReadMsgId == "" {
+		return nil, errors.Errorf("lastReadMsgId is required to update chat")
+	}
+
+	o := &ErrorHandler{}
+	o.UpdateChatRoomLastReadMsgId(wsConnection.server.mongoDb, updateChatParams.BotId, updateChatParams.PeerId, updateChatParams.LastReadMsgId)
+
+	return nil, o.Err
 }
 
 func (wsConnection *WsConnection) onConnect() {
@@ -220,4 +165,5 @@ func (wsConnection *WsConnection) onConnect() {
 	c.On("send_message", c.onSendMessage)
 	c.On("get_conversation_messages", c.onGetConversationMessages)
 	c.On("get_unread_messages_meta", c.onGetUnreadMessagesMeta)
+	c.On("update_chat", c.onUpdateChat)
 }

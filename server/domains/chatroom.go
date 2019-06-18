@@ -83,15 +83,11 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType str
 	return result
 }
 
-func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, peerId string, lastMsgId string) {
+func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, peerId string) {
 	now := time.Now().UnixNano() / 1e6
 
 	updatePayload := bson.M{
 		"updatedAt": now,
-	}
-
-	if lastMsgId != "" {
-		updatePayload["lastMsgId"] = lastMsgId
 	}
 
 	chatType := "single"
@@ -109,5 +105,14 @@ func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, pe
 		"$setOnInsert": bson.M{
 			"createdAt": now,
 		},
+	})
+}
+
+func (o *ErrorHandler) UpdateChatRoomLastReadMsgId(db *mgo.Database, botId string, peerId string, msgId string) {
+	o.Err = db.C(ChatRoomCollection).Update(bson.M{
+		"botId":  botId,
+		"peerId": peerId,
+	}, bson.M{
+		"lastReadMessageId": msgId,
 	})
 }
