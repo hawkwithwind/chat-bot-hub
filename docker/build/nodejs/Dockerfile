@@ -1,4 +1,4 @@
-FROM node:8-slim
+FROM node:8-stretch-slim
 ARG mirror=mirrors.ustc.edu.cn
 ADD modifysource.sh /home/scripts/modifysource.sh
 RUN /bin/bash /home/scripts/modifysource.sh $mirror
