@@ -21,8 +21,9 @@ type Config struct {
 	Host string
 	Port string
 
-	Chathubs   []string
-	ChathubWeb string
+	Chathubs              []string
+	ChathubWeb            string
+	ChathubWebAccessToken string
 
 	Mongo    utils.MongoConfig
 	Database utils.DatabaseConfig

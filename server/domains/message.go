@@ -317,12 +317,9 @@ func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, pee
 			}
 		}
 	} else if direction == "old" {
-		if fromMessage == nil {
-			o.Err = fmt.Errorf("fromMessageId is not supplied")
-			return nil
+		if fromMessage != nil {
+			criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
 		}
-
-		criteria["updatedAt"] = bson.M{"$lt": fromMessage.UpdatedAt}
 
 		query := db.C(
 			WechatMessageCollection,

@@ -17,10 +17,10 @@ type GetConversationMessagesParams struct {
 }
 
 type SendMessageParams struct {
-	BotLogin   string `json:"botLogin"`
-	ToUserName string `json:"toUserName"`
-	Content    string `json:"content"`
-	AtList     string `json:"atList"`
+	BotLogin   string   `json:"botLogin"`
+	ToUserName string   `json:"toUserName"`
+	Content    string   `json:"content"`
+	AtList     []string `json:"atList"`
 }
 
 type GetBotUnreadMessagesParams struct {

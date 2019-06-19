@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"io"
@@ -118,8 +119,21 @@ func (server *Server) StartHubClient() {
 
 func (server *Server) SendHubBotAction(botLogin string, actionType string, actionBody string) (*httpx.RestfulResponse, error) {
 	request := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", server.Config.WebBaseUrl, "/botaction/"+botLogin))
-	request.Params["actionType"] = actionType
-	request.Params["actionBody"] = actionBody
+
+	request.Headers["X-Authorize"] = server.Config.ChathubWebAccessToken
+	request.Headers["X-Client-Type"] = "SDK"
+
+	body := map[string]string{
+		"actionType": actionType,
+		"actionBody": actionBody,
+	}
+
+	bodyStr, err := json.Marshal(&body)
+	if err != nil {
+		return nil, err
+	}
+
+	request.Body = string(bodyStr)
 
 	return httpx.RestfulCallRetry(server.restfulclient, request, 3, 1)
 }

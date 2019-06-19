@@ -280,8 +280,8 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 
 	// process concurrently
 	hub.saveMessageToDB(bot, bodyJSON)
-	hub.sendEventToSubStreamingNodes(bot, inEvent.EventType, newBodyStr)
 	hub.updateChatRoom(bot, bodyJSON)
+	hub.sendEventToSubStreamingNodes(bot, inEvent.EventType, newBodyStr)
 
 	if bot.filter != nil {
 		if err := bot.filter.Fill(newBodyStr); err != nil {
@@ -296,7 +296,7 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 	return nil
 }
 
-func (hub *ChatHub) onSendMessage(bot *ChatBot, actionBody map[string]interface{}, result map[string]interface{}) {
+func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody map[string]interface{}, result map[string]interface{}) {
 	o := ErrorHandler{}
 
 	// result.success is faulse
@@ -338,6 +338,14 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionBody map[string]interface{
 
 			hub.saveMessageToDB(bot, msg)
 			hub.updateChatRoom(bot, msg)
+
+			var eventType string
+			if imageId != "" {
+				eventType = IMAGEMESSAGE
+			} else {
+				eventType = MESSAGE
+			}
+			hub.sendEventToSubStreamingNodes(bot, eventType, o.ToJson(msg))
 		}
 	}
 }
@@ -677,7 +685,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					actionType := actionBody["actionType"]
 					if actionType == SendTextMessage || actionType == SendAppMessage || actionType == SendImageMessage || actionType == SendImageResourceMessage {
-						hub.onSendMessage(bot, actionBody, result)
+						hub.onSendMessage(bot, actionType.(string), actionBody, result)
 					}
 
 					if o.Err == nil {
