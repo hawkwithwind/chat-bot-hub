@@ -69,14 +69,12 @@ message ChatRoom {
    string botId = 2;
    // @inject_tag: bson:"peerId"
    string peerId = 3;
-   // @inject_tag: bson:"lastReadMsgId"
-   string lastReadMsgId = 4;
    // @inject_tag: bson:"createdAt"
-   uint64 createdAt = 5;
+   uint64 createdAt = 4;
    // @inject_tag: bson:"updatedAt"
-   uint64 updatedAt = 6;
+   uint64 updatedAt = 5;
    // @inject_tag: bson:"chatType"
-   string chatType = 7;
+   string chatType = 6;
 }
 
 message FilterCreateRequest {

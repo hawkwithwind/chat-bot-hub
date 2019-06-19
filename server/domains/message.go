@@ -186,8 +186,8 @@ func (o *ErrorHandler) buildGetUnreadMessageCriteria(db *mgo.Database, userId st
 	return criteria
 }
 
-func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, userId string, peerId string, fromMessageId string) *WechatMessage {
-	criteria := o.buildGetUnreadMessageCriteria(db, userId, peerId, fromMessageId)
+func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, userId string, peerId string) *WechatMessage {
+	criteria := o.buildGetUnreadMessageCriteria(db, userId, peerId, "")
 
 	if o.Err != nil {
 		return nil
@@ -211,6 +211,10 @@ func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, userId strin
 }
 
 func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, userId string, peerId string, fromMessageId string) int {
+	if fromMessageId == "" {
+		return 0
+	}
+
 	criteria := o.buildGetUnreadMessageCriteria(db, userId, peerId, fromMessageId)
 
 	if o.Err != nil {
@@ -237,7 +241,7 @@ func (o *ErrorHandler) getChatUnreadMessagesCount(db *mgo.Database, userId strin
  * 两者互斥
  */
 func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, userId string, peerId string, fromMessageId string) *UnreadMessageMeta {
-	lastMessage := o.getChatLatestUnreadMessage(db, userId, peerId, fromMessageId)
+	lastMessage := o.getChatLatestUnreadMessage(db, userId, peerId)
 	if o.Err != nil {
 		return nil
 	}

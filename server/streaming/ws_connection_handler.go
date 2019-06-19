@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"sync"
 )
 
@@ -28,12 +27,6 @@ type GetBotUnreadMessagesParams struct {
 	BotId         string `json:"botId"`
 	PeerId        string `json:"peerId"`
 	FromMessageId string `json:"fromMessageId"`
-}
-
-type UpdateChatParams struct {
-	BotId         string `json:"botId"`
-	PeerId        string `json:"peerId"`
-	LastReadMsgId string `json:"lastReadMsgId"`
 }
 
 func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error) {
@@ -128,21 +121,6 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 
 	return result, nil
 }
-func (wsConnection *WsConnection) onUpdateChat(payload interface{}) (interface{}, error) {
-	updateChatParams := &UpdateChatParams{}
-	if err := mapstructure.Decode(payload, updateChatParams); err != nil {
-		return nil, err
-	}
-
-	if updateChatParams.LastReadMsgId == "" {
-		return nil, errors.Errorf("lastReadMsgId is required to update chat")
-	}
-
-	o := &ErrorHandler{}
-	o.UpdateChatRoomLastReadMsgId(wsConnection.server.mongoDb, updateChatParams.BotId, updateChatParams.PeerId, updateChatParams.LastReadMsgId)
-
-	return nil, o.Err
-}
 
 func (wsConnection *WsConnection) onConnect() {
 	c := wsConnection
@@ -165,5 +143,4 @@ func (wsConnection *WsConnection) onConnect() {
 	c.On("send_message", c.onSendMessage)
 	c.On("get_conversation_messages", c.onGetConversationMessages)
 	c.On("get_unread_messages_meta", c.onGetUnreadMessagesMeta)
-	c.On("update_chat", c.onUpdateChat)
 }
