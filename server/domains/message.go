@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/mitchellh/mapstructure"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,23 +18,29 @@ type MsgSource struct {
 	MemberCount uint64 `json:"memberCount" bson:"memberCount"`
 }
 
+type WechatMessageContact struct {
+	NickName string `json:"nickName"`
+	Avatar   string `json:"avatar"`
+}
+
 type WechatMessage struct {
-	MsgId       string      `json:"msgId" bson:"msgId"`
-	MsgType     int         `json:"msgType" bson:"msgType"`
-	ImageId     string      `json:"imageId" bson:"imageId"`
-	Content     interface{} `json:"content" bson:"content"`
-	GroupId     string      `json:"groupId" bson:"groupId"`
-	Description string      `json:"description" bson:"description"`
-	FromUser    string      `json:"fromUser" bson:"fromUser"`
-	MType       int         `json:"mType" bson:"mType"`
-	SubType     int         `json:"subType" bson:"subType"`
-	Status      int         `json:"status" bson:"status"`
-	Continue    int         `json:"continue" bson:"continue"`
-	Timestamp   uint64      `json:"timestamp" bson:"timestamp"`
-	ToUser      string      `json:"toUser" bson:"toUser"`
-	Uin         uint64      `json:"uin" bson:"uin"`
-	MsgSource   interface{} `json:"msgSource" bson:"msgSource"`
-	UpdatedAt   time.Time   `json:"updateAt" bson:"updatedAt"`
+	MsgId           string                `json:"msgId" bson:"msgId"`
+	MsgType         int                   `json:"msgType" bson:"msgType"`
+	ImageId         string                `json:"imageId" bson:"imageId"`
+	Content         interface{}           `json:"content" bson:"content"`
+	GroupId         string                `json:"groupId" bson:"groupId"`
+	Description     string                `json:"description" bson:"description"`
+	FromUser        string                `json:"fromUser" bson:"fromUser"`
+	MType           int                   `json:"mType" bson:"mType"`
+	SubType         int                   `json:"subType" bson:"subType"`
+	Status          int                   `json:"status" bson:"status"`
+	Continue        int                   `json:"continue" bson:"continue"`
+	Timestamp       uint64                `json:"timestamp" bson:"timestamp"`
+	ToUser          string                `json:"toUser" bson:"toUser"`
+	Uin             uint64                `json:"uin" bson:"uin"`
+	MsgSource       interface{}           `json:"msgSource" bson:"msgSource"`
+	UpdatedAt       time.Time             `json:"updateAt" bson:"updatedAt"`
+	FromUserContact *WechatMessageContact `json:"fromUserContact,omitempty" bson:"-"`
 }
 
 type UnreadMessageMeta struct {
@@ -44,16 +52,74 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
-func (o *ErrorHandler) GetWechatMessages(query *mgo.Query) []WechatMessage {
-	if o.Err != nil {
-		return []WechatMessage{}
+func (o *ErrorHandler) FillWechatMessageContact(db *dbx.Database, message *WechatMessage) error {
+	if message.FromUserContact != nil {
+		return nil
 	}
 
-	wm := []WechatMessage{}
+	tx := o.Begin(db)
+	defer o.CommitOrRollback(tx)
+
+	user := o.GetChatUserByName(tx, "WECHATBOT", message.FromUser)
+	if user != nil {
+		message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
+	}
+
+	return o.Err
+}
+
+func (o *ErrorHandler) FillWechatMessagesContact(db *dbx.Database, messages []*WechatMessage) error {
+	fromUserMap := &sync.Map{}
+	for _, message := range messages {
+		fromUserMap.Store(message.FromUser, nil)
+	}
+
+	// 并发获取所有的 ChatUser
+	wg := sync.WaitGroup{}
+
+	fromUserMap.Range(func(key, value interface{}) bool {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			tx := o.Begin(db)
+			defer o.CommitOrRollback(tx)
+
+			fromUser := key.(string)
+			user := o.GetChatUserByName(tx, "WECHATBOT", fromUser)
+			if o.Err == nil {
+				fromUserMap.Store(fromUser, user)
+			}
+		}()
+
+		return true
+	})
+
+	wg.Wait()
+
+	for _, message := range messages {
+		if val, ok := fromUserMap.Load(message.FromUser); ok {
+			if val != nil {
+				user := val.(*ChatUser)
+				message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (o *ErrorHandler) GetWechatMessages(query *mgo.Query) []*WechatMessage {
+	if o.Err != nil {
+		return []*WechatMessage{}
+	}
+
+	var wm []*WechatMessage
 
 	o.Err = query.All(&wm)
 	if o.Err != nil {
-		return []WechatMessage{}
+		return []*WechatMessage{}
 	}
 
 	return wm
@@ -204,7 +270,7 @@ func (o *ErrorHandler) getChatLatestUnreadMessage(db *mgo.Database, userId strin
 	messages := o.GetWechatMessages(query)
 
 	if messages != nil && len(messages) == 1 {
-		return &messages[0]
+		return messages[0]
 	} else {
 		return nil
 	}
@@ -258,7 +324,7 @@ func (o *ErrorHandler) GetChatUnreadMessagesMeta(db *mgo.Database, userId string
 	return result
 }
 
-func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, peerId string, direction string, fromMessageId string) []WechatMessage {
+func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, peerId string, direction string, fromMessageId string) []*WechatMessage {
 	criteria := o.buildGetMessagesCriteria(userId, peerId)
 
 	if o.Err != nil {
@@ -275,7 +341,7 @@ func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, pee
 		}
 	}
 
-	var result []WechatMessage
+	var result []*WechatMessage
 
 	// 默认 page size 40 条
 	const pageSize = 40

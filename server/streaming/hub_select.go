@@ -107,7 +107,7 @@ func (server *Server) StartHubClient() {
 			in := <-server.chmsg
 			server.Info("RECV [%server] from channel", in.EventType)
 
-			server.onHubEvent(in)
+			go server.onHubEvent(in)
 		}
 	}()
 

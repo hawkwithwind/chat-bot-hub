@@ -8,15 +8,15 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
-func (server *Server) findWsConnectionByBotId(botId string) *WsConnection {
-	var result *WsConnection = nil
+func (server *Server) findWsConnectionsByBotId(botId string) []*WsConnection {
+	var result []*WsConnection
 
 	server.websocketConnections.Range(func(key, _ interface{}) bool {
 		connection := key.(*WsConnection)
 
 		for _, bot := range connection.bots {
 			if bot.BotId == botId {
-				result = connection
+				result = append(result, connection)
 				return false
 			}
 		}
@@ -28,17 +28,19 @@ func (server *Server) findWsConnectionByBotId(botId string) *WsConnection {
 }
 
 func (server *Server) forwardMessage(message *domains.WechatMessage, botId string) {
-	connection := server.findWsConnectionByBotId(botId)
-	if connection == nil {
+	connections := server.findWsConnectionsByBotId(botId)
+	if connections == nil {
 		return
 	}
 
-	event := connection.CreateRequest("new_messages", []*domains.WechatMessage{message})
-	connection.SendWithAck(event, func(payload interface{}, err error) {
-		if err != nil {
-			server.Error(err, "Forward message failed")
-		}
-	})
+	for _, connection := range connections {
+		event := connection.CreateRequest("new_messages", []*domains.WechatMessage{message})
+		connection.SendWithAck(event, func(payload interface{}, err error) {
+			if err != nil {
+				server.Error(err, "Forward message failed")
+			}
+		})
+	}
 }
 
 func (server *Server) onHubEvent(event *pb.EventReply) {
@@ -52,7 +54,10 @@ func (server *Server) onHubEvent(event *pb.EventReply) {
 			return
 		}
 
-		go server.forwardMessage(&wechatMessage, event.BotId)
+		o := &ErrorHandler{}
+		_ = o.FillWechatMessageContact(server.db, &wechatMessage)
+
+		server.forwardMessage(&wechatMessage, event.BotId)
 
 		break
 	}

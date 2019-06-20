@@ -75,6 +75,8 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 	}
 
 	messages := o.GetMessagesHistories(server.mongoDb, bot.Login, params.PeerId, params.Direction, params.FromMessageId)
+	_ = o.FillWechatMessagesContact(server.db, messages)
+
 	return messages, o.Err
 }
 
