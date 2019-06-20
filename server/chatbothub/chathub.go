@@ -326,6 +326,16 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 				groupId = toUser
 			}
 
+			mType := 0
+			switch actionType {
+			case SendTextMessage:
+				mType = 1
+			case SendAppMessage:
+				mType = 49
+			case SendImageMessage:
+				mType = 3
+			}
+
 			msg := map[string]interface{}{
 				"msgId":     msgId,
 				"fromUser":  bot.Login,
@@ -334,6 +344,7 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 				"imageId":   imageId,
 				"content":   content,
 				"timestamp": time.Now().Unix(),
+				"mType":     mType,
 			}
 
 			hub.saveMessageToDB(bot, msg)
