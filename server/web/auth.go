@@ -240,7 +240,7 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 
 	if validated == true {
 		if user.ExpireAt.Before(time.Now()) {
-			o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
+			o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
 			return
 		}
 
@@ -375,27 +375,31 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-				o.Err = ctx.UpdateAccounts()
-				if o.Err != nil {
+			o.Err = ctx.UpdateAccounts()
+			if o.Err != nil {
+				return
+			}
+
+			foundcount := 0
+			for _, acc := range ctx.accounts.accounts {
+				if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+					foundcount += 1
+				}
+			}
+
+			validated := false
+			if foundcount == 1 {
+				validated = true
+			}
+
+			//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+			if validated {
+				if user.ExpireAt.Before(time.Now()) {
+					o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
 					return
-				}
-
-				foundcount := 0
-				for _, acc := range ctx.accounts.accounts {
-					if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
-						foundcount += 1
-					}
-				}
-
-				validated := false
-				if foundcount == 1 {
-					validated = true
-				}
-
-				//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
-				if validated {
-					if user.ExpireAt.Before(time.Now()) {
-						o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
+				} else {
+					if clientType == SDK && user.SdkCode != SDKCODE {
+						o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
 						return
 					}
 
