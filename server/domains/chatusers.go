@@ -114,8 +114,8 @@ func (chatuser *ChatUser) SetLastSendAt(sendAt time.Time) {
 func (chatuser *ChatUser) SetLastMsgId(msgId string) {
 	chatuser.LastMsgId = sql.NullString{
 		String: msgId,
-		Valid: true,
-	}	
+		Valid:  true,
+	}
 }
 
 func (o *ErrorHandler) NewDefaultChatUser() dbx.Searchable {
@@ -387,7 +387,7 @@ func (o *ErrorHandler) FindOrCreateChatUsers(q dbx.Queryable, chatusers []*ChatU
 		return []ChatUser{}
 	}
 
-	uns := make([]string, 0, len(chatusers))
+	uns := []string{}
 	for _, cun := range chatusers {
 		uns = append(uns, cun.UserName)
 	}

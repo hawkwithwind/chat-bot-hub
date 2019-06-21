@@ -3,8 +3,8 @@ package tasks
 import (
 	"fmt"
 	"log"
-	"os"
 	"net/http"
+	"os"
 
 	"github.com/robfig/cron"
 
@@ -17,11 +17,11 @@ type ErrorHandler struct {
 }
 
 type Tasks struct {
-	cron       *cron.Cron
-	Webhost    string
-	Webport    string
-	WebBaseUrl string
-	logger     *log.Logger
+	cron          *cron.Cron
+	Webhost       string
+	Webport       string
+	WebBaseUrl    string
+	logger        *log.Logger
 	restfulclient *http.Client
 }
 

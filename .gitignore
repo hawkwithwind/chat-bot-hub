@@ -4,6 +4,7 @@ rebuild.sh
 mysql.env
 build/
 config/config.yml
+config/*.prof
 frontend/node
 frontend/node_modules
 *.DS_Store

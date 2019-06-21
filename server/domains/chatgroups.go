@@ -92,11 +92,10 @@ func (chatgroup *ChatGroup) SetLastSendAt(sendAt time.Time) {
 
 func (chatgroup *ChatGroup) SetLastMsgId(msgId string) {
 	chatgroup.LastMsgId = sql.NullString{
-		String:  msgId,
-		Valid: true,
+		String: msgId,
+		Valid:  true,
 	}
 }
-
 
 func (ctx *ErrorHandler) NewChatGroup(groupname string, ctype string, nickname string, owner string, membercount int, maxmembercount int) *ChatGroup {
 	if ctx.Err != nil {
@@ -160,6 +159,33 @@ ON DUPLICATE KEY UPDATE
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
 }
 
+func (o *ErrorHandler) FindOrCreateChatGroups(q dbx.Queryable, chatgroups []*ChatGroup) []ChatGroup {
+	if o.Err != nil {
+		return []ChatGroup{}
+	}
+
+	if len(chatgroups) == 0 {
+		return []ChatGroup{}
+	}
+
+	o.UpdateOrCreateChatGroups(q, chatgroups)
+	if o.Err != nil {
+		return []ChatGroup{}
+	}
+
+	gns := []string{}
+	for _, cgn := range chatgroups {
+		gns = append(gns, cgn.GroupName)
+	}
+
+	ret := o.GetChatGroupByNames(q, chatgroups[0].Type, gns)
+	if o.Err != nil {
+		return []ChatGroup{}
+	} else {
+		return ret
+	}
+}
+
 func (o *ErrorHandler) UpdateChatGroup(q dbx.Queryable, chatgroup *ChatGroup) {
 	if o.Err != nil {
 		return
@@ -180,6 +206,74 @@ WHERE chatgroupid = :chatgroupid
 `
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatgroup)
+}
+
+func (o *ErrorHandler) UpdateOrCreateChatGroups(q dbx.Queryable, chatgroups []*ChatGroup) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+INSERT INTO chatgroups
+(chatgroupid, groupname, type, nickname, owner, membercount, maxmembercount, alias, avatar, ext)
+VALUES
+%s
+ON DUPLICATE KEY UPDATE
+`
+	vls := []string{}
+
+	for _, field := range []string{
+		"groupname",
+		"alias",
+		"nickname",
+		"owner",
+		"avatar",
+		"membercount",
+		"maxmembercount",
+		"ext",
+	} {
+		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
+	}
+
+	query += strings.Join(vls, ",\n")
+
+	var valueStrings []string
+	var valueArgs []interface{}
+
+	for _, chatgroup := range chatgroups {
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+		valueArgs = append(valueArgs,
+			chatgroup.ChatGroupId,
+			chatgroup.GroupName,
+			chatgroup.Type,
+			chatgroup.NickName,
+			chatgroup.Owner,
+			chatgroup.MemberCount,
+			chatgroup.MaxMemberCount,
+		)
+
+		if chatgroup.Alias.Valid {
+			valueArgs = append(valueArgs, chatgroup.Alias.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatgroup.Avatar.Valid {
+			valueArgs = append(valueArgs, chatgroup.Avatar.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+
+		if chatgroup.Ext.Valid {
+			valueArgs = append(valueArgs, chatgroup.Ext.String)
+		} else {
+			valueArgs = append(valueArgs, nil)
+		}
+	}
+
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(query, strings.Join(valueStrings, ",\n")), valueArgs...)
 }
 
 func (o *ErrorHandler) GetChatGroupById(q dbx.Queryable, cgid string) *ChatGroup {
@@ -215,6 +309,29 @@ WHERE groupname=?
 	} else {
 		return nil
 	}
+}
+
+func (o *ErrorHandler) GetChatGroupByNames(q dbx.Queryable, ctype string, groupnames []string) []ChatGroup {
+	if o.Err != nil {
+		return []ChatGroup{}
+	}
+
+	if len(groupnames) == 0 {
+		return []ChatGroup{}
+	}
+
+	const query string = `
+SELECT * FROM chatgroups
+WHERE type = "%s"
+  AND groupname IN ("%s")
+  AND deleteat is NULL
+`
+
+	chatgroups := []ChatGroup{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatgroups, fmt.Sprintf(query, ctype, strings.Join(groupnames, `", "`)))
+
+	return chatgroups
 }
 
 type ChatGroupCriteria struct {

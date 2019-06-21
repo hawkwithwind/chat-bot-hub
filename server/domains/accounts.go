@@ -129,3 +129,20 @@ func (o *ErrorHandler) GetAccountByName(q dbx.Queryable, name string) *Account {
 		return nil
 	}
 }
+
+func (o *ErrorHandler) GetAccounts(q dbx.Queryable) []Account {
+	if o.Err != nil {
+		return nil
+	}
+
+	accounts := []Account{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &accounts,
+		"SELECT * FROM accounts WHERE deleteat is NULL")
+
+	if o.Err != nil {
+		return []Account{}
+	}
+
+	return accounts
+}

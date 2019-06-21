@@ -105,3 +105,28 @@ VALUES
 	ctx, _ := o.DefaultContext()
 	_, o.Err = q.NamedExecContext(ctx, query, chatcontactgroup)
 }
+
+func (o *ErrorHandler) SaveIgnoreChatContactGroups(q dbx.Queryable, chatcontactgroups []*ChatContactGroup) {
+	if o.Err != nil {
+		return
+	}
+
+	query := `
+INSERT IGNORE INTO chatcontactgroups
+(chatcontactgroupid, botid, chatgroupid)
+VALUES
+`
+
+	valuetuples := []string{}
+	params := []interface{}{}
+
+	for _, cg := range chatcontactgroups {
+		valuetuples = append(valuetuples, `(?, ?, ?)`)
+		params = append(params, cg.ChatContactGroupId, cg.BotId, cg.ChatGroupId)
+	}
+
+	query += strings.Join(valuetuples, ",\n")
+
+	ctx, _ := o.DefaultContext()
+	_, o.Err = q.ExecContext(ctx, query, params...)
+}

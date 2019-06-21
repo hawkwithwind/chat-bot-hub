@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -12,6 +13,7 @@ import (
 	"github.com/gorilla/sessions"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
@@ -213,25 +215,43 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
+	//validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+
+	o.Err = ctx.UpdateAccounts()
+	if o.Err != nil {
+		return
+	}
+
+	foundcount := 0
+	for _, acc := range ctx.accounts.accounts {
+		if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+			foundcount += 1
+		}
+	}
+
+	validated := false
+	if foundcount == 1 {
+		validated = true
+	}
+
+	if o.Err != nil {
+		return
+	}
+
+	if validated == true {
 		if user.ExpireAt.Before(time.Now()) {
-			o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
-			return
-		} else {
-			if user.SdkCode != REFRESHCODE {
-				o.Err = utils.NewAuthError(fmt.Errorf("不支持的令牌类型"))
-				return
-			}
-
-			if clientType != SDK {
-				o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
-				return
-			}
-
-			// pass validate
-			o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30, nil))
+			o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 			return
 		}
+
+		if clientType != SDK {
+			o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
+			return
+		}
+
+		// pass validate
+		o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30, nil))
+		return
 	} else {
 		o.Err = utils.NewAuthError(fmt.Errorf("身份令牌未验证通过"))
 		return
@@ -254,8 +274,26 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		o.Err = utils.NewAuthError(o.Err)
 	}
 
-	if o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password) {
+	o.Err = ctx.UpdateAccounts()
+	if o.Err != nil {
+		return
+	}
 
+	foundcount := 0
+	for _, acc := range ctx.accounts.accounts {
+		secret := utils.HexString(utils.CheckSum([]byte(user.Password)))
+		if acc.AccountName == user.AccountName && acc.Secret == secret {
+			foundcount += 1
+		}
+	}
+
+	validated := false
+	if foundcount == 1 {
+		validated = true
+	}
+
+	//o.AccountValidate(ctx.db.Conn, user.AccountName, user.Password)
+	if validated {
 		tokenString := o.authorize(ctx.Config.SecretPhrase, user.AccountName, utils.PasswordCheckSum(user.Password))
 		session.Values["X-AUTHORIZE"] = tokenString
 		session.Save(req, w)
@@ -337,13 +375,27 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			if o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret) {
-				if user.ExpireAt.Before(time.Now()) {
-					o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
+				o.Err = ctx.UpdateAccounts()
+				if o.Err != nil {
 					return
-				} else {
-					if clientType == SDK && user.SdkCode != SDKCODE {
-						o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
+				}
+
+				foundcount := 0
+				for _, acc := range ctx.accounts.accounts {
+					if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+						foundcount += 1
+					}
+				}
+
+				validated := false
+				if foundcount == 1 {
+					validated = true
+				}
+
+				//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+				if validated {
+					if user.ExpireAt.Before(time.Now()) {
+						o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
 						return
 					}
 
@@ -360,4 +412,42 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 	})
+}
+
+type Accounts struct {
+	accounts []domains.Account
+	mux      sync.Mutex
+	updateAt time.Time
+}
+
+func (web *WebServer) UpdateAccounts() error {
+	o := &ErrorHandler{}
+
+	o.BackEndError(web)
+
+	web.accounts.mux.Lock()
+	defer web.accounts.mux.Unlock()
+
+	if web.accounts.updateAt.After(time.Now().Add(-10 * time.Minute)) {
+		return nil
+	}
+
+	tx := o.Begin(web.db)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	defer o.CommitOrRollback(tx)
+
+	accounts := o.GetAccounts(tx)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	web.Info("[cache accounts debug] updated %d accounts", len(accounts))
+
+	web.accounts.accounts = accounts
+	web.accounts.updateAt = time.Now()
+
+	return nil
 }
