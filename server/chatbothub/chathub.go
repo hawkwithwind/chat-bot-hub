@@ -339,14 +339,15 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			}
 
 			msg := map[string]interface{}{
-				"msgId":     msgId,
-				"fromUser":  bot.Login,
-				"toUser":    toUser,
-				"groupId":   groupId,
-				"imageId":   imageId,
-				"content":   content,
-				"timestamp": time.Now().Unix(),
-				"mType":     mType,
+				"msgId":       msgId,
+				"fromUser":    bot.Login,
+				"toUser":      toUser,
+				"groupId":     groupId,
+				"imageId":     imageId,
+				"content":     content,
+				"timestamp":   time.Now().Unix(),
+				"mType":       mType,
+				"description": content,
 			}
 
 			hub.saveMessageToDB(bot, msg)
