@@ -34,3 +34,15 @@ func (hub *ChatHub) GetBotChatRoom(ctx context.Context, request *pb.GetBotChatRo
 
 	return response, o.Err
 }
+
+func (hub *ChatHub) UpdateBotChatRoom(ctx context.Context, request *pb.UpdateBotChatRoomRequest) (*pb.UpdateBotChatRoomResponse, error) {
+	o := &ErrorHandler{}
+	o.UpdateOrCreateChatRoom(hub.mongoDb, request.BotId, request.PeerId)
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	response := &pb.UpdateBotChatRoomResponse{}
+	return response, nil
+}

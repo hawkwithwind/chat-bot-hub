@@ -34,6 +34,7 @@ service ChatBotHub {
   rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
   rpc GetBotChatRooms (GetBotChatRoomsRequest) returns (GetBotChatRoomsResponse) {}
   rpc GetBotChatRoom (GetBotChatRoomRequest) returns (GetBotChatRoomResponse) {}
+  rpc updateBotChatRoom (UpdateBotChatRoomRequest) returns (UpdateBotChatRoomResponse) {}
 
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
@@ -71,6 +72,14 @@ message GetBotChatRoomRequest {
 
 message GetBotChatRoomResponse {
   ChatRoom chatRoom = 1;
+}
+
+message UpdateBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+}
+
+message UpdateBotChatRoomResponse {
 }
 
 message ChatRoom {

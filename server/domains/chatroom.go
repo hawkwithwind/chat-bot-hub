@@ -123,24 +123,21 @@ func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, pe
 		return
 	}
 
-	updatePayload := bson.M{
-		"updatedAt": now,
-	}
-
 	chatType := "single"
 	if strings.Index(peerId, "@chatroom") != -1 {
 		chatType = "group"
 	}
 
-	updatePayload["chatType"] = chatType
-
 	_, o.Err = db.C(ChatRoomCollection).Upsert(bson.M{
 		"botId":  botId,
 		"peerId": peerId,
 	}, bson.M{
-		"$set": updatePayload,
+		"$set": bson.M{
+			"updatedAt": now,
+		},
 		"$setOnInsert": bson.M{
 			"createdAt": now,
+			"chatType":  chatType,
 		},
 	})
 }
