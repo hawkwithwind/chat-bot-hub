@@ -1,6 +1,7 @@
 package domains
 
 import (
+	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -85,6 +86,16 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType str
 
 func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, peerId string) {
 	now := time.Now().UnixNano() / 1e6
+
+	if botId == "" {
+		o.Err = fmt.Errorf("botId is required")
+		return
+	}
+
+	if peerId == "" {
+		o.Err = fmt.Errorf("peerId is required")
+		return
+	}
 
 	updatePayload := bson.M{
 		"updatedAt": now,

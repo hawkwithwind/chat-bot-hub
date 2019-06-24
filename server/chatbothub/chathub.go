@@ -220,7 +220,9 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 
 		// 别人发给你 和 你发给别人 的消息都会收到
 		var peerId string
-		if peerId = msgJson["fromUser"].(string); peerId == bot.Login {
+		if msgJson["groupId"] != nil {
+			peerId = msgJson["groupId"].(string)
+		} else if peerId = msgJson["fromUser"].(string); peerId == bot.Login {
 			peerId = msgJson["toUser"].(string)
 		}
 
