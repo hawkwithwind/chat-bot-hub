@@ -33,6 +33,7 @@ service ChatBotHub {
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
   rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
   rpc GetBotChatRooms (GetBotChatRoomsRequest) returns (GetBotChatRoomsResponse) {}
+  rpc GetBotChatRoom (GetBotChatRoomRequest) returns (GetBotChatRoomResponse) {}
 
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
@@ -60,6 +61,16 @@ message GetBotChatRoomsRequest {
 
 message GetBotChatRoomsResponse {
   repeated ChatRoom items = 1;
+}
+
+message GetBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+  bool createIfNotExist = 3;
+}
+
+message GetBotChatRoomResponse {
+  ChatRoom chatRoom = 1;
 }
 
 message ChatRoom {

@@ -52,10 +52,36 @@ func (o *ErrorHandler) EnsureChatRoomIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) getChatRoom(db *mgo.Database, roomId string) *pb.ChatRoom {
+func (o *ErrorHandler) GetChatRoomWithId(db *mgo.Database, botId string, roomId string) *pb.ChatRoom {
 	result := &pb.ChatRoom{}
-	o.Err = db.C(ChatRoomCollection).Find(bson.M{"_id": roomId}).One(result)
+
+	o.Err = db.C(ChatRoomCollection).Find(bson.M{
+		"_id":   roomId,
+		"botId": botId,
+	}).One(result)
+
 	return result
+}
+
+func (o *ErrorHandler) GetChatRoomWithPeerId(db *mgo.Database, botId string, peerId string) *pb.ChatRoom {
+	result := &pb.ChatRoom{}
+
+	o.Err = db.C(ChatRoomCollection).Find(bson.M{
+		"botId":  botId,
+		"peerId": peerId,
+	}).One(result)
+
+	return result
+}
+
+func (o *ErrorHandler) CreateChatRoom(db *mgo.Database, botId string, peerId string) *pb.ChatRoom {
+	o.UpdateOrCreateChatRoom(db, botId, peerId)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	return o.GetChatRoomWithPeerId(db, botId, peerId)
 }
 
 func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType string, fromRoomId string, limit int32) []*pb.ChatRoom {
@@ -64,7 +90,7 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType str
 	//o.EnsureChatRoomIndexes(db)
 
 	if fromRoomId != "" {
-		fromRoom := o.getChatRoom(db, fromRoomId)
+		fromRoom := o.GetChatRoomWithId(db, botId, fromRoomId)
 
 		if fromRoom != nil {
 			criteria["updatedAt"] = bson.M{"$lt": fromRoom.UpdatedAt}
@@ -74,7 +100,7 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType str
 	criteria["botId"] = botId
 
 	if chatType != "" && chatType != "all" {
-		criteria["type"] = chatType
+		criteria["chatType"] = chatType
 	}
 
 	query := db.C(ChatRoomCollection).Find(criteria).Sort("-updatedAt").Limit(int(limit))
@@ -106,7 +132,7 @@ func (o *ErrorHandler) UpdateOrCreateChatRoom(db *mgo.Database, botId string, pe
 		chatType = "group"
 	}
 
-	updatePayload["type"] = chatType
+	updatePayload["chatType"] = chatType
 
 	_, o.Err = db.C(ChatRoomCollection).Upsert(bson.M{
 		"botId":  botId,

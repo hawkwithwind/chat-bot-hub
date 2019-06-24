@@ -19,3 +19,18 @@ func (hub *ChatHub) GetBotChatRooms(ctx context.Context, request *pb.GetBotChatR
 
 	return response, nil
 }
+
+func (hub *ChatHub) GetBotChatRoom(ctx context.Context, request *pb.GetBotChatRoomRequest) (*pb.GetBotChatRoomResponse, error) {
+	o := &ErrorHandler{}
+
+	response := &pb.GetBotChatRoomResponse{}
+
+	room := o.GetChatRoomWithPeerId(hub.mongoDb, request.BotId, request.PeerId)
+	if room != nil {
+		response.ChatRoom = room
+	} else if request.CreateIfNotExist {
+		response.ChatRoom = o.CreateChatRoom(hub.mongoDb, request.BotId, request.PeerId)
+	}
+
+	return response, o.Err
+}
