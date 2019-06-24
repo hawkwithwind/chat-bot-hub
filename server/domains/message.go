@@ -220,6 +220,8 @@ func (o *ErrorHandler) buildGetMessagesCriteria(userId string, peerId string) bs
 	if strings.Index(peerId, "@chatroom") != -1 {
 		criteria["groupId"] = peerId
 	} else {
+		criteria["groupId"] = ""
+
 		criteria["$or"] = []bson.M{
 			{
 				"toUser":   userId,
