@@ -1,6 +1,7 @@
 package domains
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -56,8 +57,15 @@ func (o *ErrorHandler) GetChatRoomWithId(db *mgo.Database, roomId string) *pb.Ch
 	result := &pb.ChatRoom{}
 
 	o.Err = db.C(ChatRoomCollection).Find(bson.M{
-		"_id": roomId,
+		"_id": bson.ObjectIdHex(roomId),
 	}).One(result)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	result.Id = hex.EncodeToString(result.ObjectId)
+	result.ObjectId = nil
 
 	return result
 }
@@ -69,6 +77,13 @@ func (o *ErrorHandler) GetChatRoomWithPeerId(db *mgo.Database, botId string, pee
 		"botId":  botId,
 		"peerId": peerId,
 	}).One(result)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	result.Id = hex.EncodeToString(result.ObjectId)
+	result.ObjectId = nil
 
 	return result
 }
@@ -108,6 +123,12 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botIds []string, chatType 
 
 	var result []*pb.ChatRoom
 	o.Err = query.All(&result)
+
+	for _, room := range result {
+		room.Id = hex.EncodeToString(room.ObjectId)
+		room.ObjectId = nil
+	}
+
 	return result
 }
 
