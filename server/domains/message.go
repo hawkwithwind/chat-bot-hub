@@ -100,8 +100,7 @@ func (o *ErrorHandler) FillWechatMessagesContact(db *dbx.Database, messages []*W
 
 	for _, message := range messages {
 		if val, ok := fromUserMap.Load(message.FromUser); ok {
-			if val != nil {
-				user := val.(*ChatUser)
+			if user := val.(*ChatUser); user != nil {
 				message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
 			}
 		}

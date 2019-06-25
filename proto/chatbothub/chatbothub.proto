@@ -54,7 +54,7 @@ message BotFilterRequest {
 }
 
 message GetBotChatRoomsRequest {
-  string botId = 1;
+  repeated string botIds = 1;
   string fromRoomId = 2;
   int32 limit = 3;
   string chatType = 4;

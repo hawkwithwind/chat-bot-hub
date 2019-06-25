@@ -3,6 +3,7 @@ package streaming
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/globalsign/mgo/bson"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -34,7 +35,10 @@ func (server *Server) forwardMessage(message *domains.WechatMessage, botId strin
 	}
 
 	for _, connection := range connections {
-		event := connection.CreateRequest("new_messages", []*domains.WechatMessage{message})
+		event := connection.CreateRequest("new_messages", bson.M{
+			"botId":    botId,
+			"messages": []*domains.WechatMessage{message},
+		})
 		connection.SendWithAck(event, func(payload interface{}, err error) {
 			if err != nil {
 				server.Error(err, "Forward message failed")
