@@ -1,6 +1,7 @@
 data/
 testdata/
 rebuild.sh
+rabbitmq.env
 mysql.env
 build/
 config/config.yml

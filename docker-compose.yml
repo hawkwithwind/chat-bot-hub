@@ -37,6 +37,7 @@ services:
     command: ./app/server -s web
     env_file:
       - ./mysql.env
+      - ./rabbitmq.env
     ports:
       - '9000:9000'
 
@@ -66,7 +67,18 @@ services:
     command: --smallfiles
     ports:
       - '27017:27017'
-      
+
+  rabbitmq:
+    restart: unless-stopped
+    image: rabbitmq:3.7-management-alpine
+    networks:
+      - chatbothub-network
+    env_file:
+      - ./rabbitmq.env
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+
 volumes:
   chatbothub-mysql:
     external: true
