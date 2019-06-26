@@ -5,3 +5,11 @@ type DatabaseConfig struct {
 	DataSourceName string
 	MaxConnectNum  int
 }
+
+type OssConfig struct {
+	Region string
+	Accesskeyid string
+    Accesskeysecret string
+    Bucket string
+}
+

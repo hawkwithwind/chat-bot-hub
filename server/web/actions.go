@@ -14,6 +14,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"	
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -193,22 +194,6 @@ func (o *ErrorHandler) CreateFilterChain(
 			break
 		}
 	}
-}
-
-type WechatSnsMoment struct {
-	CreateTime  int    `json:"createTime" msg:"createTime"`
-	Description string `json:"description" msg:"description"`
-	MomentId    string `json:"id" msg:"id"`
-	NickName    string `json:"nickName" msg:"nickName"`
-	UserName    string `json:"userName" msg:"userName"`
-}
-
-type WechatSnsTimeline struct {
-	Data    []WechatSnsMoment `json:"data"`
-	Count   int               `json:"count"`
-	Message string            `json:"message"`
-	Page    string            `json:"page"`
-	Status  int               `json:"status"`
 }
 
 func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
@@ -493,49 +478,53 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	case chatbothub.MESSAGE:
 		msg := o.getStringValue(r.Form, "body")
+		if o.Err != nil {
+			return
+		}
+		
 		if thebotinfo.ClientType == "WECHATBOT" {
-			body := o.FromJson(msg)
-			if body != nil {
-				fromUser := o.FromMapString("fromUser", body, "body", false, "")
-				groupId := o.FromMapString("groupId", body, "body", true, "")
-				msgId := o.FromMapString("msgId", body, "body", false, "")
-				timestamp := int64(o.FromMapFloat("timestamp", body, "body", false, 0))
-				tm := o.BJTimeFromUnix(timestamp)
-				if o.Err != nil {
-					return
-				}
+			message := models.WechatMessage{}
+			o.Err = json.Unmarshal([]byte(msg), &message)
+			if o.Err != nil {
+				return
+			}
+			
+			tm := o.BJTimeFromUnix(message.Timestamp)
+			if o.Err != nil {
+				return
+			}
+			
+			chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, message.FromUser)
+			if o.Err != nil {
+				return
+			}
 
-				chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, fromUser)
+			if chatuser != nil {
+				chatuser.SetLastSendAt(tm)
+				chatuser.SetLastMsgId(message.MsgId)
+				o.UpdateChatUser(tx, chatuser)
 				if o.Err != nil {
 					return
 				}
-				if chatuser != nil {
-					chatuser.SetLastSendAt(tm)
-					chatuser.SetLastMsgId(msgId)
-					o.UpdateChatUser(tx, chatuser)
+			}
+
+			if message.GroupId != "" {
+				chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, message.GroupId)
+				if o.Err != nil {
+					return
+				}
+				if chatgroup != nil {
+					chatgroup.SetLastSendAt(tm)
+					chatgroup.SetLastMsgId(message.MsgId)
+					o.UpdateChatGroup(tx, chatgroup)
 					if o.Err != nil {
 						return
 					}
 				}
+			}
 
-				if groupId != "" {
-					chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupId)
-					if o.Err != nil {
-						return
-					}
-					if chatgroup != nil {
-						chatgroup.SetLastSendAt(tm)
-						chatgroup.SetLastMsgId(msgId)
-						o.UpdateChatGroup(tx, chatgroup)
-						if o.Err != nil {
-							return
-						}
-					}
-				}
-
-				if o.Err != nil {
-					return
-				}
+			if o.Err != nil {
+				return
 			}
 		}
 
@@ -853,7 +842,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
-				wetimeline := WechatSnsTimeline{}
+				wetimeline := models.WechatSnsTimeline{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
 				if o.Err != nil {
 					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
@@ -920,7 +909,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 				// all items new, means there are more to pull, save earliest momentId
 				if len(wetimeline.Data) > 0 {
-					var minItem WechatSnsMoment
+					var minItem models.WechatSnsMoment
 					for i, d := range wetimeline.Data {
 						if i == 0 || d.CreateTime < minItem.CreateTime {
 							minItem = d
