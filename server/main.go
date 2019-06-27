@@ -75,6 +75,7 @@ func loadConfig(configPath string) (MainConfig, error) {
 	c.Streaming.Database = c.Web.Database
 	c.Streaming.Mongo = c.Web.Mongo
 	c.Streaming.WebBaseUrl = c.Web.Baseurl
+	c.Streaming.Oss = c.Hub.Oss
 
 	return c, nil
 }

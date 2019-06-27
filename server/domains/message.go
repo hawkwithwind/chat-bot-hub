@@ -3,9 +3,11 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/mitchellh/mapstructure"
 	"strings"
 	"sync"
@@ -41,6 +43,7 @@ type WechatMessage struct {
 	MsgSource       interface{}           `json:"msgSource" bson:"msgSource"`
 	UpdatedAt       time.Time             `json:"updateAt" bson:"updatedAt"`
 	FromUserContact *WechatMessageContact `json:"fromUserContact,omitempty" bson:"-"`
+	SignedUrl       string                `json:"signedUrl,omitempty" bson:"-"`
 }
 
 type UnreadMessageMeta struct {
@@ -107,6 +110,18 @@ func (o *ErrorHandler) FillWechatMessagesContact(db *dbx.Database, messages []*W
 	}
 
 	return nil
+}
+
+func (o *ErrorHandler) FillWechatMessagesImageSignedURL(ossBucket *oss.Bucket, messages []*WechatMessage) {
+	for _, message := range messages {
+		if message.MType == 3 {
+			// 图片消息
+			message.SignedUrl, _ = utils.GenSignedURL(ossBucket, message.ImageId, "IMAGEMESSAGE")
+		} else if message.MType == 47 {
+			// emoji 消息
+			message.SignedUrl, _ = utils.GenSignedURL(ossBucket, message.ImageId, "EMOJIMESSAGE")
+		}
+	}
 }
 
 func (o *ErrorHandler) GetWechatMessages(query *mgo.Query) []*WechatMessage {

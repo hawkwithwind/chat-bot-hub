@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
@@ -27,6 +28,7 @@ type Config struct {
 
 	Mongo    utils.MongoConfig
 	Database utils.DatabaseConfig
+	Oss      utils.OssConfig
 
 	WebBaseUrl string
 }
@@ -45,6 +47,9 @@ type Server struct {
 	db      *dbx.Database
 
 	restfulclient *http.Client
+
+	ossClient *oss.Client
+	ossBucket *oss.Bucket
 }
 
 func (server *Server) init() error {
@@ -72,6 +77,21 @@ func (server *Server) init() error {
 	}
 
 	server.restfulclient = httpx.NewHttpClient()
+
+	ossClient, err := oss.New(server.Config.Oss.Region, server.Config.Oss.Accesskeyid, server.Config.Oss.Accesskeysecret, oss.UseCname(true))
+	if err != nil {
+		server.Error(err, "cannot create ossClient")
+		return err
+	}
+
+	ossBucket, err := ossClient.Bucket(server.Config.Oss.Bucket)
+	if err != nil {
+		server.Error(err, "cannot get oss bucket")
+		return err
+	}
+
+	server.ossClient = ossClient
+	server.ossBucket = ossBucket
 
 	return nil
 }

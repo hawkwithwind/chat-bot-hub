@@ -76,6 +76,7 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 
 	messages := o.GetMessagesHistories(server.mongoDb, bot.Login, params.PeerId, params.Direction, params.FromMessageId)
 	_ = o.FillWechatMessagesContact(server.db, messages)
+	o.FillWechatMessagesImageSignedURL(server.ossBucket, messages)
 
 	return messages, o.Err
 }
@@ -114,7 +115,13 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 		go func() {
 			defer wg.Done()
 
-			result[index] = o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
+			meta := o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
+
+			if meta.LatestMessage != nil {
+				o.FillWechatMessagesImageSignedURL(wsConnection.server.ossBucket, []*domains.WechatMessage{meta.LatestMessage})
+			}
+
+			result[index] = meta
 		}()
 
 	}
