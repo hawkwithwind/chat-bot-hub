@@ -5,13 +5,15 @@ import (
 	"golang.org/x/net/context"
 	"io"
 	"sync"
+	"net/http"
 
-	// "google.golang.org/grpc/status"
-	// "google.golang.org/grpc/codes"
-	// "google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type StreamingNode struct {
@@ -25,10 +27,26 @@ type StreamingNode struct {
 }
 
 type StreamingActionType int32
+type StreamingResourceType int32
 
 const (
 	Subscribe   StreamingActionType = 1
 	UnSubscribe StreamingActionType = 2
+
+	Message     StreamingResourceType = 1
+	Moment      StreamingResourceType = 2
+)
+
+var (
+	resourceTypeNames map[StreamingResourceType]string = map[StreamingResourceType]string {
+		Message: "message",
+		Moment: "moment",
+	}
+
+	actionTypeNames map[StreamingActionType]string = map[StreamingActionType]string {
+		Subscribe: "subscribe",
+		UnSubscribe: "unsubscribe",
+	}
 )
 
 func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequest) (*pb.OperationReply, error) {
@@ -40,15 +58,70 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 	subs := []string{}
 	unsubs := []string{}
 
-	// md, ok := metadata.FromIncomingContext(ctx)
-	// if !ok {
-	// 	return nil, status.Error(codes.PermissionDenied, "metadata is null")
-	// }
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "metadata is null")
+	}
 
-	// token, ok := md["token"]
-	// if !ok {
-	// 	return nil, status.Error(codes.PermissionDenied, "metadata[token] is not set")
-	// }
+	tokens, ok := md["token"]
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "metadata[token] is not set")
+	}
+
+	if len(tokens) == 0 {
+		return nil, status.Error(codes.PermissionDenied, "metadata[token] is empty")
+	}
+
+	token := tokens[0]
+	
+	o := &ErrorHandler{}
+	authuser := o.ValidateJWTToken(hub.WebSecretPhrase, token)
+	if o.Err != nil {
+		return nil, status.Error(codes.PermissionDenied, o.Err.Error())
+	}
+
+	if authuser == nil {
+		return nil, status.Error(codes.PermissionDenied, "authuser is null")
+	}
+
+	if authuser.Child != nil {
+		restreq := httpx.NewRestfulRequest("post", authuser.Child.AuthUrl)
+		params := map[string]interface{}{}
+		params["metadata"] = authuser.Child.Metadata
+		resources := []interface{}{}
+
+		for _, res := range req.Resources {
+
+			if StreamingActionType(res.ActionType) != Subscribe {
+				// only check subs, unsubs is always safe
+				continue
+			}
+
+			rtname, found := resourceTypeNames[StreamingResourceType(res.ResourceType)]
+			if !found {
+				return nil, status.Error(codes.PermissionDenied, "malformed request")
+			}			
+
+			// only subs botIds, ignore chatuser and groups
+			resources = append(resources, map[string]interface{}{
+				"botId": res.BotId,
+				"resourceType": rtname,
+				"actionType": "subscribe",				
+			})
+		}
+		params["resources"] = resources
+		
+		restreq.Body = o.ToJson(params)
+
+		resp, err := httpx.RestfulCallCore(hub.restfulclient, restreq)
+		if err != nil {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, status.Error(codes.PermissionDenied, o.ToJson(resp))
+		}
+	}	
 
 	for _, res := range req.Resources {
 		at := StreamingActionType(res.ActionType)

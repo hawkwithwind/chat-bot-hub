@@ -122,6 +122,7 @@ func main() {
 					Webhost:    "web",
 					Webport:    config.Web.Port,
 					WebBaseUrl: config.Web.Baseurl,
+					WebSecretPhrase: config.Web.SecretPhrase,
 				}
 				hub.Serve()
 			}, nil)
