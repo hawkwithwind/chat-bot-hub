@@ -84,7 +84,7 @@ func (hub *ChatHub) init() {
 	// set global variable chathub
 	chathub = hub
 
-	ossClient, err := oss.New(hub.Config.Oss.Region, hub.Config.Oss.Accesskeyid, hub.Config.Oss.Accesskeysecret)
+	ossClient, err := oss.New(hub.Config.Oss.Region, hub.Config.Oss.Accesskeyid, hub.Config.Oss.Accesskeysecret, oss.UseCname(true))
     if err != nil {
         hub.Error(err, "cannot create ossClient")
 		return
