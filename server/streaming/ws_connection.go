@@ -24,8 +24,8 @@ type WsConnection struct {
 	server *Server
 	conn   *websocket.Conn
 
-	user *utils.AuthUser
-	bots []domains.BotExpand
+	hubToken string
+	bots     []domains.BotExpand
 
 	eventSeq int64
 
@@ -76,20 +76,21 @@ func (wsConnection *WsConnection) Close() error {
  * private methods
  */
 
-func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, user *utils.AuthUser) (*WsConnection, error) {
+func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, token string, user *utils.AuthUser) (*WsConnection, error) {
 	o := &ErrorHandler{}
 	bots := o.GetBotsByAccountName(server.db.Conn, user.AccountName)
 	if o.Err != nil {
 		return nil, o.Err
 	}
 
-	result := &WsConnection{server: server, conn: wsConnection, user: user}
+	result := &WsConnection{server: server, conn: wsConnection}
 
 	result.eventSeq = 1
 	result.eventHandlers = &sync.Map{}
 	result.ackCallbacks = &sync.Map{}
 	result.eventsToWriteChan = make(chan WsEvent, 128)
 	result.bots = bots
+	result.hubToken = token
 
 	return result, nil
 }

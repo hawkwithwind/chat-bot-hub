@@ -5,8 +5,10 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/logger"
+	"math/rand"
 	"net/http"
 	"sync"
 
@@ -30,7 +32,8 @@ type Config struct {
 	Database utils.DatabaseConfig
 	Oss      utils.OssConfig
 
-	WebBaseUrl string
+	WebBaseUrl   string
+	SecretPhrase string
 }
 
 type Server struct {
@@ -50,6 +53,8 @@ type Server struct {
 
 	ossClient *oss.Client
 	ossBucket *oss.Bucket
+
+	grpcWrapper *rpc.GRPCWrapper
 }
 
 func (server *Server) init() error {
@@ -92,6 +97,9 @@ func (server *Server) init() error {
 
 	server.ossClient = ossClient
 	server.ossBucket = ossBucket
+
+	i := rand.Intn(len(server.Config.Chathubs))
+	server.grpcWrapper = rpc.CreateGRPCWrapper(server.Config.Chathubs[i])
 
 	return nil
 }

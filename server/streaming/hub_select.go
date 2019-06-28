@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"io"
 	"time"
 
@@ -136,4 +137,8 @@ func (server *Server) SendHubBotAction(botLogin string, actionType string, actio
 	request.Body = string(bodyStr)
 
 	return httpx.RestfulCallRetry(server.restfulclient, request, 3, 1)
+}
+
+func (server *Server) NewGRPCWrapper() (*rpc.GRPCWrapper, error) {
+	return server.grpcWrapper.Clone()
 }

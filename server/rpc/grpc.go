@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"fmt"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -20,11 +19,11 @@ type GRPCWrapper struct {
 	factory    func() (*grpc.ClientConn, error)
 }
 
-func CreateGRPCWrapper(host string, port string) *GRPCWrapper {
+func CreateGRPCWrapper(addr string) *GRPCWrapper {
 	return &GRPCWrapper{
 		lastActive: time.Now(),
 		factory: func() (*grpc.ClientConn, error) {
-			return grpc.Dial(fmt.Sprintf("%s:%s", host, port), grpc.WithInsecure())
+			return grpc.Dial(addr, grpc.WithInsecure())
 		},
 	}
 }

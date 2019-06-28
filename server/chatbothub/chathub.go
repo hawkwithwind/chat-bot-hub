@@ -605,13 +605,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
 
-					///////////////////
-					//just for testing, will delete after implement sub/unsub and auth
-					for _, snode := range hub.streamingNodes {
-						snode.Sub([]string{botId})
-					}
-					////////////////////
-
 					if o.Err == nil {
 						go func() {
 							if _, err := httpx.RestfulCallRetry(hub.restfulclient,

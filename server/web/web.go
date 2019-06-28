@@ -127,7 +127,7 @@ func (ctx *WebServer) init() error {
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
 
-	ctx.wrapper = rpc.CreateGRPCWrapper(ctx.Hubhost, ctx.Hubport)
+	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubport, ctx.Hubport))
 
 	return nil
 }
