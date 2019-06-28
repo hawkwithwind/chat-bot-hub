@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"log"
 	//"io"
 	"context"
@@ -50,7 +51,7 @@ type WebServer struct {
 	Hubport string
 	Hubhost string
 
-	wrapper       *GRPCWrapper
+	wrapper       *rpc.GRPCWrapper
 	restfulclient *http.Client
 
 	logger        *log.Logger
@@ -126,7 +127,7 @@ func (ctx *WebServer) init() error {
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
 
-	ctx.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+	ctx.wrapper = rpc.CreateGRPCWrapper(ctx.Hubhost, ctx.Hubport)
 
 	return nil
 }
