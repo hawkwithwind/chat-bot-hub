@@ -1,6 +1,5 @@
 package streaming
 
-import "C"
 import (
 	"encoding/json"
 	"fmt"
