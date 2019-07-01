@@ -17,14 +17,17 @@ import (
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/streadway/amqp"
 
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
+	
 )
 
 type ErrorHandler struct {
@@ -40,6 +43,7 @@ type ChatHubConfig struct {
 	Mongo    utils.MongoConfig
 	Database utils.DatabaseConfig
 	Oss      utils.OssConfig
+	Rabbitmq utils.RabbitMQConfig
 }
 
 var (
@@ -81,6 +85,25 @@ func (hub *ChatHub) init() {
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
 
+	err = hub.mqReconnect()
+	if err != nil {
+		hub.Error(err, "connect to rabbitmq failed")
+		return
+	}
+
+	_, err = hub.mqChannel.QueueDeclare(
+		utils.CH_BotNotify,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		hub.Error(err, "declare queue failed")
+		return
+	}
+
 	// set global variable chathub
 	chathub = hub
 
@@ -98,6 +121,35 @@ func (hub *ChatHub) init() {
 
 	hub.ossClient = ossClient
 	hub.ossBucket = ossBucket
+}
+
+func (hub *ChatHub) mqReconnect() error {
+	o := ErrorHandler{}
+
+	if hub.mqConn != nil && hub.mqConn.IsClosed() == false {
+		return nil
+	}
+	
+	hub.mqConn = o.RabbitMQConnect(hub.Config.Rabbitmq)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	hub.mqChannel = o.RabbitMQChannel(hub.mqConn)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	o.Err = hub.mqChannel.Qos(
+		1, // prefetch count
+		0, // prefetch size
+		false, //global
+	)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	return nil
 }
 
 type ChatHub struct {
@@ -128,7 +180,29 @@ type ChatHub struct {
 
 	ossClient *oss.Client
 	ossBucket *oss.Bucket
+
+	mqConn    *amqp.Connection
+	mqChannel *amqp.Channel
 }
+
+func (hub *ChatHub) mqSend(queue string, body string) error {
+	err := hub.mqReconnect()
+	if err != nil {
+		return err
+	}
+	
+	return hub.mqChannel.Publish(
+		"",    // exchange
+		queue,
+		false, // mandatory
+		false, // immediate
+		amqp.Publishing {
+			DeliveryMode: amqp.Persistent,
+			ContentType: "text/plain",
+			Body: []byte(body),
+		})
+}
+
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	o := &ErrorHandler{}
@@ -293,11 +367,13 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 	}
 
 	if imagekey != "" {
-		signedURL, err := hub.ossBucket.SignURL(imagekey, oss.HTTPGet, 60)
-		if err != nil {
-			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imagekey)
-		} else {
-			bodyJSON["signedUrl"] = signedURL
+		if hub.ossBucket != nil {
+			signedURL, err := hub.ossBucket.SignURL(imagekey, oss.HTTPGet, 60)
+			if err != nil {
+				hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imagekey)
+			} else {
+				bodyJSON["signedUrl"] = signedURL
+			}
 		}
 	}
 
@@ -325,10 +401,20 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 		}
 	}
 
-	go func() {
-		_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
-	}()
+	//go func() {
+	//	_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+	//}()
 
+	err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+		BotId: bot.BotId,
+		EventType: inEvent.EventType,
+		Body: newBodyStr,
+	}))
+
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 

@@ -285,54 +285,115 @@ func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	defer o.BackEndError(ctx)
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
+
+
+	r.ParseForm()
+	eventType := o.getStringValue(r.Form, "event")
+	bodystr := o.getStringValue(r.Form, "body")
+
+	if o.Err != nil {
+		return
+	}
+
+	err := ctx.processBotNotify(botId, eventType, bodystr)
+	if err != nil {
+		o.Err = err
+		return
+	}
+	
+	o.ok(w, "success", nil)
+}
+
+func (ctx *WebServer) mqConsume() {
+	for {
+		err := ctx.mqReconnect()
+		if err != nil {
+			ctx.Error(err, "connect to rabbitmq failed")
+			continue
+		}
+		
+		msgs, err := ctx.mqChannel.Consume(
+			utils.CH_BotNotify, // queue
+			"",    // consumer 
+			false, // auto-ack
+			false, // exclusive
+			false, // no-local
+			false, // no-wait
+			nil,   // args
+		)
+
+		if err != nil {
+			ctx.Error(err, "failed to register a consumer")
+			continue
+		}
+
+		go func() {
+			for d := range msgs {
+				mqEvent := models.MqEvent{}
+
+				err := json.Unmarshal(d.Body, &mqEvent)
+				if err != nil {
+					ctx.Error(err, "unmarshal mqevent failed")
+					continue
+				}
+
+				err = ctx.processBotNotify(mqEvent.BotId, mqEvent.EventType, mqEvent.Body)
+				if err != nil {
+					ctx.Error(err, "process event failed")
+					continue
+				}
+				d.Ack(false)
+			}
+		}()
+	}
+}
+
+func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr string) error {
+	o := ErrorHandler{}
+	defer o.BackEndError(ctx)
 
 	ctx.Info("botNotify %s", botId)
 
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
-		return
+		return o.Err
 	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
-	r.ParseForm()
-	eventType := o.getStringValue(r.Form, "event")
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
-		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
 		ctx.Info("[contacts debug] bot notify received raw")
-		o.ok(w, "success", nil)
-		return
+		return nil
 	}
 
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 	defer o.CommitOrRollback(tx)
 
 	bot := o.GetBotById(tx, botId)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
 	if bot == nil {
 		o.Err = fmt.Errorf("bot %s not found", botId)
-		return
+		return o.Err
 	}
 
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
@@ -345,7 +406,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
 	switch eventType {
@@ -356,7 +417,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-		return
+		return nil
 
 	case chatbothub.LOGINDONE:
 		var oldtoken string
@@ -386,7 +447,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
@@ -396,7 +457,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.Login = thebotinfo.Login
 		o.UpdateBotLogin(tx, bot)
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		// rebuild msg filter error and new action error should not effect update bot login
@@ -414,14 +475,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
 		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
-		return
+		return nil
 
 	case chatbothub.FRIENDREQUEST:
-		reqstr := o.getStringValue(r.Form, "body")
-		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, reqstr)
+		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
-			reqm := o.FromJson(reqstr)
+			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
@@ -430,7 +490,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, reqstr, "NEW")
+		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, bodystr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -456,9 +516,8 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}()
 
 	case chatbothub.STATUSMESSAGE:
-		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
-
+		
 		go func() {
 			if bot.Callback.Valid {
 				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
@@ -469,34 +528,33 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}()
 
 	case chatbothub.GROUPINFO:
-		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
-
+		
 		if thebotinfo.ClientType == "WECHATBOT" {
 
 		}
 
 	case chatbothub.MESSAGE:
-		msg := o.getStringValue(r.Form, "body")
+		msg := bodystr
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 		
 		if thebotinfo.ClientType == "WECHATBOT" {
 			message := models.WechatMessage{}
 			o.Err = json.Unmarshal([]byte(msg), &message)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 			
 			tm := o.BJTimeFromUnix(message.Timestamp)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 			
 			chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, message.FromUser)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			if chatuser != nil {
@@ -504,27 +562,27 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				chatuser.SetLastMsgId(message.MsgId)
 				o.UpdateChatUser(tx, chatuser)
 				if o.Err != nil {
-					return
+					return o.Err
 				}
 			}
 
 			if message.GroupId != "" {
 				chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, message.GroupId)
 				if o.Err != nil {
-					return
+					return o.Err
 				}
 				if chatgroup != nil {
 					chatgroup.SetLastSendAt(tm)
 					chatgroup.SetLastMsgId(message.MsgId)
 					o.UpdateChatGroup(tx, chatgroup)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 				}
 			}
 
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 		}
 
@@ -533,7 +591,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	//case chatbothub.EMOJIMESSAGE:
 
 	case chatbothub.ACTIONREPLY:
-		reqstr := o.getStringValue(r.Form, "body")
+		reqstr := bodystr
 		debugstr := reqstr
 		if len(debugstr) > 120 {
 			debugstr = debugstr[:120]
@@ -549,7 +607,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		localar.ReplyAt = awayar.ReplyAt
@@ -571,7 +629,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 								"status", rdata, "actionReply.result.data", false, 0))
 
 							if o.Err != nil {
-								return
+								return o.Err
 							}
 
 							if status == 0 {
@@ -591,7 +649,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err != nil {
 			ctx.Info("result is %s", awayar.Result)
-			return
+			return o.Err
 		}
 
 		switch localar.ActionType {
@@ -602,7 +660,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			for _, fr := range frs {
@@ -665,12 +723,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 					o.UpdateOrCreateChatUser(tx, chatuser)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 					if theuser == nil {
 						o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
@@ -678,7 +736,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 					o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
@@ -689,18 +747,18 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			userId := o.FromMapString("userId", bodym, "actionBody", false, "")
 
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			if acresult.Success == false {
 				ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
-				return
+				return nil
 			}
 			switch resdata := acresult.Data.(type) {
 			case map[string]interface{}:
@@ -708,7 +766,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				case float64:
 					if restatus != 0 {
 						ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
-						return
+						return nil
 					}
 				}
 			}
@@ -717,7 +775,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			o.DeleteChatContact(tx, bot.BotId, userId)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
@@ -725,23 +783,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			info := WechatContactInfo{}
 			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &info)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			if info.UserName == "" {
 				ctx.Info("search user name empty, ignore. body:\n %s\n", localar.Result)
-				return
+				return nil
 			}
 
 			if info.UserName[:5] != "wxid_" {
 				ctx.Info("search user not friend, ignore for now.\n%v", info)
-				return
+				return nil
 			}
 
 			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
@@ -763,35 +821,35 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			bodym := o.FromJson(localar.ActionBody)
 			groupId := o.FromMapString("groupId", bodym, "actionBody", false, "")
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			ctx.Info("groupId %s, returned\n%v\n", groupId, localar.Result)
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			groupInfo := WechatGroupInfo{}
 			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &groupInfo)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			// 1. find group
 			chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupInfo.UserName)
 			if o.Err != nil {
-				return
+				return o.Err
 			} else if chatgroup == nil {
 				o.Err = fmt.Errorf("didn't find chat group %s", groupInfo.UserName)
-				return
+				return o.Err
 			}
 
 			// 1.1 save botId contact groupId, if not exist
 			o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			// 2. update group members
@@ -803,10 +861,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			members := o.FindOrCreateChatUsers(tx, users)
 			if o.Err != nil {
-				return
+				return o.Err
 			} else if len(members) != len(users) {
 				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(users), len(members), members)
-				return
+				return o.Err
 			}
 
 			memberMap := map[string]string{}
@@ -838,7 +896,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
 				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
-				return
+				return o.Err
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
@@ -846,7 +904,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
 				if o.Err != nil {
 					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
-					return
+					return o.Err
 				}
 
 				ctx.Info("Wechat Sns Timeline")
@@ -858,14 +916,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
-						return
+						return o.Err
 					}
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
 					foundms := o.GetMomentByCode(tx, m.MomentId)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					if len(foundms) == 0 {
@@ -879,7 +937,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
@@ -896,7 +954,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
@@ -904,7 +962,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if o.Err != nil {
-					return
+					return o.Err
 				}
 
 				// all items new, means there are more to pull, save earliest momentId
@@ -929,7 +987,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 		o.SaveActionRequest(ctx.redispool, localar)
 
@@ -945,9 +1003,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
+		return o.Err
 	}
 
-	o.ok(w, "success", nil)
+	return o.Err
 }
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {

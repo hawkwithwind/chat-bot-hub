@@ -24,6 +24,7 @@ type MainConfig struct {
 	Web       web.WebConfig
 	Redis     utils.RedisConfig
 	Fluent    utils.FluentConfig
+	Rabbitmq  utils.RabbitMQConfig
 	Streaming streaming.Config
 }
 
@@ -101,9 +102,11 @@ func main() {
 			defer wg.Done()
 			config.Web.Redis = config.Redis
 			config.Web.Fluent = config.Fluent
+			config.Web.Rabbitmq = config.Rabbitmq
+			
 			webserver := web.WebServer{
 				Config:  config.Web,
-				Hubhost: "127.0.0.1",
+				Hubhost: "hub",
 				Hubport: config.Hub.Port}
 			webserver.Serve()
 		}()
@@ -117,6 +120,8 @@ func main() {
 			raven.CapturePanicAndWait(func() {
 				config.Hub.Redis = config.Redis
 				config.Hub.Fluent = config.Fluent
+				config.Hub.Rabbitmq = config.Rabbitmq
+				
 				hub := chatbothub.ChatHub{
 					Config:     config.Hub,
 					Webhost:    "web",

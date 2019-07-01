@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
 	"github.com/hawkwithwind/mux"
+	"github.com/streadway/amqp"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -38,6 +39,8 @@ type WebConfig struct {
 	Redis        utils.RedisConfig
 	Fluent       utils.FluentConfig
 	Mongo        utils.MongoConfig
+	Rabbitmq     utils.RabbitMQConfig
+	
 	SecretPhrase string
 	Database     utils.DatabaseConfig
 	Sentry       string
@@ -61,6 +64,9 @@ type WebServer struct {
 	mongoDb       *mgo.Database
 	contactParser *ContactParser
 	accounts      Accounts
+
+	mqConn        *amqp.Connection
+	mqChannel     *amqp.Channel
 }
 
 func (ctx *WebServer) init() error {
@@ -122,11 +128,64 @@ func (ctx *WebServer) init() error {
 		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
 	}
 
+	err = ctx.mqReconnect()
+	if err != nil {
+		ctx.Error(err, "connect to rabbitmq failed")
+		return err
+	}
+
+	_, err = ctx.mqChannel.QueueDeclare(
+		utils.CH_BotNotify,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		ctx.Error(err, "declare queue failed")
+		return err
+	}
+
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
 
 	ctx.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
+
+	go func() {
+		ctx.mqConsume()
+	} ()
+	ctx.Info("begin consume rabbitmq ...")
+
+	return nil
+}
+
+func (web *WebServer) mqReconnect() error {
+	o := ErrorHandler{}
+
+	if web.mqConn != nil && web.mqConn.IsClosed() == false {
+		return nil
+	}
+	
+	web.mqConn = o.RabbitMQConnect(web.Config.Rabbitmq)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	web.mqChannel = o.RabbitMQChannel(web.mqConn)
+	if o.Err != nil {
+		return o.Err
+	}
+
+	o.Err = web.mqChannel.Qos(
+		1, // prefetch count
+		0, // prefetch size
+		false, //global
+	)
+	if o.Err != nil {
+		return o.Err
+	}
 
 	return nil
 }
