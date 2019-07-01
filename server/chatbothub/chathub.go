@@ -700,13 +700,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 					////////////////////
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify logindone failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-								hub.Error(err, "webnotify logindone failed\n")
-							}
-						}()
+						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: thebot.BotId,
+							EventType: LOGINDONE,
+							Body: "",
+						}))
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
@@ -741,37 +749,61 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
+				// if o.Err == nil {
+				// 	go func() {
+				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 			thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
+				// 			hub.Error(err, "webnotify updatetoken failed\n")
+				// 		}
+				// 	}()
+				// }
+
 				if o.Err == nil {
-					go func() {
-						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-							thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
-							hub.Error(err, "webnotify updatetoken failed\n")
-						}
-					}()
+					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId: thebot.BotId,
+						EventType: UPDATETOKEN,
+						Body: "",
+					}))
 				}
 
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
+				// if o.Err == nil {
+				// 	go func() {
+				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 			bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
+				// 			hub.Error(err, "webnotify friendrequest failed\n")
+				// 		}
+				// 	}()
+				// }
+				
 				if o.Err == nil {
-					go func() {
-						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-							hub.Error(err, "webnotify friendrequest failed\n")
-						}
-					}()
+					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId: bot.BotId,
+						EventType: FRIENDREQUEST,
+						Body: reqstr,
+					}))
 				}
 
 			case CONTACTSYNCDONE:
 				hub.Info("contact sync done")
 
-				go func() {
-					if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
-						hub.Error(err, "webnotify contactsync done failed\n")
-					}
-				}()
-
+				// go func() {
+				// 	if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 		bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
+				// 		hub.Error(err, "webnotify contactsync done failed\n")
+				// 	}
+				// }()
+				
+				if o.Err == nil {
+					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId: bot.BotId,
+						EventType: CONTACTSYNCDONE,
+						Body: "",
+					}))
+				}
+				
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
@@ -822,19 +854,31 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.onSendMessage(bot, actionType.(string), actionBody, result)
 					}
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(
+					// 				hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+					// 					ActionRequestId: actionRequestId,
+					// 					Result:          o.ToJson(result),
+					// 					ReplyAt:         utils.JSONTime{Time: time.Now()},
+					// 				})), 5, 1)
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(
-									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
-										ActionRequestId: actionRequestId,
-										Result:          o.ToJson(result),
-										ReplyAt:         utils.JSONTime{Time: time.Now()},
-									})), 5, 1)
-						}()
+						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: bot.BotId,
+							EventType: ACTIONREPLY,
+							Body: o.ToJson(domains.ActionRequest{
+								ActionRequestId: actionRequestId,
+								Result:          o.ToJson(result),
+								ReplyAt:         utils.JSONTime{Time: time.Now()},
+							}),
+						}))
 					}
 				}
-
+				
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
@@ -855,13 +899,22 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					bodym := o.FromJson(msg)
 					hub.Info("status message %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify statusmessage failed\n")
+					// 		}
+					// 	}()
+					// }
+
+					
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify statusmessage failed\n")
-							}
-						}()
+						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: bot.BotId,
+							EventType: STATUSMESSAGE,
+							Body: in.Body,
+						}))
 					}
 				}
 
@@ -872,13 +925,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("contact info %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify contact info failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify contact info failed\n")
-							}
-						}()
+						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: bot.BotId,
+							EventType: CONTACTINFO,
+							Body: in.Body,
+						}))
 					}
 				}
 
@@ -889,13 +950,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("group info %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify group info failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify group info failed\n")
-							}
-						}()
+						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: bot.BotId,
+							EventType: GROUPINFO,
+							Body: in.Body,
+						}))
 					}
 				}
 
