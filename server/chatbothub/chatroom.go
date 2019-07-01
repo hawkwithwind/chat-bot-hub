@@ -8,7 +8,7 @@ import (
 func (hub *ChatHub) GetBotChatRooms(ctx context.Context, request *pb.GetBotChatRoomsRequest) (*pb.GetBotChatRoomsResponse, error) {
 	o := &ErrorHandler{}
 
-	chatRooms := o.GetChatRooms(hub.mongoDb, request.BotId, request.ChatType, request.FromRoomId, request.Limit)
+	chatRooms := o.GetChatRooms(hub.mongoDb, request.BotIds, request.ChatType, request.FromRoomId, request.Limit)
 
 	if o.Err != nil {
 		return nil, o.Err

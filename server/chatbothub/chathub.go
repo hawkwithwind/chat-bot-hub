@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/streadway/amqp"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
@@ -55,11 +55,11 @@ func (hub *ChatHub) init() {
 
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
 	var err error
-	hub.fluentLogger, err = fluent.New(fluent.Config{
-		FluentPort:   hub.Config.Fluent.Port,
-		FluentHost:   hub.Config.Fluent.Host,
-		WriteTimeout: 60 * time.Second,
-	})
+	//hub.fluentLogger, err = fluent.New(fluent.Config{
+	//	FluentPort:   hub.Config.Fluent.Port,
+	//	FluentHost:   hub.Config.Fluent.Host,
+	//	WriteTimeout: 60 * time.Second,
+	//})
 	if err != nil {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
@@ -108,16 +108,16 @@ func (hub *ChatHub) init() {
 	chathub = hub
 
 	ossClient, err := oss.New(hub.Config.Oss.Region, hub.Config.Oss.Accesskeyid, hub.Config.Oss.Accesskeysecret, oss.UseCname(true))
-    if err != nil {
-        hub.Error(err, "cannot create ossClient")
+	if err != nil {
+		hub.Error(err, "cannot create ossClient")
 		return
-    }
-    
-    ossBucket, err := ossClient.Bucket(hub.Config.Oss.Bucket)
-    if err != nil {
-        hub.Error(err, "cannot get oss bucket")
+	}
+
+	ossBucket, err := ossClient.Bucket(hub.Config.Oss.Bucket)
+	if err != nil {
+		hub.Error(err, "cannot get oss bucket")
 		return
-    }
+	}
 
 	hub.ossClient = ossClient
 	hub.ossBucket = ossBucket
@@ -345,35 +345,31 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		return nil, o.Err
 	}
 
-	imagekey := ""
+	imageId := ""
 
 	if inEvent.EventType == IMAGEMESSAGE {
-		imageId := o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
+		imageId = o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "image message must contains imageId", bodyString)
 			return nil, o.Err
 		}
-		imagekey = "chathub/images/" + imageId
-		
+
 	} else if inEvent.EventType == EMOJIMESSAGE {
-		emojiId := o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
+		imageId = o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "emoji message must contains emojiId", bodyString)
 			return nil, o.Err
 		}
 
-		bodyJSON["imageId"] = emojiId
-		imagekey = "chathub/emoji/" + emojiId
+		bodyJSON["imageId"] = imageId
 	}
 
-	if imagekey != "" {
-		if hub.ossBucket != nil {
-			signedURL, err := hub.ossBucket.SignURL(imagekey, oss.HTTPGet, 60)
-			if err != nil {
-				hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imagekey)
-			} else {
-				bodyJSON["signedUrl"] = signedURL
-			}
+	if imageId != "" {
+		signedURL, err := utils.GenSignedURL(hub.ossBucket, imageId, inEvent.EventType)
+		if err != nil {
+			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imageId)
+		} else {
+			bodyJSON["signedUrl"] = signedURL
 		}
 	}
 
@@ -692,22 +688,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
-
-					///////////////////
-					//just for testing, will delete after implement sub/unsub and auth
-					for _, snode := range hub.streamingNodes {
-						snode.Sub([]string{botId})
-					}
-					////////////////////
-
-					// if o.Err == nil {
-					// 	go func() {
-					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-					// 			thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-					// 			hub.Error(err, "webnotify logindone failed\n")
-					// 		}
-					// 	}()
-					// }
 
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{

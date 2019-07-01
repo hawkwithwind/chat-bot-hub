@@ -167,6 +167,7 @@ func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
 		ExpireAt *utils.JSONTime `json:"expireAt"`
 		Metadata string          `json:"metadata"`
 		AuthUrl  string          `json:"authUrl"`
+		Cookie   string          `json:"cookie"`
 	}{}
 
 	o.Err = json.Unmarshal(b, &querym)
@@ -199,6 +200,7 @@ func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "", o.genSdkToken(web, accountName, expires, refreshExpires, &utils.AuthChildUser{
 		Metadata: querym.Metadata,
 		AuthUrl:  querym.AuthUrl,
+		Cookie:   querym.Cookie,
 	}))
 }
 

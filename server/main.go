@@ -76,6 +76,8 @@ func loadConfig(configPath string) (MainConfig, error) {
 	c.Streaming.Database = c.Web.Database
 	c.Streaming.Mongo = c.Web.Mongo
 	c.Streaming.WebBaseUrl = c.Web.Baseurl
+	c.Streaming.Oss = c.Hub.Oss
+	c.Streaming.SecretPhrase = c.Web.SecretPhrase
 
 	return c, nil
 }
@@ -123,10 +125,11 @@ func main() {
 				config.Hub.Rabbitmq = config.Rabbitmq
 				
 				hub := chatbothub.ChatHub{
-					Config:     config.Hub,
-					Webhost:    "web",
-					Webport:    config.Web.Port,
-					WebBaseUrl: config.Web.Baseurl,
+					Config:          config.Hub,
+					Webhost:         "web",
+					Webport:         config.Web.Port,
+					WebBaseUrl:      config.Web.Baseurl,
+					WebSecretPhrase: config.Web.SecretPhrase,
 				}
 				hub.Serve()
 			}, nil)

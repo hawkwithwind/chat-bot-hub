@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"net/http"
 
 	"github.com/hawkwithwind/mux"
@@ -13,8 +14,8 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	"github.com/hawkwithwind/chat-bot-hub/server/models"	
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -33,7 +34,7 @@ func (o *ErrorHandler) BackEndError(ctx *WebServer) {
 }
 
 func (o *ErrorHandler) CreateFilterChain(
-	ctx *WebServer, tx dbx.Queryable, wrapper *GRPCWrapper, filterId string) {
+	ctx *WebServer, tx dbx.Queryable, wrapper *rpc.GRPCWrapper, filterId string) {
 
 	lastFilterId := ""
 	currentFilterId := filterId
@@ -57,7 +58,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			body = ""
 		}
 
-		if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
+		if opreply, err := wrapper.Client.FilterCreate(wrapper.Context, &pb.FilterCreateRequest{
 			FilterId:   filter.FilterId,
 			FilterType: filter.FilterType,
 			FilterName: filter.FilterName,
@@ -102,7 +103,7 @@ func (o *ErrorHandler) CreateFilterChain(
 									return
 								}
 								var opreply *pb.OperationReply
-								opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+								opreply, o.Err = wrapper.Client.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
 										Key:   key,
 										Value: value,
@@ -142,7 +143,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						}
 						// branch this
 						var opreply *pb.OperationReply
-						opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+						opreply, o.Err = wrapper.Client.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 							Tag: &pb.BranchTag{
 								Key: regstr,
 							},
@@ -171,7 +172,7 @@ func (o *ErrorHandler) CreateFilterChain(
 		}
 
 		if lastFilterId != "" {
-			if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
+			if nxtreply, err := wrapper.Client.FilterNext(wrapper.Context, &pb.FilterNextRequest{
 				FilterId:     lastFilterId,
 				NextFilterId: filter.FilterId,
 			}); err != nil {
@@ -196,7 +197,7 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
-func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
+func (o *ErrorHandler) getTheBot(wrapper *rpc.GRPCWrapper, botId string) *pb.BotsInfo {
 	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
 	if o.Err == nil {
 		if len(botsreply.BotsInfo) == 0 {
@@ -539,19 +540,19 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if o.Err != nil {
 			return o.Err
 		}
-		
+
 		if thebotinfo.ClientType == "WECHATBOT" {
 			message := models.WechatMessage{}
 			o.Err = json.Unmarshal([]byte(msg), &message)
 			if o.Err != nil {
 				return o.Err
 			}
-			
+
 			tm := o.BJTimeFromUnix(message.Timestamp)
 			if o.Err != nil {
 				return o.Err
 			}
-			
+
 			chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, message.FromUser)
 			if o.Err != nil {
 				return o.Err
@@ -943,7 +944,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
-						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
+						_, o.Err = wrapper.Client.FilterFill(wrapper.Context, &pb.FilterFillRequest{
 							BotId:  bot.BotId,
 							Source: "MOMENT",
 							Body:   o.ToJson(m),
@@ -1144,7 +1145,7 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	o.ok(w, "success", nil)
 }
 
-func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *rpc.GRPCWrapper) {
 	if o.Err != nil {
 		return
 	}
@@ -1159,7 +1160,7 @@ func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx
 		}
 		web.Info("b[%s] initializing filters done", bot.BotId)
 		var ret *pb.OperationReply
-		ret, o.Err = w.client.BotFilter(w.context, &pb.BotFilterRequest{
+		ret, o.Err = w.Client.BotFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
@@ -1207,7 +1208,7 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	o.ok(w, "success", nil)
 }
 
-func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *rpc.GRPCWrapper) {
 	if o.Err != nil {
 		return
 	}
@@ -1224,7 +1225,7 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 		web.Info("b[%s] initializing moment filters done", bot.BotId)
 
 		var ret *pb.OperationReply
-		ret, o.Err = w.client.BotMomentFilter(w.context, &pb.BotFilterRequest{
+		ret, o.Err = w.Client.BotMomentFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})

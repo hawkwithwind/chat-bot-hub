@@ -9,6 +9,7 @@ import (
 type AuthChildUser struct {
 	AuthUrl  string `json:"AuthUrl"`
 	Metadata string `json:"metadata"`
+	Cookie   string `json:"cookie"`
 }
 
 type AuthUser struct {

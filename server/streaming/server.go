@@ -1,11 +1,14 @@
 package streaming
 
 import (
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/logger"
+	"math/rand"
 	"net/http"
 	"sync"
 
@@ -27,8 +30,10 @@ type Config struct {
 
 	Mongo    utils.MongoConfig
 	Database utils.DatabaseConfig
+	Oss      utils.OssConfig
 
-	WebBaseUrl string
+	WebBaseUrl   string
+	SecretPhrase string
 }
 
 type Server struct {
@@ -45,6 +50,11 @@ type Server struct {
 	db      *dbx.Database
 
 	restfulclient *http.Client
+
+	ossClient *oss.Client
+	ossBucket *oss.Bucket
+
+	grpcWrapper *rpc.GRPCWrapper
 }
 
 func (server *Server) init() error {
@@ -72,6 +82,24 @@ func (server *Server) init() error {
 	}
 
 	server.restfulclient = httpx.NewHttpClient()
+
+	ossClient, err := oss.New(server.Config.Oss.Region, server.Config.Oss.Accesskeyid, server.Config.Oss.Accesskeysecret, oss.UseCname(true))
+	if err != nil {
+		server.Error(err, "cannot create ossClient")
+		return err
+	}
+
+	ossBucket, err := ossClient.Bucket(server.Config.Oss.Bucket)
+	if err != nil {
+		server.Error(err, "cannot get oss bucket")
+		return err
+	}
+
+	server.ossClient = ossClient
+	server.ossBucket = ossBucket
+
+	i := rand.Intn(len(server.Config.Chathubs))
+	server.grpcWrapper = rpc.CreateGRPCWrapper(server.Config.Chathubs[i])
 
 	return nil
 }

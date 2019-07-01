@@ -22,11 +22,16 @@ func (server *Server) validateToken(token string) (*utils.AuthUser, error) {
 		return nil, errors.New("auth fail, no token supplied")
 	}
 
-	// TODO: call web token validation
-	user := &utils.AuthUser{}
-	user.AccountName = "haoda"
+	o := &ErrorHandler{}
 
-	return user, nil
+	user := o.ValidateJWTToken(server.Config.SecretPhrase, token)
+	if o.Err != nil {
+		return nil, o.Err
+	} else if user.Child == nil {
+		return nil, utils.NewAuthError(fmt.Errorf("failed to parse user.Child"))
+	}
+
+	return user, o.Err
 }
 
 func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +49,7 @@ func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	wsConnection, err := server.CreateWsConnection(conn, user)
+	wsConnection, err := server.CreateWsConnection(conn, token, user)
 	if err != nil {
 		server.Error(err, "Create new WsConnection failed")
 		return

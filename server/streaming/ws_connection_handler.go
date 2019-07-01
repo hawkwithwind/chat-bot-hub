@@ -3,8 +3,10 @@ package streaming
 import (
 	"encoding/json"
 	"fmt"
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/mitchellh/mapstructure"
+	"google.golang.org/grpc/metadata"
 	"sync"
 )
 
@@ -76,6 +78,7 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 
 	messages := o.GetMessagesHistories(server.mongoDb, bot.Login, params.PeerId, params.Direction, params.FromMessageId)
 	_ = o.FillWechatMessagesContact(server.db, messages)
+	o.FillWechatMessagesImageSignedURL(server.ossBucket, messages)
 
 	return messages, o.Err
 }
@@ -114,7 +117,13 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 		go func() {
 			defer wg.Done()
 
-			result[index] = o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
+			meta := o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
+
+			if meta.LatestMessage != nil {
+				o.FillWechatMessagesImageSignedURL(wsConnection.server.ossBucket, []*domains.WechatMessage{meta.LatestMessage})
+			}
+
+			result[index] = meta
 		}()
 
 	}
@@ -124,6 +133,37 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 	return result, nil
 }
 
+func (wsConnection *WsConnection) onUpdateSubscription(payload interface{}) (interface{}, error) {
+	resources := make([]*pb.StreamingResource, 0)
+	if err := mapstructure.Decode(payload, &resources); err != nil {
+		return nil, err
+	}
+
+	if len(resources) == 0 {
+		return nil, fmt.Errorf("resources can not be empty")
+	}
+
+	wrapper, err := wsConnection.server.NewGRPCWrapper()
+	if err != nil {
+		return nil, err
+	}
+
+	req := &pb.StreamingCtrlRequest{
+		ClientId:   "stream001",
+		ClientType: "streaming",
+		Resources:  resources,
+	}
+
+	ctx := metadata.AppendToOutgoingContext(wrapper.Context, "token", wsConnection.hubToken)
+
+	_, err = wrapper.Client.StreamingCtrl(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return "success", nil
+}
+
 func (wsConnection *WsConnection) onConnect() {
 	c := wsConnection
 	server := c.server
@@ -131,6 +171,7 @@ func (wsConnection *WsConnection) onConnect() {
 	server.Debug("websocket new connection")
 
 	c.On("close", func(payload interface{}) (interface{}, error) {
+
 		return nil, nil
 	})
 
@@ -145,4 +186,5 @@ func (wsConnection *WsConnection) onConnect() {
 	c.On("send_message", c.onSendMessage)
 	c.On("get_conversation_messages", c.onGetConversationMessages)
 	c.On("get_unread_messages_meta", c.onGetUnreadMessagesMeta)
+	c.On("update_subscription", c.onUpdateSubscription)
 }

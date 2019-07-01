@@ -1,6 +1,7 @@
 package domains
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -52,13 +53,19 @@ func (o *ErrorHandler) EnsureChatRoomIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) GetChatRoomWithId(db *mgo.Database, botId string, roomId string) *pb.ChatRoom {
+func (o *ErrorHandler) GetChatRoomWithId(db *mgo.Database, roomId string) *pb.ChatRoom {
 	result := &pb.ChatRoom{}
 
 	o.Err = db.C(ChatRoomCollection).Find(bson.M{
-		"_id":   roomId,
-		"botId": botId,
+		"_id": bson.ObjectIdHex(roomId),
 	}).One(result)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	result.Id = hex.EncodeToString(result.ObjectId)
+	result.ObjectId = nil
 
 	return result
 }
@@ -70,6 +77,13 @@ func (o *ErrorHandler) GetChatRoomWithPeerId(db *mgo.Database, botId string, pee
 		"botId":  botId,
 		"peerId": peerId,
 	}).One(result)
+
+	if o.Err != nil {
+		return nil
+	}
+
+	result.Id = hex.EncodeToString(result.ObjectId)
+	result.ObjectId = nil
 
 	return result
 }
@@ -84,20 +98,22 @@ func (o *ErrorHandler) CreateChatRoom(db *mgo.Database, botId string, peerId str
 	return o.GetChatRoomWithPeerId(db, botId, peerId)
 }
 
-func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType string, fromRoomId string, limit int32) []*pb.ChatRoom {
+func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botIds []string, chatType string, fromRoomId string, limit int32) []*pb.ChatRoom {
 	criteria := bson.M{}
 
 	//o.EnsureChatRoomIndexes(db)
 
 	if fromRoomId != "" {
-		fromRoom := o.GetChatRoomWithId(db, botId, fromRoomId)
+		fromRoom := o.GetChatRoomWithId(db, fromRoomId)
 
 		if fromRoom != nil {
 			criteria["updatedAt"] = bson.M{"$lt": fromRoom.UpdatedAt}
 		}
 	}
 
-	criteria["botId"] = botId
+	criteria["botId"] = bson.M{
+		"$in": botIds,
+	}
 
 	if chatType != "" && chatType != "all" {
 		criteria["chatType"] = chatType
@@ -107,6 +123,12 @@ func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botId string, chatType str
 
 	var result []*pb.ChatRoom
 	o.Err = query.All(&result)
+
+	for _, room := range result {
+		room.Id = hex.EncodeToString(room.ObjectId)
+		room.ObjectId = nil
+	}
+
 	return result
 }
 

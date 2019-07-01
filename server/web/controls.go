@@ -4,112 +4,32 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/mux"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
-
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
-	"github.com/hawkwithwind/mux"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
-type GRPCWrapper struct {
-	conn    *grpc.ClientConn
-	client  pb.ChatBotHubClient
-	context context.Context
-	cancel  context.CancelFunc
-
-	lastActive time.Time
-	factory    func() (*grpc.ClientConn, error)
-}
-
-func (g *GRPCWrapper) Reconnect() error {
-	if g.conn != nil && g.lastActive.Add(5*time.Second).Before(time.Now()) {
-		g.conn.Close()
-		g.conn = nil
-	}
-
-	if g.conn == nil {
-		var err error
-		g.conn, err = g.factory()
-		if err != nil {
-			g.conn = nil
-			return err
-		}
-	}
-
-	g.lastActive = time.Now()
-	return nil
-}
-
-func (w *GRPCWrapper) Cancel() {
-	if w == nil {
-		return
-	}
-
-	if w.cancel != nil {
-		w.cancel()
-	}
-
-	// if w.conn != nil {
-	// 	w.conn.Close()
-	// }
-}
-
-func (web *WebServer) NewGRPCWrapper() (*GRPCWrapper, error) {
+func (web *WebServer) NewGRPCWrapper() (*rpc.GRPCWrapper, error) {
 	if web.wrapper == nil {
-		o := &ErrorHandler{}
-		web.wrapper = o.GRPCConnect(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
-
-		if o.Err != nil {
-			return nil, o.Err
-		}
+		web.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", web.Hubport, web.Hubport))
 	}
 
-	wrapper := web.wrapper
-	err := wrapper.Reconnect()
-	if err != nil {
-		return nil, err
-	}
-
-	gctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-	return &GRPCWrapper{
-		conn:       wrapper.conn,
-		client:     pb.NewChatBotHubClient(wrapper.conn),
-		context:    gctx,
-		cancel:     cancel,
-		lastActive: wrapper.lastActive,
-		factory:    wrapper.factory,
-	}, nil
+	return web.wrapper.Clone()
 }
 
-func (ctx *ErrorHandler) GRPCConnect(target string) *GRPCWrapper {
+func (ctx *ErrorHandler) GetBots(w *rpc.GRPCWrapper, req *pb.BotsRequest) *pb.BotsReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	return &GRPCWrapper{
-		lastActive: time.Now(),
-		factory: func() (*grpc.ClientConn, error) {
-			return grpc.Dial(target, grpc.WithInsecure())
-		},
-	}
-}
-
-func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsReply {
-	if ctx.Err != nil {
-		return nil
-	}
-
-	if botsreply, err := w.client.GetBots(w.context, req); err != nil {
+	if botsreply, err := w.Client.GetBots(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else {
@@ -117,12 +37,12 @@ func (ctx *ErrorHandler) GetBots(w *GRPCWrapper, req *pb.BotsRequest) *pb.BotsRe
 	}
 }
 
-func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.BotLoginReply {
+func (ctx *ErrorHandler) BotLogin(w *rpc.GRPCWrapper, req *pb.BotLoginRequest) *pb.BotLoginReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if loginreply, err := w.client.BotLogin(w.context, req); err != nil {
+	if loginreply, err := w.Client.BotLogin(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if loginreply == nil {
@@ -143,12 +63,12 @@ func (ctx *ErrorHandler) BotLogin(w *GRPCWrapper, req *pb.BotLoginRequest) *pb.B
 	}
 }
 
-func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+func (ctx *ErrorHandler) BotLogout(w *rpc.GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if opreply, err := w.client.BotLogout(w.context, req); err != nil {
+	if opreply, err := w.Client.BotLogout(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if opreply == nil {
@@ -159,12 +79,12 @@ func (ctx *ErrorHandler) BotLogout(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb
 	}
 }
 
-func (ctx *ErrorHandler) BotShutdown(w *GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
+func (ctx *ErrorHandler) BotShutdown(w *rpc.GRPCWrapper, req *pb.BotLogoutRequest) *pb.OperationReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if opreply, err := w.client.BotShutdown(w.context, req); err != nil {
+	if opreply, err := w.Client.BotShutdown(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if opreply == nil {
@@ -175,12 +95,12 @@ func (ctx *ErrorHandler) BotShutdown(w *GRPCWrapper, req *pb.BotLogoutRequest) *
 	}
 }
 
-func (ctx *ErrorHandler) BotAction(w *GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
+func (ctx *ErrorHandler) BotAction(w *rpc.GRPCWrapper, req *pb.BotActionRequest) *pb.BotActionReply {
 	if ctx.Err != nil {
 		return nil
 	}
 
-	if actionreply, err := w.client.BotAction(w.context, req); err != nil {
+	if actionreply, err := w.Client.BotAction(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if actionreply == nil {
