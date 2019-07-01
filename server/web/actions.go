@@ -338,14 +338,18 @@ func (ctx *WebServer) mqConsume() {
 				err := json.Unmarshal(d.Body, &mqEvent)
 				if err != nil {
 					ctx.Error(err, "unmarshal mqevent failed")
+					d.Ack(false)
 					continue
 				}
 
 				err = ctx.processBotNotify(mqEvent.BotId, mqEvent.EventType, mqEvent.Body)
 				if err != nil {
 					ctx.Error(err, "process event failed")
+					d.Ack(false)
 					continue
 				}
+				
+				// no matter process success or not, must ack it; currently didn't handle with retry
 				d.Ack(false)
 			}
 		}()
