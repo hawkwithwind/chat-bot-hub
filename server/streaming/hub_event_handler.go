@@ -15,10 +15,9 @@ func (server *Server) findWsConnectionsByBotId(botId string) []*WsConnection {
 	server.websocketConnections.Range(func(key, _ interface{}) bool {
 		connection := key.(*WsConnection)
 
-		for _, bot := range connection.bots {
-			if bot.BotId == botId {
+		if val, ok := connection.botsSubscriptionInfo.Load(botId); ok {
+			if val == 1 {
 				result = append(result, connection)
-				return false
 			}
 		}
 

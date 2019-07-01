@@ -49,27 +49,19 @@ func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	wsConnection, err := server.CreateWsConnection(conn, token, user)
+	wsConnection := server.CreateWsConnection(conn, token, user)
+
+	err = wsConnection.onConnect()
 	if err != nil {
 		server.Error(err, "Create new WsConnection failed")
 		return
 	}
 
 	server.websocketConnections.Store(wsConnection, true)
-	server.onNewConnectionChan <- wsConnection
-
 	go wsConnection.listen()
 }
 
 func (server *Server) ServeWebsocketServer() error {
-	// 监听新连接
-	go func() {
-		for {
-			connection := <-server.onNewConnectionChan
-			connection.onConnect()
-		}
-	}()
-
 	server.Info("websocket server starts....")
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

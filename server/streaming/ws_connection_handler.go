@@ -31,6 +31,17 @@ type GetBotUnreadMessagesParams struct {
 	FromMessageId string `json:"fromMessageId"`
 }
 
+type ActionType int32
+type ResourceType int32
+
+const (
+	Subscribe   ActionType = 1
+	UnSubscribe ActionType = 2
+
+	Message ResourceType = 1
+	Moment  ResourceType = 2
+)
+
 func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error) {
 	o := &ErrorHandler{}
 
@@ -161,10 +172,20 @@ func (wsConnection *WsConnection) onUpdateSubscription(payload interface{}) (int
 		return nil, err
 	}
 
+	for _, res := range req.Resources {
+		switch ActionType(res.ActionType) {
+		case Subscribe:
+			wsConnection.botsSubscriptionInfo.Store(res.BotId, 1)
+
+		case UnSubscribe:
+			wsConnection.botsSubscriptionInfo.Store(res.BotId, 0)
+		}
+	}
+
 	return "success", nil
 }
 
-func (wsConnection *WsConnection) onConnect() {
+func (wsConnection *WsConnection) onConnect() error {
 	c := wsConnection
 	server := c.server
 
@@ -187,4 +208,6 @@ func (wsConnection *WsConnection) onConnect() {
 	c.On("get_conversation_messages", c.onGetConversationMessages)
 	c.On("get_unread_messages_meta", c.onGetUnreadMessagesMeta)
 	c.On("update_subscription", c.onUpdateSubscription)
+
+	return nil
 }

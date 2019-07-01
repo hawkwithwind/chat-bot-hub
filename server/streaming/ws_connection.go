@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"strconv"
 	"sync"
@@ -25,13 +24,13 @@ type WsConnection struct {
 	conn   *websocket.Conn
 
 	hubToken string
-	bots     []domains.BotExpand
+	authUser *utils.AuthUser
 
-	eventSeq int64
+	botsSubscriptionInfo *sync.Map
 
-	eventHandlers *sync.Map
-	ackCallbacks  *sync.Map
-
+	eventSeq          int64
+	eventHandlers     *sync.Map
+	ackCallbacks      *sync.Map
 	eventsToWriteChan chan WsEvent
 }
 
@@ -76,12 +75,7 @@ func (wsConnection *WsConnection) Close() error {
  * private methods
  */
 
-func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, token string, user *utils.AuthUser) (*WsConnection, error) {
-	o := &ErrorHandler{}
-	bots := o.GetBotsByAccountName(server.db.Conn, user.AccountName)
-	if o.Err != nil {
-		return nil, o.Err
-	}
+func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, token string, user *utils.AuthUser) *WsConnection {
 
 	result := &WsConnection{server: server, conn: wsConnection}
 
@@ -89,10 +83,11 @@ func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, token str
 	result.eventHandlers = &sync.Map{}
 	result.ackCallbacks = &sync.Map{}
 	result.eventsToWriteChan = make(chan WsEvent, 128)
-	result.bots = bots
 	result.hubToken = token
+	result.authUser = user
+	result.botsSubscriptionInfo = &sync.Map{}
 
-	return result, nil
+	return result
 }
 
 func (wsConnection *WsConnection) writeJSON(payload interface{}) error {

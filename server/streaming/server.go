@@ -44,8 +44,6 @@ type Server struct {
 
 	websocketConnections *sync.Map
 
-	onNewConnectionChan chan *WsConnection
-
 	mongoDb *mgo.Database
 	db      *dbx.Database
 
@@ -64,7 +62,6 @@ func (server *Server) init() error {
 
 	server.chmsg = make(chan *pb.EventReply, 1000)
 	server.websocketConnections = &sync.Map{}
-	server.onNewConnectionChan = make(chan *WsConnection)
 
 	o := &ErrorHandler{}
 
