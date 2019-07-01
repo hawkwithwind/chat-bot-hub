@@ -18,7 +18,7 @@ import (
 
 func (web *WebServer) NewGRPCWrapper() (*rpc.GRPCWrapper, error) {
 	if web.wrapper == nil {
-		web.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", web.Hubport, web.Hubport))
+		web.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", web.Hubhost, web.Hubport))
 	}
 
 	return web.wrapper.Clone()
