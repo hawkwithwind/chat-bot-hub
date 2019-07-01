@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
+	"time"
 	"net/http"
 
 	"github.com/hawkwithwind/mux"
@@ -16,6 +16,7 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -309,7 +310,9 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctx *WebServer) mqConsume() {
-	for {
+	ticker := time.NewTicker(5 * time.Second)
+	
+	for ; ; <-ticker.C {
 		err := ctx.mqReconnect()
 		if err != nil {
 			ctx.Error(err, "connect to rabbitmq failed")
