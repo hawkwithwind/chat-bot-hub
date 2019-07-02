@@ -3,14 +3,19 @@ package web
 import (
 	"fmt"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"log"
+	"net"
+	"os/signal"
+	"sync"
+
 	//"io"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +32,8 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/web"
 )
 
 type ErrorHandler struct {
@@ -34,14 +41,15 @@ type ErrorHandler struct {
 }
 
 type WebConfig struct {
-	Host         string
-	Port         string
-	Baseurl      string
-	Redis        utils.RedisConfig
-	Fluent       utils.FluentConfig
-	Mongo        utils.MongoConfig
-	Rabbitmq     utils.RabbitMQConfig
-	
+	Host     string
+	Port     string
+	GrpcPort string
+	Baseurl  string
+	Redis    utils.RedisConfig
+	Fluent   utils.FluentConfig
+	Mongo    utils.MongoConfig
+	Rabbitmq utils.RabbitMQConfig
+
 	SecretPhrase string
 	Database     utils.DatabaseConfig
 	Sentry       string
@@ -66,8 +74,8 @@ type WebServer struct {
 	contactParser *ContactParser
 	accounts      Accounts
 
-	mqConn        *amqp.Connection
-	mqChannel     *amqp.Channel
+	mqConn    *amqp.Connection
+	mqChannel *amqp.Channel
 }
 
 func (ctx *WebServer) init() error {
@@ -81,11 +89,11 @@ func (ctx *WebServer) init() error {
 	ctx.db = &dbx.Database{}
 
 	var err error
-	ctx.fluentLogger, err = fluent.New(fluent.Config{
-		FluentPort:   ctx.Config.Fluent.Port,
-		FluentHost:   ctx.Config.Fluent.Host,
-		WriteTimeout: 60 * time.Second,
-	})
+	//ctx.fluentLogger, err = fluent.New(fluent.Config{
+	//	FluentPort:   ctx.Config.Fluent.Port,
+	//	FluentHost:   ctx.Config.Fluent.Host,
+	//	WriteTimeout: 60 * time.Second,
+	//})
 
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
@@ -156,7 +164,7 @@ func (ctx *WebServer) init() error {
 
 	go func() {
 		ctx.mqConsume()
-	} ()
+	}()
 	ctx.Info("begin consume rabbitmq ...")
 
 	return nil
@@ -168,7 +176,7 @@ func (web *WebServer) mqReconnect() error {
 	if web.mqConn != nil && web.mqConn.IsClosed() == false {
 		return nil
 	}
-	
+
 	web.mqConn = o.RabbitMQConnect(web.Config.Rabbitmq)
 	if o.Err != nil {
 		return o.Err
@@ -180,8 +188,8 @@ func (web *WebServer) mqReconnect() error {
 	}
 
 	o.Err = web.mqChannel.Qos(
-		1, // prefetch count
-		0, // prefetch size
+		1,     // prefetch count
+		0,     // prefetch size
 		false, //global
 	)
 	if o.Err != nil {
@@ -390,11 +398,7 @@ func tracing(nextRequestID func() string) func(http.Handler) http.Handler {
 	}
 }
 
-func (ctx *WebServer) Serve() {
-	if ctx.init() != nil {
-		return
-	}
-
+func (ctx *WebServer) serveHTTP(exitChan chan bool) error {
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
@@ -462,7 +466,7 @@ func (ctx *WebServer) Serve() {
 	r.HandleFunc("/{mapkey}/messages", ctx.validate(ctx.SearchMessage)).Methods("GET", "POST")
 	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", ctx.validate(ctx.GetChatMessage)).Methods("GET")
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("/app/static/")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("build/static")))
 
 	r.Use(mux.CORSMethodMiddleware(r))
 	r.Use(handlers.CORS(
@@ -474,7 +478,7 @@ func (ctx *WebServer) Serve() {
 	r.Use(sentryContext)
 
 	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
-	ctx.Info("listen %s.", addr)
+	ctx.Info("http server listen: %s.", addr)
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      r,
@@ -484,13 +488,8 @@ func (ctx *WebServer) Serve() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	done := make(chan bool)
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-
-	go func() {
-		<-quit
-		ctx.Info("Server is shutting down")
+	shutDown := func() {
+		ctx.Info("http server is shutting down")
 		atomic.StoreInt32(&healthy, 0)
 
 		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -498,17 +497,125 @@ func (ctx *WebServer) Serve() {
 
 		server.SetKeepAlivesEnabled(false)
 		if err := server.Shutdown(c); err != nil {
-			ctx.Error(err, "Could not gracefully shutdown server")
+			ctx.Error(err, "Could not gracefully shutdown http server")
 		}
-		close(done)
+	}
+
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, os.Interrupt)
+
+		<-quit
+
+		shutDown()
 	}()
 
-	ctx.Info("restful server starts.")
-	atomic.StoreInt32(&healthy, 1)
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		ctx.Error(err, "listen failed")
-	}
-	<-done
+	go func() {
+		e := <-exitChan
+		if e {
+			shutDown()
+		}
+	}()
 
-	ctx.Info("Server stopped")
+	ctx.Info("http server starts.")
+	atomic.StoreInt32(&healthy, 1)
+
+	var result error
+
+	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		ctx.Error(err, "http server listen failed")
+
+		// 结束监听但并不调用shutdown
+		exitChan <- false
+
+		result = err
+	}
+
+	ctx.Info("http server stopped")
+
+	return result
+}
+
+func (ctx *WebServer) serverGRPC(exitChan chan bool) error {
+	ctx.Info("grpc server listen: %s:%s", ctx.Config.Host, ctx.Config.GrpcPort)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.GrpcPort))
+	if err != nil {
+		ctx.Error(err, "grpc server fail to listen")
+	}
+
+	s := grpc.NewServer()
+	pb.RegisterChatBotWebServer(s, ctx)
+	reflection.Register(s)
+
+	shutDown := func() {
+		ctx.Info("Grpc server is shutting down")
+		s.GracefulStop()
+	}
+
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, os.Interrupt)
+
+		<-quit
+
+		shutDown()
+	}()
+
+	go func() {
+		e := <-exitChan
+
+		if e {
+			shutDown()
+		}
+	}()
+
+	ctx.Info("grpc server started")
+
+	var result error
+
+	if err := s.Serve(lis); err != nil {
+		ctx.Error(err, "grpc server fail to serve")
+
+		// 结束监听但并不调用shutdown
+		exitChan <- false
+
+		result = err
+	}
+
+	ctx.Info("grpc server ends")
+
+	return result
+}
+
+func (ctx *WebServer) Serve() {
+	if ctx.init() != nil {
+		return
+	}
+
+	httpServerExitChan := make(chan bool)
+	grpcServerExitChan := make(chan bool)
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(2)
+
+	go func() {
+		err := ctx.serveHTTP(httpServerExitChan)
+		// close grpc server if http server exits accidentally
+		grpcServerExitChan <- err != nil
+
+		waitGroup.Done()
+	}()
+
+	go func() {
+		err := ctx.serverGRPC(grpcServerExitChan)
+		// close http server if grpc server exits accidentally
+		httpServerExitChan <- err != nil
+
+		waitGroup.Done()
+	}()
+
+	waitGroup.Wait()
+
+	ctx.Info("web server ends")
 }
