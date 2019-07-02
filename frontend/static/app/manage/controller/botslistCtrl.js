@@ -293,6 +293,9 @@
           "comment": "json结构的消息体",
         }
       ],
+      "GetContact": [
+        commonParams.userId,
+      ],
       "SearchContact": [
         commonParams.userId,
       ],
