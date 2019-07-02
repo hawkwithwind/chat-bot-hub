@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/globalsign/mgo"
-	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"io"
 	"log"
 	"net"
@@ -18,16 +17,15 @@ import (
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
+	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"github.com/streadway/amqp"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/models"
-	
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
@@ -41,7 +39,6 @@ type ChatHubConfig struct {
 	Redis  utils.RedisConfig
 
 	Mongo    utils.MongoConfig
-	Database utils.DatabaseConfig
 	Oss      utils.OssConfig
 	Rabbitmq utils.RabbitMQConfig
 }
@@ -72,12 +69,6 @@ func (hub *ChatHub) init() {
 	hub.mongoDb = o.NewMongoConn(hub.Config.Mongo.Host, hub.Config.Mongo.Port)
 	if o.Err != nil {
 		hub.Error(o.Err, "connect to mongo failed")
-		return
-	}
-
-	hub.db = &dbx.Database{}
-	if o.Connect(hub.db, "mysql", hub.Config.Database.DataSourceName); o.Err != nil {
-		hub.Error(o.Err, "connect to database failed")
 		return
 	}
 
@@ -129,7 +120,7 @@ func (hub *ChatHub) mqReconnect() error {
 	if hub.mqConn != nil && hub.mqConn.IsClosed() == false {
 		return nil
 	}
-	
+
 	hub.mqConn = o.RabbitMQConnect(hub.Config.Rabbitmq)
 	if o.Err != nil {
 		return o.Err
@@ -141,8 +132,8 @@ func (hub *ChatHub) mqReconnect() error {
 	}
 
 	o.Err = hub.mqChannel.Qos(
-		1, // prefetch count
-		0, // prefetch size
+		1,     // prefetch count
+		0,     // prefetch size
 		false, //global
 	)
 	if o.Err != nil {
@@ -176,7 +167,6 @@ type ChatHub struct {
 
 	redispool *redis.Pool
 	mongoDb   *mgo.Database
-	db        *dbx.Database
 
 	ossClient *oss.Client
 	ossBucket *oss.Bucket
@@ -190,19 +180,18 @@ func (hub *ChatHub) mqSend(queue string, body string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return hub.mqChannel.Publish(
-		"",    // exchange
+		"", // exchange
 		queue,
 		false, // mandatory
 		false, // immediate
-		amqp.Publishing {
+		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
-			ContentType: "text/plain",
-			Body: []byte(body),
+			ContentType:  "text/plain",
+			Body:         []byte(body),
 		})
 }
-
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 	o := &ErrorHandler{}
@@ -402,15 +391,15 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 	//}()
 
 	err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-		BotId: bot.BotId,
+		BotId:     bot.BotId,
 		EventType: inEvent.EventType,
-		Body: newBodyStr,
+		Body:      newBodyStr,
 	}))
 
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -691,9 +680,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: thebot.BotId,
+							BotId:     thebot.BotId,
 							EventType: LOGINDONE,
-							Body: "",
+							Body:      "",
 						}))
 					}
 				} else if bot.ClientType == QQBOT {
@@ -740,9 +729,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 				if o.Err == nil {
 					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-						BotId: thebot.BotId,
+						BotId:     thebot.BotId,
 						EventType: UPDATETOKEN,
-						Body: "",
+						Body:      "",
 					}))
 				}
 
@@ -757,12 +746,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// 		}
 				// 	}()
 				// }
-				
+
 				if o.Err == nil {
 					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-						BotId: bot.BotId,
+						BotId:     bot.BotId,
 						EventType: FRIENDREQUEST,
-						Body: reqstr,
+						Body:      reqstr,
 					}))
 				}
 
@@ -775,15 +764,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// 		hub.Error(err, "webnotify contactsync done failed\n")
 				// 	}
 				// }()
-				
+
 				if o.Err == nil {
 					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-						BotId: bot.BotId,
+						BotId:     bot.BotId,
 						EventType: CONTACTSYNCDONE,
-						Body: "",
+						Body:      "",
 					}))
 				}
-				
+
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
@@ -848,7 +837,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: bot.BotId,
+							BotId:     bot.BotId,
 							EventType: ACTIONREPLY,
 							Body: o.ToJson(domains.ActionRequest{
 								ActionRequestId: actionRequestId,
@@ -858,7 +847,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}))
 					}
 				}
-				
+
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
@@ -888,12 +877,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					// 	}()
 					// }
 
-					
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: bot.BotId,
+							BotId:     bot.BotId,
 							EventType: STATUSMESSAGE,
-							Body: in.Body,
+							Body:      in.Body,
 						}))
 					}
 				}
@@ -916,9 +904,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: bot.BotId,
+							BotId:     bot.BotId,
 							EventType: CONTACTINFO,
-							Body: in.Body,
+							Body:      in.Body,
 						}))
 					}
 				}
@@ -941,9 +929,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: bot.BotId,
+							BotId:     bot.BotId,
 							EventType: GROUPINFO,
-							Body: in.Body,
+							Body:      in.Body,
 						}))
 					}
 				}

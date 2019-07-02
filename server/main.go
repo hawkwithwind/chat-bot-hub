@@ -70,7 +70,6 @@ func loadConfig(configPath string) (MainConfig, error) {
 		}
 	}
 
-	c.Hub.Database = c.Web.Database
 	c.Hub.Mongo = c.Web.Mongo
 
 	c.Streaming.Database = c.Web.Database
