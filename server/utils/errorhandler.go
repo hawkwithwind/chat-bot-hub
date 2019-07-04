@@ -223,3 +223,9 @@ func (ctx *ErrorHandler) GetResponseBody(resp *httpx.RestfulResponse) map[string
 	respbody, ctx.Err = resp.ResponseBody()
 	return respbody
 }
+
+func (o *ErrorHandler) Recover(name string) {
+	if r := recover(); r != nil {
+		fmt.Printf("recover from go[%s] with context: %v", name, r)
+	}
+}
