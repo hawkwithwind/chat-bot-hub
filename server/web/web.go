@@ -398,7 +398,7 @@ func tracing(nextRequestID func() string) func(http.Handler) http.Handler {
 	}
 }
 
-func (ctx *WebServer) serveHTTP(exitChan chan bool) error {
+func (server *WebServer) serveHTTP(ctx context.Context) error {
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
@@ -406,65 +406,65 @@ func (ctx *WebServer) serveHTTP(exitChan chan bool) error {
 	r := mux.NewRouter()
 
 	r.Handle("/healthz", healthz())
-	r.HandleFunc("/echo", ctx.echo).Methods("Post")
-	r.HandleFunc("/hello", ctx.validate(ctx.hello)).Methods("GET")
+	r.HandleFunc("/echo", server.echo).Methods("Post")
+	r.HandleFunc("/hello", server.validate(server.hello)).Methods("GET")
 
 	// bot CURD (controls.go)
-	r.HandleFunc("/consts", ctx.validate(ctx.getConsts)).Methods("GET")
-	r.HandleFunc("/bots", ctx.validate(ctx.getBots)).Methods("GET")
-	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.getBotById)).Methods("GET")
-	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.deleteBot)).Methods("DELETE")
+	r.HandleFunc("/consts", server.validate(server.getConsts)).Methods("GET")
+	r.HandleFunc("/bots", server.validate(server.getBots)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", server.validate(server.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", server.validate(server.deleteBot)).Methods("DELETE")
 	r.HandleFunc("/bots/{botId}/msgfilters/rebuild",
-		ctx.validate(ctx.rebuildMsgFiltersFromWeb)).Methods("POST")
+		server.validate(server.rebuildMsgFiltersFromWeb)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/momentfilters/rebuild",
-		ctx.validate(ctx.rebuildMomentFiltersFromWeb)).Methods("POST")
-	r.HandleFunc("/bots/{botId}", ctx.validate(ctx.updateBot)).Methods("PUT")
-	r.HandleFunc("/bots", ctx.validate(ctx.createBot)).Methods("POST")
-	r.HandleFunc("/bots/scancreate", ctx.validate(ctx.scanCreateBot)).Methods("POST")
+		server.validate(server.rebuildMomentFiltersFromWeb)).Methods("POST")
+	r.HandleFunc("/bots/{botId}", server.validate(server.updateBot)).Methods("PUT")
+	r.HandleFunc("/bots", server.validate(server.createBot)).Methods("POST")
+	r.HandleFunc("/bots/scancreate", server.validate(server.scanCreateBot)).Methods("POST")
 
 	// filter CURD (controls.go)
-	r.HandleFunc("/filters", ctx.validate(ctx.createFilter)).Methods("POST")
-	r.HandleFunc("/filters/{filterId}", ctx.validate(ctx.updateFilter)).Methods("PUT")
-	r.HandleFunc("/filters/{filterId}/next", ctx.validate(ctx.updateFilterNext)).Methods("PUT")
-	r.HandleFunc("/filters", ctx.validate(ctx.getFilters)).Methods("GET")
-	r.HandleFunc("/filters/{filterId}", ctx.validate(ctx.deleteFilter)).Methods("DELETE")
-	r.HandleFunc("/filters/{filterId}", ctx.validate(ctx.getFilter)).Methods("GET")
+	r.HandleFunc("/filters", server.validate(server.createFilter)).Methods("POST")
+	r.HandleFunc("/filters/{filterId}", server.validate(server.updateFilter)).Methods("PUT")
+	r.HandleFunc("/filters/{filterId}/next", server.validate(server.updateFilterNext)).Methods("PUT")
+	r.HandleFunc("/filters", server.validate(server.getFilters)).Methods("GET")
+	r.HandleFunc("/filters/{filterId}", server.validate(server.deleteFilter)).Methods("DELETE")
+	r.HandleFunc("/filters/{filterId}", server.validate(server.getFilter)).Methods("GET")
 
 	// filter templates and generators (filtermanage.go)
-	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.getFilterTemplateSuites)).Methods("GET")
-	r.HandleFunc("/filtertemplatesuites", ctx.validate(ctx.createFilterTemplateSuite)).Methods("POST")
-	r.HandleFunc("/filtertemplatesuites/{suiteId}", ctx.validate(ctx.updateFilterTemplateSuite)).Methods("PUT")
-	r.HandleFunc("/filtertemplates", ctx.validate(ctx.createFilterTemplate)).Methods("POST")
-	r.HandleFunc("/filtertemplates/{templateId}", ctx.validate(ctx.updateFilterTemplate)).Methods("PUT")
-	r.HandleFunc("/filtertemplates/{templateId}", ctx.validate(ctx.deleteFilterTemplate)).Methods("DELETE")
+	r.HandleFunc("/filtertemplatesuites", server.validate(server.getFilterTemplateSuites)).Methods("GET")
+	r.HandleFunc("/filtertemplatesuites", server.validate(server.createFilterTemplateSuite)).Methods("POST")
+	r.HandleFunc("/filtertemplatesuites/{suiteId}", server.validate(server.updateFilterTemplateSuite)).Methods("PUT")
+	r.HandleFunc("/filtertemplates", server.validate(server.createFilterTemplate)).Methods("POST")
+	r.HandleFunc("/filtertemplates/{templateId}", server.validate(server.updateFilterTemplate)).Methods("PUT")
+	r.HandleFunc("/filtertemplates/{templateId}", server.validate(server.deleteFilterTemplate)).Methods("DELETE")
 
 	// chatusers and more (controls.go)
-	r.HandleFunc("/chatusers", ctx.validate(ctx.getChatUsers)).Methods("GET")
-	r.HandleFunc("/chatgroups", ctx.validate(ctx.getChatGroups)).Methods("GET")
-	r.HandleFunc("/chatgroups/{groupname}/members", ctx.validate(ctx.getGroupMembers)).Methods("GET")
+	r.HandleFunc("/chatusers", server.validate(server.getChatUsers)).Methods("GET")
+	r.HandleFunc("/chatgroups", server.validate(server.getChatGroups)).Methods("GET")
+	r.HandleFunc("/chatgroups/{groupname}/members", server.validate(server.getGroupMembers)).Methods("GET")
 
 	// bot login and action (actions.go)
-	r.HandleFunc("/botlogin", ctx.validate(ctx.botLogin)).Methods("POST")
-	r.HandleFunc("/bots/{botId}/logout", ctx.validate(ctx.botLogout)).Methods("POST")
-	r.HandleFunc("/botaction/{login}", ctx.validate(ctx.botAction)).Methods("POST")
-	r.HandleFunc("/bots/{botId}/notify", ctx.botNotify).Methods("Post")
-	r.HandleFunc("/bots/{botId}/loginstage", ctx.botLoginStage).Methods("Post")
-	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", ctx.NotifyWechatBotsCrawlTimeline).Methods("POST")
-	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", ctx.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
-	r.HandleFunc("/bots/{login}/friendrequests", ctx.validate(ctx.getFriendRequests)).Methods("GET")
+	r.HandleFunc("/botlogin", server.validate(server.botLogin)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/logout", server.validate(server.botLogout)).Methods("POST")
+	r.HandleFunc("/botaction/{login}", server.validate(server.botAction)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
+	r.HandleFunc("/bots/{botId}/loginstage", server.botLoginStage).Methods("Post")
+	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
+	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
+	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
 
 	// account login and auth (auth.go)
-	r.HandleFunc("/login", ctx.login).Methods("POST")
-	r.HandleFunc("/refreshtoken", ctx.refreshToken).Methods("Post")
-	r.HandleFunc("/sdktoken", ctx.validate(ctx.sdkToken)).Methods("Post")
-	r.HandleFunc("/sdktoken/child", ctx.validate(ctx.sdkTokenChild)).Methods("Post")
-	r.HandleFunc("/githublogin", ctx.githubOAuth).Methods("GET")
-	r.HandleFunc("/auth/callback", ctx.githubOAuthCallback).Methods("GET")
+	r.HandleFunc("/login", server.login).Methods("POST")
+	r.HandleFunc("/refreshtoken", server.refreshToken).Methods("Post")
+	r.HandleFunc("/sdktoken", server.validate(server.sdkToken)).Methods("Post")
+	r.HandleFunc("/sdktoken/child", server.validate(server.sdkTokenChild)).Methods("Post")
+	r.HandleFunc("/githublogin", server.githubOAuth).Methods("GET")
+	r.HandleFunc("/auth/callback", server.githubOAuthCallback).Methods("GET")
 
 	// search
-	r.HandleFunc("/{domain}/search", ctx.validate(ctx.Search)).Methods("GET")
-	r.HandleFunc("/{mapkey}/messages", ctx.validate(ctx.SearchMessage)).Methods("GET", "POST")
-	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", ctx.validate(ctx.GetChatMessage)).Methods("GET")
+	r.HandleFunc("/{domain}/search", server.validate(server.Search)).Methods("GET")
+	r.HandleFunc("/{mapkey}/messages", server.validate(server.SearchMessage)).Methods("GET", "POST")
+	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", server.validate(server.GetChatMessage)).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("app/static")))
 
@@ -472,86 +472,108 @@ func (ctx *WebServer) serveHTTP(exitChan chan bool) error {
 	r.Use(handlers.CORS(
 		handlers.AllowCredentials(),
 		handlers.AllowedHeaders([]string{"Content-Type", "X-Requested-With"}),
-		handlers.AllowedOrigins(ctx.Config.AllowOrigin)))
+		handlers.AllowedOrigins(server.Config.AllowOrigin)))
 	r.Use(tracing(nextRequestID))
-	r.Use(logging(ctx.logger))
+	r.Use(logging(server.logger))
 	r.Use(sentryContext)
 
-	addr := fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.Port)
-	ctx.Info("http server listen: %s.", addr)
-	server := &http.Server{
+	addr := fmt.Sprintf("%s:%s", server.Config.Host, server.Config.Port)
+	server.Info("http server listen: %s", addr)
+	httpServer := &http.Server{
 		Addr:         addr,
 		Handler:      r,
-		ErrorLog:     ctx.logger,
+		ErrorLog:     server.logger,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	shutDown := func() {
-		ctx.Info("http server is shutting down")
+	running := true
+
+	go func() {
+		<-ctx.Done()
+
+		if !running {
+			return
+		}
+
+		server.Info("http server is shutting down")
 		atomic.StoreInt32(&healthy, 0)
 
 		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		server.SetKeepAlivesEnabled(false)
-		if err := server.Shutdown(c); err != nil {
-			ctx.Error(err, "Could not gracefully shutdown http server")
-		}
-	}
-
-	go func() {
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, os.Interrupt)
-
-		<-quit
-
-		shutDown()
-	}()
-
-	go func() {
-		e := <-exitChan
-		if e {
-			shutDown()
+		httpServer.SetKeepAlivesEnabled(false)
+		if err := httpServer.Shutdown(c); err != nil {
+			server.Error(err, "Could not gracefully shutdown http server")
 		}
 	}()
 
-	ctx.Info("http server starts.")
+	server.Info("http server starts")
 	atomic.StoreInt32(&healthy, 1)
 
 	var result error
 
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		ctx.Error(err, "http server listen failed")
-
-		// 结束监听但并不调用shutdown
-		exitChan <- false
-
+	// err is ErrServerClosed if shut down gracefully
+	if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
+		server.Error(err, "http server listen failed")
 		result = err
 	}
 
-	ctx.Info("http server stopped")
+	server.Info("http server stopped")
+
+	running = false
 
 	return result
 }
 
-func (ctx *WebServer) serverGRPC(exitChan chan bool) error {
-	ctx.Info("grpc server listen: %s:%s", ctx.Config.Host, ctx.Config.GrpcPort)
+func (server *WebServer) serverGRPC(ctx context.Context) error {
+	server.Info("grpc server listen: %s:%s", server.Config.Host, server.Config.GrpcPort)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", ctx.Config.Host, ctx.Config.GrpcPort))
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", server.Config.Host, server.Config.GrpcPort))
 	if err != nil {
-		ctx.Error(err, "grpc server fail to listen")
+		server.Error(err, "grpc server fail to listen")
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterChatBotWebServer(s, ctx)
+	pb.RegisterChatBotWebServer(s, server)
 	reflection.Register(s)
 
-	shutDown := func() {
-		ctx.Info("Grpc server is shutting down")
+	running := true
+
+	go func() {
+		<-ctx.Done()
+
+		if !running {
+			return
+		}
+
+		server.Info("Grpc server is shutting down")
 		s.GracefulStop()
+	}()
+
+	server.Info("grpc server starts")
+
+	var result error
+
+	// err is nil if shut donw gracefully
+	if err := s.Serve(lis); err != nil {
+		server.Error(err, "grpc server fail to serve")
 	}
+
+	server.Info("grpc server ends")
+
+	running = false
+
+	return result
+}
+
+func (server *WebServer) Serve() {
+	if server.init() != nil {
+		return
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	go func() {
 		quit := make(chan os.Signal, 1)
@@ -559,63 +581,31 @@ func (ctx *WebServer) serverGRPC(exitChan chan bool) error {
 
 		<-quit
 
-		shutDown()
+		cancelFunc()
 	}()
-
-	go func() {
-		e := <-exitChan
-
-		if e {
-			shutDown()
-		}
-	}()
-
-	ctx.Info("grpc server started")
-
-	var result error
-
-	if err := s.Serve(lis); err != nil {
-		ctx.Error(err, "grpc server fail to serve")
-
-		// 结束监听但并不调用shutdown
-		exitChan <- false
-
-		result = err
-	}
-
-	ctx.Info("grpc server ends")
-
-	return result
-}
-
-func (ctx *WebServer) Serve() {
-	if ctx.init() != nil {
-		return
-	}
-
-	httpServerExitChan := make(chan bool)
-	grpcServerExitChan := make(chan bool)
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 
 	go func() {
-		err := ctx.serveHTTP(httpServerExitChan)
-		// close grpc server if http server exits accidentally
-		grpcServerExitChan <- err != nil
+		_ = server.serveHTTP(ctx)
+
+		// try to stop grpc server
+		cancelFunc()
 
 		waitGroup.Done()
 	}()
 
 	go func() {
-		err := ctx.serverGRPC(grpcServerExitChan)
-		// close http server if grpc server exits accidentally
-		httpServerExitChan <- err != nil
+		_ = server.serverGRPC(ctx)
+
+		// try to stop http server
+		cancelFunc()
 
 		waitGroup.Done()
 	}()
 
 	waitGroup.Wait()
 
-	ctx.Info("web server ends")
+	server.Info("web server ends")
 }
