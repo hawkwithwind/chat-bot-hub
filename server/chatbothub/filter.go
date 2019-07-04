@@ -504,6 +504,7 @@ func NewWebTrigger(client *http.Client, filterId string, filterName string) *Web
 func (f *WebTrigger) Fill(msg string) error {
 	go func() {
 		o := domains.ErrorHandler{}
+		defer o.Recover("WebTrigger.Fill")
 
 		jar, err := cookiejar.New(nil)
 		if err != nil {
