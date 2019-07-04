@@ -48,3 +48,17 @@ func (server *WebServer) GetBot(_ context.Context, req *pb.GetBotRequest) (*pb.G
 
 	return response, nil
 }
+
+func (server *WebServer) ValidateToken(_ context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	o := ErrorHandler{}
+	user := o.ValidateJWTToken(server.Config.SecretPhrase, req.Token)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	response := &pb.ValidateTokenResponse{}
+	payload, _ := json.Marshal(user)
+	response.Payload = payload
+
+	return response, nil
+}

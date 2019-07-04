@@ -29,8 +29,7 @@ type Config struct {
 	Mongo utils.MongoConfig
 	Oss   utils.OssConfig
 
-	WebBaseUrl   string
-	SecretPhrase string
+	WebBaseUrl string
 }
 
 type Server struct {

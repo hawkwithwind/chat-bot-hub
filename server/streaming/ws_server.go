@@ -1,8 +1,10 @@
 package streaming
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	chatbotweb "github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/pkg/errors"
 	"net/http"
@@ -24,14 +26,32 @@ func (server *Server) validateToken(token string) (*utils.AuthUser, error) {
 
 	o := &ErrorHandler{}
 
-	user := o.ValidateJWTToken(server.Config.SecretPhrase, token)
+	wrapper, err := server.NewWebGRPCWrapper()
+	if err != nil {
+		return nil, err
+	}
+	defer wrapper.Cancel()
+
+	req := &chatbotweb.ValidateTokenRequest{}
+	req.Token = token
+
+	res, err := wrapper.WebClient.ValidateToken(wrapper.Context, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var user utils.AuthUser
+	if err = json.Unmarshal(res.Payload, &user); err != nil {
+		return nil, err
+	}
+
 	if o.Err != nil {
 		return nil, o.Err
 	} else if user.Child == nil {
 		return nil, utils.NewAuthError(fmt.Errorf("failed to parse user.Child"))
 	}
 
-	return user, o.Err
+	return &user, o.Err
 }
 
 func (server *Server) acceptWebsocketConnection(w http.ResponseWriter, r *http.Request) {
