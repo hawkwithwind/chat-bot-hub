@@ -5,7 +5,8 @@ var gulp = require('gulp');
 // 引入组件
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify-es').default;
-var cssmin = require('gulp-cssmin');
+//var cssmin = require('gulp-cssmin');
+var cleanCSS = require('gulp-clean-css');
 var rename = require('gulp-rename');
 var ngAnnotate = require('gulp-ng-annotate');
 var html2js = require('gulp-html2js');
@@ -114,7 +115,7 @@ gulp.copy=function(src, dest, base){
 gulp.task('css', function() {
   return gulp.src(cssConfig, srcConfig)
     .pipe(concat('app.css'))
-    .pipe(cssmin())
+    .pipe(cleanCSS({compatibility: 'ie8'}))
     .pipe(rename({suffix: '.min'}))
     .pipe(gulp.dest(destPath + 'css'));
 });
