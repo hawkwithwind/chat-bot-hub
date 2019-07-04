@@ -6,7 +6,8 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
+	"github.com/hawkwithwind/chat-bot-hub/proto/web"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/mitchellh/mapstructure"
 	"strings"
@@ -55,23 +56,32 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
-func (o *ErrorHandler) FillWechatMessageContact(db *dbx.Database, message *WechatMessage) error {
+func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage) error {
 	if message.FromUserContact != nil {
 		return nil
 	}
 
-	tx := o.Begin(db)
-	defer o.CommitOrRollback(tx)
-
-	user := o.GetChatUserByName(tx, "WECHATBOT", message.FromUser)
-	if user != nil {
-		message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
+	request := &chatbotweb.GetChatUserRequest{
+		Type:     "WECHATBOT",
+		UserName: message.FromUser,
 	}
+
+	res, err := wrapper.WebClient.GetChatUser(wrapper.Context, request)
+	if err != nil {
+		return err
+	}
+
+	var user ChatUser
+	if err = json.Unmarshal(res.Payload, &user); err != nil {
+		return err
+	}
+
+	message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
 
 	return o.Err
 }
 
-func (o *ErrorHandler) FillWechatMessagesContact(db *dbx.Database, messages []*WechatMessage) error {
+func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage) error {
 	fromUserMap := &sync.Map{}
 	for _, message := range messages {
 		fromUserMap.Store(message.FromUser, nil)
@@ -86,14 +96,24 @@ func (o *ErrorHandler) FillWechatMessagesContact(db *dbx.Database, messages []*W
 		go func() {
 			defer wg.Done()
 
-			tx := o.Begin(db)
-			defer o.CommitOrRollback(tx)
-
 			fromUser := key.(string)
-			user := o.GetChatUserByName(tx, "WECHATBOT", fromUser)
-			if o.Err == nil {
-				fromUserMap.Store(fromUser, user)
+
+			request := &chatbotweb.GetChatUserRequest{
+				Type:     "WECHATBOT",
+				UserName: fromUser,
 			}
+
+			res, err := wrapper.WebClient.GetChatUser(wrapper.Context, request)
+			if err != nil {
+				return
+			}
+
+			var user ChatUser
+			if err = json.Unmarshal(res.Payload, &user); err != nil {
+				return
+			}
+
+			fromUserMap.Store(fromUser, &user)
 		}()
 
 		return true

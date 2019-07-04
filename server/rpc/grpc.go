@@ -1,7 +1,8 @@
 package rpc
 
 import (
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"time"
@@ -10,7 +11,8 @@ import (
 type GRPCWrapper struct {
 	conn *grpc.ClientConn
 
-	Client pb.ChatBotHubClient
+	HubClient chatbothub.ChatBotHubClient
+	WebClient chatbotweb.ChatBotWebClient
 
 	Context context.Context
 	cancel  context.CancelFunc
@@ -71,7 +73,8 @@ func (g *GRPCWrapper) Clone() (*GRPCWrapper, error) {
 
 	return &GRPCWrapper{
 		conn:       g.conn,
-		Client:     pb.NewChatBotHubClient(g.conn),
+		HubClient:  chatbothub.NewChatBotHubClient(g.conn),
+		WebClient:  chatbotweb.NewChatBotWebClient(g.conn),
 		Context:    gctx,
 		cancel:     cancel,
 		lastActive: g.lastActive,

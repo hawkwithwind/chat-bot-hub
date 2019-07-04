@@ -57,8 +57,15 @@ func (server *Server) onHubEvent(event *pb.EventReply) {
 			return
 		}
 
+		wrapper, err := server.NewWebGRPCWrapper()
+		if err != nil {
+			server.Error(err, "create grpc wrapper failed")
+			return
+		}
+		defer wrapper.Cancel()
+
 		o := &ErrorHandler{}
-		_ = o.FillWechatMessageContact(server.db, &wechatMessage)
+		_ = o.FillWechatMessageContact(wrapper, &wechatMessage)
 
 		server.forwardMessage(&wechatMessage, event.BotId)
 

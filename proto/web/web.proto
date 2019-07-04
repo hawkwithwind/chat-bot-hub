@@ -10,6 +10,7 @@ import "google/protobuf/any.proto";
 
 service ChatBotWeb {
     rpc getChatUser (GetChatUserRequest) returns (GetChatUserResponse) {}
+    rpc getBot (GetBotRequest) returns (GetBotResponse) {}
 }
 
 message GetChatUserRequest {
@@ -18,5 +19,13 @@ message GetChatUserRequest {
 }
 
 message GetChatUserResponse {
-    google.protobuf.Any payload = 1;
+    bytes payload = 1;
+}
+
+message GetBotRequest {
+    string botId = 1;
+}
+
+message GetBotResponse {
+    bytes payload = 1;
 }

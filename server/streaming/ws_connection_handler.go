@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/metadata"
@@ -43,18 +44,24 @@ const (
 )
 
 func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error) {
-	o := &ErrorHandler{}
+	wrapper, err := wsConnection.server.NewWebGRPCWrapper()
+	if err != nil {
+		return nil, err
+	}
+	defer wrapper.Cancel()
 
-	bot := o.GetBotById(wsConnection.server.db.Conn, botId)
-	if o.Err != nil {
-		return nil, o.Err
+	req := &chatbotweb.GetBotRequest{BotId: botId}
+	res, err := wrapper.WebClient.GetBot(wrapper.Context, req)
+	if err != nil {
+		return nil, err
 	}
 
-	if bot == nil {
-		return nil, fmt.Errorf("Can not find bot with id: %s\n", botId)
+	var bot domains.Bot
+	if err = json.Unmarshal(res.Payload, &bot); err != nil {
+		return nil, err
 	}
 
-	return bot, nil
+	return &bot, nil
 }
 
 func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{}, error) {
@@ -88,7 +95,15 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 	}
 
 	messages := o.GetMessagesHistories(server.mongoDb, bot.Login, params.PeerId, params.Direction, params.FromMessageId)
-	_ = o.FillWechatMessagesContact(server.db, messages)
+
+	wrapper, err := server.NewWebGRPCWrapper()
+	if err != nil {
+		wsConnection.server.Error(err, "create grpc wrapper failed")
+		return nil, err
+	}
+	defer wrapper.Cancel()
+
+	_ = o.FillWechatMessagesContact(wrapper, messages)
 	o.FillWechatMessagesImageSignedURL(server.ossBucket, messages)
 
 	return messages, o.Err
@@ -154,10 +169,11 @@ func (wsConnection *WsConnection) onUpdateSubscription(payload interface{}) (int
 		return nil, fmt.Errorf("resources can not be empty")
 	}
 
-	wrapper, err := wsConnection.server.NewGRPCWrapper()
+	wrapper, err := wsConnection.server.NewHubGRPCWrapper()
 	if err != nil {
 		return nil, err
 	}
+	defer wrapper.Cancel()
 
 	req := &pb.StreamingCtrlRequest{
 		ClientId:   "stream001",
@@ -167,7 +183,7 @@ func (wsConnection *WsConnection) onUpdateSubscription(payload interface{}) (int
 
 	ctx := metadata.AppendToOutgoingContext(wrapper.Context, "token", wsConnection.hubToken)
 
-	_, err = wrapper.Client.StreamingCtrl(ctx, req)
+	_, err = wrapper.HubClient.StreamingCtrl(ctx, req)
 	if err != nil {
 		return nil, err
 	}

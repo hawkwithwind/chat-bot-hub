@@ -139,6 +139,10 @@ func (server *Server) SendHubBotAction(botLogin string, actionType string, actio
 	return httpx.RestfulCallRetry(server.restfulclient, request, 3, 1)
 }
 
-func (server *Server) NewGRPCWrapper() (*rpc.GRPCWrapper, error) {
-	return server.grpcWrapper.Clone()
+func (server *Server) NewHubGRPCWrapper() (*rpc.GRPCWrapper, error) {
+	return server.hubGRPCWrapper.Clone()
+}
+
+func (server *Server) NewWebGRPCWrapper() (*rpc.GRPCWrapper, error) {
+	return server.webGRPCWrapper.Clone()
 }

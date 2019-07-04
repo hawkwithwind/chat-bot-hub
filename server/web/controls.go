@@ -29,7 +29,7 @@ func (ctx *ErrorHandler) GetBots(w *rpc.GRPCWrapper, req *pb.BotsRequest) *pb.Bo
 		return nil
 	}
 
-	if botsreply, err := w.Client.GetBots(w.Context, req); err != nil {
+	if botsreply, err := w.HubClient.GetBots(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else {
@@ -42,7 +42,7 @@ func (ctx *ErrorHandler) BotLogin(w *rpc.GRPCWrapper, req *pb.BotLoginRequest) *
 		return nil
 	}
 
-	if loginreply, err := w.Client.BotLogin(w.Context, req); err != nil {
+	if loginreply, err := w.HubClient.BotLogin(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if loginreply == nil {
@@ -68,7 +68,7 @@ func (ctx *ErrorHandler) BotLogout(w *rpc.GRPCWrapper, req *pb.BotLogoutRequest)
 		return nil
 	}
 
-	if opreply, err := w.Client.BotLogout(w.Context, req); err != nil {
+	if opreply, err := w.HubClient.BotLogout(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if opreply == nil {
@@ -84,7 +84,7 @@ func (ctx *ErrorHandler) BotShutdown(w *rpc.GRPCWrapper, req *pb.BotLogoutReques
 		return nil
 	}
 
-	if opreply, err := w.Client.BotShutdown(w.Context, req); err != nil {
+	if opreply, err := w.HubClient.BotShutdown(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if opreply == nil {
@@ -100,7 +100,7 @@ func (ctx *ErrorHandler) BotAction(w *rpc.GRPCWrapper, req *pb.BotActionRequest)
 		return nil
 	}
 
-	if actionreply, err := w.Client.BotAction(w.Context, req); err != nil {
+	if actionreply, err := w.HubClient.BotAction(w.Context, req); err != nil {
 		ctx.Err = err
 		return nil
 	} else if actionreply == nil {

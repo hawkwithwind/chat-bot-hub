@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 	"net/http"
+	"time"
 
 	"github.com/hawkwithwind/mux"
 
@@ -15,8 +15,8 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/models"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.RestfulRequest {
@@ -59,7 +59,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			body = ""
 		}
 
-		if opreply, err := wrapper.Client.FilterCreate(wrapper.Context, &pb.FilterCreateRequest{
+		if opreply, err := wrapper.HubClient.FilterCreate(wrapper.Context, &pb.FilterCreateRequest{
 			FilterId:   filter.FilterId,
 			FilterType: filter.FilterType,
 			FilterName: filter.FilterName,
@@ -104,7 +104,7 @@ func (o *ErrorHandler) CreateFilterChain(
 									return
 								}
 								var opreply *pb.OperationReply
-								opreply, o.Err = wrapper.Client.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
+								opreply, o.Err = wrapper.HubClient.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
 										Key:   key,
 										Value: value,
@@ -144,7 +144,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						}
 						// branch this
 						var opreply *pb.OperationReply
-						opreply, o.Err = wrapper.Client.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
+						opreply, o.Err = wrapper.HubClient.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 							Tag: &pb.BranchTag{
 								Key: regstr,
 							},
@@ -173,7 +173,7 @@ func (o *ErrorHandler) CreateFilterChain(
 		}
 
 		if lastFilterId != "" {
-			if nxtreply, err := wrapper.Client.FilterNext(wrapper.Context, &pb.FilterNextRequest{
+			if nxtreply, err := wrapper.HubClient.FilterNext(wrapper.Context, &pb.FilterNextRequest{
 				FilterId:     lastFilterId,
 				NextFilterId: filter.FilterId,
 			}); err != nil {
@@ -291,7 +291,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-
 	r.ParseForm()
 	eventType := o.getStringValue(r.Form, "event")
 	bodystr := o.getStringValue(r.Form, "body")
@@ -305,28 +304,28 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		o.Err = err
 		return
 	}
-	
+
 	o.ok(w, "success", nil)
 }
 
 func (ctx *WebServer) mqConsume() {
 	ticker := time.NewTicker(5 * time.Second)
-	
+
 	for ; ; <-ticker.C {
 		err := ctx.mqReconnect()
 		if err != nil {
 			ctx.Error(err, "connect to rabbitmq failed")
 			continue
 		}
-		
+
 		msgs, err := ctx.mqChannel.Consume(
 			utils.CH_BotNotify, // queue
-			"",    // consumer 
-			false, // auto-ack
-			false, // exclusive
-			false, // no-local
-			false, // no-wait
-			nil,   // args
+			"",                 // consumer
+			false,              // auto-ack
+			false,              // exclusive
+			false,              // no-local
+			false,              // no-wait
+			nil,                // args
 		)
 
 		if err != nil {
@@ -351,7 +350,7 @@ func (ctx *WebServer) mqConsume() {
 					d.Ack(false)
 					continue
 				}
-				
+
 				// no matter process success or not, must ack it; currently didn't handle with retry
 				d.Ack(false)
 			}
@@ -525,7 +524,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
-		
+
 		go func() {
 			if bot.Callback.Valid {
 				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
@@ -537,7 +536,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 	case chatbothub.GROUPINFO:
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
-		
+
 		if thebotinfo.ClientType == "WECHATBOT" {
 
 		}
@@ -951,7 +950,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
-						_, o.Err = wrapper.Client.FilterFill(wrapper.Context, &pb.FilterFillRequest{
+						_, o.Err = wrapper.HubClient.FilterFill(wrapper.Context, &pb.FilterFillRequest{
 							BotId:  bot.BotId,
 							Source: "MOMENT",
 							Body:   o.ToJson(m),
@@ -1167,7 +1166,7 @@ func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx
 		}
 		web.Info("b[%s] initializing filters done", bot.BotId)
 		var ret *pb.OperationReply
-		ret, o.Err = w.Client.BotFilter(w.Context, &pb.BotFilterRequest{
+		ret, o.Err = w.HubClient.BotFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
@@ -1232,7 +1231,7 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 		web.Info("b[%s] initializing moment filters done", bot.BotId)
 
 		var ret *pb.OperationReply
-		ret, o.Err = w.Client.BotMomentFilter(w.Context, &pb.BotFilterRequest{
+		ret, o.Err = w.HubClient.BotMomentFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})
