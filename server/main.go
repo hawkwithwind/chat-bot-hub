@@ -97,8 +97,9 @@ func main() {
 	raven.SetDSN(config.Web.Sentry)
 
 	if *startcmd == "web" {
+		wg.Add(1)
+
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 			config.Web.Redis = config.Redis
 			config.Web.Fluent = config.Fluent
@@ -113,8 +114,9 @@ func main() {
 	}
 
 	if *startcmd == "hub" {
+		wg.Add(1)
+
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 
 			raven.CapturePanicAndWait(func() {
@@ -135,9 +137,10 @@ func main() {
 	}
 
 	if *startcmd == "tasks" {
+		wg.Add(1)
+
 		go func() {
-			wg.Add(1)
-			//defer wg.Done()
+			defer wg.Done()
 
 			task := tasks.Tasks{
 				Webhost:    "web",
@@ -147,15 +150,15 @@ func main() {
 
 			err := task.Serve()
 			if err != nil {
-				wg.Done()
 				log.Printf("task start failed %s\n", err)
 			}
 		}()
 	}
 
 	if *startcmd == "streaming" {
+		wg.Add(1)
+
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 
 			server := streaming.Server{
@@ -164,7 +167,6 @@ func main() {
 
 			err := server.Serve()
 			if err != nil {
-				wg.Done()
 				log.Printf("streaming start failed %s\n", err.Error())
 			}
 		}()
