@@ -466,7 +466,7 @@ func (ctx *WebServer) serveHTTP(exitChan chan bool) error {
 	r.HandleFunc("/{mapkey}/messages", ctx.validate(ctx.SearchMessage)).Methods("GET", "POST")
 	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", ctx.validate(ctx.GetChatMessage)).Methods("GET")
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("build/static")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("app/static")))
 
 	r.Use(mux.CORSMethodMiddleware(r))
 	r.Use(handlers.CORS(
