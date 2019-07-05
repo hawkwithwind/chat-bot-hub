@@ -19,6 +19,7 @@ var (
 		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
 		"moments":           (*ErrorHandler).NewDefaultMoment,
 		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
+		"chatcontactlabels": (*ErrorHandler).NewDefaultChatContactLabel,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, dbx.Searchable, string, interface{}) string{

@@ -270,6 +270,12 @@
         "type": "string",
         "required": false,
       },
+      "labelId": {
+        "name": "labelId",
+        "display": "标签ID",
+        "type": "string",
+        "required": true,
+      }
     }
 
     $scope.actions = {
@@ -404,7 +410,23 @@
           "type": "int",
           "required": true,
         },
-      ],      
+      ],
+      "GetLabelList":[],
+      "AddLabel":[
+        {
+          "name": "label",
+          "display": "label 标签",
+          "type": "string",
+          "required": true,
+        },
+      ],
+      "DeleteLabel": [
+        commonParams.labelId,
+      ],
+      "SetLabel": [
+        commonParams.labelId,
+        commonParams.userId,
+      ],
     }
 
     $scope.close = () => {
@@ -414,24 +436,28 @@
     let url = "/botaction/" + $scope.data.login
     
     $scope.sendAction = (data) => {
-      if(data.actionBody.memberList) {
-        data.actionBody.memberList = JSON.parse(data.actionBody.memberList)
-      }
+      if (!data.actionBody) {
+        data.actionBody = JSON.stringify({})
+      } else {
+        if(data.actionBody.memberList) {
+          data.actionBody.memberList = JSON.parse(data.actionBody.memberList)
+        }
 
-      if(data.actionBody.type) {
-        data.actionBody.type = parseInt(data.actionBody.type, 10)
-      }
+        if(data.actionBody.type) {
+          data.actionBody.type = parseInt(data.actionBody.type, 10)
+        }
 
-      if(data.actionBody.commentType) {
-        data.actionBody.commentType = parseInt(data.actionBody.commentType, 10)
+        if(data.actionBody.commentType) {
+          data.actionBody.commentType = parseInt(data.actionBody.commentType, 10)
+        }
+
+        data.actionBody = JSON.stringify(data.actionBody)
       }
-      
-      data.actionBody = JSON.stringify(data.actionBody)
       
       $http({
 	method: 'POST',
 	url: url,
-	data: JSON.stringify(data)
+	data: JSON.stringify(data),
       })
 	.then((success) => {
 	  toastr.success(success, '发送成功')

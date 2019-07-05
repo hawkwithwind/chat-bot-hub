@@ -897,6 +897,32 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
 
+		case chatbothub.GetLabelList:
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
+				return o.Err
+			}
+
+			if thebotinfo.ClientType == "WECHATBOT" {
+				labels := models.WechatChatContactLabels{}
+				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &labels)
+				if o.Err != nil {
+					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
+					return o.Err
+				}
+
+				labeldomains := []*domains.ChatContactLabel{}
+				for _, l := range labels.Label {
+					labeldomains = append(labeldomains, o.NewChatContactLabel(thebotinfo.BotId, l.Id, l.Name))
+					o.SaveChatContactLabels(tx, labeldomains)
+					if o.Err != nil {
+						return o.Err
+					}
+				}
+			}
+			
 		case chatbothub.SnsTimeline:
 			ctx.Info("snstimeline")
 			acresult := domains.ActionResult{}
