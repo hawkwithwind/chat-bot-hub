@@ -386,18 +386,22 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 		}
 	}
 
-	//go func() {
-	//	_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
-	//}()
+	if len(newBodyStr) > 32*1024 {
+		hub.Info("message[%d] exceeds 32*1024\n%s\n", len(newBodyStr), newBodyStr)
+		
+		go func() {
+			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+		}()
+	} else {
+		err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+			BotId:     bot.BotId,
+			EventType: inEvent.EventType,
+			Body:      newBodyStr,
+		}))
 
-	err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-		BotId:     bot.BotId,
-		EventType: inEvent.EventType,
-		Body:      newBodyStr,
-	}))
-
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -823,28 +827,33 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.onSendMessage(bot, actionType.(string), actionBody, result)
 					}
 
-					// if o.Err == nil {
-					// 	go func() {
-					// 		httpx.RestfulCallRetry(hub.restfulclient,
-					// 			bot.WebNotifyRequest(
-					// 				hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
-					// 					ActionRequestId: actionRequestId,
-					// 					Result:          o.ToJson(result),
-					// 					ReplyAt:         utils.JSONTime{Time: time.Now()},
-					// 				})), 5, 1)
-					// 	}()
-					// }
-
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId:     bot.BotId,
-							EventType: ACTIONREPLY,
-							Body: o.ToJson(domains.ActionRequest{
-								ActionRequestId: actionRequestId,
-								Result:          o.ToJson(result),
-								ReplyAt:         utils.JSONTime{Time: time.Now()},
-							}),
-						}))
+						resultstring := o.ToJson(result)
+						if len(resultstring) > 32 * 1024 {
+							hub.Info("actionreply [%d] exceeds 32 * 1024 \n %s \n ", len(resultstring), resultstring)
+							
+							go func() {
+								httpx.RestfulCallRetry(hub.restfulclient,
+									bot.WebNotifyRequest(
+										hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+											ActionRequestId: actionRequestId,
+											Result:          resultstring,
+											ReplyAt:         utils.JSONTime{Time: time.Now()},
+										})), 5, 1)
+							}()
+							
+						} else {
+							
+							o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+								BotId:     bot.BotId,
+								EventType: ACTIONREPLY,
+								Body: o.ToJson(domains.ActionRequest{
+									ActionRequestId: actionRequestId,
+									Result:          resultstring,
+									ReplyAt:         utils.JSONTime{Time: time.Now()},
+								}),
+							}))
+						}
 					}
 				}
 

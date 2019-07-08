@@ -11,7 +11,7 @@ import (
 	"github.com/getsentry/raven-go"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	//"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
@@ -377,13 +377,13 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 	}
 }
 
-// func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) *httpx.RestfulRequest {
-// 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
-// 	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, botnotifypath))
-// 	rr.Params["event"] = event
-// 	rr.Params["body"] = body
-// 	return rr
-// }
+ func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) *httpx.RestfulRequest {
+ 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
+ 	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, botnotifypath))
+ 	rr.Params["event"] = event
+ 	rr.Params["body"] = body
+ 	return rr
+ }
 
 func (bot *ChatBot) logoutOrShutdown() (*ChatBot, error) {
 	if bot.Status == WorkingLoggedIn || bot.Status == LoggingStaging {
