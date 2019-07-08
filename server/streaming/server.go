@@ -30,6 +30,9 @@ type Config struct {
 	Oss   utils.OssConfig
 
 	WebBaseUrl string
+
+	ClientId   string
+	ClientType string
 }
 
 type Server struct {

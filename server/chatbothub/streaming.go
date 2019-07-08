@@ -85,9 +85,6 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 	}
 
 	if authuser.Child != nil {
-		restreq := httpx.NewRestfulRequest("post", authuser.Child.AuthUrl)
-		restreq.Headers["cookie"] = authuser.Child.Cookie
-		params := map[string]interface{}{}
 		resources := []interface{}{}
 
 		for _, res := range req.Resources {
@@ -109,17 +106,24 @@ func (hub *ChatHub) StreamingCtrl(ctx context.Context, req *pb.StreamingCtrlRequ
 				"actionType":   "subscribe",
 			})
 		}
-		params["resources"] = resources
 
-		restreq.SetBodyString(o.ToJson(params), "json", "utf-8")
+		// 如果 resources 全是 unsubscribe，那就不需要 maneki 授权
+		if len(resources) > 0 {
+			params := map[string]interface{}{}
+			params["resources"] = resources
 
-		resp, err := httpx.RestfulCallCore(hub.restfulclient, restreq)
-		if err != nil {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
+			restreq := httpx.NewRestfulRequest("post", authuser.Child.AuthUrl)
+			restreq.Headers["cookie"] = authuser.Child.Cookie
+			restreq.SetBodyString(o.ToJson(params), "json", "utf-8")
 
-		if resp.StatusCode != http.StatusOK {
-			return nil, status.Error(codes.PermissionDenied, o.ToJson(resp))
+			resp, err := httpx.RestfulCallCore(hub.restfulclient, restreq)
+			if err != nil {
+				return nil, status.Error(codes.PermissionDenied, err.Error())
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				return nil, status.Error(codes.PermissionDenied, o.ToJson(resp))
+			}
 		}
 	}
 
