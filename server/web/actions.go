@@ -319,8 +319,8 @@ func (ctx *WebServer) mqConsume() {
 		}
 
 		msgs, err := ctx.mqChannel.Consume(
-			utils.CH_BotNotify, // queue
-			"",                 // consumer
+			utils.CH_BotNotify,           // queue
+			utils.CONSU_WEB_BotNotify,    // consumer
 			false,              // auto-ack
 			false,              // exclusive
 			false,              // no-local
@@ -333,28 +333,26 @@ func (ctx *WebServer) mqConsume() {
 			continue
 		}
 
-		go func() {
-			for d := range msgs {
-				mqEvent := models.MqEvent{}
+		for d := range msgs {
+			mqEvent := models.MqEvent{}
 
-				err := json.Unmarshal(d.Body, &mqEvent)
-				if err != nil {
-					ctx.Error(err, "unmarshal mqevent failed")
-					d.Ack(false)
-					continue
-				}
-
-				err = ctx.processBotNotify(mqEvent.BotId, mqEvent.EventType, mqEvent.Body)
-				if err != nil {
-					ctx.Error(err, "process event failed")
-					d.Ack(false)
-					continue
-				}
-
-				// no matter process success or not, must ack it; currently didn't handle with retry
+			err := json.Unmarshal(d.Body, &mqEvent)
+			if err != nil {
+				ctx.Error(err, "unmarshal mqevent failed")
 				d.Ack(false)
+				continue
 			}
-		}()
+
+			err = ctx.processBotNotify(mqEvent.BotId, mqEvent.EventType, mqEvent.Body)
+			if err != nil {
+				ctx.Error(err, "process event failed")
+				d.Ack(false)
+				continue
+			}
+
+			// no matter process success or not, must ack it; currently didn't handle with retry
+			d.Ack(false)
+		}
 	}
 }
 
