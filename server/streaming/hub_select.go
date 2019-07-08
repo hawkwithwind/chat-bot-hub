@@ -15,12 +15,13 @@ import (
 )
 
 func (server *Server) listen(client pb.ChatBotHubClient) error {
-	ctx := context.Background()
-
-	stream, err := client.StreamingTunnel(ctx)
+	stream, err := client.StreamingTunnel(context.Background())
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	go func() {
 		register := pb.EventRequest{
@@ -29,22 +30,34 @@ func (server *Server) listen(client pb.ChatBotHubClient) error {
 			ClientType: "streaming",
 			Body:       "",
 		}
+
 		if err := stream.Send(&register); err != nil {
 			server.Error(err, "send register to grpc server failed")
+			return
 		}
+
 		server.Info("REGISTER DONE")
 
+		ticker := time.NewTicker(time.Second * 2)
+		defer ticker.Stop()
+
 		for {
-			ping := pb.EventRequest{
-				EventType:  "PING",
-				ClientId:   "stream001",
-				ClientType: "streaming",
-				Body:       "",
+			select {
+			case <-ticker.C:
+				ping := pb.EventRequest{
+					EventType:  "PING",
+					ClientId:   "stream001",
+					ClientType: "streaming",
+					Body:       "",
+				}
+				if err := stream.Send(&ping); err != nil {
+					server.Error(err, "send ping to grpc server failed")
+					return
+				}
+
+			case <-ctx.Done():
+				return
 			}
-			if err := stream.Send(&ping); err != nil {
-				server.Error(err, "send ping to grpc server failed")
-			}
-			time.Sleep(2000 * time.Millisecond)
 		}
 	}()
 
