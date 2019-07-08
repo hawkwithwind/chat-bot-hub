@@ -251,7 +251,7 @@ func (f *FluentFilter) Fill(msg string) error {
 		go func() {
 			o := &ErrorHandler{}
 			defer o.Recover("filter fluent logger")
-			
+
 			if body != nil {
 				if f.logger != nil {
 					f.logger.Post(f.tag, body)

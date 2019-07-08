@@ -1435,32 +1435,32 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		}
 
 		type LabelVO struct {
-			BotId string `json:"botId"`
-			LabelId int `json:"labelId"`
-			Label string `json:"label"`
-			CreateAt utils.JSONTime `json:"createAt"`
+			BotId    string          `json:"botId"`
+			LabelId  int             `json:"labelId"`
+			Label    string          `json:"label"`
+			CreateAt utils.JSONTime  `json:"createAt"`
 			DeleteAt *utils.JSONTime `json:"deleteAt"`
 		}
 
 		lvos := []LabelVO{}
 		for _, l := range labelDomains {
 			lvo := LabelVO{
-				BotId: l.BotId,
-				LabelId: l.LabelId,
-				Label: l.Label,
-				CreateAt: utils.JSONTime{l.CreateAt.Time},				
+				BotId:    l.BotId,
+				LabelId:  l.LabelId,
+				Label:    l.Label,
+				CreateAt: utils.JSONTime{l.CreateAt.Time},
 			}
 
 			if l.DeleteAt.Valid {
 				lvo.DeleteAt = &utils.JSONTime{l.DeleteAt.Time}
 			}
-			
+
 			lvos = append(lvos, lvo)
 		}
-		
+
 		o.okWithPaging(w, "success", lvos, paging)
 		return
-		
+
 	case "moments":
 		var momentDomains []domains.Moment
 		o.Err = json.Unmarshal([]byte(o.ToJson(rows)), &momentDomains)

@@ -7,20 +7,20 @@ import (
 )
 
 type RabbitMQConfig struct {
-	User string
+	User     string
 	Password string
-	Host string
-	Port string
-	Vhost string
+	Host     string
+	Port     string
+	Vhost    string
 
-	Maintainer string
-	Accesskeyid string
+	Maintainer      string
+	Accesskeyid     string
 	Accesskeysecret string
 	Resourceownerid uint64
 }
 
 const (
-	CH_BotNotify string = "botNotify"
+	CH_BotNotify        string = "botNotify"
 	CONSU_WEB_BotNotify string = "webBotNotify"
 )
 
@@ -35,11 +35,11 @@ func (o *ErrorHandler) RabbitMQConnect(config RabbitMQConfig) *amqp.Connection {
 	}
 
 	var url string
-	
+
 	if config.Maintainer == MT_ALIYUN {
-		userName:=AliyunGetUserName(config.Accesskeyid, config.Resourceownerid)
-		password:=AliyunGetPassword(config.Accesskeysecret)
-		
+		userName := AliyunGetUserName(config.Accesskeyid, config.Resourceownerid)
+		password := AliyunGetPassword(config.Accesskeysecret)
+
 		url = fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
 			userName,
 			password,

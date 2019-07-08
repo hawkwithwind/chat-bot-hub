@@ -377,13 +377,13 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 	}
 }
 
- func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) *httpx.RestfulRequest {
- 	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
- 	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, botnotifypath))
- 	rr.Params["event"] = event
- 	rr.Params["body"] = body
- 	return rr
- }
+func (bot *ChatBot) WebNotifyRequest(baseurl string, event string, body string) *httpx.RestfulRequest {
+	botnotifypath := fmt.Sprintf("/bots/%s/notify", bot.BotId)
+	rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, botnotifypath))
+	rr.Params["event"] = event
+	rr.Params["body"] = body
+	return rr
+}
 
 func (bot *ChatBot) logoutOrShutdown() (*ChatBot, error) {
 	if bot.Status == WorkingLoggedIn || bot.Status == LoggingStaging {
@@ -539,7 +539,7 @@ func (bot *ChatBot) DeleteLabel(actionType string, arId string, body string) err
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
 
-		o.SendAction(bot, arId, DeleteLabel, o.ToJson(map[string]interface{} {
+		o.SendAction(bot, arId, DeleteLabel, o.ToJson(map[string]interface{}{
 			"labelId": labelId,
 		}))
 	} else {
@@ -571,9 +571,9 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 			// 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 			// 	}
 			// }
-						
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{} {
-				"userId": userId,
+
+			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+				"userId":      userId,
 				"labelIdList": labelId,
 			}))
 		} else {
@@ -581,19 +581,18 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 			if o.Err != nil {
 				return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 			}
-			
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{} {
-				"userId": userId,
+
+			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+				"userId":  userId,
 				"labelId": labelIdnumber,
 			}))
 		}
-		
-			
+
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
-	
+
 	return o.Err
 }
 

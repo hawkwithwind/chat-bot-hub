@@ -172,7 +172,7 @@ func (ctx *WebServer) init() error {
 
 func (web *WebServer) mqReconnect() error {
 	o := ErrorHandler{}
-	
+
 	if web.mqConn != nil && web.mqConn.IsClosed() == false {
 		return nil
 	}

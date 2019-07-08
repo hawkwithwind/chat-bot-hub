@@ -7,10 +7,8 @@ type DatabaseConfig struct {
 }
 
 type OssConfig struct {
-	Region string
-	Accesskeyid string
-    Accesskeysecret string
-    Bucket string
+	Region          string
+	Accesskeyid     string
+	Accesskeysecret string
+	Bucket          string
 }
-
-

@@ -52,11 +52,11 @@ func (hub *ChatHub) init() {
 
 	hub.logger = log.New(os.Stdout, "[HUB] ", log.Ldate|log.Ltime)
 	var err error
-	//hub.fluentLogger, err = fluent.New(fluent.Config{
-	//	FluentPort:   hub.Config.Fluent.Port,
-	//	FluentHost:   hub.Config.Fluent.Host,
-	//	WriteTimeout: 60 * time.Second,
-	//})
+	hub.fluentLogger, err = fluent.New(fluent.Config{
+		FluentPort:   hub.Config.Fluent.Port,
+		FluentHost:   hub.Config.Fluent.Host,
+		WriteTimeout: 60 * time.Second,
+	})
 	if err != nil {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
@@ -388,7 +388,7 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 
 	if len(newBodyStr) > 32*1024 {
 		hub.Info("message[%d] exceeds 32*1024\n%s\n", len(newBodyStr), newBodyStr)
-		
+
 		go func() {
 			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
 		}()
@@ -829,9 +829,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						resultstring := o.ToJson(result)
-						if len(resultstring) > 32 * 1024 {
+						if len(resultstring) > 32*1024 {
 							hub.Info("actionreply [%d] exceeds 32 * 1024 \n %s \n ", len(resultstring), resultstring)
-							
+
 							go func() {
 								httpx.RestfulCallRetry(hub.restfulclient,
 									bot.WebNotifyRequest(
@@ -841,9 +841,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 											ReplyAt:         utils.JSONTime{Time: time.Now()},
 										})), 5, 1)
 							}()
-							
+
 						} else {
-							
+
 							o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,
