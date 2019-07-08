@@ -319,8 +319,8 @@ func (ctx *WebServer) mqConsume() {
 		}
 
 		msgs, err := ctx.mqChannel.Consume(
-			utils.CH_BotNotify,         // queue
-			utils.CONSU_WEB_BotNotify,  // consumer
+			utils.CH_BotNotify, // queue
+			"",                 // consumer
 			false,              // auto-ack
 			false,              // exclusive
 			false,              // no-local
