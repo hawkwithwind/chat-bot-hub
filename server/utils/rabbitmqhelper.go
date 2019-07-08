@@ -57,7 +57,7 @@ func (o *ErrorHandler) RabbitMQConnect(config RabbitMQConfig) *amqp.Connection {
 		)
 	}
 
-	fmt.Println("rabbitmq connecting to %s", url)
+	//fmt.Println("rabbitmq connecting to %s", url)
 	mqconn, err := amqp.Dial(url)
 
 	if err != nil {

@@ -174,7 +174,6 @@ func (web *WebServer) mqReconnect() error {
 	o := ErrorHandler{}
 	
 	if web.mqConn != nil && web.mqConn.IsClosed() == false {
-		web.Info("conn is not nil, and is not closed")
 		return nil
 	}
 
@@ -193,7 +192,7 @@ func (web *WebServer) mqReconnect() error {
 	o.Err = web.mqChannel.Qos(
 		1,     // prefetch count
 		0,     // prefetch size
-		false, //global
+		false, // global
 	)
 	if o.Err != nil {
 		return o.Err
