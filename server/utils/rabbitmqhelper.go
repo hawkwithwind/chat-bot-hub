@@ -11,10 +11,21 @@ type RabbitMQConfig struct {
 	Password string
 	Host string
 	Port string
+	Vhost string
+
+	Maintainer string
+	Accesskeyid string
+	Accesskeysecret string
+	Resourceownerid uint64
 }
 
 const (
 	CH_BotNotify string = "botNotify"
+)
+
+const (
+	MT_ALIYUN string = "aliyun"
+	MT_LOCAL  string = "local"
 )
 
 func (o *ErrorHandler) RabbitMQConnect(config RabbitMQConfig) *amqp.Connection {
@@ -22,12 +33,31 @@ func (o *ErrorHandler) RabbitMQConnect(config RabbitMQConfig) *amqp.Connection {
 		return nil
 	}
 
-	mqconn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		config.User,
-		config.Password,
-		config.Host,
-		config.Port,
-	))
+	var url string
+	
+	if config.Maintainer == MT_ALIYUN {
+		userName:=AliyunGetUserName(config.Accesskeyid, config.Resourceownerid)
+		password:=AliyunGetPassword(config.Accesskeysecret)
+		
+		url = fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
+			userName,
+			password,
+			config.Host,
+			config.Port,
+			config.Vhost,
+		)
+	} else {
+		url = fmt.Sprintf("amqp://%s:%s@%s:%s/%s",
+			config.User,
+			config.Password,
+			config.Host,
+			config.Port,
+			config.Vhost,
+		)
+	}
+
+	fmt.Println("rabbitmq connecting to %s", url)
+	mqconn, err := amqp.Dial(url)
 
 	if err != nil {
 		o.Err = err
