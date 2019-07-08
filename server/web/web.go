@@ -172,18 +172,21 @@ func (ctx *WebServer) init() error {
 
 func (web *WebServer) mqReconnect() error {
 	o := ErrorHandler{}
-
+	
 	if web.mqConn != nil && web.mqConn.IsClosed() == false {
+		web.Info("conn is not nil, and is not closed")
 		return nil
 	}
 
 	web.mqConn = o.RabbitMQConnect(web.Config.Rabbitmq)
 	if o.Err != nil {
+		web.Info("reconnect still failed %v", o.Err)
 		return o.Err
 	}
 
 	web.mqChannel = o.RabbitMQChannel(web.mqConn)
 	if o.Err != nil {
+		web.Info("reconnect channel create failed")
 		return o.Err
 	}
 
