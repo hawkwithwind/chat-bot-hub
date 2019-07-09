@@ -312,20 +312,13 @@ func (ctx *WebServer) mqConsume(queue string, consumer string) {
 	ticker := time.NewTicker(5 * time.Second)
 
 	for ; ; <-ticker.C {
-		err := ctx.mqReconnect()
-		if err != nil {
-			ctx.Error(err, "connect to rabbitmq failed")
-			continue
-		}
-
-		msgs, err := ctx.mqChannel.Consume(
+		msgs, err := ctx.rabbitmq.Consume(
 			queue,        // queue
 			consumer,     // consumer
 			false,        // auto-ack
 			false,        // exclusive
 			false,        // no-local
 			false,        // no-wait
-			nil,          // args
 		)
 
 		if err != nil {

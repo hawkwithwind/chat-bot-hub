@@ -17,7 +17,7 @@ import (
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	"github.com/streadway/amqp"
+	//"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -77,40 +77,19 @@ func (hub *ChatHub) init() {
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
 
-	err = hub.mqReconnect()
-	if err != nil {
-		hub.Error(err, "connect to rabbitmq failed")
-		return
-	}
 
-	mqChannel := o.RabbitMQChannel(hub.mqConn)
-	if o.Err != nil {
-		hub.Error(o.Err, "create channel failed")
+	hub.rabbitmq = o.NewRabbitMQWrapper(hub.Config.Rabbitmq)
+	err = hub.rabbitmq.Reconnect()
+	if err != nil {
+		hub.Error(err, "connect rabbitmq failed")
 		return
 	}
-	defer mqChannel.Close()
-	
-	_, err = mqChannel.QueueDeclare(
-		utils.CH_BotNotify, // queue name
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
+	err = hub.rabbitmq.DeclareQueue(utils.CH_BotNotify, true, false, false, false)
 	if err != nil {
 		hub.Error(err, "declare queue botnotify failed")
 		return
 	}
-
-	_, err = mqChannel.QueueDeclare(
-		utils.CH_ContactInfo, // queue name
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
+	err = hub.rabbitmq.DeclareQueue(utils.CH_ContactInfo, true, false, false, false)
 	if err != nil {
 		hub.Error(err, "declare queue contactinfo failed")
 		return
@@ -133,21 +112,6 @@ func (hub *ChatHub) init() {
 
 	hub.ossClient = ossClient
 	hub.ossBucket = ossBucket
-}
-
-func (hub *ChatHub) mqReconnect() error {
-	o := ErrorHandler{}
-
-	if hub.mqConn != nil && hub.mqConn.IsClosed() == false {
-		return nil
-	}
-
-	hub.mqConn = o.RabbitMQConnect(hub.Config.Rabbitmq)
-	if o.Err != nil {
-		return o.Err
-	}
-
-	return nil
 }
 
 type ChatHub struct {
@@ -178,33 +142,7 @@ type ChatHub struct {
 	ossClient *oss.Client
 	ossBucket *oss.Bucket
 
-	mqConn    *amqp.Connection
-	mqChannel *amqp.Channel
-}
-
-func (hub *ChatHub) mqSend(queue string, body string) error {
-	err := hub.mqReconnect()
-	if err != nil {
-		return err
-	}
-
-	o := &ErrorHandler{}
-	mqChannel := o.RabbitMQChannel(hub.mqConn)
-	if o.Err != nil {
-		return o.Err
-	}
-	defer mqChannel.Close()
-
-	return mqChannel.Publish(
-		"", // exchange
-		queue,
-		false, // mandatory
-		false, // immediate
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
-			Body:         []byte(body),
-		})
+	rabbitmq *utils.RabbitMQWrapper
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -407,7 +345,7 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
 		}()
 	} else {
-		err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+		err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 			BotId:     bot.BotId,
 			EventType: inEvent.EventType,
 			Body:      newBodyStr,
@@ -697,7 +635,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 							BotId:     thebot.BotId,
 							EventType: LOGINDONE,
 							Body:      "",
@@ -746,7 +684,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// }
 
 				if o.Err == nil {
-					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     thebot.BotId,
 						EventType: UPDATETOKEN,
 						Body:      "",
@@ -766,7 +704,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// }
 
 				if o.Err == nil {
-					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
 						EventType: FRIENDREQUEST,
 						Body:      reqstr,
@@ -783,8 +721,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// 	}
 				// }()
 
-				if o.Err == nil {
-					o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+				if o.Err == nil {					
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
 						EventType: CONTACTSYNCDONE,
 						Body:      "",
@@ -858,7 +796,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 						} else {
 
-							o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,
 								Body: o.ToJson(domains.ActionRequest{
@@ -901,7 +839,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					// }
 
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
 							EventType: STATUSMESSAGE,
 							Body:      in.Body,
@@ -926,7 +864,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					// }
 
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_ContactInfo, o.ToJson(models.MqEvent{
+						o.Err = hub.rabbitmq.Send(utils.CH_ContactInfo, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
 							EventType: CONTACTINFO,
 							Body:      in.Body,
@@ -951,7 +889,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					// }
 
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
 							EventType: GROUPINFO,
 							Body:      in.Body,

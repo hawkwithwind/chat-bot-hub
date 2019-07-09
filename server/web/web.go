@@ -26,7 +26,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/sessions"
 	"github.com/hawkwithwind/mux"
-	"github.com/streadway/amqp"
+	//"github.com/streadway/amqp"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -74,8 +74,7 @@ type WebServer struct {
 	contactParser *ContactParser
 	accounts      Accounts
 
-	mqConn    *amqp.Connection
-	mqChannel *amqp.Channel
+	rabbitmq      *utils.RabbitMQWrapper
 }
 
 func (ctx *WebServer) init() error {
@@ -137,33 +136,18 @@ func (ctx *WebServer) init() error {
 		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
 	}
 
-	err = ctx.mqReconnect()
+	ctx.rabbitmq = o.NewRabbitMQWrapper(ctx.Config.Rabbitmq)
+	err = ctx.rabbitmq.Reconnect()
 	if err != nil {
-		ctx.Error(err, "connect to rabbitmq failed")
+		ctx.Error(err, "connect rabbitmq failed")
 		return err
 	}
-
-	_, err = ctx.mqChannel.QueueDeclare(
-		utils.CH_BotNotify,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
+	err = ctx.rabbitmq.DeclareQueue(utils.CH_BotNotify, true, false, false, false)
 	if err != nil {
 		ctx.Error(err, "declare queue botnotify failed")
 		return err
 	}
-
-	_, err = ctx.mqChannel.QueueDeclare(
-		utils.CH_ContactInfo,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
+	err = ctx.rabbitmq.DeclareQueue(utils.CH_ContactInfo, true, false, false, false)
 	if err != nil {
 		ctx.Error(err, "declare queue contactinfo failed")
 		return err
@@ -184,37 +168,6 @@ func (ctx *WebServer) init() error {
 		ctx.mqConsume(utils.CH_ContactInfo, utils.CONSU_WEB_ContactInfo)
 	}()
 	ctx.Info("begin consume rabbitmq contactinfo ...")
-
-	return nil
-}
-
-func (web *WebServer) mqReconnect() error {
-	o := ErrorHandler{}
-
-	if web.mqConn != nil && web.mqConn.IsClosed() == false {
-		return nil
-	}
-
-	web.mqConn = o.RabbitMQConnect(web.Config.Rabbitmq)
-	if o.Err != nil {
-		web.Info("reconnect still failed %v", o.Err)
-		return o.Err
-	}
-
-	web.mqChannel = o.RabbitMQChannel(web.mqConn)
-	if o.Err != nil {
-		web.Info("reconnect channel create failed")
-		return o.Err
-	}
-
-	o.Err = web.mqChannel.Qos(
-		1,     // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-	if o.Err != nil {
-		return o.Err
-	}
 
 	return nil
 }
