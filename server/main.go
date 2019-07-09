@@ -43,7 +43,7 @@ func loadConfig(configPath string) (MainConfig, error) {
 		return c, err
 	}
 
-	data := make([]byte, 2048)
+	data := make([]byte, 16 * 1024)
 	len := 0
 	for {
 		n, _ := config.Read(data)
