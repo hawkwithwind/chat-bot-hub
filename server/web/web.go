@@ -152,7 +152,20 @@ func (ctx *WebServer) init() error {
 		nil,   // arguments
 	)
 	if err != nil {
-		ctx.Error(err, "declare queue failed")
+		ctx.Error(err, "declare queue botnotify failed")
+		return err
+	}
+
+	_, err = ctx.mqChannel.QueueDeclare(
+		utils.CH_ContactInfo,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		ctx.Error(err, "declare queue contactinfo failed")
 		return err
 	}
 
@@ -163,9 +176,14 @@ func (ctx *WebServer) init() error {
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	go func() {
-		ctx.mqConsume()
+		ctx.mqConsume(utils.CH_BotNotify, utils.CONSU_WEB_BotNotify)
 	}()
-	ctx.Info("begin consume rabbitmq ...")
+	ctx.Info("begin consume rabbitmq botnotify ...")
+
+	go func() {
+		ctx.mqConsume(utils.CH_ContactInfo, utils.CONSU_WEB_ContactInfo)
+	}()
+	ctx.Info("begin consume rabbitmq contactinfo ...")
 
 	return nil
 }

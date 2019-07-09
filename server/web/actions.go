@@ -308,7 +308,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, "success", nil)
 }
 
-func (ctx *WebServer) mqConsume() {
+func (ctx *WebServer) mqConsume(queue string, consumer string) {
 	ticker := time.NewTicker(5 * time.Second)
 
 	for ; ; <-ticker.C {
@@ -319,13 +319,13 @@ func (ctx *WebServer) mqConsume() {
 		}
 
 		msgs, err := ctx.mqChannel.Consume(
-			utils.CH_BotNotify,        // queue
-			utils.CONSU_WEB_BotNotify, // consumer
-			false,                     // auto-ack
-			false,                     // exclusive
-			false,                     // no-local
-			false,                     // no-wait
-			nil,                       // args
+			queue,        // queue
+			consumer,     // consumer
+			false,        // auto-ack
+			false,        // exclusive
+			false,        // no-local
+			false,        // no-wait
+			nil,          // args
 		)
 
 		if err != nil {

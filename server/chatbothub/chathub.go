@@ -163,7 +163,7 @@ func (hub *ChatHub) mqSend(queue string, body string) error {
 	defer mqChannel.Close()
 	
 	_, err = mqChannel.QueueDeclare(
-		utils.CH_BotNotify,
+		queue, // queue name
 		true,  // durable
 		false, // delete when unused
 		false, // exclusive
@@ -906,7 +906,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					// }
 
 					if o.Err == nil {
-						o.Err = hub.mqSend(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						o.Err = hub.mqSend(utils.CH_ContactInfo, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
 							EventType: CONTACTINFO,
 							Body:      in.Body,
