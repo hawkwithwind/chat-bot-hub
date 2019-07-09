@@ -116,6 +116,9 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 			Body:         []byte(body),
 		})
 	if err != nil {
+		w.mqChannel.Close()
+		w.mqChannel = nil
+		
 		w.mqConn.Close()
 		w.mqConn = nil
 		return err
