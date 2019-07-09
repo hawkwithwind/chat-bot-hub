@@ -121,6 +121,10 @@ func main() {
 			raven.CapturePanicAndWait(func() {
 				config.Hub.Redis = config.Redis
 				config.Hub.Fluent = config.Fluent
+
+				fmt.Println("config", config)
+				fmt.Println("hub config", config.Hub)
+				
 				config.Hub.Rabbitmq = config.Rabbitmq
 
 				hub := chatbothub.ChatHub{
