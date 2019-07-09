@@ -140,8 +140,10 @@ func (w *RabbitMQWrapper) Consume(queue string ,consumer string, autoack bool, e
 		if o.Err != nil {
 			return nil, o.Err
 		}
+
+		w.mqChannel.Qos(100, 0, false)
 	}
-		
+
 	msgs, err := w.mqChannel.Consume(
 		queue,
 		consumer,
