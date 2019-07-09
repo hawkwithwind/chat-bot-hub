@@ -89,6 +89,9 @@ func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
 }
 
 func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
+	hub.muxBots.Lock()
+	defer hub.muxBots.Unlock()
+
 	o := &ErrorHandler{}
 
 	botm := make(map[string]*pb.BotsInfo)
