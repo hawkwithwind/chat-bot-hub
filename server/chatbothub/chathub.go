@@ -127,20 +127,6 @@ func (hub *ChatHub) mqReconnect() error {
 		return o.Err
 	}
 
-	hub.mqChannel = o.RabbitMQChannel(hub.mqConn)
-	if o.Err != nil {
-		return o.Err
-	}
-
-	o.Err = hub.mqChannel.Qos(
-		1,     // prefetch count
-		0,     // prefetch size
-		false, //global
-	)
-	if o.Err != nil {
-		return o.Err
-	}
-
 	return nil
 }
 
@@ -181,6 +167,13 @@ func (hub *ChatHub) mqSend(queue string, body string) error {
 	if err != nil {
 		return err
 	}
+
+	o := &ErrorHandler{}
+	hub.mqChannel = o.RabbitMQChannel(hub.mqConn)
+	if o.Err != nil {
+		return o.Err
+	}
+	defer hub.mqChannel.Close()
 
 	return hub.mqChannel.Publish(
 		"", // exchange
