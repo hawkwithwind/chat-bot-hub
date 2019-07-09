@@ -29,7 +29,7 @@ type MainConfig struct {
 }
 
 var (
-	configPath = flag.String("c", "config/config.yml", "config file path")
+	configPath = flag.String("c", "/config/config.yml", "config file path")
 	startcmd   = flag.String("s", "", "start command: web/hub")
 	config     MainConfig
 )
