@@ -55,7 +55,10 @@ func loadConfig(configPath string) (MainConfig, error) {
 
 	fmt.Println(string(data))
 	
-	yaml.Unmarshal(data[:len], &c)
+	err = yaml.Unmarshal(data[:len], &c)
+	if err != nil {
+		return nil, err
+	}
 
 	dbuser := os.Getenv("DB_USER")
 	dbpassword := os.Getenv("DB_PASSWORD")
