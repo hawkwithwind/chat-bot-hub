@@ -94,7 +94,7 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 	}
 
 	o := &ErrorHandler{}
-	if w.mqChannel != nil && w.lastActive.Add(5 * time.Second).Before(time.Now()) {
+	if w.mqChannel != nil && w.lastActive.Add(5 * time.Minute).Before(time.Now()) {
 		w.mqChannel.Close()
 		w.mqChannel = nil
 	}
@@ -130,7 +130,7 @@ func (w *RabbitMQWrapper) Consume(queue string ,consumer string, autoack bool, e
 	}
 
 	o := &ErrorHandler{}
-	if w.mqChannel != nil && w.lastActive.Add(5 * time.Second).Before(time.Now()) {
+	if w.mqChannel != nil && w.lastActive.Add(5 * time.Minute).Before(time.Now()) {
 		w.mqChannel.Close()
 		w.mqChannel = nil
 	}
