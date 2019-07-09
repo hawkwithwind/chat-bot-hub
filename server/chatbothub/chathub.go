@@ -83,19 +83,6 @@ func (hub *ChatHub) init() {
 		return
 	}
 
-	_, err = hub.mqChannel.QueueDeclare(
-		utils.CH_BotNotify,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		hub.Error(err, "declare queue failed")
-		return
-	}
-
 	// set global variable chathub
 	chathub = hub
 
@@ -169,13 +156,26 @@ func (hub *ChatHub) mqSend(queue string, body string) error {
 	}
 
 	o := &ErrorHandler{}
-	hub.mqChannel = o.RabbitMQChannel(hub.mqConn)
+	mqChannel := o.RabbitMQChannel(hub.mqConn)
 	if o.Err != nil {
 		return o.Err
 	}
-	defer hub.mqChannel.Close()
+	defer mqChannel.Close()
+	
+	_, err = mqChannel.QueueDeclare(
+		utils.CH_BotNotify,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		hub.Error(err, "declare queue failed")
+		return err
+	}
 
-	return hub.mqChannel.Publish(
+	return mqChannel.Publish(
 		"", // exchange
 		queue,
 		false, // mandatory
