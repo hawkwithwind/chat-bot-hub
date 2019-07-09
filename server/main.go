@@ -52,6 +52,9 @@ func loadConfig(configPath string) (MainConfig, error) {
 		}
 		len += n
 	}
+
+	fmt.Println(string(data))
+	
 	yaml.Unmarshal(data[:len], &c)
 
 	dbuser := os.Getenv("DB_USER")
@@ -75,6 +78,8 @@ func loadConfig(configPath string) (MainConfig, error) {
 	c.Streaming.Mongo = c.Web.Mongo
 	c.Streaming.WebBaseUrl = c.Web.Baseurl
 	c.Streaming.Oss = c.Hub.Oss
+
+	fmt.Println("main config", c)
 
 	return c, nil
 }
