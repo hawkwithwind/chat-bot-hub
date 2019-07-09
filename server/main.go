@@ -53,8 +53,6 @@ func loadConfig(configPath string) (MainConfig, error) {
 		len += n
 	}
 
-	fmt.Println(string(data))
-	
 	err = yaml.Unmarshal(data[:len], &c)
 	if err != nil {
 		return c, err
@@ -81,8 +79,6 @@ func loadConfig(configPath string) (MainConfig, error) {
 	c.Streaming.Mongo = c.Web.Mongo
 	c.Streaming.WebBaseUrl = c.Web.Baseurl
 	c.Streaming.Oss = c.Hub.Oss
-
-	fmt.Println("main config", c)
 
 	return c, nil
 }
@@ -129,10 +125,6 @@ func main() {
 			raven.CapturePanicAndWait(func() {
 				config.Hub.Redis = config.Redis
 				config.Hub.Fluent = config.Fluent
-
-				fmt.Println("config", config)
-				fmt.Println("hub config", config.Hub)
-				
 				config.Hub.Rabbitmq = config.Rabbitmq
 
 				hub := chatbothub.ChatHub{
