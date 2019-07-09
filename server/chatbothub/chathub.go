@@ -57,6 +57,9 @@ func (hub *ChatHub) init() {
 		FluentHost:   hub.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
+
+	hub.Info("host %s port %s", hub.Config.Fluent.Host, hub.Config.Fluent.Port)
+	
 	if err != nil {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
