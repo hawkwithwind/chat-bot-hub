@@ -409,6 +409,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/botlogin", server.validate(server.botLogin)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/logout", server.validate(server.botLogout)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/clearlogininfo", server.validate(server.clearBotLoginInfo)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/shutdown", server.validate(server.botShutdown)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/loginstage", server.botLoginStage).Methods("Post")
 	r.HandleFunc("/bots", server.validate(server.getBots)).Methods("GET")
 	r.HandleFunc("/bots/{botId}", server.validate(server.getBotById)).Methods("GET")
@@ -440,7 +441,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/auth/callback", server.githubOAuthCallback).Methods("GET")
 
 	// search
-	r.HandleFunc("/{domain}/search", server.validate(server.Search)).Methods("GET")
+	r.HandleFunc("/{domain}/search", server.validate(server.Search)).Methods("GET", "POST")
 	r.HandleFunc("/{mapkey}/messages", server.validate(server.SearchMessage)).Methods("GET", "POST")
 	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", server.validate(server.GetChatMessage)).Methods("GET")
 
