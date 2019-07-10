@@ -21,9 +21,9 @@ type RabbitMQConfig struct {
 }
 
 const (
-	CH_BotNotify        string = "botNotify"
-	CH_ContactInfo      string = "contactInfo"
-	CONSU_WEB_BotNotify string = "webBotNotify"
+	CH_BotNotify          string = "botNotify"
+	CH_ContactInfo        string = "contactInfo"
+	CONSU_WEB_BotNotify   string = "webBotNotify"
 	CONSU_WEB_ContactInfo string = "webContactInfo"
 )
 
@@ -33,10 +33,10 @@ const (
 )
 
 type RabbitMQWrapper struct {
-	mqConn *amqp.Connection
-	mqChannel *amqp.Channel
+	mqConn     *amqp.Connection
+	mqChannel  *amqp.Channel
 	lastActive time.Time
-	config    RabbitMQConfig
+	config     RabbitMQConfig
 }
 
 func (o *ErrorHandler) NewRabbitMQWrapper(config RabbitMQConfig) *RabbitMQWrapper {
@@ -45,7 +45,7 @@ func (o *ErrorHandler) NewRabbitMQWrapper(config RabbitMQConfig) *RabbitMQWrappe
 	}
 
 	return &RabbitMQWrapper{
-		config: config,		
+		config: config,
 	}
 }
 
@@ -66,20 +66,20 @@ func (w *RabbitMQWrapper) Reconnect() error {
 
 func (w *RabbitMQWrapper) DeclareQueue(queue string, durable bool, autodelete bool, exclusive bool, nowait bool) error {
 	o := &ErrorHandler{}
-	
+
 	mqChannel := o.RabbitMQChannel(w.mqConn)
 	if o.Err != nil {
 		return o.Err
 	}
 	defer mqChannel.Close()
-	
+
 	_, err := mqChannel.QueueDeclare(
-		queue, // queue name
-		durable,  // durable
+		queue,      // queue name
+		durable,    // durable
 		autodelete, // delete when unused
-		exclusive, // exclusive
-		nowait, // no-wait
-		nil,   // arguments
+		exclusive,  // exclusive
+		nowait,     // no-wait
+		nil,        // arguments
 	)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 	}
 
 	o := &ErrorHandler{}
-	if w.mqChannel != nil && w.lastActive.Add(2 * time.Minute).Before(time.Now()) {
+	if w.mqChannel != nil && w.lastActive.Add(2*time.Minute).Before(time.Now()) {
 		w.mqChannel.Close()
 		w.mqChannel = nil
 	}
@@ -105,7 +105,7 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 			return o.Err
 		}
 	}
-	
+
 	err = w.mqChannel.Publish("", // exchange
 		queue,
 		false, // mandatory
@@ -125,14 +125,14 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 	return nil
 }
 
-func (w *RabbitMQWrapper) Consume(queue string ,consumer string, autoack bool, exclusive bool, nolocal bool, nowait bool) (<-chan amqp.Delivery, error) {
+func (w *RabbitMQWrapper) Consume(queue string, consumer string, autoack bool, exclusive bool, nolocal bool, nowait bool) (<-chan amqp.Delivery, error) {
 	err := w.Reconnect()
 	if err != nil {
 		return nil, err
 	}
 
 	o := &ErrorHandler{}
-	if w.mqChannel != nil && w.lastActive.Add(5 * time.Minute).Before(time.Now()) {
+	if w.mqChannel != nil && w.lastActive.Add(5*time.Minute).Before(time.Now()) {
 		w.mqChannel.Close()
 		w.mqChannel = nil
 	}
@@ -160,7 +160,7 @@ func (w *RabbitMQWrapper) Consume(queue string ,consumer string, autoack bool, e
 	}
 
 	w.lastActive = time.Now()
-	return msgs, nil	
+	return msgs, nil
 }
 
 func (o *ErrorHandler) RabbitMQConnect(config RabbitMQConfig) *amqp.Connection {

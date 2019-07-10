@@ -17,7 +17,6 @@ import (
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	//"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -76,7 +75,6 @@ func (hub *ChatHub) init() {
 	hub.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
-
 
 	hub.rabbitmq = o.NewRabbitMQWrapper(hub.Config.Rabbitmq)
 	err = hub.rabbitmq.Reconnect()
@@ -721,7 +719,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// 	}
 				// }()
 
-				if o.Err == nil {					
+				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
 						EventType: CONTACTSYNCDONE,

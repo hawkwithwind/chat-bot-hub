@@ -45,8 +45,8 @@ func (status ChatBotStatus) String() string {
 }
 
 type LoginInfo struct {
-	WxData string `json:"wxData"`
-	Token  string `json:"token"`
+	WxData string `json:"wxData,omitempty"`
+	Token  string `json:"token,omitempty"`
 }
 
 type ChatBot struct {

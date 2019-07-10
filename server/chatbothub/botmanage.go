@@ -161,6 +161,8 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 		return nil, err
 	}
 
+	hub.DropBot(bot.ClientId)
+
 	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 

@@ -198,92 +198,6 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
-func (o *ErrorHandler) getTheBot(wrapper *rpc.GRPCWrapper, botId string) *pb.BotsInfo {
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
-	if o.Err == nil {
-		if len(botsreply.BotsInfo) == 0 {
-			o.Err = utils.NewClientError(
-				utils.STATUS_INCONSISTENT,
-				fmt.Errorf("bot {%s} not activated", botId),
-			)
-		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = utils.NewClientError(
-				utils.STATUS_INCONSISTENT,
-				fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo),
-			)
-		}
-	}
-
-	if o.Err != nil {
-		return nil
-	}
-
-	if botsreply == nil || len(botsreply.BotsInfo) == 0 {
-		o.Err = fmt.Errorf("cannot find bots %s", botId)
-		return nil
-	}
-
-	return botsreply.BotsInfo[0]
-}
-
-func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
-	defer o.WebError(w)
-	defer o.BackEndError(web)
-
-	vars := mux.Vars(r)
-	botId := vars["botId"]
-
-	web.Info("botNotify %s", botId)
-
-	tx := o.Begin(web.db)
-	defer o.CommitOrRollback(tx)
-
-	bot := o.GetBotById(tx, botId)
-	if o.Err != nil {
-		return
-	}
-
-	if bot == nil {
-		o.Err = fmt.Errorf("bot %s not found", botId)
-		return
-	}
-
-	wrapper, err := web.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return
-	}
-	defer wrapper.Cancel()
-
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return
-	}
-
-	if thebotinfo == nil {
-		o.Err = fmt.Errorf("bot %s not active", botId)
-		return
-	}
-
-	if thebotinfo.Status != int32(chatbothub.LoggingStaging) {
-		o.Err = fmt.Errorf("bot[%s] not LogingStaging but %d", botId, thebotinfo.Status)
-		return
-	}
-
-	if len(thebotinfo.Login) == 0 {
-		o.Err = fmt.Errorf("bot[%s] loging staging with empty login %#v", botId, thebotinfo)
-		return
-	}
-
-	web.Info("[LOGIN MIGRATE] bot migrate b[%s] %s", botId, thebotinfo.Login)
-
-	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
-	o.ok(w, "", map[string]interface{}{
-		"botId": oldId,
-	})
-}
-
 func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -313,12 +227,12 @@ func (ctx *WebServer) mqConsume(queue string, consumer string) {
 
 	for ; ; <-ticker.C {
 		msgs, err := ctx.rabbitmq.Consume(
-			queue,        // queue
-			consumer,     // consumer
-			false,        // auto-ack
-			false,        // exclusive
-			false,        // no-local
-			false,        // no-wait
+			queue,    // queue
+			consumer, // consumer
+			false,    // auto-ack
+			false,    // exclusive
+			false,    // no-local
+			false,    // no-wait
 		)
 
 		if err != nil {

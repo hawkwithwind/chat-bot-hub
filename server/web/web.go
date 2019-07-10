@@ -74,7 +74,7 @@ type WebServer struct {
 	contactParser *ContactParser
 	accounts      Accounts
 
-	rabbitmq      *utils.RabbitMQWrapper
+	rabbitmq *utils.RabbitMQWrapper
 }
 
 func (ctx *WebServer) init() error {
@@ -382,18 +382,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/echo", server.echo).Methods("Post")
 	r.HandleFunc("/hello", server.validate(server.hello)).Methods("GET")
 
-	// bot CURD (controls.go)
 	r.HandleFunc("/consts", server.validate(server.getConsts)).Methods("GET")
-	r.HandleFunc("/bots", server.validate(server.getBots)).Methods("GET")
-	r.HandleFunc("/bots/{botId}", server.validate(server.getBotById)).Methods("GET")
-	r.HandleFunc("/bots/{botId}", server.validate(server.deleteBot)).Methods("DELETE")
-	r.HandleFunc("/bots/{botId}/msgfilters/rebuild",
-		server.validate(server.rebuildMsgFiltersFromWeb)).Methods("POST")
-	r.HandleFunc("/bots/{botId}/momentfilters/rebuild",
-		server.validate(server.rebuildMomentFiltersFromWeb)).Methods("POST")
-	r.HandleFunc("/bots/{botId}", server.validate(server.updateBot)).Methods("PUT")
-	r.HandleFunc("/bots", server.validate(server.createBot)).Methods("POST")
-	r.HandleFunc("/bots/scancreate", server.validate(server.scanCreateBot)).Methods("POST")
 
 	// filter CURD (controls.go)
 	r.HandleFunc("/filters", server.validate(server.createFilter)).Methods("POST")
@@ -416,15 +405,31 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/chatgroups", server.validate(server.getChatGroups)).Methods("GET")
 	r.HandleFunc("/chatgroups/{groupname}/members", server.validate(server.getGroupMembers)).Methods("GET")
 
-	// bot login and action (actions.go)
+	// bot CURD and login (botmanage.go)
 	r.HandleFunc("/botlogin", server.validate(server.botLogin)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/logout", server.validate(server.botLogout)).Methods("POST")
-	r.HandleFunc("/botaction/{login}", server.validate(server.botAction)).Methods("POST")
-	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
+	r.HandleFunc("/bots/{botId}/clearlogininfo", server.validate(server.clearBotLoginInfo)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/loginstage", server.botLoginStage).Methods("Post")
+	r.HandleFunc("/bots", server.validate(server.getBots)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", server.validate(server.getBotById)).Methods("GET")
+	r.HandleFunc("/bots/{botId}", server.validate(server.deleteBot)).Methods("DELETE")
+	r.HandleFunc("/bots/{botId}/msgfilters/rebuild",
+		server.validate(server.rebuildMsgFiltersFromWeb)).Methods("POST")
+	r.HandleFunc("/bots/{botId}/momentfilters/rebuild",
+		server.validate(server.rebuildMomentFiltersFromWeb)).Methods("POST")
+	r.HandleFunc("/bots/{botId}", server.validate(server.updateBot)).Methods("PUT")
+	r.HandleFunc("/bots", server.validate(server.createBot)).Methods("POST")
+	r.HandleFunc("/bots/scancreate", server.validate(server.scanCreateBot)).Methods("POST")
+
+	// bot action (actions.go)
+	r.HandleFunc("/botaction/{login}", server.validate(server.botAction)).Methods("POST")
+	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
+	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
+
+	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
-	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
+	r.HandleFunc("/bots/{botId}/crawltimeline", server.validate(server.NotifyWechatBotCrawlTimeline)).Methods("POST")
 
 	// account login and auth (auth.go)
 	r.HandleFunc("/login", server.login).Methods("POST")
