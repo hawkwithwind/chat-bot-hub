@@ -72,7 +72,7 @@ func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{
 
 	jsonstr, _ := json.Marshal(params)
 
-	if _, err := wsConnection.server.SendHubBotAction(params.BotLogin, "SendTextMessage", string(jsonstr)); err != nil {
+	if _, err := wsConnection.SendHubBotAction(params.BotLogin, "SendTextMessage", string(jsonstr)); err != nil {
 		return nil, err
 	}
 

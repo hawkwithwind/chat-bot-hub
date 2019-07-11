@@ -1,9 +1,6 @@
 package streaming
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"io"
 	"time"
@@ -161,27 +158,6 @@ func (server *Server) StartHubClient() {
 		server.Info("BEGIN SELECT GRPC ...")
 		server._select()
 	}()
-}
-
-func (server *Server) SendHubBotAction(botLogin string, actionType string, actionBody string) (*httpx.RestfulResponse, error) {
-	request := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", server.Config.WebBaseUrl, "/botaction/"+botLogin))
-
-	request.Headers["X-Authorize"] = server.Config.ChathubWebAccessToken
-	request.Headers["X-Client-Type"] = "SDK"
-
-	body := map[string]string{
-		"actionType": actionType,
-		"actionBody": actionBody,
-	}
-
-	bodyStr, err := json.Marshal(&body)
-	if err != nil {
-		return nil, err
-	}
-
-	request.Body = string(bodyStr)
-
-	return httpx.RestfulCallRetry(server.restfulclient, request, 3, 1)
 }
 
 func (server *Server) NewHubGRPCWrapper() (*rpc.GRPCWrapper, error) {

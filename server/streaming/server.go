@@ -22,9 +22,8 @@ type Config struct {
 	Host string
 	Port string
 
-	Chathubs              []string
-	ChatWebGrpc           string
-	ChathubWebAccessToken string
+	Chathubs    []string
+	ChatWebGrpc string
 
 	Mongo utils.MongoConfig
 	Oss   utils.OssConfig

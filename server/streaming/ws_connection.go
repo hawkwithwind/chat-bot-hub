@@ -1,9 +1,11 @@
 package streaming
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"strconv"
 	"sync"
@@ -243,4 +245,25 @@ func (wsConnection *WsConnection) invokeAckCallback(seq int64, payload interface
 	(*wrapper.ack)(payload, err)
 
 	return nil
+}
+
+func (wsConnection *WsConnection) SendHubBotAction(botLogin string, actionType string, actionBody string) (*httpx.RestfulResponse, error) {
+	request := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", wsConnection.server.Config.WebBaseUrl, "/botaction/"+botLogin))
+
+	request.Headers["X-Authorize"] = wsConnection.hubToken
+	request.Headers["X-Client-Type"] = "STREAMING"
+
+	body := map[string]string{
+		"actionType": actionType,
+		"actionBody": actionBody,
+	}
+
+	bodyStr, err := json.Marshal(&body)
+	if err != nil {
+		return nil, err
+	}
+
+	request.Body = string(bodyStr)
+
+	return httpx.RestfulCallRetry(wsConnection.server.restfulclient, request, 3, 1)
 }
