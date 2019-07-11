@@ -29,7 +29,7 @@ type MainConfig struct {
 }
 
 var (
-	configPath = flag.String("c", "config/config.yml", "config file path")
+	configPath = flag.String("c", "/config/config.yml", "config file path")
 	startcmd   = flag.String("s", "", "start command: web/hub")
 	config     MainConfig
 )
@@ -43,7 +43,7 @@ func loadConfig(configPath string) (MainConfig, error) {
 		return c, err
 	}
 
-	data := make([]byte, 2048)
+	data := make([]byte, 16*1024)
 	len := 0
 	for {
 		n, _ := config.Read(data)
@@ -52,7 +52,11 @@ func loadConfig(configPath string) (MainConfig, error) {
 		}
 		len += n
 	}
-	yaml.Unmarshal(data[:len], &c)
+
+	err = yaml.Unmarshal(data[:len], &c)
+	if err != nil {
+		return c, err
+	}
 
 	dbuser := os.Getenv("DB_USER")
 	dbpassword := os.Getenv("DB_PASSWORD")
@@ -139,7 +143,7 @@ func main() {
 		wg.Add(1)
 
 		go func() {
-			defer wg.Done()
+			//defer wg.Done()
 
 			task := tasks.Tasks{
 				Webhost:    "web",
