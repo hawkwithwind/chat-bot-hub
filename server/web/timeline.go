@@ -125,6 +125,11 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 			return
 		}
 
+		if botinfo.Login == "" {
+			web.Info("[Timeline Crawl Tail] bot %s login empty", bot.BotId)
+			continue
+		}
+
 		momentCode := o.SpopMomentCrawlTail(web.redispool, botinfo.BotId)
 		if o.Err != nil {
 			return
@@ -140,8 +145,6 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		if o.Err != nil {
 			return
 		}
-
-		web.Info("crawl timeline %#v\n", ar)
 
 		if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 			actionReplys = append(actionReplys, *actionReply)

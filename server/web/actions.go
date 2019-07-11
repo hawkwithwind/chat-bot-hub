@@ -565,6 +565,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 
 		switch localar.ActionType {
+		case chatbothub.SendImageMessage:
+			ctx.Info("[Action Reply] %s SendImageMessage")
+
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
