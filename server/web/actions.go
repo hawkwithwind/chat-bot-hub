@@ -24,7 +24,7 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 
-	//fmt.Printf("rr: %v", rr)
+	fmt.Printf("[Web Callback] rr: %v\n", rr)
 	return rr
 }
 
@@ -921,9 +921,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 		default:
-			ctx.Info("action reply %s\n", o.ToJson(localar))
+			ctx.Info("DEFAULT action reply %s\n", o.ToJson(localar))
 		}
-
+		
 		if o.Err != nil {
 			return o.Err
 		}
@@ -932,10 +932,12 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(ctx.restfulclient,
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient,
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
-				}
+					} else {
+						ctx.Info("action reply resp %v\n", resp)
+					}
 			}
 		}()
 
