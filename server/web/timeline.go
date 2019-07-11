@@ -141,6 +141,8 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 			return
 		}
 
+		web.Info("crawl timeline %#v\n", ar)
+
 		if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 			actionReplys = append(actionReplys, *actionReply)
 		}
