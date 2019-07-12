@@ -125,6 +125,11 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 			return
 		}
 
+		if botinfo.Login == "" {
+			web.Info("[Timeline Crawl Tail] bot %s login empty", bot.BotId)
+			continue
+		}
+
 		momentCode := o.SpopMomentCrawlTail(web.redispool, botinfo.BotId)
 		if o.Err != nil {
 			return

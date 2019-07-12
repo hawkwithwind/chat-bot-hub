@@ -24,7 +24,7 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 
-	fmt.Printf("[Web Callback] rr: %v\n", rr)
+	fmt.Printf("[Web Callback] %s \n", bot.Callback.String)
 	return rr
 }
 
@@ -565,6 +565,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 
 		switch localar.ActionType {
+		case chatbothub.SendImageMessage:
+			ctx.Info("[Action Reply] %s SendImageMessage")
+
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
@@ -865,13 +868,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					if len(foundms) == 0 {
-						//if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-						//	if err := ctx.fluentLogger.Post(tag, m); err != nil {
-						//		ctx.Error(err, "push moment to fluentd failed")
-						//	}
-						//} else {
-						//	ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
-						//}
+						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+							if err := ctx.fluentLogger.Post(tag, m); err != nil {
+								ctx.Error(err, "push moment to fluentd failed")
+							}
+						} else {
+							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
+						}
 					}
 
 					if o.Err != nil {
@@ -921,9 +924,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 		default:
-			ctx.Info("DEFAULT action reply %s\n", o.ToJson(localar))
+			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}
-		
+
 		if o.Err != nil {
 			return o.Err
 		}
@@ -935,9 +938,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient,
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
-					} else {
-						ctx.Info("action reply resp %v\n", resp)
-					}
+				} else {
+					ctx.Info("action reply resp [%d]\n", resp.StatusCode)
+				}
 			}
 		}()
 

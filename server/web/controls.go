@@ -717,6 +717,7 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(web)
 
 	vars := mux.Vars(r)
 	domain := vars["domain"]
@@ -744,6 +745,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	rows, paging := o.SelectByCriteria(tx, account.AccountId, query, domain)
 
 	if o.Err != nil {
+		web.Info("[Web Search] failed when select")
 		return
 	}
 

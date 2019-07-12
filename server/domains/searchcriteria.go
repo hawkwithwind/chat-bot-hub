@@ -226,6 +226,11 @@ func (o *ErrorHandler) SelectByCriteria(
 		results = append(results, m)
 	}
 
+	o.Err = rows.Err()
+	if o.Err != nil {
+		return []interface{}{}, utils.Paging{}
+	}
+
 	pagecount := count / paging.PageSize
 	if count%paging.PageSize != 0 {
 		pagecount += 1
