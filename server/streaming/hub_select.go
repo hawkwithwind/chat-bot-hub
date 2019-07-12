@@ -11,36 +11,6 @@ import (
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
-func (server *Server) recoverSubscriptions() {
-	server.websocketConnections.Range(func(key, _ interface{}) bool {
-		connection := key.(*WsConnection)
-
-		var resources []*pb.StreamingResource
-
-		connection.botsSubscriptionInfo.Range(func(key, value interface{}) bool {
-			botId := key.(string)
-			subNum := value.(int)
-
-			if subNum == 1 {
-				res := &pb.StreamingResource{}
-				res.BotId = botId
-				res.ActionType = int32(Subscribe)
-				res.ResourceType = int32(Message)
-
-				resources = append(resources, res)
-			}
-
-			return true
-		})
-
-		if len(resources) > 0 {
-			_ = connection.sendStreamingCtrl(resources)
-		}
-
-		return true
-	})
-}
-
 func (server *Server) listen(client pb.ChatBotHubClient) error {
 	stream, err := client.StreamingTunnel(context.Background())
 	if err != nil {
@@ -65,7 +35,7 @@ func (server *Server) listen(client pb.ChatBotHubClient) error {
 
 		server.Info("REGISTER DONE")
 
-		server.recoverSubscriptions()
+		server.RecoverConnectionSubs()
 
 		ticker := time.NewTicker(time.Second * 2)
 		defer ticker.Stop()

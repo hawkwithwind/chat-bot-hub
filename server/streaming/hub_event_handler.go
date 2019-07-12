@@ -9,26 +9,9 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
-func (server *Server) findWsConnectionsByBotId(botId string) []*WsConnection {
-	var result []*WsConnection
-
-	server.websocketConnections.Range(func(key, _ interface{}) bool {
-		connection := key.(*WsConnection)
-
-		if val, ok := connection.botsSubscriptionInfo.Load(botId); ok {
-			if val == 1 {
-				result = append(result, connection)
-			}
-		}
-
-		return true
-	})
-
-	return result
-}
-
 func (server *Server) forwardMessage(message *domains.WechatMessage, botId string) {
-	connections := server.findWsConnectionsByBotId(botId)
+	// 1: Message 2: Moment
+	connections := server.GetSubscribedConnections(botId, 1)
 	if connections == nil {
 		return
 	}

@@ -28,8 +28,6 @@ type WsConnection struct {
 	hubToken string
 	authUser *utils.AuthUser
 
-	botsSubscriptionInfo *sync.Map
-
 	eventSeq          int64
 	eventHandlers     *sync.Map
 	ackCallbacks      *sync.Map
@@ -87,7 +85,6 @@ func (server *Server) CreateWsConnection(wsConnection *websocket.Conn, token str
 	result.eventsToWriteChan = make(chan WsEvent, 128)
 	result.hubToken = token
 	result.authUser = user
-	result.botsSubscriptionInfo = &sync.Map{}
 
 	return result
 }

@@ -188,48 +188,11 @@ func (wsConnection *WsConnection) onUpdateSubscription(payload interface{}) (int
 		return nil, fmt.Errorf("resources can not be empty")
 	}
 
-	if err := wsConnection.sendStreamingCtrl(resources); err != nil {
+	if err := wsConnection.server.UpdateConnectionSubs(wsConnection, resources); err != nil {
 		return nil, err
 	}
 
-	for _, res := range resources {
-		switch ActionType(res.ActionType) {
-		case Subscribe:
-			wsConnection.botsSubscriptionInfo.Store(res.BotId, 1)
-
-		case UnSubscribe:
-			wsConnection.botsSubscriptionInfo.Store(res.BotId, 0)
-		}
-	}
-
 	return "success", nil
-}
-
-func (wsConnection *WsConnection) unsubscribeAll() {
-	// unsubscribe all bots
-
-	resources := make([]*pb.StreamingResource, 0)
-	wsConnection.botsSubscriptionInfo.Range(func(key, value interface{}) bool {
-		botId := key.(string)
-		subNum := value.(int)
-
-		if subNum == 1 {
-			res := &pb.StreamingResource{}
-			res.BotId = botId
-			res.ActionType = int32(UnSubscribe)
-			res.ResourceType = int32(Message)
-
-			resources = append(resources, res)
-		}
-
-		return true
-	})
-
-	if len(resources) == 0 {
-		return
-	}
-
-	_ = wsConnection.sendStreamingCtrl(resources)
 }
 
 func (wsConnection *WsConnection) onConnect() error {
@@ -239,7 +202,7 @@ func (wsConnection *WsConnection) onConnect() error {
 	server.Debug("websocket new connection")
 
 	c.On("close", func(payload interface{}) (interface{}, error) {
-		c.unsubscribeAll()
+		_ = wsConnection.server.RemoveSubsForConnection(wsConnection)
 
 		return nil, nil
 	})

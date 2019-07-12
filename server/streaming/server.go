@@ -40,7 +40,8 @@ type Server struct {
 	Config Config
 	chmsg  chan *pb.EventReply
 
-	websocketConnections *sync.Map
+	websocketConnections      *sync.Map
+	botAndWsConnectionSubInfo *sync.Map
 
 	mongoDb *mgo.Database
 
@@ -60,6 +61,7 @@ func (server *Server) init() error {
 
 	server.chmsg = make(chan *pb.EventReply, 1000)
 	server.websocketConnections = &sync.Map{}
+	server.botAndWsConnectionSubInfo = &sync.Map{}
 
 	o := &ErrorHandler{}
 
