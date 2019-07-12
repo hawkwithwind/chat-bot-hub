@@ -88,12 +88,12 @@ func (ctx *WebServer) init() error {
 	ctx.db = &dbx.Database{}
 
 	var err error
-	//ctx.fluentLogger, err = fluent.New(fluent.Config{
-	//	FluentPort:   ctx.Config.Fluent.Port,
-	//	FluentHost:   ctx.Config.Fluent.Host,
-	//	WriteTimeout: 60 * time.Second,
-	//})
-
+	ctx.fluentLogger, err = fluent.New(fluent.Config{
+		FluentPort:   ctx.Config.Fluent.Port,
+		FluentHost:   ctx.Config.Fluent.Host,
+		WriteTimeout: 60 * time.Second,
+	})
+	
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
 	}
