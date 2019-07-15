@@ -43,7 +43,7 @@ func (tasks *Tasks) init() {
 func (tasks *Tasks) Serve() error {
 	tasks.init()
 
-	tasks.cron.AddFunc("0 0 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
+	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
 	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWechatBotsCrawlTimelineTail() })
 
 	tasks.cron.Start()

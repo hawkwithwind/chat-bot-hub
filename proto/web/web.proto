@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.hawkwithwind.chatbothub.web";
+option java_outer_classname = "ChatBotWebProto";
+
+package chatbotweb;
+
+import "google/protobuf/any.proto";
+
+service ChatBotWeb {
+    rpc getChatUser (GetChatUserRequest) returns (GetChatUserResponse) {}
+    rpc getBot (GetBotRequest) returns (GetBotResponse) {}
+    rpc validateToken (ValidateTokenRequest) returns (ValidateTokenResponse) {}
+}
+
+message GetChatUserRequest {
+    string userName = 1;
+    string type = 2;
+}
+
+message GetChatUserResponse {
+    bytes payload = 1;
+}
+
+message GetBotRequest {
+    string botId = 1;
+}
+
+message GetBotResponse {
+    bytes payload = 1;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    bytes payload = 1;
+}

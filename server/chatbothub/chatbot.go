@@ -45,8 +45,8 @@ func (status ChatBotStatus) String() string {
 }
 
 type LoginInfo struct {
-	WxData string `json:"wxData"`
-	Token  string `json:"token"`
+	WxData string `json:"wxData,omitempty"`
+	Token  string `json:"token,omitempty"`
 }
 
 type ChatBot struct {
@@ -85,6 +85,7 @@ const (
 	SetRoomName              string = "SetRoomName"
 	GetRoomQRCode            string = "GetRoomQRCode"
 	GetContactQRCode         string = "GetContactQRCode"
+	GetContact               string = "GetContact"
 	SearchContact            string = "SearchContact"
 	SyncContact              string = "SyncContact"
 	SnsTimeline              string = "SnsTimeline"
@@ -95,6 +96,10 @@ const (
 	SnsUpload                string = "SnsUpload"
 	SnsobjectOP              string = "SnsobjectOP"
 	SnsSendMoment            string = "SnsSendMoment"
+	GetLabelList             string = "GetLabelList"
+	AddLabel                 string = "AddLabel"
+	DeleteLabel              string = "DeleteLabel"
+	SetLabel                 string = "SetLabel"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -410,6 +415,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SetRoomName:              (*ChatBot).SetRoomName,
 		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
+		GetContact:               (*ChatBot).GetContact,
 		SearchContact:            (*ChatBot).SearchContact,
 		SyncContact:              (*ChatBot).SyncContact,
 		SnsTimeline:              (*ChatBot).SnsTimeline,
@@ -420,6 +426,10 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		SnsUpload:                (*ChatBot).SnsUpload,
 		SnsobjectOP:              (*ChatBot).SnsobjectOP,
 		SnsSendMoment:            (*ChatBot).SnsSendMoment,
+		GetLabelList:             (*ChatBot).GetLabelList,
+		AddLabel:                 (*ChatBot).AddLabel,
+		DeleteLabel:              (*ChatBot).DeleteLabel,
+		SetLabel:                 (*ChatBot).SetLabel,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -500,6 +510,90 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 		o.Err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
+}
+
+func (bot *ChatBot) GetLabelList(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+
+	params := []ActionParam{}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) AddLabel(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+
+	params := []ActionParam{
+		NewActionParam("label", true, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) DeleteLabel(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		labelId := int(o.FromMapFloat("labelId", bodym, "actionbody", false, 0.0))
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
+		o.SendAction(bot, arId, DeleteLabel, o.ToJson(map[string]interface{}{
+			"labelId": labelId,
+		}))
+	} else {
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
+	}
+
+	return o.Err
+}
+
+func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+
+	if bot.ClientType == WECHATBOT {
+		bodym := o.FromJson(body)
+		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
+		labelId := o.FromMapString("labelId", bodym, "actionbody", false, "")
+
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
+		if strings.Contains(labelId, ",") {
+			// labelstrings := strings.Split(labelId, ",")
+			// labels := []int64{}
+			// for _, l := range labelstrings {
+			// 	labels = append(labels, o.ParseInt(l, 10, 64))
+			// 	if o.Err != nil {
+			// 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+			// 	}
+			// }
+
+			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+				"userId":      userId,
+				"labelIdList": labelId,
+			}))
+		} else {
+			labelIdnumber := o.ParseInt(labelId, 10, 64)
+			if o.Err != nil {
+				return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+			}
+
+			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+				"userId":  userId,
+				"labelId": labelIdnumber,
+			}))
+		}
+
+	} else {
+		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
+			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
+	}
+
+	return o.Err
 }
 
 func (bot *ChatBot) SnsTimeline(actionType string, arId string, body string) error {
@@ -633,6 +727,15 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 		"content":    contentm,
 	}))
 
+	return o.Err
+}
+
+func (bot *ChatBot) GetContact(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
 }
 

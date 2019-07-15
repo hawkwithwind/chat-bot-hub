@@ -3,29 +3,32 @@ package chatbothub
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/globalsign/mgo"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ErrorHandler struct {
-	utils.ErrorHandler
+	domains.ErrorHandler
 }
 
 type ChatHubConfig struct {
@@ -33,6 +36,10 @@ type ChatHubConfig struct {
 	Port   string
 	Fluent utils.FluentConfig
 	Redis  utils.RedisConfig
+
+	Mongo    utils.MongoConfig
+	Oss      utils.OssConfig
+	Rabbitmq utils.RabbitMQConfig
 }
 
 var (
@@ -49,35 +56,96 @@ func (hub *ChatHub) init() {
 		FluentHost:   hub.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
+
 	if err != nil {
 		hub.Error(err, "create fluentLogger failed %v", err)
 	}
 	hub.bots = make(map[string]*ChatBot)
+	hub.streamingNodes = make(map[string]*StreamingNode)
 	hub.filters = make(map[string]Filter)
+
+	o := &ErrorHandler{}
+
+	hub.mongoDb = o.NewMongoConn(hub.Config.Mongo.Host, hub.Config.Mongo.Port)
+	if o.Err != nil {
+		hub.Error(o.Err, "connect to mongo failed")
+		return
+	}
+
+	if o.EnsuredMongoIndexes(hub.mongoDb); o.Err != nil {
+		hub.Error(o.Err, "mongo ensure indexes fail")
+		return
+	}
+
 	hub.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
 
+	hub.rabbitmq = o.NewRabbitMQWrapper(hub.Config.Rabbitmq)
+	err = hub.rabbitmq.Reconnect()
+	if err != nil {
+		hub.Error(err, "connect rabbitmq failed")
+		return
+	}
+	err = hub.rabbitmq.DeclareQueue(utils.CH_BotNotify, true, false, false, false)
+	if err != nil {
+		hub.Error(err, "declare queue botnotify failed")
+		return
+	}
+	err = hub.rabbitmq.DeclareQueue(utils.CH_ContactInfo, true, false, false, false)
+	if err != nil {
+		hub.Error(err, "declare queue contactinfo failed")
+		return
+	}
+
 	// set global variable chathub
 	chathub = hub
+
+	ossClient, err := oss.New(hub.Config.Oss.Region, hub.Config.Oss.Accesskeyid, hub.Config.Oss.Accesskeysecret, oss.UseCname(true))
+	if err != nil {
+		hub.Error(err, "cannot create ossClient")
+		return
+	}
+
+	ossBucket, err := ossClient.Bucket(hub.Config.Oss.Bucket)
+	if err != nil {
+		hub.Error(err, "cannot get oss bucket")
+		return
+	}
+
+	hub.ossClient = ossClient
+	hub.ossBucket = ossBucket
 }
 
 type ChatHub struct {
-	Config ChatHubConfig
+	Config          ChatHubConfig
+	Webhost         string
+	Webport         string
+	WebBaseUrl      string
+	restfulclient   *http.Client
+	WebSecretPhrase string
+	logger          *log.Logger
+	fluentLogger    *fluent.Fluent
 
-	Webhost       string
-	Webport       string
-	WebBaseUrl    string
-	restfulclient *http.Client
+	muxBots sync.Mutex
+	bots    map[string]*ChatBot
 
-	logger       *log.Logger
-	fluentLogger *fluent.Fluent
-
-	muxBots    sync.Mutex
-	bots       map[string]*ChatBot
 	muxFilters sync.Mutex
 	filters    map[string]Filter
-	redispool  *redis.Pool
+
+	muxStreamingNodes sync.Mutex
+	streamingNodes    map[string]*StreamingNode
+
+	muxBotsSubs sync.Mutex
+	botsSubs    map[string]string
+
+	redispool *redis.Pool
+	mongoDb   *mgo.Database
+
+	ossClient *oss.Client
+	ossBucket *oss.Bucket
+
+	rabbitmq *utils.RabbitMQWrapper
 }
 
 func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
@@ -139,90 +207,6 @@ func (ctx *ChatHub) Error(err error, msg string, v ...interface{}) {
 	raven.CaptureError(err, nil)
 }
 
-func (hub *ChatHub) GetAvailableBot(bottype string) *ChatBot {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	for _, v := range hub.bots {
-		if v.ClientType == bottype && v.Status == BeginRegistered {
-			return v
-		}
-	}
-
-	return nil
-}
-
-func (hub *ChatHub) GetBot(clientid string) *ChatBot {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	if thebot, found := hub.bots[clientid]; found {
-		return thebot
-	}
-
-	return nil
-}
-
-func (hub *ChatHub) GetBotByLogin(login string) *ChatBot {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	for _, bot := range hub.bots {
-		if bot.Login == login {
-			return bot
-		}
-	}
-
-	return nil
-}
-
-func (hub *ChatHub) GetBotById(botId string) *ChatBot {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	for _, bot := range hub.bots {
-		if bot.BotId == botId {
-			return bot
-		}
-	}
-
-	return nil
-}
-
-func (hub *ChatHub) SetBot(clientid string, thebot *ChatBot) {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	hub.bots[clientid] = thebot
-}
-
-func (hub *ChatHub) DropBot(clientid string) {
-	hub.muxBots.Lock()
-	defer hub.muxBots.Unlock()
-
-	delete(hub.bots, clientid)
-
-	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
-}
-
-func (hub *ChatHub) SetFilter(filterId string, thefilter Filter) {
-	hub.muxFilters.Lock()
-	defer hub.muxFilters.Unlock()
-
-	hub.filters[filterId] = thefilter
-}
-
-func (hub *ChatHub) GetFilter(filterId string) Filter {
-	hub.muxFilters.Lock()
-	defer hub.muxFilters.Unlock()
-
-	if thefilter, found := hub.filters[filterId]; found {
-		return thefilter
-	}
-
-	return nil
-}
-
 type WechatMsgSource struct {
 	AtUserList  string `xml:"atuserlist" json:"atUserList"`
 	Silence     int    `xml:"silence" json:"silence"`
@@ -245,6 +229,203 @@ func (o *ErrorHandler) ReplaceWechatMsgSource(body map[string]interface{}) map[s
 	}
 
 	return body
+}
+
+func (hub *ChatHub) saveMessageToDB(bot *ChatBot, msgJSON map[string]interface{}) {
+	go func() {
+		o := &ErrorHandler{}
+		messages := []map[string]interface{}{msgJSON}
+		o.UpdateWechatMessages(hub.mongoDb, messages)
+	}()
+}
+
+func (hub *ChatHub) sendEventToSubStreamingNodes(bot *ChatBot, eventType string, msgString string) {
+	go func() {
+		for _, snode := range hub.streamingNodes {
+			if _, ok := snode.SubBots[bot.BotId]; ok {
+				err := snode.SendMsg(eventType, bot.BotId, bot.ClientId, bot.ClientType, msgString)
+				if err != nil {
+					hub.Error(err, "send msg failed, continue")
+				}
+			}
+		}
+	}()
+}
+
+func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{}) {
+	go func() {
+		o := &ErrorHandler{}
+
+		// 别人发给你 和 你发给别人 的消息都会收到
+		var peerId string
+		if msgJson["groupId"] != nil {
+			peerId = msgJson["groupId"].(string)
+		} else if peerId = msgJson["fromUser"].(string); peerId == bot.Login {
+			peerId = msgJson["toUser"].(string)
+		}
+
+		o.UpdateOrCreateChatRoom(hub.mongoDb, bot.BotId, peerId)
+	}()
+}
+
+func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
+	o := ErrorHandler{}
+
+	bodyString := inEvent.Body
+
+	if inEvent.EventType == MESSAGE {
+		var msgStr string
+		err := json.Unmarshal([]byte(inEvent.Body), &msgStr)
+		if err != nil {
+			hub.Error(o.Err, "cannot parse %s", inEvent.Body)
+			return nil, err
+		}
+		bodyString = msgStr
+	}
+
+	bodyJSON := o.FromJson(bodyString)
+	if o.Err != nil {
+		hub.Error(o.Err, "event body is not json format: %s", bodyString)
+		return nil, o.Err
+	}
+
+	imageId := ""
+
+	if inEvent.EventType == IMAGEMESSAGE {
+		imageId = o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "image message must contains imageId", bodyString)
+			return nil, o.Err
+		}
+
+	} else if inEvent.EventType == EMOJIMESSAGE {
+		imageId = o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "emoji message must contains emojiId", bodyString)
+			return nil, o.Err
+		}
+
+		bodyJSON["imageId"] = imageId
+	}
+
+	if imageId != "" {
+		signedURL, err := utils.GenSignedURL(hub.ossBucket, imageId, inEvent.EventType)
+		if err != nil {
+			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imageId)
+		} else {
+			bodyJSON["signedUrl"] = signedURL
+		}
+	}
+
+	bodyJSON = o.ReplaceWechatMsgSource(bodyJSON)
+	return bodyJSON, nil
+}
+
+func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) error {
+	bodyJSON, err := hub.verifyMessage(bot, inEvent)
+	if err != nil {
+		return err
+	}
+
+	o := ErrorHandler{}
+	newBodyStr := o.ToJson(bodyJSON)
+
+	// process concurrently
+	hub.saveMessageToDB(bot, bodyJSON)
+	hub.updateChatRoom(bot, bodyJSON)
+	hub.sendEventToSubStreamingNodes(bot, inEvent.EventType, newBodyStr)
+
+	if bot.filter != nil {
+		if err := bot.filter.Fill(newBodyStr); err != nil {
+			return err
+		}
+	}
+
+	if len(newBodyStr) > 32*1024 {
+		hub.Info("message[%d] exceeds 32*1024\n%s\n", len(newBodyStr), newBodyStr)
+
+		go func() {
+			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+		}()
+	} else {
+		err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+			BotId:     bot.BotId,
+			EventType: inEvent.EventType,
+			Body:      newBodyStr,
+		}))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody map[string]interface{}, result map[string]interface{}) {
+	o := ErrorHandler{}
+
+	// result.success is faulse
+	if scsptr := o.FromMap("success", result, "actionReply.result", nil); scsptr != nil {
+		if o.Err != nil || !scsptr.(bool) {
+			return
+		}
+	}
+
+	if rdataptr := o.FromMap("data", result, "actionReply.result", nil); rdataptr != nil {
+		switch resultData := rdataptr.(type) {
+		case map[string]interface{}:
+			status := int(o.FromMapFloat("status", resultData, "actionReply.result.data", false, 0))
+			if o.Err != nil || status != 0 {
+				return
+			}
+
+			msgId := o.FromMapString("msgId", resultData, "actionReply.result.data", false, "")
+
+			bodyJSON := o.FromJson(actionBody["body"].(string))
+			toUser := o.FromMapString("toUserName", bodyJSON, "actionBody.toUserName", false, "")
+			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
+			imageId := o.FromMapString("imageId", bodyJSON, "actionReply.actionBody", true, "")
+
+			groupId := ""
+			if regexp.MustCompile(`@chatroom$`).MatchString(toUser) {
+				groupId = toUser
+			}
+
+			mType := 0
+			switch actionType {
+			case SendTextMessage:
+				mType = 1
+			case SendAppMessage:
+				mType = 49
+			case SendImageMessage:
+				mType = 3
+			}
+
+			msg := map[string]interface{}{
+				"msgId":       msgId,
+				"fromUser":    bot.Login,
+				"toUser":      toUser,
+				"groupId":     groupId,
+				"imageId":     imageId,
+				"content":     content,
+				"timestamp":   time.Now().Unix(),
+				"mType":       mType,
+				"description": content,
+			}
+
+			hub.saveMessageToDB(bot, msg)
+			hub.updateChatRoom(bot, msg)
+
+			var eventType string
+			if imageId != "" {
+				eventType = IMAGEMESSAGE
+			} else {
+				eventType = MESSAGE
+			}
+			hub.sendEventToSubStreamingNodes(bot, eventType, o.ToJson(msg))
+		}
+	}
 }
 
 func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
@@ -285,6 +466,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
+
 				if newbot.canReLogin() {
 					//relogin the bot
 					o := ErrorHandler{}
@@ -454,13 +636,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
 					}
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								thebot.WebNotifyRequest(hub.WebBaseUrl, LOGINDONE, ""), 5, 1); err != nil {
-								hub.Error(err, "webnotify logindone failed\n")
-							}
-						}()
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId:     thebot.BotId,
+							EventType: LOGINDONE,
+							Body:      "",
+						}))
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
@@ -495,36 +677,60 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
+				// if o.Err == nil {
+				// 	go func() {
+				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 			thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
+				// 			hub.Error(err, "webnotify updatetoken failed\n")
+				// 		}
+				// 	}()
+				// }
+
 				if o.Err == nil {
-					go func() {
-						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-							thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
-							hub.Error(err, "webnotify updatetoken failed\n")
-						}
-					}()
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     thebot.BotId,
+						EventType: UPDATETOKEN,
+						Body:      "",
+					}))
 				}
 
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
+				// if o.Err == nil {
+				// 	go func() {
+				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 			bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
+				// 			hub.Error(err, "webnotify friendrequest failed\n")
+				// 		}
+				// 	}()
+				// }
+
 				if o.Err == nil {
-					go func() {
-						if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-							bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-							hub.Error(err, "webnotify friendrequest failed\n")
-						}
-					}()
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     bot.BotId,
+						EventType: FRIENDREQUEST,
+						Body:      reqstr,
+					}))
 				}
 
 			case CONTACTSYNCDONE:
 				hub.Info("contact sync done")
 
-				go func() {
-					if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-						bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
-						hub.Error(err, "webnotify contactsync done failed\n")
-					}
-				}()
+				// go func() {
+				// 	if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+				// 		bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
+				// 		hub.Error(err, "webnotify contactsync done failed\n")
+				// 	}
+				// }()
+
+				if o.Err == nil {
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     bot.BotId,
+						EventType: CONTACTSYNCDONE,
+						Body:      "",
+					}))
+				}
 
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
@@ -571,96 +777,44 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						actionRequestId = o.FromMapString("actionRequestId", actionBody, "actionBody", false, "")
 					}
 
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(
-									hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
-										ActionRequestId: actionRequestId,
-										Result:          o.ToJson(result),
-										ReplyAt:         utils.JSONTime{Time: time.Now()},
-									})), 5, 1)
-						}()
-					}
-				}
-
-			case MESSAGE:
-				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
-					var msg string
-					o.Err = json.Unmarshal([]byte(in.Body), &msg)
-					if o.Err != nil {
-						hub.Error(o.Err, "cannot parse %s", in.Body)
+					actionType := actionBody["actionType"]
+					if actionType == SendTextMessage || actionType == SendAppMessage || actionType == SendImageMessage || actionType == SendImageResourceMessage {
+						hub.onSendMessage(bot, actionType.(string), actionBody, result)
 					}
 
-					body := o.FromJson(msg)
 					if o.Err == nil {
-						if o.Err == nil {
-							body = o.ReplaceWechatMsgSource(body)
+						resultstring := o.ToJson(result)
+						if len(resultstring) > 32*1024 {
+							hub.Info("actionreply [%d] exceeds 32 * 1024 \n %s \n ", len(resultstring), resultstring)
+
+							go func() {
+								httpx.RestfulCallRetry(hub.restfulclient,
+									bot.WebNotifyRequest(
+										hub.WebBaseUrl, ACTIONREPLY, o.ToJson(domains.ActionRequest{
+											ActionRequestId: actionRequestId,
+											Result:          resultstring,
+											ReplyAt:         utils.JSONTime{Time: time.Now()},
+										})), 5, 1)
+							}()
+
+						} else {
+
+							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+								BotId:     bot.BotId,
+								EventType: ACTIONREPLY,
+								Body: o.ToJson(domains.ActionRequest{
+									ActionRequestId: actionRequestId,
+									Result:          resultstring,
+									ReplyAt:         utils.JSONTime{Time: time.Now()},
+								}),
+							}))
 						}
 					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(body))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, MESSAGE, o.ToJson(body)), 5, 1)
-						}()
-					}
-
-				} else {
-					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
 
-			case IMAGEMESSAGE:
-				if bot.ClientType == WECHATBOT {
-					bodym := o.FromJson(in.Body)
-					o.FromMapString("imageId", bodym, "actionBody", false, "")
-
-					if o.Err == nil {
-						bodym = o.ReplaceWechatMsgSource(bodym)
-					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(bodym))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
-						}()
-					}
-
-				} else {
-					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
-				}
-
-			case EMOJIMESSAGE:
-				if bot.ClientType == WECHATBOT {
-					bodym := o.FromJson(in.Body)
-					emojiId := o.FromMapString("emojiId", bodym, "actionBody", false, "")
-
-					if o.Err == nil {
-						bodym["imageId"] = emojiId
-					}
-
-					if o.Err == nil {
-						bodym = o.ReplaceWechatMsgSource(bodym)
-					}
-
-					if o.Err == nil && bot.filter != nil {
-						o.Err = bot.filter.Fill(o.ToJson(bodym))
-					}
-
-					if o.Err == nil {
-						go func() {
-							httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, in.EventType, o.ToJson(bodym)), 5, 1)
-						}()
-					}
+			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
+				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
+					o.Err = hub.onReceiveMessage(bot, in)
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
@@ -678,13 +832,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					bodym := o.FromJson(msg)
 					hub.Info("status message %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify statusmessage failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify statusmessage failed\n")
-							}
-						}()
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId:     bot.BotId,
+							EventType: STATUSMESSAGE,
+							Body:      in.Body,
+						}))
 					}
 				}
 
@@ -695,13 +857,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("contact info %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify contact info failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify contact info failed\n")
-							}
-						}()
+						o.Err = hub.rabbitmq.Send(utils.CH_ContactInfo, o.ToJson(models.MqEvent{
+							BotId:     bot.BotId,
+							EventType: CONTACTINFO,
+							Body:      in.Body,
+						}))
 					}
 				}
 
@@ -712,13 +882,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					//bodym := o.FromJson(in.Body)
 					//hub.Info("group info %v", bodym)
 
+					// if o.Err == nil {
+					// 	go func() {
+					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
+					// 			bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
+					// 			hub.Error(err, "webnotify group info failed\n")
+					// 		}
+					// 	}()
+					// }
+
 					if o.Err == nil {
-						go func() {
-							if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-								bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
-								hub.Error(err, "webnotify group info failed\n")
-							}
-						}()
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId:     bot.BotId,
+							EventType: GROUPINFO,
+							Body:      in.Body,
+						}))
 					}
 				}
 
@@ -737,421 +915,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			}
 		}
 	}
-}
-
-func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
-	if o.Err != nil {
-		return false
-	}
-
-	for _, l := range lines {
-		if l == target {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (hub *ChatHub) GetBots(ctx context.Context, req *pb.BotsRequest) (*pb.BotsReply, error) {
-	o := &ErrorHandler{}
-
-	botm := make(map[string]*pb.BotsInfo)
-
-	for _, v := range hub.bots {
-		if len(req.Logins) > 0 {
-			if o.FindFromLines(req.Logins, v.Login) {
-				botm[v.ClientId] = NewBotsInfo(v)
-			}
-		}
-
-		if len(req.BotIds) > 0 {
-			if o.FindFromLines(req.BotIds, v.BotId) {
-				botm[v.ClientId] = NewBotsInfo(v)
-			}
-		}
-
-		if len(req.Logins) == 0 && len(req.BotIds) == 0 {
-			botm[v.ClientId] = NewBotsInfo(v)
-		}
-	}
-
-	bots := make([]*pb.BotsInfo, 0)
-	for _, v := range botm {
-		bots = append(bots, v)
-	}
-
-	return &pb.BotsReply{BotsInfo: bots}, nil
-}
-
-func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event *pb.EventReply) {
-	if ctx.Err != nil {
-		return
-	}
-
-	if tunnel == nil {
-		ctx.Err = fmt.Errorf("tunnel is null")
-		return
-	}
-
-	if err := tunnel.Send(event); err != nil {
-		ctx.Err = err
-	}
-}
-
-type LoginBody struct {
-	BotId     string `json:"botId"`
-	Login     string `json:"login"`
-	Password  string `json:"password"`
-	LoginInfo string `json:"loginInfo"`
-}
-
-func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
-	hub.Info("recieve logout bot cmd from web %s", req.BotId)
-
-	bot := hub.GetBotById(req.BotId)
-	if bot == nil {
-		hub.Info("cannot find bot %s\n%#v", req.BotId, hub.bots)
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("b[%s] not found", req.BotId),
-		}, nil
-	}
-
-	_, err := bot.logout()
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
-}
-
-func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
-	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
-
-	bot := hub.GetBotById(req.BotId)
-	if bot == nil {
-		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
-		return &pb.OperationReply{Code: 0, Message: "success"}, nil
-	}
-
-	_, err := bot.shutdown()
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
-}
-
-func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
-	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
-	o := &ErrorHandler{}
-
-	var bot *ChatBot
-	if req.ClientId == "" {
-		bot = hub.GetAvailableBot(req.ClientType)
-	} else {
-		bot = hub.GetBot(req.ClientId)
-	}
-
-	if bot != nil {
-		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
-		}
-
-		body := o.ToJson(LoginBody{
-			BotId:     req.BotId,
-			Login:     req.Login,
-			Password:  req.Password,
-			LoginInfo: req.LoginInfo,
-		})
-
-		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType:  LOGIN,
-			ClientType: req.ClientType,
-			ClientId:   req.ClientId,
-			Body:       body,
-		})
-	} else {
-		if req.ClientId == "" {
-			o.Err = utils.NewClientError(utils.RESOURCE_INSUFFICIENT,
-				fmt.Errorf("cannot find available client for login"))
-		} else {
-			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
-				fmt.Errorf("cannot find bot[%s] %s", req.ClientType, req.ClientId))
-		}
-	}
-
-	if o.Err != nil {
-		switch clientError := o.Err.(type) {
-		case *utils.ClientError:
-			return &pb.BotLoginReply{
-				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: &pb.OperationReply{
-					Code:    int32(clientError.Code),
-					Message: clientError.Error(),
-				},
-			}, nil
-		default:
-			return &pb.BotLoginReply{
-				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: &pb.OperationReply{
-					Code:    int32(utils.UNKNOWN),
-					Message: o.Err.Error(),
-				},
-			}, nil
-		}
-	} else {
-		return &pb.BotLoginReply{Msg: "LOGIN BOT DONE"}, nil
-	}
-}
-
-func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*pb.BotActionReply, error) {
-	o := &ErrorHandler{}
-
-	bot := hub.GetBotByLogin(req.Login)
-	if bot == nil {
-		o.Err = fmt.Errorf("b[%s] not found", req.Login)
-	}
-
-	if o.Err == nil {
-		o.Err = bot.BotAction(req.ActionRequestId, req.ActionType, req.ActionBody)
-	}
-
-	if o.Err != nil {
-		switch clientError := o.Err.(type) {
-		case *utils.ClientError:
-			return &pb.BotActionReply{
-				Msg: "Action failed",
-				ClientError: &pb.OperationReply{
-					Code:    int32(clientError.Code),
-					Message: clientError.Error(),
-				},
-			}, nil
-		default:
-			return &pb.BotActionReply{
-				Msg: "Action failed",
-				ClientError: &pb.OperationReply{
-					Code:    int32(utils.UNKNOWN),
-					Message: o.Err.Error(),
-				},
-			}, nil
-		}
-	} else {
-		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
-	}
-}
-
-func (hub *ChatHub) CreateFilterByType(
-	filterId string, filterName string, filterType string) (Filter, error) {
-	var filter Filter
-	switch filterType {
-	case WECHATBASEFILTER:
-		filter = NewWechatBaseFilter(filterId, filterName)
-	case WECHATMOMENTFILTER:
-		filter = NewWechatMomentFilter(filterId, filterName)
-	case PLAINFILTER:
-		filter = NewPlainFilter(filterId, filterName, hub.logger)
-	case FLUENTFILTER:
-		if tag, ok := hub.Config.Fluent.Tags["msg"]; ok {
-			filter = NewFluentFilter(filterId, filterName, hub.fluentLogger, tag)
-		} else {
-			return filter, fmt.Errorf("config.fluent.tags.msg not found")
-		}
-	case WEBTRIGGER:
-		filter = NewWebTrigger(hub.restfulclient, filterId, filterName)
-	case KVROUTER:
-		filter = NewKVRouter(filterId, filterName)
-	case REGEXROUTER:
-		filter = NewRegexRouter(filterId, filterName)
-	default:
-		return nil, fmt.Errorf("filter type %s not supported", filterType)
-	}
-
-	return filter, nil
-}
-
-func (hub *ChatHub) FilterCreate(
-	ctx context.Context, req *pb.FilterCreateRequest) (*pb.OperationReply, error) {
-	//hub.Info("FilterCreate %v", req)
-
-	filter, err := hub.CreateFilterByType(req.FilterId, req.FilterName, req.FilterType)
-	if err != nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.PARAM_INVALID),
-			Message: err.Error(),
-		}, err
-	}
-
-	if req.Body != "" {
-		o := &ErrorHandler{}
-		bodym := o.FromJson(req.Body)
-		if o.Err != nil {
-			return &pb.OperationReply{
-				Code:    int32(utils.PARAM_INVALID),
-				Message: o.Err.Error(),
-			}, nil
-		}
-
-		if bodym != nil {
-			switch ff := filter.(type) {
-			case *WebTrigger:
-				url := o.FromMapString("url", bodym, "body.url", false, "")
-				method := o.FromMapString("method", bodym, "body.method", false, "")
-				if o.Err != nil {
-					return &pb.OperationReply{
-						Code:    int32(utils.PARAM_INVALID),
-						Message: o.Err.Error(),
-					}, nil
-				}
-
-				ff.Action.Url = url
-				ff.Action.Method = method
-			}
-		} else {
-			hub.Info("cannot parse body %s", req.Body)
-		}
-	}
-
-	hub.SetFilter(req.FilterId, filter)
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
-}
-
-func (hub *ChatHub) FilterFill(
-	ctx context.Context, req *pb.FilterFillRequest) (*pb.FilterFillReply, error) {
-
-	bot := hub.GetBotById(req.BotId)
-	if bot == nil {
-		return nil, fmt.Errorf("b[%s] not found", req.BotId)
-	}
-
-	var err error
-
-	if req.Source == "MSG" {
-		if bot.filter != nil {
-			err = bot.filter.Fill(req.Body)
-		}
-	} else if req.Source == "MOMENT" {
-		if bot.momentFilter != nil {
-			err = bot.momentFilter.Fill(req.Body)
-		}
-	} else {
-		return nil, fmt.Errorf("not support filter source %s", req.Source)
-	}
-
-	return &pb.FilterFillReply{Success: true}, err
-}
-
-func (hub *ChatHub) FilterNext(
-	ctx context.Context, req *pb.FilterNextRequest) (*pb.OperationReply, error) {
-	//hub.Info("FilterNext %v", req)
-
-	parentFilter := hub.GetFilter(req.FilterId)
-	if parentFilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("filter %s not found", req.FilterId),
-		}, nil
-	}
-
-	nextFilter := hub.GetFilter(req.NextFilterId)
-	if nextFilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("filter %s not found", req.NextFilterId),
-		}, nil
-	}
-
-	if err := parentFilter.Next(nextFilter); err != nil {
-		return nil, err
-	} else {
-		return &pb.OperationReply{Code: 0, Message: "success"}, nil
-	}
-}
-
-func (hub *ChatHub) RouterBranch(
-	ctx context.Context, req *pb.RouterBranchRequest) (*pb.OperationReply, error) {
-	//hub.Info("RouterBranch %v", req)
-
-	parentFilter := hub.GetFilter(req.RouterId)
-	if parentFilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("filter %s not found", req.RouterId),
-		}, nil
-	}
-
-	childFilter := hub.GetFilter(req.FilterId)
-	if childFilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("child filter %s not found", req.FilterId),
-		}, nil
-	}
-
-	switch r := parentFilter.(type) {
-	case Router:
-		if err := r.Branch(BranchTag{Key: req.Tag.Key, Value: req.Tag.Value}, childFilter); err != nil {
-			return nil, err
-		}
-	default:
-		return &pb.OperationReply{
-			Code:    int32(utils.METHOD_UNSUPPORTED),
-			Message: fmt.Sprintf("filter type %T cannot branch", r),
-		}, nil
-	}
-
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
-}
-
-func (hub *ChatHub) BotFilter(
-	ctx context.Context, req *pb.BotFilterRequest) (*pb.OperationReply, error) {
-
-	thebot := hub.GetBotById(req.BotId)
-	if thebot == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("bot %s not found", req.BotId),
-		}, nil
-	}
-
-	thefilter := hub.GetFilter(req.FilterId)
-	if thefilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("filter %s not found", req.FilterId),
-		}, nil
-	}
-
-	thebot.filter = thefilter
-
-	hub.SetBot(thebot.ClientId, thebot)
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
-}
-
-func (hub *ChatHub) BotMomentFilter(
-	ctx context.Context, req *pb.BotFilterRequest) (*pb.OperationReply, error) {
-
-	thebot := hub.GetBotById(req.BotId)
-	if thebot == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("bot %s not found", req.BotId),
-		}, nil
-	}
-
-	thefilter := hub.GetFilter(req.FilterId)
-	if thefilter == nil {
-		return &pb.OperationReply{
-			Code:    int32(utils.RESOURCE_NOT_FOUND),
-			Message: fmt.Sprintf("filter %s not found", req.FilterId),
-		}, nil
-	}
-
-	thebot.momentFilter = thefilter
-
-	hub.SetBot(thebot.ClientId, thebot)
-	return &pb.OperationReply{Code: 0, Message: "success"}, nil
 }
 
 func (hub *ChatHub) Serve() {

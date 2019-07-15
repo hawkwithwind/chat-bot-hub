@@ -19,6 +19,7 @@ var (
 		"chatcontactgroups": (*ErrorHandler).NewDefaultChatContactGroupExpand,
 		"moments":           (*ErrorHandler).NewDefaultMoment,
 		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
+		"chatcontactlabels": (*ErrorHandler).NewDefaultChatContactLabel,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, dbx.Searchable, string, interface{}) string{
@@ -223,6 +224,11 @@ func (o *ErrorHandler) SelectByCriteria(
 		}
 
 		results = append(results, m)
+	}
+
+	o.Err = rows.Err()
+	if o.Err != nil {
+		return []interface{}{}, utils.Paging{}
 	}
 
 	pagecount := count / paging.PageSize

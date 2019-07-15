@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -17,29 +18,13 @@ import (
 )
 
 const (
-	SDK         string = "SDK"
-	USER        string = "USER"
-	SDKCODE     string = "sdkbearer"
-	REFRESHCODE string = "refresh"
+	SDK          string = "SDK"
+	USER         string = "USER"
+	STREAMING    string = "STREAMING"
+	SDKCODE      string = "sdkbearer"
+	SDKCHILDCODE string = "childbearer"
+	REFRESHCODE  string = "refresh"
 )
-
-type User struct {
-	AccountName string         `json:"accountname"`
-	Password    string         `json:"password"`
-	SdkCode     string         `json:"sdkcode"`
-	Secret      string         `json:"secret"`
-	ExpireAt    utils.JSONTime `json:"expireat"`
-}
-
-type AuthError struct {
-	error
-}
-
-func NewAuthError(err error) error {
-	return &AuthError{
-		err,
-	}
-}
 
 func (o *ErrorHandler) getAccountName(r *http.Request) string {
 	if o.Err != nil {
@@ -68,17 +53,29 @@ func (o *ErrorHandler) register(db *dbx.Database, name string, pass string, emai
 	o.SaveAccount(db.Conn, account)
 }
 
-func (o *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time) string {
+func (o *ErrorHandler) generateToken(s string, name string, sdkcode string, secret string, expireAt time.Time, child *utils.AuthChildUser) string {
 	if o.Err != nil {
 		return ""
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"accountname": name,
-		"sdkcode":     sdkcode,
-		"secret":      secret,
-		"expireat":    utils.JSONTime{expireAt},
-	})
+	var token *jwt.Token
+
+	if child == nil {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"accountname": name,
+			"sdkcode":     sdkcode,
+			"secret":      secret,
+			"expireat":    utils.JSONTime{expireAt},
+		})
+	} else {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"accountname": name,
+			"sdkcode":     sdkcode,
+			"secret":      secret,
+			"expireat":    utils.JSONTime{expireAt},
+			"child":       child,
+		})
+	}
 
 	var tokenstring string
 	if tokenstring, o.Err = token.SignedString([]byte(s)); o.Err == nil {
@@ -93,10 +90,10 @@ func (o *ErrorHandler) authorize(s string, name string, secret string) string {
 		return ""
 	}
 
-	return o.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7))
+	return o.generateToken(s, name, "", secret, time.Now().Add(time.Hour*24*7), nil)
 }
 
-func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires time.Duration, refreshExpires time.Duration) map[string]interface{} {
+func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires time.Duration, refreshExpires time.Duration, child *utils.AuthChildUser) map[string]interface{} {
 	expireAt := time.Now().Add(expires)
 	refreshExpireAt := time.Now().Add(refreshExpires)
 
@@ -109,8 +106,15 @@ func (o *ErrorHandler) genSdkToken(web *WebServer, accountName string, expires t
 		return map[string]interface{}{}
 	}
 
-	tokenString := o.generateToken(web.Config.SecretPhrase, account.AccountName, SDKCODE, account.Secret, expireAt)
-	refreshToken := o.generateToken(web.Config.SecretPhrase, account.AccountName, REFRESHCODE, account.Secret, refreshExpireAt)
+	var sdkcode string
+	if child == nil {
+		sdkcode = SDKCODE
+	} else {
+		sdkcode = SDKCHILDCODE
+	}
+
+	tokenString := o.generateToken(web.Config.SecretPhrase, account.AccountName, sdkcode, account.Secret, expireAt, child)
+	refreshToken := o.generateToken(web.Config.SecretPhrase, account.AccountName, REFRESHCODE, account.Secret, refreshExpireAt, child)
 
 	if o.Err != nil {
 		return map[string]interface{}{}
@@ -133,11 +137,71 @@ func (ctx *WebServer) sdkToken(w http.ResponseWriter, req *http.Request) {
 	case string:
 		accountName = login
 	default:
-		o.Err = NewAuthError(fmt.Errorf("context[login] should be string but [%T]%v", login, login))
+		o.Err = utils.NewAuthError(fmt.Errorf("context[login] should be string but [%T]%v", login, login))
 		return
 	}
 
-	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30))
+	o.ok(w, "", o.genSdkToken(ctx, accountName, time.Hour*24*7, time.Hour*24*30, nil))
+}
+
+func (web *WebServer) sdkTokenChild(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	r.ParseForm()
+	accountName := o.getAccountName(r)
+	if o.Err != nil {
+		return
+	}
+
+	var b []byte
+	b, o.Err = ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if o.Err != nil {
+		o.Err = utils.NewAuthError(o.Err)
+		return
+	}
+
+	querym := struct {
+		ExpireAt *utils.JSONTime `json:"expireAt"`
+		Metadata string          `json:"metadata"`
+		AuthUrl  string          `json:"authUrl"`
+		Cookie   string          `json:"cookie"`
+	}{}
+
+	o.Err = json.Unmarshal(b, &querym)
+	if o.Err != nil {
+		o.Err = utils.NewAuthError(o.Err)
+		return
+	}
+
+	if len(querym.AuthUrl) == 0 {
+		o.Err = utils.NewAuthError(fmt.Errorf("authUrl must be set"))
+		return
+	}
+
+	if querym.ExpireAt == nil {
+		querym.ExpireAt = &utils.JSONTime{
+			Time: time.Now().Add(time.Hour * 24 * 7),
+		}
+	}
+
+	now := time.Now()
+
+	if querym.ExpireAt.After(now) == false {
+		o.Err = utils.NewAuthError(fmt.Errorf("expireat must set after current time"))
+		return
+	}
+
+	expires := querym.ExpireAt.Sub(now)
+	refreshExpires := querym.ExpireAt.Sub(now) * 4
+
+	o.ok(w, "", o.genSdkToken(web, accountName, expires, refreshExpires, &utils.AuthChildUser{
+		Metadata: querym.Metadata,
+		AuthUrl:  querym.AuthUrl,
+		Cookie:   querym.Cookie,
+	}))
 }
 
 func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
@@ -148,65 +212,50 @@ func (ctx *WebServer) refreshToken(w http.ResponseWriter, req *http.Request) {
 	bearerToken := req.Header.Get("X-AUTHORIZE-REFRESH")
 	clientType := req.Header.Get("X-CLIENT-TYPE")
 
-	var token *jwt.Token
-	token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("解析令牌出错")
+	user := o.ValidateJWTToken(ctx.Config.SecretPhrase, bearerToken)
+	if o.Err != nil {
+		return
+	}
+
+	//validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+
+	o.Err = ctx.UpdateAccounts()
+	if o.Err != nil {
+		return
+	}
+
+	foundcount := 0
+	for _, acc := range ctx.accounts.accounts {
+		if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+			foundcount += 1
 		}
-		return []byte(ctx.Config.SecretPhrase), nil
-	})
-	if token.Valid {
-		var user User
-		utils.DecodeMap(token.Claims, &user)
+	}
 
-		//validated := o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+	validated := false
+	if foundcount == 1 {
+		validated = true
+	}
 
-		o.Err = ctx.UpdateAccounts()
-		if o.Err != nil {
+	if o.Err != nil {
+		return
+	}
+
+	if validated == true {
+		if user.ExpireAt.Before(time.Now()) {
+			o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
 			return
 		}
 
-		foundcount := 0
-		for _, acc := range ctx.accounts.accounts {
-			if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
-				foundcount += 1
-			}
-		}
-
-		validated := false
-		if foundcount == 1 {
-			validated = true
-		}
-
-		if o.Err != nil {
+		if clientType != SDK {
+			o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
 			return
 		}
 
-		if validated == true {
-			if user.ExpireAt.Before(time.Now()) {
-				o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
-				return
-			} else {
-				if user.SdkCode != REFRESHCODE {
-					o.Err = NewAuthError(fmt.Errorf("不支持的令牌类型"))
-					return
-				}
-
-				if clientType != SDK {
-					o.Err = NewAuthError(fmt.Errorf("不支持的用户类型"))
-					return
-				}
-
-				// pass validate
-				o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30))
-				return
-			}
-		} else {
-			o.Err = NewAuthError(fmt.Errorf("身份令牌未验证通过"))
-			return
-		}
+		// pass validate
+		o.ok(w, "", o.genSdkToken(ctx, user.AccountName, time.Hour*24*7, time.Hour*24*30, nil))
+		return
 	} else {
-		o.Err = NewAuthError(fmt.Errorf("身份令牌无效"))
+		o.Err = utils.NewAuthError(fmt.Errorf("身份令牌未验证通过"))
 		return
 	}
 }
@@ -218,13 +267,13 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 	var session *sessions.Session
 	session, o.Err = ctx.store.Get(req, "chatbothub")
 	if o.Err != nil {
-		o.Err = NewAuthError(o.Err)
+		o.Err = utils.NewAuthError(o.Err)
 	}
 
-	var user User
+	var user utils.AuthUser
 	o.Err = json.NewDecoder(req.Body).Decode(&user)
 	if o.Err != nil {
-		o.Err = NewAuthError(o.Err)
+		o.Err = utils.NewAuthError(o.Err)
 	}
 
 	o.Err = ctx.UpdateAccounts()
@@ -254,11 +303,43 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		if o.Err == nil {
 			http.Redirect(w, req, "/", http.StatusFound)
 		} else {
-			o.Err = NewAuthError(o.Err)
+			o.Err = utils.NewAuthError(o.Err)
 		}
 	} else {
-		o.Err = NewAuthError(fmt.Errorf("用户名密码不匹配"))
+		o.Err = utils.NewAuthError(fmt.Errorf("用户名密码不匹配"))
 	}
+}
+
+func (web *WebServer) streamingCtrl(w http.ResponseWriter, req *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	bearerToken := req.Header.Get("X-AUTHORIZE")
+	clientType := req.Header.Get("X-CLIENT-TYPE")
+
+	if clientType != STREAMING {
+		o.Err = utils.NewAuthError(fmt.Errorf("malfaled request"))
+		return
+	}
+
+	user := o.ValidateJWTToken(web.Config.SecretPhrase, bearerToken)
+	if o.Err != nil {
+		return
+	}
+
+	if user == nil {
+		o.Err = utils.NewAuthError(fmt.Errorf("failed to parse user"))
+		return
+	}
+
+	if user.Child == nil {
+		o.Err = utils.NewAuthError(fmt.Errorf("failed to parse user.Child"))
+		return
+	}
+
+	// TODO
+
+	o.ok(w, "", nil)
 }
 
 func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
@@ -290,70 +371,50 @@ func (ctx *WebServer) validate(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		if o.Err == nil && bearerToken != "" {
-			var token *jwt.Token
-			token, o.Err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("解析令牌出错")
-				}
-				return []byte(ctx.Config.SecretPhrase), nil
-			})
 
+			user := o.ValidateJWTToken(ctx.Config.SecretPhrase, bearerToken)
 			if o.Err != nil {
-				o.Err = NewAuthError(fmt.Errorf("解析令牌出错: %s", o.Err.Error()))
 				return
 			}
 
-			if token == nil {
-				o.Err = NewAuthError(fmt.Errorf("token is null"))
+			o.Err = ctx.UpdateAccounts()
+			if o.Err != nil {
 				return
 			}
 
-			if token.Valid {
-				var user User
-				utils.DecodeMap(token.Claims, &user)
+			foundcount := 0
+			for _, acc := range ctx.accounts.accounts {
+				if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
+					foundcount += 1
+				}
+			}
 
-				o.Err = ctx.UpdateAccounts()
-				if o.Err != nil {
+			validated := false
+			if foundcount == 1 {
+				validated = true
+			}
+
+			//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
+			if validated {
+				if user.ExpireAt.Before(time.Now()) {
+					o.Err = utils.NewAuthError(fmt.Errorf("身份令牌已过期"))
 					return
-				}
-
-				foundcount := 0
-				for _, acc := range ctx.accounts.accounts {
-					if acc.AccountName == user.AccountName && acc.Secret == user.Secret {
-						foundcount += 1
-					}
-				}
-
-				validated := false
-				if foundcount == 1 {
-					validated = true
-				}
-
-				//o.AccountValidateSecret(ctx.db.Conn, user.AccountName, user.Secret)
-				if validated {
-					if user.ExpireAt.Before(time.Now()) {
-						o.Err = NewAuthError(fmt.Errorf("身份令牌已过期"))
-						return
-					} else {
-						if clientType == SDK && user.SdkCode != SDKCODE {
-							o.Err = NewAuthError(fmt.Errorf("不支持的用户类型"))
-							return
-						}
-
-						// pass validate
-						context.Set(req, "login", user.AccountName)
-						next(w, req)
-					}
 				} else {
-					o.Err = NewAuthError(fmt.Errorf("身份令牌未验证通过"))
-					return
+					if clientType == SDK && user.SdkCode != SDKCODE {
+						o.Err = utils.NewAuthError(fmt.Errorf("不支持的用户类型"))
+						return
+					}
+
+					// pass validate
+					context.Set(req, "login", user.AccountName)
+					next(w, req)
 				}
 			} else {
-				o.Err = NewAuthError(fmt.Errorf("身份令牌无效"))
+				o.Err = utils.NewAuthError(fmt.Errorf("身份令牌未验证通过"))
 				return
 			}
 		} else {
-			o.Err = NewAuthError(fmt.Errorf("未登录用户无权限访问"))
+			o.Err = utils.NewAuthError(fmt.Errorf("未登录用户无权限访问"))
 			return
 		}
 	})

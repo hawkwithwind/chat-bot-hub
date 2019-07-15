@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"reflect"
+	"sync"
 	"time"
 
 	mt "github.com/mitchellh/mapstructure"
@@ -66,4 +67,26 @@ func StringNull(str string, defaultValue string) sql.NullString {
 			Valid:  true,
 		}
 	}
+}
+
+func MapLen(syncMap *sync.Map) int {
+	result := 0
+
+	syncMap.Range(func(key, value interface{}) bool {
+		result++
+		return true
+	})
+
+	return result
+}
+
+func MapKeys(syncMap *sync.Map) []interface{} {
+	var result []interface{}
+
+	syncMap.Range(func(key, value interface{}) bool {
+		result = append(result, key)
+		return true
+	})
+
+	return result
 }

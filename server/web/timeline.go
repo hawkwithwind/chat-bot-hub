@@ -4,8 +4,49 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hawkwithwind/mux"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
+
+func (web *WebServer) NotifyWechatBotCrawlTimeline(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	vars := mux.Vars(r)
+	botId := vars["botId"]
+
+	accountName := o.getAccountName(r)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	o.CheckBotOwnerById(tx, botId, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
+	defer wrapper.Cancel()
+
+	botinfo := o.getTheBot(wrapper, botId)
+	if o.Err != nil {
+		return
+	}
+
+	ar := o.NewActionRequest(botinfo.Login, "SnsTimeline", "{}", "NEW")
+	actionReply := o.CreateAndRunAction(web, ar)
+	if o.Err != nil {
+		return
+	}
+
+	o.ok(w, "", actionReply)
+}
 
 func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
@@ -82,6 +123,11 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return
+		}
+
+		if botinfo.Login == "" {
+			web.Info("[Timeline Crawl Tail] bot %s login empty", bot.BotId)
+			continue
 		}
 
 		momentCode := o.SpopMomentCrawlTail(web.redispool, botinfo.BotId)

@@ -249,8 +249,13 @@ func (f *FluentFilter) Fill(msg string) error {
 
 	if o.Err == nil {
 		go func() {
+			o := &ErrorHandler{}
+			defer o.Recover("filter fluent logger")
+
 			if body != nil {
-				f.logger.Post(f.tag, body)
+				if f.logger != nil {
+					f.logger.Post(f.tag, body)
+				}
 			}
 		}()
 
@@ -504,6 +509,7 @@ func NewWebTrigger(client *http.Client, filterId string, filterName string) *Web
 func (f *WebTrigger) Fill(msg string) error {
 	go func() {
 		o := domains.ErrorHandler{}
+		defer o.Recover("WebTrigger.Fill")
 
 		jar, err := cookiejar.New(nil)
 		if err != nil {

@@ -26,7 +26,7 @@ build-angular: $(RUNTIME_PATH)/$(EXECUTABLE) build-nodejs-image
 	cp -R frontend/static/img $(RUNTIME_PATH)/static/ && \
 	cp -R frontend/static/lib $(RUNTIME_PATH)/static/ && \
 	cp frontend/index.html $(RUNTIME_PATH)/static/ && \
-	chmod -R -w $(RUNTIME_PATH)/static/
+	chmod -f -R -w $(RUNTIME_PATH)/static/
 
 $(RUNTIME_PATH)/$(EXECUTABLE): $(SOURCES) $(RUNTIME_PATH) build-golang-image build-migrate-image
 	docker run --rm \
@@ -103,7 +103,8 @@ gen:
 	$(RUNTIME_IMAGE):build-golang sh -c \
 	"go get -u github.com/golang/protobuf/protoc-gen-go && \
 	   cd proto && \
-	   protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub"
+	   protoc -I chatbothub/ chatbothub/chatbothub.proto --go_out=plugins=grpc:chatbothub && \
+	   protoc -I streaming/ streaming/streaming.proto --go_out=plugins=grpc:streaming"
 
 
 

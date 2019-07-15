@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/hawkwithwind/mux"
@@ -15,6 +14,8 @@ import (
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
+	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
@@ -23,7 +24,7 @@ func webCallbackRequest(bot *domains.Bot, event string, body string) *httpx.Rest
 	rr.Params["event"] = event
 	rr.Params["body"] = body
 
-	//fmt.Printf("rr: %v", rr)
+	fmt.Printf("[Web Callback] %s \n", bot.Callback.String)
 	return rr
 }
 
@@ -34,7 +35,7 @@ func (o *ErrorHandler) BackEndError(ctx *WebServer) {
 }
 
 func (o *ErrorHandler) CreateFilterChain(
-	ctx *WebServer, tx dbx.Queryable, wrapper *GRPCWrapper, filterId string) {
+	ctx *WebServer, tx dbx.Queryable, wrapper *rpc.GRPCWrapper, filterId string) {
 
 	lastFilterId := ""
 	currentFilterId := filterId
@@ -58,7 +59,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			body = ""
 		}
 
-		if opreply, err := wrapper.client.FilterCreate(wrapper.context, &pb.FilterCreateRequest{
+		if opreply, err := wrapper.HubClient.FilterCreate(wrapper.Context, &pb.FilterCreateRequest{
 			FilterId:   filter.FilterId,
 			FilterType: filter.FilterType,
 			FilterName: filter.FilterName,
@@ -103,7 +104,7 @@ func (o *ErrorHandler) CreateFilterChain(
 									return
 								}
 								var opreply *pb.OperationReply
-								opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+								opreply, o.Err = wrapper.HubClient.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 									Tag: &pb.BranchTag{
 										Key:   key,
 										Value: value,
@@ -143,7 +144,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						}
 						// branch this
 						var opreply *pb.OperationReply
-						opreply, o.Err = wrapper.client.RouterBranch(wrapper.context, &pb.RouterBranchRequest{
+						opreply, o.Err = wrapper.HubClient.RouterBranch(wrapper.Context, &pb.RouterBranchRequest{
 							Tag: &pb.BranchTag{
 								Key: regstr,
 							},
@@ -172,7 +173,7 @@ func (o *ErrorHandler) CreateFilterChain(
 		}
 
 		if lastFilterId != "" {
-			if nxtreply, err := wrapper.client.FilterNext(wrapper.context, &pb.FilterNextRequest{
+			if nxtreply, err := wrapper.HubClient.FilterNext(wrapper.Context, &pb.FilterNextRequest{
 				FilterId:     lastFilterId,
 				NextFilterId: filter.FilterId,
 			}); err != nil {
@@ -197,159 +198,114 @@ func (o *ErrorHandler) CreateFilterChain(
 	}
 }
 
-type WechatSnsMoment struct {
-	CreateTime  int    `json:"createTime" msg:"createTime"`
-	Description string `json:"description" msg:"description"`
-	MomentId    string `json:"id" msg:"id"`
-	NickName    string `json:"nickName" msg:"nickName"`
-	UserName    string `json:"userName" msg:"userName"`
-}
-
-type WechatSnsTimeline struct {
-	Data    []WechatSnsMoment `json:"data"`
-	Count   int               `json:"count"`
-	Message string            `json:"message"`
-	Page    string            `json:"page"`
-	Status  int               `json:"status"`
-}
-
-func (o *ErrorHandler) getTheBot(wrapper *GRPCWrapper, botId string) *pb.BotsInfo {
-	botsreply := o.GetBots(wrapper, &pb.BotsRequest{BotIds: []string{botId}})
-	if o.Err == nil {
-		if len(botsreply.BotsInfo) == 0 {
-			o.Err = utils.NewClientError(
-				utils.STATUS_INCONSISTENT,
-				fmt.Errorf("bot {%s} not activated", botId),
-			)
-		} else if len(botsreply.BotsInfo) > 1 {
-			o.Err = utils.NewClientError(
-				utils.STATUS_INCONSISTENT,
-				fmt.Errorf("bot {%s} multiple instance {%#v}", botId, botsreply.BotsInfo),
-			)
-		}
-	}
-
-	if o.Err != nil {
-		return nil
-	}
-
-	if botsreply == nil || len(botsreply.BotsInfo) == 0 {
-		o.Err = fmt.Errorf("cannot find bots %s", botId)
-		return nil
-	}
-
-	return botsreply.BotsInfo[0]
-}
-
-func (web *WebServer) botLoginStage(w http.ResponseWriter, r *http.Request) {
+func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
-	defer o.BackEndError(web)
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
-	web.Info("botNotify %s", botId)
+	r.ParseForm()
+	eventType := o.getStringValue(r.Form, "event")
+	bodystr := o.getStringValue(r.Form, "body")
 
-	tx := o.Begin(web.db)
-	defer o.CommitOrRollback(tx)
-
-	bot := o.GetBotById(tx, botId)
 	if o.Err != nil {
 		return
 	}
 
-	if bot == nil {
-		o.Err = fmt.Errorf("bot %s not found", botId)
-		return
-	}
-
-	wrapper, err := web.NewGRPCWrapper()
+	err := ctx.processBotNotify(botId, eventType, bodystr)
 	if err != nil {
 		o.Err = err
 		return
 	}
-	defer wrapper.Cancel()
 
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return
-	}
-
-	if thebotinfo == nil {
-		o.Err = fmt.Errorf("bot %s not active", botId)
-		return
-	}
-
-	if thebotinfo.Status != int32(chatbothub.LoggingStaging) {
-		o.Err = fmt.Errorf("bot[%s] not LogingStaging but %d", botId, thebotinfo.Status)
-		return
-	}
-
-	if len(thebotinfo.Login) == 0 {
-		o.Err = fmt.Errorf("bot[%s] loging staging with empty login %#v", botId, thebotinfo)
-		return
-	}
-
-	web.Info("[LOGIN MIGRATE] bot migrate b[%s] %s", botId, thebotinfo.Login)
-
-	oldId := o.BotMigrate(tx, botId, thebotinfo.Login)
-	o.ok(w, "", map[string]interface{}{
-		"botId": oldId,
-	})
+	o.ok(w, "success", nil)
 }
 
-func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
-	o := ErrorHandler{}
-	defer o.WebError(w)
-	defer o.BackEndError(ctx)
+func (ctx *WebServer) mqConsume(queue string, consumer string) {
+	ticker := time.NewTicker(5 * time.Second)
 
-	vars := mux.Vars(r)
-	botId := vars["botId"]
+	for ; ; <-ticker.C {
+		msgs, err := ctx.rabbitmq.Consume(
+			queue,    // queue
+			consumer, // consumer
+			false,    // auto-ack
+			false,    // exclusive
+			false,    // no-local
+			false,    // no-wait
+		)
+
+		if err != nil {
+			ctx.Error(err, "failed to register a consumer")
+			continue
+		}
+
+		for d := range msgs {
+			mqEvent := models.MqEvent{}
+
+			err := json.Unmarshal(d.Body, &mqEvent)
+			if err != nil {
+				ctx.Error(err, "unmarshal mqevent failed")
+				d.Ack(false)
+				continue
+			}
+
+			err = ctx.processBotNotify(mqEvent.BotId, mqEvent.EventType, mqEvent.Body)
+			if err != nil {
+				ctx.Error(err, "process event failed")
+				d.Ack(false)
+				continue
+			}
+
+			// no matter process success or not, must ack it; currently didn't handle with retry
+			d.Ack(false)
+		}
+	}
+}
+
+func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr string) error {
+	o := ErrorHandler{}
+	defer o.BackEndError(ctx)
 
 	ctx.Info("botNotify %s", botId)
 
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
-		return
+		return o.Err
 	}
 	defer wrapper.Cancel()
 
 	thebotinfo := o.getTheBot(wrapper, botId)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
-	r.ParseForm()
-	eventType := o.getStringValue(r.Form, "event")
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
-		bodystr := o.getStringValue(r.Form, "body")
 		if thebotinfo.ClientType == "WECHATBOT" {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
 		ctx.Info("[contacts debug] bot notify received raw")
-		o.ok(w, "success", nil)
-		return
+		return nil
 	}
 
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 	defer o.CommitOrRollback(tx)
 
 	bot := o.GetBotById(tx, botId)
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
 	if bot == nil {
 		o.Err = fmt.Errorf("bot %s not found", botId)
-		return
+		return o.Err
 	}
 
 	ifmap := o.FromJson(thebotinfo.LoginInfo)
@@ -362,7 +318,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Err != nil {
-		return
+		return o.Err
 	}
 
 	switch eventType {
@@ -373,7 +329,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
-		return
+		return nil
 
 	case chatbothub.LOGINDONE:
 		var oldtoken string
@@ -403,7 +359,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
@@ -413,7 +369,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		bot.Login = thebotinfo.Login
 		o.UpdateBotLogin(tx, bot)
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		// rebuild msg filter error and new action error should not effect update bot login
@@ -431,14 +387,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		// now, initailize bot's filter, and call chathub to create intances and get connected
 		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
 		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
-		return
+		return nil
 
 	case chatbothub.FRIENDREQUEST:
-		reqstr := o.getStringValue(r.Form, "body")
-		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, reqstr)
+		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
 		rlogin := ""
 		if thebotinfo.ClientType == "WECHATBOT" {
-			reqm := o.FromJson(reqstr)
+			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
@@ -447,7 +402,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, reqstr, "NEW")
+		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, bodystr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -473,7 +428,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}()
 
 	case chatbothub.STATUSMESSAGE:
-		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
 		go func() {
@@ -486,7 +440,6 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}()
 
 	case chatbothub.GROUPINFO:
-		bodystr := o.getStringValue(r.Form, "body")
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
 
 		if thebotinfo.ClientType == "WECHATBOT" {
@@ -494,64 +447,63 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case chatbothub.MESSAGE:
-		msg := o.getStringValue(r.Form, "body")
+		msg := bodystr
+		if o.Err != nil {
+			return o.Err
+		}
+
 		if thebotinfo.ClientType == "WECHATBOT" {
-			body := o.FromJson(msg)
-			if body != nil {
-				fromUser := o.FromMapString("fromUser", body, "body", false, "")
-				groupId := o.FromMapString("groupId", body, "body", true, "")
-				msgId := o.FromMapString("msgId", body, "body", false, "")
-				timestamp := int64(o.FromMapFloat("timestamp", body, "body", false, 0))
-				tm := o.BJTimeFromUnix(timestamp)
-				if o.Err != nil {
-					return
-				}
+			message := models.WechatMessage{}
+			o.Err = json.Unmarshal([]byte(msg), &message)
+			if o.Err != nil {
+				return o.Err
+			}
 
-				chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, fromUser)
+			tm := o.BJTimeFromUnix(message.Timestamp)
+			if o.Err != nil {
+				return o.Err
+			}
+
+			chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, message.FromUser)
+			if o.Err != nil {
+				return o.Err
+			}
+
+			if chatuser != nil {
+				chatuser.SetLastSendAt(tm)
+				chatuser.SetLastMsgId(message.MsgId)
+				o.UpdateChatUser(tx, chatuser)
 				if o.Err != nil {
-					return
+					return o.Err
 				}
-				if chatuser != nil {
-					chatuser.SetLastSendAt(tm)
-					chatuser.SetLastMsgId(msgId)
-					o.UpdateChatUser(tx, chatuser)
+			}
+
+			if message.GroupId != "" {
+				chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, message.GroupId)
+				if o.Err != nil {
+					return o.Err
+				}
+				if chatgroup != nil {
+					chatgroup.SetLastSendAt(tm)
+					chatgroup.SetLastMsgId(message.MsgId)
+					o.UpdateChatGroup(tx, chatgroup)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 				}
+			}
 
-				if groupId != "" {
-					chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupId)
-					if o.Err != nil {
-						return
-					}
-					if chatgroup != nil {
-						chatgroup.SetLastSendAt(tm)
-						chatgroup.SetLastMsgId(msgId)
-						o.UpdateChatGroup(tx, chatgroup)
-						if o.Err != nil {
-							return
-						}
-					}
-				}
-
-				if o.Err != nil {
-					return
-				}
-				o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+			if o.Err != nil {
+				return o.Err
 			}
 		}
 
-	case chatbothub.IMAGEMESSAGE:
-		msg := o.getStringValue(r.Form, "body")
-		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+	//case chatbothub.IMAGEMESSAGE:
 
-	case chatbothub.EMOJIMESSAGE:
-		msg := o.getStringValue(r.Form, "body")
-		o.UpdateWechatMessages(ctx.mongoDb, []string{msg})
+	//case chatbothub.EMOJIMESSAGE:
 
 	case chatbothub.ACTIONREPLY:
-		reqstr := o.getStringValue(r.Form, "body")
+		reqstr := bodystr
 		debugstr := reqstr
 		if len(debugstr) > 120 {
 			debugstr = debugstr[:120]
@@ -567,7 +519,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 
 		localar.ReplyAt = awayar.ReplyAt
@@ -589,58 +541,11 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 								"status", rdata, "actionReply.result.data", false, 0))
 
 							if o.Err != nil {
-								return
+								return o.Err
 							}
 
 							if status == 0 {
 								localar.Status = "Done"
-
-								if localar.ActionType == chatbothub.SendTextMessage ||
-									localar.ActionType == chatbothub.SendAppMessage ||
-									localar.ActionType == chatbothub.SendImageMessage ||
-									localar.ActionType == chatbothub.SendImageResourceMessage {
-
-									msgId := o.FromMapString("msgId", rdata, "actionReply.result.data", false, "")
-
-									actionm := o.FromJson(localar.ActionBody)
-									if o.Err != nil {
-										return
-									}
-
-									var toUser, groupId string
-
-									if toUserNamep, ok := actionm["toUserName"]; ok {
-										switch toUserName := toUserNamep.(type) {
-										case string:
-											toUser = toUserName
-											var chatroom = regexp.MustCompile(`@chatroom$`)
-											if chatroom.MatchString(toUserName) {
-												groupId = toUserName
-											} else {
-												groupId = ""
-											}
-										}
-									}
-
-									content := o.FromMapString("content", actionm, "actionReply.actionBody", true, "")
-									imageId := o.FromMapString("imageId", actionm, "actionReply.actionBody", true, "")
-
-									msg := map[string]interface{}{
-										"msgId":     msgId,
-										"fromUser":  localar.Login,
-										"toUser":    toUser,
-										"groupId":   groupId,
-										"imageId":   imageId,
-										"content":   content,
-										"timestamp": time.Now().Unix(),
-									}
-
-									o.UpdateWechatMessages(ctx.mongoDb, []string{o.ToJson(msg)})
-									if o.Err != nil {
-										ctx.Error(o.Err, "[SAVE DEBUG] update message error")
-									}
-								}
-
 							}
 						default:
 							if o.Err == nil {
@@ -656,10 +561,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 		if o.Err != nil {
 			ctx.Info("result is %s", awayar.Result)
-			return
+			return o.Err
 		}
 
 		switch localar.ActionType {
+		case chatbothub.SendImageMessage:
+			ctx.Info("[Action Reply] %s SendImageMessage")
+
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
@@ -667,7 +575,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			for _, fr := range frs {
@@ -730,12 +638,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 					o.UpdateOrCreateChatUser(tx, chatuser)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 					if theuser == nil {
 						o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
@@ -743,7 +651,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 					o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
@@ -754,18 +662,18 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			userId := o.FromMapString("userId", bodym, "actionBody", false, "")
 
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			if acresult.Success == false {
 				ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
-				return
+				return nil
 			}
 			switch resdata := acresult.Data.(type) {
 			case map[string]interface{}:
@@ -773,7 +681,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				case float64:
 					if restatus != 0 {
 						ctx.Info("delete contact %s from %s [failed]\n%s\n", userId, bot.Login, localar.Result)
-						return
+						return nil
 					}
 				}
 			}
@@ -782,7 +690,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			o.DeleteChatContact(tx, bot.BotId, userId)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
@@ -790,23 +698,23 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			info := WechatContactInfo{}
 			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &info)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			if info.UserName == "" {
 				ctx.Info("search user name empty, ignore. body:\n %s\n", localar.Result)
-				return
+				return nil
 			}
 
 			if info.UserName[:5] != "wxid_" {
 				ctx.Info("search user not friend, ignore for now.\n%v", info)
-				return
+				return nil
 			}
 
 			ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
@@ -828,35 +736,35 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			bodym := o.FromJson(localar.ActionBody)
 			groupId := o.FromMapString("groupId", bodym, "actionBody", false, "")
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			ctx.Info("groupId %s, returned\n%v\n", groupId, localar.Result)
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			groupInfo := WechatGroupInfo{}
 			o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &groupInfo)
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			// 1. find group
 			chatgroup := o.GetChatGroupByName(tx, thebotinfo.ClientType, groupInfo.UserName)
 			if o.Err != nil {
-				return
+				return o.Err
 			} else if chatgroup == nil {
 				o.Err = fmt.Errorf("didn't find chat group %s", groupInfo.UserName)
-				return
+				return o.Err
 			}
 
 			// 1.1 save botId contact groupId, if not exist
 			o.SaveIgnoreChatContactGroup(tx, o.NewChatContactGroup(bot.BotId, chatgroup.ChatGroupId))
 			if o.Err != nil {
-				return
+				return o.Err
 			}
 
 			// 2. update group members
@@ -868,10 +776,10 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 
 			members := o.FindOrCreateChatUsers(tx, users)
 			if o.Err != nil {
-				return
+				return o.Err
 			} else if len(members) != len(users) {
 				o.Err = fmt.Errorf("didn't find or create group[%s] members correctly expect %d but %d\n{{{ %v }}\n", groupInfo.UserName, len(users), len(members), members)
-				return
+				return o.Err
 			}
 
 			memberMap := map[string]string{}
@@ -897,21 +805,47 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
 
+		case chatbothub.GetLabelList:
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
+				return o.Err
+			}
+
+			if thebotinfo.ClientType == "WECHATBOT" {
+				labels := models.WechatChatContactLabels{}
+				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &labels)
+				if o.Err != nil {
+					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
+					return o.Err
+				}
+
+				labeldomains := []*domains.ChatContactLabel{}
+				for _, l := range labels.Label {
+					labeldomains = append(labeldomains, o.NewChatContactLabel(thebotinfo.BotId, l.Id, l.Name))
+					o.SaveChatContactLabels(tx, labeldomains)
+					if o.Err != nil {
+						return o.Err
+					}
+				}
+			}
+
 		case chatbothub.SnsTimeline:
 			ctx.Info("snstimeline")
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
 				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
-				return
+				return o.Err
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
-				wetimeline := WechatSnsTimeline{}
+				wetimeline := models.WechatSnsTimeline{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
 				if o.Err != nil {
 					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
-					return
+					return o.Err
 				}
 
 				ctx.Info("Wechat Sns Timeline")
@@ -923,14 +857,14 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
-						return
+						return o.Err
 					}
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
 					foundms := o.GetMomentByCode(tx, m.MomentId)
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					if len(foundms) == 0 {
@@ -944,13 +878,13 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
-						_, o.Err = wrapper.client.FilterFill(wrapper.context, &pb.FilterFillRequest{
+						_, o.Err = wrapper.HubClient.FilterFill(wrapper.Context, &pb.FilterFillRequest{
 							BotId:  bot.BotId,
 							Source: "MOMENT",
 							Body:   o.ToJson(m),
@@ -961,7 +895,7 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 					}
 
 					if o.Err != nil {
-						return
+						return o.Err
 					}
 
 					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
@@ -969,12 +903,12 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if o.Err != nil {
-					return
+					return o.Err
 				}
 
 				// all items new, means there are more to pull, save earliest momentId
 				if len(wetimeline.Data) > 0 {
-					var minItem WechatSnsMoment
+					var minItem models.WechatSnsMoment
 					for i, d := range wetimeline.Data {
 						if i == 0 || d.CreateTime < minItem.CreateTime {
 							minItem = d
@@ -990,29 +924,32 @@ func (ctx *WebServer) botNotify(w http.ResponseWriter, r *http.Request) {
 			}
 
 		default:
-			ctx.Info("action reply %s\n", o.ToJson(localar))
+			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}
 
 		if o.Err != nil {
-			return
+			return o.Err
 		}
 		o.SaveActionRequest(ctx.redispool, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
 			if bot.Callback.Valid {
-				if _, err := httpx.RestfulCallRetry(ctx.restfulclient,
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient,
 					webCallbackRequest(bot, eventType, eh.ToJson(localar)), 5, 1); err != nil {
 					ctx.Error(err, "callback failed")
+				} else {
+					ctx.Info("action reply resp [%d]\n", resp.StatusCode)
 				}
 			}
 		}()
 
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
+		return o.Err
 	}
 
-	o.ok(w, "success", nil)
+	return o.Err
 }
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
@@ -1150,7 +1087,7 @@ func (web *WebServer) rebuildMsgFiltersFromWeb(w http.ResponseWriter, r *http.Re
 	o.ok(w, "success", nil)
 }
 
-func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *rpc.GRPCWrapper) {
 	if o.Err != nil {
 		return
 	}
@@ -1165,7 +1102,7 @@ func (o *ErrorHandler) rebuildMsgFilters(web *WebServer, bot *domains.Bot, q dbx
 		}
 		web.Info("b[%s] initializing filters done", bot.BotId)
 		var ret *pb.OperationReply
-		ret, o.Err = w.client.BotFilter(w.context, &pb.BotFilterRequest{
+		ret, o.Err = w.HubClient.BotFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.FilterId.String,
 		})
@@ -1213,7 +1150,7 @@ func (web *WebServer) rebuildMomentFiltersFromWeb(w http.ResponseWriter, r *http
 	o.ok(w, "success", nil)
 }
 
-func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *GRPCWrapper) {
+func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q dbx.Queryable, w *rpc.GRPCWrapper) {
 	if o.Err != nil {
 		return
 	}
@@ -1230,7 +1167,7 @@ func (o *ErrorHandler) rebuildMomentFilters(web *WebServer, bot *domains.Bot, q 
 		web.Info("b[%s] initializing moment filters done", bot.BotId)
 
 		var ret *pb.OperationReply
-		ret, o.Err = w.client.BotMomentFilter(w.context, &pb.BotFilterRequest{
+		ret, o.Err = w.HubClient.BotMomentFilter(w.Context, &pb.BotFilterRequest{
 			BotId:    bot.BotId,
 			FilterId: bot.MomentFilterId.String,
 		})

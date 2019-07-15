@@ -32,15 +32,71 @@ service ChatBotHub {
   rpc BotAction (BotActionRequest) returns (BotActionReply) {}
   rpc BotFilter (BotFilterRequest) returns (OperationReply) {}
   rpc BotMomentFilter (BotFilterRequest) returns (OperationReply) {}
+  rpc GetBotChatRooms (GetBotChatRoomsRequest) returns (GetBotChatRoomsResponse) {}
+  rpc GetBotChatRoom (GetBotChatRoomRequest) returns (GetBotChatRoomResponse) {}
+  rpc updateBotChatRoom (UpdateBotChatRoomRequest) returns (UpdateBotChatRoomResponse) {}
+
   rpc FilterCreate (FilterCreateRequest) returns (OperationReply) {}
   rpc FilterNext (FilterNextRequest) returns (OperationReply) {}
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
   rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
+
+  // tunnel that connect streaming server and chathub server
+  rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
+  
+  // streaming rpc
+  rpc StreamingCtrl (StreamingCtrlRequest) returns (OperationReply) {}
 }
 
 message BotFilterRequest {
   string botId = 1;
   string filterId = 2;
+}
+
+message GetBotChatRoomsRequest {
+  repeated string botIds = 1;
+  string fromRoomId = 2;
+  int32 limit = 3;
+  string chatType = 4;
+}
+
+message GetBotChatRoomsResponse {
+  repeated ChatRoom items = 1;
+}
+
+message GetBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+  bool createIfNotExist = 3;
+}
+
+message GetBotChatRoomResponse {
+  ChatRoom chatRoom = 1;
+}
+
+message UpdateBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+}
+
+message UpdateBotChatRoomResponse {
+}
+
+message ChatRoom {
+   // @inject_tag: json:"-" bson:"_id"
+   bytes objectId = 1;
+   // @inject_tag: bson:"-"
+   string id = 2;
+   // @inject_tag: bson:"botId"
+   string botId = 3;
+   // @inject_tag: bson:"peerId"
+   string peerId = 4;
+   // @inject_tag: bson:"createdAt"
+   uint64 createdAt = 5;
+   // @inject_tag: bson:"updatedAt"
+   uint64 updatedAt = 6;
+   // @inject_tag: bson:"chatType"
+   string chatType = 7;
 }
 
 message FilterCreateRequest {
@@ -76,8 +132,11 @@ message EventRequest {
 message EventReply {
   string eventType = 1;
   string body = 2;
-  string clientId = 3;
-  string clientType = 4;
+  string botClientId = 3;
+  string botClientType = 4;
+  string botId = 5;
+  string clientId = 6;
+  string clientType = 7;
 }
 
 message BotsRequest {
@@ -152,3 +211,18 @@ message FilterFillRequest {
 message FilterFillReply {
   bool   success = 1;
 }
+
+message StreamingCtrlRequest {
+  string clientId = 1;
+  string clientType = 2;
+  repeated StreamingResource resources = 3;
+}
+
+message StreamingResource {
+  string botId = 1;
+  int32 resourceType = 2;
+  int32 actionType = 3;
+  repeated string chatusers = 4;
+  repeated string chatgroups = 5;
+}
+

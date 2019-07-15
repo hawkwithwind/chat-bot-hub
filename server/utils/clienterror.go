@@ -16,6 +16,16 @@ const (
 	METHOD_UNSUPPORTED     ClientErrorCode = 3002
 )
 
+type AuthError struct {
+	error
+}
+
+func NewAuthError(err error) error {
+	return &AuthError{
+		err,
+	}
+}
+
 type ClientError struct {
 	error
 	Code ClientErrorCode

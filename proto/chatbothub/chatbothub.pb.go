@@ -71,6 +71,374 @@ func (m *BotFilterRequest) GetFilterId() string {
 	return ""
 }
 
+type GetBotChatRoomsRequest struct {
+	BotIds               []string `protobuf:"bytes,1,rep,name=botIds,proto3" json:"botIds,omitempty"`
+	FromRoomId           string   `protobuf:"bytes,2,opt,name=fromRoomId,proto3" json:"fromRoomId,omitempty"`
+	Limit                int32    `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	ChatType             string   `protobuf:"bytes,4,opt,name=chatType,proto3" json:"chatType,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetBotChatRoomsRequest) Reset()         { *m = GetBotChatRoomsRequest{} }
+func (m *GetBotChatRoomsRequest) String() string { return proto.CompactTextString(m) }
+func (*GetBotChatRoomsRequest) ProtoMessage()    {}
+func (*GetBotChatRoomsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{1}
+}
+
+func (m *GetBotChatRoomsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetBotChatRoomsRequest.Unmarshal(m, b)
+}
+func (m *GetBotChatRoomsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetBotChatRoomsRequest.Marshal(b, m, deterministic)
+}
+func (m *GetBotChatRoomsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBotChatRoomsRequest.Merge(m, src)
+}
+func (m *GetBotChatRoomsRequest) XXX_Size() int {
+	return xxx_messageInfo_GetBotChatRoomsRequest.Size(m)
+}
+func (m *GetBotChatRoomsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetBotChatRoomsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetBotChatRoomsRequest proto.InternalMessageInfo
+
+func (m *GetBotChatRoomsRequest) GetBotIds() []string {
+	if m != nil {
+		return m.BotIds
+	}
+	return nil
+}
+
+func (m *GetBotChatRoomsRequest) GetFromRoomId() string {
+	if m != nil {
+		return m.FromRoomId
+	}
+	return ""
+}
+
+func (m *GetBotChatRoomsRequest) GetLimit() int32 {
+	if m != nil {
+		return m.Limit
+	}
+	return 0
+}
+
+func (m *GetBotChatRoomsRequest) GetChatType() string {
+	if m != nil {
+		return m.ChatType
+	}
+	return ""
+}
+
+type GetBotChatRoomsResponse struct {
+	Items                []*ChatRoom `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *GetBotChatRoomsResponse) Reset()         { *m = GetBotChatRoomsResponse{} }
+func (m *GetBotChatRoomsResponse) String() string { return proto.CompactTextString(m) }
+func (*GetBotChatRoomsResponse) ProtoMessage()    {}
+func (*GetBotChatRoomsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{2}
+}
+
+func (m *GetBotChatRoomsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetBotChatRoomsResponse.Unmarshal(m, b)
+}
+func (m *GetBotChatRoomsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetBotChatRoomsResponse.Marshal(b, m, deterministic)
+}
+func (m *GetBotChatRoomsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBotChatRoomsResponse.Merge(m, src)
+}
+func (m *GetBotChatRoomsResponse) XXX_Size() int {
+	return xxx_messageInfo_GetBotChatRoomsResponse.Size(m)
+}
+func (m *GetBotChatRoomsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetBotChatRoomsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetBotChatRoomsResponse proto.InternalMessageInfo
+
+func (m *GetBotChatRoomsResponse) GetItems() []*ChatRoom {
+	if m != nil {
+		return m.Items
+	}
+	return nil
+}
+
+type GetBotChatRoomRequest struct {
+	BotId                string   `protobuf:"bytes,1,opt,name=botId,proto3" json:"botId,omitempty"`
+	PeerId               string   `protobuf:"bytes,2,opt,name=peerId,proto3" json:"peerId,omitempty"`
+	CreateIfNotExist     bool     `protobuf:"varint,3,opt,name=createIfNotExist,proto3" json:"createIfNotExist,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetBotChatRoomRequest) Reset()         { *m = GetBotChatRoomRequest{} }
+func (m *GetBotChatRoomRequest) String() string { return proto.CompactTextString(m) }
+func (*GetBotChatRoomRequest) ProtoMessage()    {}
+func (*GetBotChatRoomRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{3}
+}
+
+func (m *GetBotChatRoomRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetBotChatRoomRequest.Unmarshal(m, b)
+}
+func (m *GetBotChatRoomRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetBotChatRoomRequest.Marshal(b, m, deterministic)
+}
+func (m *GetBotChatRoomRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBotChatRoomRequest.Merge(m, src)
+}
+func (m *GetBotChatRoomRequest) XXX_Size() int {
+	return xxx_messageInfo_GetBotChatRoomRequest.Size(m)
+}
+func (m *GetBotChatRoomRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetBotChatRoomRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetBotChatRoomRequest proto.InternalMessageInfo
+
+func (m *GetBotChatRoomRequest) GetBotId() string {
+	if m != nil {
+		return m.BotId
+	}
+	return ""
+}
+
+func (m *GetBotChatRoomRequest) GetPeerId() string {
+	if m != nil {
+		return m.PeerId
+	}
+	return ""
+}
+
+func (m *GetBotChatRoomRequest) GetCreateIfNotExist() bool {
+	if m != nil {
+		return m.CreateIfNotExist
+	}
+	return false
+}
+
+type GetBotChatRoomResponse struct {
+	ChatRoom             *ChatRoom `protobuf:"bytes,1,opt,name=chatRoom,proto3" json:"chatRoom,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *GetBotChatRoomResponse) Reset()         { *m = GetBotChatRoomResponse{} }
+func (m *GetBotChatRoomResponse) String() string { return proto.CompactTextString(m) }
+func (*GetBotChatRoomResponse) ProtoMessage()    {}
+func (*GetBotChatRoomResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{4}
+}
+
+func (m *GetBotChatRoomResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetBotChatRoomResponse.Unmarshal(m, b)
+}
+func (m *GetBotChatRoomResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetBotChatRoomResponse.Marshal(b, m, deterministic)
+}
+func (m *GetBotChatRoomResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBotChatRoomResponse.Merge(m, src)
+}
+func (m *GetBotChatRoomResponse) XXX_Size() int {
+	return xxx_messageInfo_GetBotChatRoomResponse.Size(m)
+}
+func (m *GetBotChatRoomResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetBotChatRoomResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetBotChatRoomResponse proto.InternalMessageInfo
+
+func (m *GetBotChatRoomResponse) GetChatRoom() *ChatRoom {
+	if m != nil {
+		return m.ChatRoom
+	}
+	return nil
+}
+
+type UpdateBotChatRoomRequest struct {
+	BotId                string   `protobuf:"bytes,1,opt,name=botId,proto3" json:"botId,omitempty"`
+	PeerId               string   `protobuf:"bytes,2,opt,name=peerId,proto3" json:"peerId,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *UpdateBotChatRoomRequest) Reset()         { *m = UpdateBotChatRoomRequest{} }
+func (m *UpdateBotChatRoomRequest) String() string { return proto.CompactTextString(m) }
+func (*UpdateBotChatRoomRequest) ProtoMessage()    {}
+func (*UpdateBotChatRoomRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{5}
+}
+
+func (m *UpdateBotChatRoomRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UpdateBotChatRoomRequest.Unmarshal(m, b)
+}
+func (m *UpdateBotChatRoomRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UpdateBotChatRoomRequest.Marshal(b, m, deterministic)
+}
+func (m *UpdateBotChatRoomRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateBotChatRoomRequest.Merge(m, src)
+}
+func (m *UpdateBotChatRoomRequest) XXX_Size() int {
+	return xxx_messageInfo_UpdateBotChatRoomRequest.Size(m)
+}
+func (m *UpdateBotChatRoomRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateBotChatRoomRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UpdateBotChatRoomRequest proto.InternalMessageInfo
+
+func (m *UpdateBotChatRoomRequest) GetBotId() string {
+	if m != nil {
+		return m.BotId
+	}
+	return ""
+}
+
+func (m *UpdateBotChatRoomRequest) GetPeerId() string {
+	if m != nil {
+		return m.PeerId
+	}
+	return ""
+}
+
+type UpdateBotChatRoomResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *UpdateBotChatRoomResponse) Reset()         { *m = UpdateBotChatRoomResponse{} }
+func (m *UpdateBotChatRoomResponse) String() string { return proto.CompactTextString(m) }
+func (*UpdateBotChatRoomResponse) ProtoMessage()    {}
+func (*UpdateBotChatRoomResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{6}
+}
+
+func (m *UpdateBotChatRoomResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UpdateBotChatRoomResponse.Unmarshal(m, b)
+}
+func (m *UpdateBotChatRoomResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UpdateBotChatRoomResponse.Marshal(b, m, deterministic)
+}
+func (m *UpdateBotChatRoomResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateBotChatRoomResponse.Merge(m, src)
+}
+func (m *UpdateBotChatRoomResponse) XXX_Size() int {
+	return xxx_messageInfo_UpdateBotChatRoomResponse.Size(m)
+}
+func (m *UpdateBotChatRoomResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateBotChatRoomResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UpdateBotChatRoomResponse proto.InternalMessageInfo
+
+type ChatRoom struct {
+	// @inject_tag: json:"-" bson:"_id"
+	ObjectId []byte `protobuf:"bytes,1,opt,name=objectId,proto3" json:"-" bson:"_id"`
+	// @inject_tag: bson:"-"
+	Id string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty" bson:"-"`
+	// @inject_tag: bson:"botId"
+	BotId string `protobuf:"bytes,3,opt,name=botId,proto3" json:"botId,omitempty" bson:"botId"`
+	// @inject_tag: bson:"peerId"
+	PeerId string `protobuf:"bytes,4,opt,name=peerId,proto3" json:"peerId,omitempty" bson:"peerId"`
+	// @inject_tag: bson:"createdAt"
+	CreatedAt uint64 `protobuf:"varint,5,opt,name=createdAt,proto3" json:"createdAt,omitempty" bson:"createdAt"`
+	// @inject_tag: bson:"updatedAt"
+	UpdatedAt uint64 `protobuf:"varint,6,opt,name=updatedAt,proto3" json:"updatedAt,omitempty" bson:"updatedAt"`
+	// @inject_tag: bson:"chatType"
+	ChatType             string   `protobuf:"bytes,7,opt,name=chatType,proto3" json:"chatType,omitempty" bson:"chatType"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ChatRoom) Reset()         { *m = ChatRoom{} }
+func (m *ChatRoom) String() string { return proto.CompactTextString(m) }
+func (*ChatRoom) ProtoMessage()    {}
+func (*ChatRoom) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{7}
+}
+
+func (m *ChatRoom) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ChatRoom.Unmarshal(m, b)
+}
+func (m *ChatRoom) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ChatRoom.Marshal(b, m, deterministic)
+}
+func (m *ChatRoom) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ChatRoom.Merge(m, src)
+}
+func (m *ChatRoom) XXX_Size() int {
+	return xxx_messageInfo_ChatRoom.Size(m)
+}
+func (m *ChatRoom) XXX_DiscardUnknown() {
+	xxx_messageInfo_ChatRoom.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ChatRoom proto.InternalMessageInfo
+
+func (m *ChatRoom) GetObjectId() []byte {
+	if m != nil {
+		return m.ObjectId
+	}
+	return nil
+}
+
+func (m *ChatRoom) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *ChatRoom) GetBotId() string {
+	if m != nil {
+		return m.BotId
+	}
+	return ""
+}
+
+func (m *ChatRoom) GetPeerId() string {
+	if m != nil {
+		return m.PeerId
+	}
+	return ""
+}
+
+func (m *ChatRoom) GetCreatedAt() uint64 {
+	if m != nil {
+		return m.CreatedAt
+	}
+	return 0
+}
+
+func (m *ChatRoom) GetUpdatedAt() uint64 {
+	if m != nil {
+		return m.UpdatedAt
+	}
+	return 0
+}
+
+func (m *ChatRoom) GetChatType() string {
+	if m != nil {
+		return m.ChatType
+	}
+	return ""
+}
+
 type FilterCreateRequest struct {
 	FilterId             string   `protobuf:"bytes,1,opt,name=filterId,proto3" json:"filterId,omitempty"`
 	FilterType           string   `protobuf:"bytes,2,opt,name=filterType,proto3" json:"filterType,omitempty"`
@@ -85,7 +453,7 @@ func (m *FilterCreateRequest) Reset()         { *m = FilterCreateRequest{} }
 func (m *FilterCreateRequest) String() string { return proto.CompactTextString(m) }
 func (*FilterCreateRequest) ProtoMessage()    {}
 func (*FilterCreateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{1}
+	return fileDescriptor_0b1f640cec0d9d68, []int{8}
 }
 
 func (m *FilterCreateRequest) XXX_Unmarshal(b []byte) error {
@@ -146,7 +514,7 @@ func (m *FilterNextRequest) Reset()         { *m = FilterNextRequest{} }
 func (m *FilterNextRequest) String() string { return proto.CompactTextString(m) }
 func (*FilterNextRequest) ProtoMessage()    {}
 func (*FilterNextRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{2}
+	return fileDescriptor_0b1f640cec0d9d68, []int{9}
 }
 
 func (m *FilterNextRequest) XXX_Unmarshal(b []byte) error {
@@ -193,7 +561,7 @@ func (m *BranchTag) Reset()         { *m = BranchTag{} }
 func (m *BranchTag) String() string { return proto.CompactTextString(m) }
 func (*BranchTag) ProtoMessage()    {}
 func (*BranchTag) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{3}
+	return fileDescriptor_0b1f640cec0d9d68, []int{10}
 }
 
 func (m *BranchTag) XXX_Unmarshal(b []byte) error {
@@ -241,7 +609,7 @@ func (m *RouterBranchRequest) Reset()         { *m = RouterBranchRequest{} }
 func (m *RouterBranchRequest) String() string { return proto.CompactTextString(m) }
 func (*RouterBranchRequest) ProtoMessage()    {}
 func (*RouterBranchRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{4}
+	return fileDescriptor_0b1f640cec0d9d68, []int{11}
 }
 
 func (m *RouterBranchRequest) XXX_Unmarshal(b []byte) error {
@@ -297,7 +665,7 @@ func (m *EventRequest) Reset()         { *m = EventRequest{} }
 func (m *EventRequest) String() string { return proto.CompactTextString(m) }
 func (*EventRequest) ProtoMessage()    {}
 func (*EventRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{5}
+	return fileDescriptor_0b1f640cec0d9d68, []int{12}
 }
 
 func (m *EventRequest) XXX_Unmarshal(b []byte) error {
@@ -349,8 +717,11 @@ func (m *EventRequest) GetClientType() string {
 type EventReply struct {
 	EventType            string   `protobuf:"bytes,1,opt,name=eventType,proto3" json:"eventType,omitempty"`
 	Body                 string   `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
-	ClientId             string   `protobuf:"bytes,3,opt,name=clientId,proto3" json:"clientId,omitempty"`
-	ClientType           string   `protobuf:"bytes,4,opt,name=clientType,proto3" json:"clientType,omitempty"`
+	BotClientId          string   `protobuf:"bytes,3,opt,name=botClientId,proto3" json:"botClientId,omitempty"`
+	BotClientType        string   `protobuf:"bytes,4,opt,name=botClientType,proto3" json:"botClientType,omitempty"`
+	BotId                string   `protobuf:"bytes,5,opt,name=botId,proto3" json:"botId,omitempty"`
+	ClientId             string   `protobuf:"bytes,6,opt,name=clientId,proto3" json:"clientId,omitempty"`
+	ClientType           string   `protobuf:"bytes,7,opt,name=clientType,proto3" json:"clientType,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -360,7 +731,7 @@ func (m *EventReply) Reset()         { *m = EventReply{} }
 func (m *EventReply) String() string { return proto.CompactTextString(m) }
 func (*EventReply) ProtoMessage()    {}
 func (*EventReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{6}
+	return fileDescriptor_0b1f640cec0d9d68, []int{13}
 }
 
 func (m *EventReply) XXX_Unmarshal(b []byte) error {
@@ -395,6 +766,27 @@ func (m *EventReply) GetBody() string {
 	return ""
 }
 
+func (m *EventReply) GetBotClientId() string {
+	if m != nil {
+		return m.BotClientId
+	}
+	return ""
+}
+
+func (m *EventReply) GetBotClientType() string {
+	if m != nil {
+		return m.BotClientType
+	}
+	return ""
+}
+
+func (m *EventReply) GetBotId() string {
+	if m != nil {
+		return m.BotId
+	}
+	return ""
+}
+
 func (m *EventReply) GetClientId() string {
 	if m != nil {
 		return m.ClientId
@@ -421,7 +813,7 @@ func (m *BotsRequest) Reset()         { *m = BotsRequest{} }
 func (m *BotsRequest) String() string { return proto.CompactTextString(m) }
 func (*BotsRequest) ProtoMessage()    {}
 func (*BotsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{7}
+	return fileDescriptor_0b1f640cec0d9d68, []int{14}
 }
 
 func (m *BotsRequest) XXX_Unmarshal(b []byte) error {
@@ -467,7 +859,7 @@ func (m *BotsReply) Reset()         { *m = BotsReply{} }
 func (m *BotsReply) String() string { return proto.CompactTextString(m) }
 func (*BotsReply) ProtoMessage()    {}
 func (*BotsReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{8}
+	return fileDescriptor_0b1f640cec0d9d68, []int{15}
 }
 
 func (m *BotsReply) XXX_Unmarshal(b []byte) error {
@@ -517,7 +909,7 @@ func (m *BotsInfo) Reset()         { *m = BotsInfo{} }
 func (m *BotsInfo) String() string { return proto.CompactTextString(m) }
 func (*BotsInfo) ProtoMessage()    {}
 func (*BotsInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{9}
+	return fileDescriptor_0b1f640cec0d9d68, []int{16}
 }
 
 func (m *BotsInfo) XXX_Unmarshal(b []byte) error {
@@ -639,7 +1031,7 @@ func (m *BotLoginRequest) Reset()         { *m = BotLoginRequest{} }
 func (m *BotLoginRequest) String() string { return proto.CompactTextString(m) }
 func (*BotLoginRequest) ProtoMessage()    {}
 func (*BotLoginRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{10}
+	return fileDescriptor_0b1f640cec0d9d68, []int{17}
 }
 
 func (m *BotLoginRequest) XXX_Unmarshal(b []byte) error {
@@ -720,7 +1112,7 @@ func (m *BotLogoutRequest) Reset()         { *m = BotLogoutRequest{} }
 func (m *BotLogoutRequest) String() string { return proto.CompactTextString(m) }
 func (*BotLogoutRequest) ProtoMessage()    {}
 func (*BotLogoutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{11}
+	return fileDescriptor_0b1f640cec0d9d68, []int{18}
 }
 
 func (m *BotLogoutRequest) XXX_Unmarshal(b []byte) error {
@@ -760,7 +1152,7 @@ func (m *OperationReply) Reset()         { *m = OperationReply{} }
 func (m *OperationReply) String() string { return proto.CompactTextString(m) }
 func (*OperationReply) ProtoMessage()    {}
 func (*OperationReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{12}
+	return fileDescriptor_0b1f640cec0d9d68, []int{19}
 }
 
 func (m *OperationReply) XXX_Unmarshal(b []byte) error {
@@ -807,7 +1199,7 @@ func (m *BotLoginReply) Reset()         { *m = BotLoginReply{} }
 func (m *BotLoginReply) String() string { return proto.CompactTextString(m) }
 func (*BotLoginReply) ProtoMessage()    {}
 func (*BotLoginReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{13}
+	return fileDescriptor_0b1f640cec0d9d68, []int{20}
 }
 
 func (m *BotLoginReply) XXX_Unmarshal(b []byte) error {
@@ -856,7 +1248,7 @@ func (m *BotActionRequest) Reset()         { *m = BotActionRequest{} }
 func (m *BotActionRequest) String() string { return proto.CompactTextString(m) }
 func (*BotActionRequest) ProtoMessage()    {}
 func (*BotActionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{14}
+	return fileDescriptor_0b1f640cec0d9d68, []int{21}
 }
 
 func (m *BotActionRequest) XXX_Unmarshal(b []byte) error {
@@ -920,7 +1312,7 @@ func (m *BotActionReply) Reset()         { *m = BotActionReply{} }
 func (m *BotActionReply) String() string { return proto.CompactTextString(m) }
 func (*BotActionReply) ProtoMessage()    {}
 func (*BotActionReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{15}
+	return fileDescriptor_0b1f640cec0d9d68, []int{22}
 }
 
 func (m *BotActionReply) XXX_Unmarshal(b []byte) error {
@@ -989,7 +1381,7 @@ func (m *FilterFillRequest) Reset()         { *m = FilterFillRequest{} }
 func (m *FilterFillRequest) String() string { return proto.CompactTextString(m) }
 func (*FilterFillRequest) ProtoMessage()    {}
 func (*FilterFillRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{16}
+	return fileDescriptor_0b1f640cec0d9d68, []int{23}
 }
 
 func (m *FilterFillRequest) XXX_Unmarshal(b []byte) error {
@@ -1042,7 +1434,7 @@ func (m *FilterFillReply) Reset()         { *m = FilterFillReply{} }
 func (m *FilterFillReply) String() string { return proto.CompactTextString(m) }
 func (*FilterFillReply) ProtoMessage()    {}
 func (*FilterFillReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_0b1f640cec0d9d68, []int{17}
+	return fileDescriptor_0b1f640cec0d9d68, []int{24}
 }
 
 func (m *FilterFillReply) XXX_Unmarshal(b []byte) error {
@@ -1070,8 +1462,141 @@ func (m *FilterFillReply) GetSuccess() bool {
 	return false
 }
 
+type StreamingCtrlRequest struct {
+	ClientId             string               `protobuf:"bytes,1,opt,name=clientId,proto3" json:"clientId,omitempty"`
+	ClientType           string               `protobuf:"bytes,2,opt,name=clientType,proto3" json:"clientType,omitempty"`
+	Resources            []*StreamingResource `protobuf:"bytes,3,rep,name=resources,proto3" json:"resources,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *StreamingCtrlRequest) Reset()         { *m = StreamingCtrlRequest{} }
+func (m *StreamingCtrlRequest) String() string { return proto.CompactTextString(m) }
+func (*StreamingCtrlRequest) ProtoMessage()    {}
+func (*StreamingCtrlRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{25}
+}
+
+func (m *StreamingCtrlRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_StreamingCtrlRequest.Unmarshal(m, b)
+}
+func (m *StreamingCtrlRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_StreamingCtrlRequest.Marshal(b, m, deterministic)
+}
+func (m *StreamingCtrlRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StreamingCtrlRequest.Merge(m, src)
+}
+func (m *StreamingCtrlRequest) XXX_Size() int {
+	return xxx_messageInfo_StreamingCtrlRequest.Size(m)
+}
+func (m *StreamingCtrlRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_StreamingCtrlRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StreamingCtrlRequest proto.InternalMessageInfo
+
+func (m *StreamingCtrlRequest) GetClientId() string {
+	if m != nil {
+		return m.ClientId
+	}
+	return ""
+}
+
+func (m *StreamingCtrlRequest) GetClientType() string {
+	if m != nil {
+		return m.ClientType
+	}
+	return ""
+}
+
+func (m *StreamingCtrlRequest) GetResources() []*StreamingResource {
+	if m != nil {
+		return m.Resources
+	}
+	return nil
+}
+
+type StreamingResource struct {
+	BotId                string   `protobuf:"bytes,1,opt,name=botId,proto3" json:"botId,omitempty"`
+	ResourceType         int32    `protobuf:"varint,2,opt,name=resourceType,proto3" json:"resourceType,omitempty"`
+	ActionType           int32    `protobuf:"varint,3,opt,name=actionType,proto3" json:"actionType,omitempty"`
+	Chatusers            []string `protobuf:"bytes,4,rep,name=chatusers,proto3" json:"chatusers,omitempty"`
+	Chatgroups           []string `protobuf:"bytes,5,rep,name=chatgroups,proto3" json:"chatgroups,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *StreamingResource) Reset()         { *m = StreamingResource{} }
+func (m *StreamingResource) String() string { return proto.CompactTextString(m) }
+func (*StreamingResource) ProtoMessage()    {}
+func (*StreamingResource) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0b1f640cec0d9d68, []int{26}
+}
+
+func (m *StreamingResource) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_StreamingResource.Unmarshal(m, b)
+}
+func (m *StreamingResource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_StreamingResource.Marshal(b, m, deterministic)
+}
+func (m *StreamingResource) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StreamingResource.Merge(m, src)
+}
+func (m *StreamingResource) XXX_Size() int {
+	return xxx_messageInfo_StreamingResource.Size(m)
+}
+func (m *StreamingResource) XXX_DiscardUnknown() {
+	xxx_messageInfo_StreamingResource.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StreamingResource proto.InternalMessageInfo
+
+func (m *StreamingResource) GetBotId() string {
+	if m != nil {
+		return m.BotId
+	}
+	return ""
+}
+
+func (m *StreamingResource) GetResourceType() int32 {
+	if m != nil {
+		return m.ResourceType
+	}
+	return 0
+}
+
+func (m *StreamingResource) GetActionType() int32 {
+	if m != nil {
+		return m.ActionType
+	}
+	return 0
+}
+
+func (m *StreamingResource) GetChatusers() []string {
+	if m != nil {
+		return m.Chatusers
+	}
+	return nil
+}
+
+func (m *StreamingResource) GetChatgroups() []string {
+	if m != nil {
+		return m.Chatgroups
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*BotFilterRequest)(nil), "chatbothub.BotFilterRequest")
+	proto.RegisterType((*GetBotChatRoomsRequest)(nil), "chatbothub.GetBotChatRoomsRequest")
+	proto.RegisterType((*GetBotChatRoomsResponse)(nil), "chatbothub.GetBotChatRoomsResponse")
+	proto.RegisterType((*GetBotChatRoomRequest)(nil), "chatbothub.GetBotChatRoomRequest")
+	proto.RegisterType((*GetBotChatRoomResponse)(nil), "chatbothub.GetBotChatRoomResponse")
+	proto.RegisterType((*UpdateBotChatRoomRequest)(nil), "chatbothub.UpdateBotChatRoomRequest")
+	proto.RegisterType((*UpdateBotChatRoomResponse)(nil), "chatbothub.UpdateBotChatRoomResponse")
+	proto.RegisterType((*ChatRoom)(nil), "chatbothub.ChatRoom")
 	proto.RegisterType((*FilterCreateRequest)(nil), "chatbothub.FilterCreateRequest")
 	proto.RegisterType((*FilterNextRequest)(nil), "chatbothub.FilterNextRequest")
 	proto.RegisterType((*BranchTag)(nil), "chatbothub.BranchTag")
@@ -1089,74 +1614,101 @@ func init() {
 	proto.RegisterType((*BotActionReply)(nil), "chatbothub.BotActionReply")
 	proto.RegisterType((*FilterFillRequest)(nil), "chatbothub.FilterFillRequest")
 	proto.RegisterType((*FilterFillReply)(nil), "chatbothub.FilterFillReply")
+	proto.RegisterType((*StreamingCtrlRequest)(nil), "chatbothub.StreamingCtrlRequest")
+	proto.RegisterType((*StreamingResource)(nil), "chatbothub.StreamingResource")
 }
 
 func init() { proto.RegisterFile("chatbothub.proto", fileDescriptor_0b1f640cec0d9d68) }
 
 var fileDescriptor_0b1f640cec0d9d68 = []byte{
-	// 987 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x5f, 0x73, 0xdb, 0x44,
-	0x10, 0xaf, 0xac, 0x38, 0xb6, 0xd7, 0xa1, 0x31, 0xd7, 0x3f, 0x08, 0xa7, 0x94, 0x8c, 0x5e, 0xf0,
-	0xc0, 0x4c, 0x26, 0x93, 0x3e, 0x42, 0x99, 0xa9, 0xdb, 0xb4, 0x04, 0xda, 0x92, 0x51, 0x53, 0x5e,
-	0x19, 0x59, 0xbe, 0xd8, 0x1a, 0xe4, 0x3b, 0xa3, 0x3b, 0xd5, 0x35, 0xc3, 0x03, 0x2f, 0x7c, 0x01,
-	0x3e, 0x0d, 0x5f, 0x83, 0x37, 0x3e, 0x0e, 0x73, 0x7b, 0x3a, 0xdd, 0xc9, 0x36, 0x71, 0x21, 0x33,
-	0x7d, 0xd3, 0xee, 0xde, 0xfd, 0xb4, 0xbf, 0xdf, 0xde, 0xee, 0x1d, 0xf4, 0x92, 0x69, 0x2c, 0x47,
-	0x5c, 0x4e, 0x8b, 0xd1, 0xd1, 0x3c, 0xe7, 0x92, 0x13, 0xb0, 0x9e, 0xf0, 0x09, 0xf4, 0x86, 0x5c,
-	0x3e, 0x4d, 0x33, 0x49, 0xf3, 0x88, 0xfe, 0x5c, 0x50, 0x21, 0xc9, 0x6d, 0x68, 0x8e, 0xb8, 0x3c,
-	0x1b, 0x07, 0xde, 0xa1, 0x37, 0xe8, 0x44, 0xda, 0x20, 0x7d, 0x68, 0x5f, 0xe2, 0xb2, 0xb3, 0x71,
-	0xd0, 0xc0, 0x40, 0x65, 0x87, 0xbf, 0x7b, 0x70, 0x4b, 0x63, 0x3c, 0xce, 0x69, 0x2c, 0xa9, 0x41,
-	0x72, 0xf7, 0x78, 0xf5, 0x3d, 0xe4, 0x3e, 0x80, 0xfe, 0xbe, 0x58, 0xce, 0x69, 0x89, 0xe8, 0x78,
-	0x6c, 0xfc, 0x65, 0x3c, 0xa3, 0x81, 0xef, 0xc6, 0x95, 0x87, 0x10, 0xd8, 0x19, 0xf1, 0xf1, 0x32,
-	0xd8, 0xc1, 0x08, 0x7e, 0x87, 0xaf, 0xe0, 0x43, 0x9d, 0xc6, 0x4b, 0xfa, 0x56, 0xbe, 0x4b, 0x12,
-	0x21, 0xec, 0x31, 0xfa, 0xb6, 0xe4, 0x5f, 0x11, 0xab, 0xf9, 0xc2, 0x07, 0xd0, 0x19, 0xe6, 0x31,
-	0x4b, 0xa6, 0x17, 0xf1, 0x84, 0xf4, 0xc0, 0xff, 0x8e, 0x2e, 0x4b, 0x1c, 0xf5, 0xa9, 0xd4, 0xfa,
-	0x21, 0xce, 0x0a, 0x43, 0x41, 0x1b, 0xe1, 0x1b, 0xb8, 0x15, 0xf1, 0x42, 0xd2, 0x5c, 0x6f, 0x35,
-	0xb9, 0x7c, 0x06, 0xbe, 0x8c, 0x27, 0xb8, 0xbd, 0x7b, 0x72, 0xe7, 0xc8, 0x29, 0x4d, 0xf5, 0x8b,
-	0x48, 0xad, 0x50, 0x49, 0xe7, 0xb8, 0xdf, 0xaa, 0x6d, 0xec, 0x1a, 0x21, 0x7f, 0xa5, 0x12, 0xbf,
-	0xc2, 0xde, 0xe9, 0x1b, 0xca, 0x2a, 0xf2, 0xf7, 0xa0, 0x43, 0x95, 0x8d, 0x22, 0xeb, 0xac, 0xad,
-	0xa3, 0xd2, 0xb0, 0x61, 0x35, 0x54, 0xe8, 0x49, 0x96, 0x52, 0x26, 0x2d, 0xba, 0xb1, 0x55, 0x4d,
-	0xf4, 0x37, 0xc2, 0x69, 0xe5, 0x1d, 0x4f, 0xf8, 0x0b, 0x40, 0xf9, 0xf7, 0x79, 0xb6, 0x7c, 0xcf,
-	0xff, 0x7e, 0x08, 0xdd, 0x21, 0x97, 0xc2, 0x10, 0xbf, 0x0b, 0xbb, 0x19, 0x9f, 0xa4, 0x4c, 0x04,
-	0xde, 0xa1, 0x3f, 0xe8, 0x44, 0xa5, 0xa5, 0xfc, 0x78, 0x9e, 0x45, 0xd0, 0xd0, 0x7e, 0x6d, 0x85,
-	0x0f, 0xa1, 0xa3, 0xb7, 0xab, 0xcc, 0x8f, 0xa1, 0x3d, 0xe2, 0x52, 0x9c, 0xb1, 0x4b, 0x8e, 0xdb,
-	0xbb, 0x27, 0xb7, 0x6b, 0xb5, 0x2a, 0x63, 0x51, 0xb5, 0x2a, 0xfc, 0xbb, 0x01, 0x6d, 0xe3, 0xae,
-	0xd1, 0xf0, 0xae, 0xa4, 0xd1, 0x58, 0xa5, 0xa1, 0x64, 0x61, 0xf6, 0xc0, 0xe3, 0x37, 0x09, 0xa0,
-	0x25, 0x64, 0x9c, 0xcb, 0x47, 0x12, 0x79, 0xfb, 0x91, 0x31, 0xd5, 0x9f, 0xb2, 0x58, 0xc8, 0xf3,
-	0x94, 0x4d, 0x82, 0x26, 0x86, 0x2a, 0x5b, 0x1d, 0x4c, 0xe4, 0x1c, 0xec, 0xea, 0x83, 0x89, 0x86,
-	0x2a, 0x0a, 0x7e, 0x20, 0xb7, 0x96, 0x2e, 0x4a, 0xe5, 0x50, 0xea, 0x08, 0x19, 0xcb, 0x42, 0x04,
-	0xed, 0x43, 0x6f, 0xd0, 0x8c, 0x4a, 0xcb, 0x36, 0x23, 0x6e, 0xeb, 0xb8, 0xcd, 0x88, 0xfb, 0x3e,
-	0x87, 0xde, 0x8c, 0xcf, 0x28, 0x33, 0x5d, 0xa3, 0x56, 0x01, 0xae, 0x5a, 0xf3, 0xdb, 0xf1, 0xd2,
-	0x75, 0xc7, 0x8b, 0xe2, 0x98, 0xc4, 0xec, 0x75, 0x9e, 0x05, 0x7b, 0xe8, 0x37, 0x66, 0xf8, 0x97,
-	0x07, 0xfb, 0x43, 0x2e, 0x9f, 0xab, 0x24, 0x9d, 0x9e, 0xfe, 0xdf, 0x0a, 0x57, 0xba, 0xf8, 0xae,
-	0x2e, 0x7d, 0x68, 0xcf, 0x63, 0x21, 0x16, 0x3c, 0x1f, 0x97, 0x87, 0xab, 0xb2, 0x95, 0x66, 0x8c,
-	0xcb, 0xf4, 0x72, 0xa9, 0xb2, 0x6b, 0x6a, 0xcd, 0x2a, 0x47, 0x5d, 0xd1, 0xdd, 0x55, 0x45, 0x2b,
-	0xb6, 0x2d, 0x87, 0x6d, 0x38, 0xc0, 0xb1, 0xfb, 0x9c, 0x4f, 0x78, 0x21, 0xaf, 0x1c, 0xbb, 0xe1,
-	0xd7, 0x70, 0xf3, 0xfb, 0x39, 0xcd, 0x63, 0x99, 0x72, 0xa6, 0x0f, 0x27, 0x81, 0x9d, 0x84, 0x8f,
-	0x75, 0x47, 0x35, 0x23, 0xfc, 0x56, 0xea, 0xcd, 0xa8, 0x10, 0xf1, 0xc4, 0x10, 0x36, 0x66, 0xf8,
-	0x23, 0x7c, 0x60, 0xc5, 0x53, 0xdb, 0x7b, 0xe0, 0xcf, 0xc4, 0xc4, 0x4c, 0xb0, 0x99, 0x98, 0x90,
-	0xaf, 0xa0, 0xab, 0xe5, 0x39, 0xcd, 0x73, 0x9e, 0x23, 0x40, 0xf7, 0xa4, 0xef, 0x1e, 0xf8, 0x7a,
-	0x06, 0x91, 0xbb, 0x3c, 0xfc, 0xc3, 0x43, 0x2e, 0x8f, 0x12, 0x1d, 0xd7, 0x5c, 0x06, 0xb0, 0x1f,
-	0xbb, 0x8e, 0x8a, 0xd5, 0xaa, 0xdb, 0x56, 0xa3, 0xe1, 0x56, 0xe3, 0x3e, 0x80, 0x5e, 0x88, 0x35,
-	0x2c, 0x87, 0xbf, 0xf5, 0xd8, 0xf8, 0xd0, 0x5e, 0x01, 0x8e, 0x27, 0xfc, 0xd3, 0x83, 0x9b, 0x4e,
-	0x52, 0x8a, 0xf7, 0xbb, 0xa7, 0xa4, 0x8e, 0x62, 0x91, 0x24, 0x54, 0x08, 0x4c, 0xaa, 0x1d, 0x19,
-	0xd3, 0x68, 0xe7, 0x5b, 0xed, 0x36, 0xdc, 0x42, 0xab, 0x7a, 0x36, 0xff, 0x9b, 0x9e, 0xaf, 0xcd,
-	0x1d, 0xf6, 0x34, 0xcd, 0xb2, 0xab, 0xaf, 0x64, 0xd5, 0xad, 0xbc, 0xc8, 0x13, 0x53, 0xf4, 0xd2,
-	0xaa, 0x92, 0xf2, 0x9d, 0xab, 0xf1, 0x0b, 0xd8, 0x77, 0x61, 0x95, 0x22, 0x0e, 0x4f, 0xaf, 0xc6,
-	0xf3, 0xe4, 0xb7, 0x16, 0xc0, 0xe3, 0x69, 0x2c, 0x87, 0x5c, 0x7e, 0x53, 0x8c, 0xc8, 0x29, 0x74,
-	0x71, 0xac, 0x5f, 0x14, 0x8c, 0xd1, 0x8c, 0x04, 0x2e, 0x15, 0xf7, 0xb6, 0xe9, 0xdf, 0xdd, 0x10,
-	0x99, 0x67, 0xcb, 0xf0, 0xc6, 0xc0, 0x3b, 0xf6, 0xc8, 0x97, 0xd0, 0x7a, 0x46, 0x15, 0xa6, 0x20,
-	0x1f, 0xad, 0x8e, 0x53, 0x83, 0x70, 0x67, 0x3d, 0x80, 0x00, 0xe4, 0x09, 0xce, 0x57, 0x3c, 0xc7,
-	0xe4, 0x60, 0x65, 0x91, 0x3b, 0x1a, 0xfa, 0x1f, 0x6f, 0x0e, 0x6a, 0x94, 0x67, 0x38, 0xe5, 0x75,
-	0xdf, 0x91, 0x7b, 0xeb, 0x2b, 0x6d, 0x3b, 0xf6, 0xaf, 0x28, 0x58, 0x78, 0x83, 0x9c, 0xe1, 0x6d,
-	0xf3, 0x6a, 0x5a, 0xc8, 0x31, 0x5f, 0xb0, 0x6b, 0x41, 0xe9, 0x9c, 0xf4, 0x51, 0x5d, 0x03, 0xaa,
-	0xb5, 0x55, 0x1d, 0xa8, 0x7e, 0xbe, 0x2b, 0x20, 0x5d, 0xe5, 0x35, 0xa0, 0xda, 0x13, 0x6f, 0x4b,
-	0x46, 0x2f, 0x70, 0xe0, 0xbe, 0x70, 0x06, 0xf7, 0x35, 0xe1, 0xf6, 0xdc, 0xc7, 0x21, 0xf9, 0xd4,
-	0x5d, 0xbd, 0xe1, 0xd9, 0xb8, 0x55, 0x7a, 0xb0, 0x8f, 0x3c, 0xf2, 0xc9, 0x3a, 0x98, 0xf3, 0xf8,
-	0xdb, 0x9e, 0x99, 0xfb, 0x4a, 0xab, 0x67, 0xb6, 0xe1, 0xfd, 0xb6, 0x05, 0xee, 0x5b, 0x93, 0x99,
-	0xea, 0xb1, 0x4d, 0x99, 0x39, 0x2d, 0xdd, 0x3f, 0xf8, 0xb7, 0x30, 0x62, 0x0d, 0x8f, 0xe1, 0x80,
-	0x51, 0x79, 0x34, 0x8d, 0x17, 0x3f, 0x2d, 0x52, 0x39, 0x5d, 0xa4, 0x6c, 0xec, 0x6c, 0x18, 0xee,
-	0xdb, 0xf6, 0x3c, 0x57, 0x8f, 0xfa, 0x73, 0x6f, 0xb4, 0x8b, 0xaf, 0xfb, 0x07, 0xff, 0x04, 0x00,
-	0x00, 0xff, 0xff, 0x28, 0xc4, 0xe8, 0xab, 0xf1, 0x0b, 0x00, 0x00,
+	// 1390 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x58, 0xdd, 0x6e, 0x13, 0x47,
+	0x14, 0x66, 0xbd, 0x71, 0x62, 0x1f, 0x9b, 0x24, 0x0c, 0x10, 0x16, 0x07, 0x68, 0x3a, 0xa5, 0xaa,
+	0x45, 0x25, 0x14, 0xc1, 0x25, 0xa5, 0x12, 0x0e, 0x01, 0x42, 0xf9, 0xd3, 0x02, 0x95, 0x2a, 0x55,
+	0xaa, 0xd6, 0xf6, 0xc4, 0xde, 0x76, 0xbd, 0x63, 0x76, 0x66, 0x09, 0x91, 0x7a, 0x55, 0xa9, 0xd7,
+	0x95, 0xfa, 0x1a, 0x7d, 0x81, 0x56, 0xea, 0x4b, 0xf4, 0x8e, 0xc7, 0xa9, 0x66, 0x66, 0xe7, 0x67,
+	0xed, 0x8d, 0x4d, 0x49, 0xef, 0xf6, 0xfc, 0xcc, 0x99, 0xef, 0x7c, 0x73, 0xe6, 0x1c, 0x8f, 0x61,
+	0x73, 0x30, 0x8e, 0x78, 0x9f, 0xf2, 0x71, 0xde, 0xbf, 0x39, 0xcd, 0x28, 0xa7, 0x08, 0xac, 0x06,
+	0xdf, 0x87, 0xcd, 0x1e, 0xe5, 0x0f, 0xe2, 0x84, 0x93, 0x2c, 0x24, 0x6f, 0x72, 0xc2, 0x38, 0xba,
+	0x00, 0xf5, 0x3e, 0xe5, 0x07, 0xc3, 0xc0, 0xdb, 0xf1, 0xba, 0xcd, 0x50, 0x09, 0xa8, 0x03, 0x8d,
+	0x43, 0xe9, 0x76, 0x30, 0x0c, 0x6a, 0xd2, 0x60, 0x64, 0xfc, 0x8b, 0x07, 0x5b, 0x0f, 0x09, 0xef,
+	0x51, 0xbe, 0x37, 0x8e, 0x78, 0x48, 0xe9, 0x84, 0xe9, 0x60, 0x5b, 0xb0, 0x2a, 0xd7, 0xb3, 0xc0,
+	0xdb, 0xf1, 0xbb, 0xcd, 0xb0, 0x90, 0xd0, 0x35, 0x80, 0xc3, 0x8c, 0x4e, 0x84, 0xaf, 0x09, 0xe8,
+	0x68, 0x04, 0x88, 0x24, 0x9e, 0xc4, 0x3c, 0xf0, 0x77, 0xbc, 0x6e, 0x3d, 0x54, 0x82, 0x00, 0x21,
+	0xc0, 0xbf, 0x3a, 0x9e, 0x92, 0x60, 0x45, 0x81, 0xd0, 0x32, 0xde, 0x87, 0x4b, 0x73, 0x18, 0xd8,
+	0x94, 0xa6, 0x8c, 0xa0, 0x1b, 0x50, 0x8f, 0x39, 0x99, 0x28, 0x0c, 0xad, 0x5b, 0x17, 0x6e, 0x3a,
+	0x9c, 0x68, 0xef, 0x50, 0xb9, 0xe0, 0x37, 0x70, 0xb1, 0x1c, 0x66, 0x31, 0x2d, 0x5b, 0xb0, 0x3a,
+	0x25, 0x0e, 0x29, 0x85, 0x84, 0x6e, 0xc0, 0xe6, 0x20, 0x23, 0x11, 0x27, 0x07, 0x87, 0xcf, 0x28,
+	0xdf, 0x7f, 0x17, 0x33, 0x95, 0x4a, 0x23, 0x9c, 0xd3, 0xe3, 0xc7, 0xb3, 0xec, 0x19, 0xe0, 0xbb,
+	0x2a, 0x5f, 0xa1, 0x93, 0xdb, 0x9e, 0x84, 0xdd, 0x78, 0xe1, 0x47, 0x10, 0xbc, 0x9e, 0x0e, 0x23,
+	0x4e, 0x4e, 0x9b, 0x01, 0xde, 0x86, 0xcb, 0x15, 0x91, 0x14, 0x30, 0xfc, 0xb7, 0x07, 0x0d, 0xad,
+	0x14, 0xa7, 0x42, 0xfb, 0x3f, 0x92, 0x81, 0x0e, 0xdd, 0x0e, 0x8d, 0x8c, 0xd6, 0xa1, 0x16, 0xeb,
+	0xc8, 0xb5, 0x78, 0x68, 0x31, 0xf8, 0xd5, 0x18, 0x56, 0x4a, 0x2c, 0x5e, 0x81, 0xa6, 0x62, 0x6b,
+	0x78, 0x8f, 0x07, 0xf5, 0x1d, 0xaf, 0xbb, 0x12, 0x5a, 0x85, 0xb0, 0xe6, 0x12, 0xa1, 0xb0, 0xae,
+	0x2a, 0xab, 0x51, 0x94, 0x6a, 0x65, 0x6d, 0xa6, 0x56, 0x7e, 0xf5, 0xe0, 0xbc, 0x2a, 0xfa, 0x3d,
+	0x19, 0x4d, 0x33, 0xe4, 0x16, 0xb9, 0x57, 0x2e, 0x72, 0x59, 0xb1, 0xf2, 0x5b, 0x46, 0xd4, 0x15,
+	0x6b, 0x34, 0xd6, 0xfe, 0x2c, 0x9a, 0x90, 0x22, 0x3d, 0x47, 0x83, 0x10, 0xac, 0xf4, 0xe9, 0xf0,
+	0xb8, 0xc8, 0x50, 0x7e, 0xe3, 0x97, 0x70, 0x4e, 0xc1, 0x78, 0x46, 0xde, 0xf1, 0x0f, 0x01, 0x81,
+	0xa1, 0x9d, 0x92, 0x77, 0xc5, 0x85, 0x35, 0x47, 0x56, 0xd2, 0xe1, 0xdb, 0xd0, 0xec, 0x65, 0x51,
+	0x3a, 0x18, 0xbf, 0x8a, 0x46, 0x68, 0x13, 0xfc, 0x6f, 0xc8, 0x71, 0x11, 0x47, 0x7c, 0x8a, 0x13,
+	0xf8, 0x36, 0x4a, 0x72, 0x9d, 0x82, 0x12, 0xf0, 0x5b, 0x38, 0x1f, 0xd2, 0x9c, 0x93, 0x4c, 0x2d,
+	0xd5, 0x58, 0xbe, 0x00, 0x9f, 0x47, 0xa3, 0xa2, 0xf6, 0x2e, 0xba, 0xb5, 0x67, 0xb6, 0x08, 0x85,
+	0x87, 0x00, 0x9d, 0xc9, 0xf5, 0xb6, 0x3d, 0x68, 0xb9, 0x94, 0x90, 0x3f, 0xd3, 0x3a, 0x7e, 0x86,
+	0xf6, 0xfe, 0x5b, 0x92, 0x9a, 0xe4, 0xaf, 0x40, 0x93, 0x08, 0x59, 0x92, 0xac, 0x50, 0x5b, 0x85,
+	0xe1, 0xb0, 0x66, 0x39, 0x94, 0xe7, 0x9c, 0xc4, 0x24, 0xb5, 0x45, 0x65, 0x64, 0x71, 0x26, 0xea,
+	0xdb, 0xe9, 0x18, 0x8e, 0x06, 0xbf, 0xf7, 0x00, 0x8a, 0xed, 0xa7, 0xc9, 0xf1, 0x47, 0x6c, 0xbe,
+	0x03, 0xad, 0x3e, 0xe5, 0x7b, 0xe5, 0xfd, 0x5d, 0x15, 0xba, 0x0e, 0x67, 0x8d, 0xe8, 0xa0, 0x28,
+	0x2b, 0xed, 0xb5, 0xa8, 0xcf, 0xf4, 0x5c, 0x93, 0xda, 0xea, 0xc2, 0xd4, 0xd6, 0xe6, 0x52, 0xbb,
+	0x0b, 0xad, 0x1e, 0xe5, 0x6e, 0x1f, 0x4e, 0xe8, 0x28, 0x4e, 0x4d, 0x1f, 0x56, 0x92, 0xd3, 0x9f,
+	0x6b, 0x6e, 0x7f, 0xc6, 0x77, 0xa1, 0xa9, 0x96, 0x0b, 0x5e, 0x76, 0xa1, 0xd1, 0xa7, 0x9c, 0x1d,
+	0xa4, 0x87, 0xb4, 0xaa, 0x85, 0xf6, 0x0a, 0x5b, 0x68, 0xbc, 0xf0, 0xfb, 0x1a, 0x34, 0xb4, 0xba,
+	0x94, 0x86, 0xb7, 0x30, 0x8d, 0xda, 0x6c, 0x1a, 0x82, 0xf4, 0xd4, 0xde, 0x27, 0xf9, 0x8d, 0x02,
+	0x58, 0x63, 0x3c, 0xca, 0xf8, 0x3d, 0x2e, 0xc9, 0xf4, 0x43, 0x2d, 0x8a, 0x9d, 0x92, 0x88, 0xf1,
+	0x17, 0x71, 0x3a, 0x92, 0x4c, 0xfa, 0xa1, 0x91, 0xe5, 0x44, 0x11, 0x39, 0x17, 0x4c, 0x2a, 0x41,
+	0x1c, 0xb9, 0xfc, 0x90, 0xb9, 0x29, 0x16, 0xad, 0x42, 0xb0, 0xc3, 0x78, 0xc4, 0x73, 0x16, 0x34,
+	0xe4, 0x18, 0x2a, 0x24, 0x7b, 0xd7, 0xe5, 0xb2, 0xa6, 0x7b, 0xd7, 0xe5, 0xba, 0x1b, 0xb0, 0x39,
+	0xa1, 0x13, 0x92, 0xea, 0x4b, 0x29, 0xbc, 0x40, 0x7a, 0xcd, 0xe9, 0xed, 0xd1, 0xb7, 0xdc, 0xa3,
+	0x17, 0x39, 0x0e, 0xa2, 0xf4, 0x75, 0x96, 0x04, 0x6d, 0xa9, 0xd7, 0x22, 0xfe, 0xc7, 0x83, 0x8d,
+	0x1e, 0xe5, 0x4f, 0x04, 0x48, 0xa7, 0x65, 0x7c, 0x34, 0xc3, 0x86, 0x17, 0xdf, 0xe5, 0xa5, 0x03,
+	0x8d, 0x69, 0xc4, 0xd8, 0x11, 0xcd, 0x74, 0x4f, 0x36, 0xb2, 0xe0, 0x2c, 0xa5, 0x3c, 0x3e, 0x3c,
+	0x16, 0xe8, 0x54, 0xc1, 0x5a, 0x45, 0x99, 0xd1, 0xd5, 0x59, 0x46, 0x4d, 0xb6, 0x6b, 0x4e, 0xb6,
+	0xb8, 0x2b, 0x7f, 0x86, 0x3c, 0xa1, 0x23, 0x9a, 0xf3, 0x85, 0xd3, 0x0a, 0x7f, 0x0d, 0xeb, 0xcf,
+	0xa7, 0x24, 0x8b, 0x78, 0x4c, 0x53, 0x55, 0x9c, 0x08, 0x56, 0x06, 0x74, 0xa8, 0xee, 0x6b, 0x3d,
+	0x94, 0xdf, 0x82, 0xbd, 0x09, 0x61, 0x2c, 0x1a, 0xe9, 0x84, 0xb5, 0x88, 0x7f, 0x80, 0xb3, 0x96,
+	0x3c, 0xb1, 0x7c, 0x13, 0xfc, 0x09, 0x1b, 0xe9, 0x06, 0x39, 0x61, 0x23, 0xf4, 0x15, 0xb4, 0x14,
+	0x3d, 0xfb, 0x59, 0x46, 0x33, 0x19, 0xa0, 0x75, 0xab, 0xe3, 0x16, 0x7c, 0x19, 0x41, 0xe8, 0xba,
+	0xe3, 0xdf, 0x3d, 0x99, 0xcb, 0xbd, 0x81, 0xb2, 0xab, 0x5c, 0xba, 0xb0, 0x11, 0xb9, 0x0a, 0x93,
+	0xd5, 0xac, 0xda, 0x9e, 0x46, 0xcd, 0x3d, 0x8d, 0x6b, 0x00, 0xca, 0x51, 0x9e, 0x61, 0x31, 0x5b,
+	0xac, 0xc6, 0xda, 0x7b, 0x76, 0xc2, 0x38, 0x1a, 0xfc, 0xa7, 0x07, 0xeb, 0x0e, 0x28, 0x91, 0xf7,
+	0x87, 0x43, 0x12, 0xa5, 0x98, 0x0f, 0x06, 0x84, 0x31, 0x09, 0xaa, 0x11, 0x6a, 0x51, 0x73, 0xe7,
+	0x5b, 0xee, 0x2a, 0x86, 0xdc, 0x2c, 0x9f, 0xf5, 0xff, 0xc6, 0xe7, 0x6b, 0x3d, 0x22, 0x1f, 0xc4,
+	0x49, 0xb2, 0xf4, 0x97, 0x0c, 0xa3, 0x79, 0x36, 0xd0, 0x87, 0x5e, 0x48, 0x06, 0x94, 0xef, 0x4c,
+	0xde, 0x2f, 0x61, 0xc3, 0x0d, 0x2b, 0x18, 0x71, 0xf2, 0xf4, 0x4a, 0x79, 0xe2, 0xdf, 0x3c, 0xb8,
+	0xf0, 0x92, 0x67, 0x24, 0x9a, 0xc4, 0xe9, 0x68, 0x8f, 0x67, 0xc9, 0xff, 0x71, 0xef, 0xee, 0x40,
+	0x33, 0x23, 0x0a, 0x21, 0x0b, 0x7c, 0xd9, 0x55, 0xaf, 0xba, 0xa4, 0x98, 0x0d, 0xc3, 0xc2, 0x2b,
+	0xb4, 0xfe, 0xf8, 0x0f, 0x0f, 0xce, 0xcd, 0x39, 0x9c, 0x40, 0x0b, 0x86, 0xb6, 0x5e, 0x68, 0xa0,
+	0xd4, 0xc3, 0x92, 0xae, 0xa2, 0xc0, 0xea, 0xa5, 0x02, 0x13, 0x3f, 0xc4, 0xc6, 0xa2, 0xf5, 0x91,
+	0x8c, 0x05, 0x2b, 0x72, 0x52, 0x58, 0x85, 0x4c, 0x75, 0x1c, 0xf1, 0x51, 0x46, 0xf3, 0x29, 0x0b,
+	0xea, 0xd2, 0xec, 0x68, 0x6e, 0xfd, 0x05, 0x00, 0xe2, 0xd7, 0x62, 0x8f, 0xf2, 0x47, 0x79, 0x1f,
+	0xed, 0x43, 0x4b, 0x0e, 0xdd, 0x57, 0x79, 0x9a, 0x92, 0x04, 0x05, 0x6e, 0xd6, 0xee, 0x8f, 0x81,
+	0xce, 0x56, 0x85, 0x65, 0x9a, 0x1c, 0xe3, 0x33, 0x5d, 0x6f, 0xd7, 0x43, 0x77, 0x60, 0x4d, 0xfd,
+	0x6c, 0x66, 0xe8, 0xd2, 0xec, 0x38, 0xd2, 0x11, 0x2e, 0xce, 0x1b, 0x64, 0x00, 0x74, 0x5f, 0xce,
+	0x27, 0xd9, 0x07, 0xd0, 0xf6, 0x8c, 0x93, 0xdb, 0x5a, 0x3b, 0x97, 0xab, 0x8d, 0x2a, 0xca, 0x43,
+	0x39, 0x25, 0x55, 0xdf, 0x42, 0x57, 0xe6, 0x3d, 0x6d, 0x3b, 0xeb, 0x2c, 0x28, 0x78, 0x7c, 0x06,
+	0x1d, 0xc8, 0x69, 0xfd, 0x72, 0x9c, 0xf3, 0x21, 0x3d, 0x4a, 0x4f, 0x15, 0x4a, 0x61, 0x52, 0x57,
+	0x7d, 0x2e, 0x50, 0xa9, 0x2d, 0x95, 0x03, 0x95, 0xfb, 0x83, 0x09, 0xa4, 0x6e, 0xc9, 0x5c, 0xa0,
+	0xd2, 0x93, 0x71, 0x09, 0xa2, 0xa7, 0x72, 0x60, 0x3d, 0x75, 0x06, 0xdf, 0xa9, 0xc2, 0x7d, 0x0f,
+	0x1b, 0x33, 0x0f, 0x3d, 0x84, 0xdd, 0x05, 0xd5, 0x2f, 0xd1, 0xce, 0x67, 0x0b, 0x7d, 0x8a, 0x77,
+	0xcd, 0x19, 0xf4, 0x1d, 0xac, 0x97, 0x8d, 0xe8, 0xd3, 0x93, 0x17, 0xea, 0xd8, 0x78, 0x91, 0x8b,
+	0x09, 0xdd, 0x87, 0x73, 0xf9, 0xec, 0x8b, 0x0a, 0x5d, 0x77, 0x97, 0x9e, 0xf4, 0x74, 0xeb, 0x7c,
+	0xbe, 0xc4, 0xcb, 0xec, 0xf1, 0x14, 0xda, 0xee, 0xc3, 0x06, 0x7d, 0xe2, 0x2e, 0xac, 0x78, 0xf2,
+	0x2c, 0xad, 0x4b, 0xb0, 0x0f, 0x14, 0x74, 0x75, 0x3e, 0x98, 0xf3, 0x70, 0x59, 0x5a, 0x05, 0x6d,
+	0xf7, 0x85, 0x51, 0x46, 0x56, 0xf1, 0xf6, 0x58, 0x12, 0xee, 0xb1, 0x46, 0x26, 0x1a, 0x78, 0x15,
+	0x32, 0x67, 0x5e, 0x74, 0xb6, 0x4f, 0x32, 0xeb, 0x2c, 0x37, 0x4c, 0x33, 0x3d, 0x65, 0x53, 0x7a,
+	0x0e, 0x67, 0x4b, 0x93, 0x02, 0xed, 0x54, 0xf6, 0x74, 0x67, 0x88, 0x2c, 0xce, 0xb3, 0xb7, 0x0b,
+	0xdb, 0x29, 0xe1, 0x37, 0xc7, 0xd1, 0xd1, 0x4f, 0x47, 0x31, 0x1f, 0x1f, 0xc5, 0xe9, 0xd0, 0xf1,
+	0xef, 0x6d, 0xd8, 0xbe, 0xfa, 0x22, 0xa3, 0x9c, 0xbe, 0xf0, 0xfa, 0xab, 0xf2, 0x6f, 0x9e, 0xdb,
+	0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x11, 0xb4, 0x31, 0x18, 0xfa, 0x11, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1181,10 +1733,17 @@ type ChatBotHubClient interface {
 	BotAction(ctx context.Context, in *BotActionRequest, opts ...grpc.CallOption) (*BotActionReply, error)
 	BotFilter(ctx context.Context, in *BotFilterRequest, opts ...grpc.CallOption) (*OperationReply, error)
 	BotMomentFilter(ctx context.Context, in *BotFilterRequest, opts ...grpc.CallOption) (*OperationReply, error)
+	GetBotChatRooms(ctx context.Context, in *GetBotChatRoomsRequest, opts ...grpc.CallOption) (*GetBotChatRoomsResponse, error)
+	GetBotChatRoom(ctx context.Context, in *GetBotChatRoomRequest, opts ...grpc.CallOption) (*GetBotChatRoomResponse, error)
+	UpdateBotChatRoom(ctx context.Context, in *UpdateBotChatRoomRequest, opts ...grpc.CallOption) (*UpdateBotChatRoomResponse, error)
 	FilterCreate(ctx context.Context, in *FilterCreateRequest, opts ...grpc.CallOption) (*OperationReply, error)
 	FilterNext(ctx context.Context, in *FilterNextRequest, opts ...grpc.CallOption) (*OperationReply, error)
 	RouterBranch(ctx context.Context, in *RouterBranchRequest, opts ...grpc.CallOption) (*OperationReply, error)
 	FilterFill(ctx context.Context, in *FilterFillRequest, opts ...grpc.CallOption) (*FilterFillReply, error)
+	// tunnel that connect streaming server and chathub server
+	StreamingTunnel(ctx context.Context, opts ...grpc.CallOption) (ChatBotHub_StreamingTunnelClient, error)
+	// streaming rpc
+	StreamingCtrl(ctx context.Context, in *StreamingCtrlRequest, opts ...grpc.CallOption) (*OperationReply, error)
 }
 
 type chatBotHubClient struct {
@@ -1289,6 +1848,33 @@ func (c *chatBotHubClient) BotMomentFilter(ctx context.Context, in *BotFilterReq
 	return out, nil
 }
 
+func (c *chatBotHubClient) GetBotChatRooms(ctx context.Context, in *GetBotChatRoomsRequest, opts ...grpc.CallOption) (*GetBotChatRoomsResponse, error) {
+	out := new(GetBotChatRoomsResponse)
+	err := c.cc.Invoke(ctx, "/chatbothub.ChatBotHub/GetBotChatRooms", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatBotHubClient) GetBotChatRoom(ctx context.Context, in *GetBotChatRoomRequest, opts ...grpc.CallOption) (*GetBotChatRoomResponse, error) {
+	out := new(GetBotChatRoomResponse)
+	err := c.cc.Invoke(ctx, "/chatbothub.ChatBotHub/GetBotChatRoom", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatBotHubClient) UpdateBotChatRoom(ctx context.Context, in *UpdateBotChatRoomRequest, opts ...grpc.CallOption) (*UpdateBotChatRoomResponse, error) {
+	out := new(UpdateBotChatRoomResponse)
+	err := c.cc.Invoke(ctx, "/chatbothub.ChatBotHub/updateBotChatRoom", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatBotHubClient) FilterCreate(ctx context.Context, in *FilterCreateRequest, opts ...grpc.CallOption) (*OperationReply, error) {
 	out := new(OperationReply)
 	err := c.cc.Invoke(ctx, "/chatbothub.ChatBotHub/FilterCreate", in, out, opts...)
@@ -1325,6 +1911,46 @@ func (c *chatBotHubClient) FilterFill(ctx context.Context, in *FilterFillRequest
 	return out, nil
 }
 
+func (c *chatBotHubClient) StreamingTunnel(ctx context.Context, opts ...grpc.CallOption) (ChatBotHub_StreamingTunnelClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ChatBotHub_serviceDesc.Streams[1], "/chatbothub.ChatBotHub/StreamingTunnel", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &chatBotHubStreamingTunnelClient{stream}
+	return x, nil
+}
+
+type ChatBotHub_StreamingTunnelClient interface {
+	Send(*EventRequest) error
+	Recv() (*EventReply, error)
+	grpc.ClientStream
+}
+
+type chatBotHubStreamingTunnelClient struct {
+	grpc.ClientStream
+}
+
+func (x *chatBotHubStreamingTunnelClient) Send(m *EventRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *chatBotHubStreamingTunnelClient) Recv() (*EventReply, error) {
+	m := new(EventReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *chatBotHubClient) StreamingCtrl(ctx context.Context, in *StreamingCtrlRequest, opts ...grpc.CallOption) (*OperationReply, error) {
+	out := new(OperationReply)
+	err := c.cc.Invoke(ctx, "/chatbothub.ChatBotHub/StreamingCtrl", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatBotHubServer is the server API for ChatBotHub service.
 type ChatBotHubServer interface {
 	// bots only use eventtunnel to communicate
@@ -1337,10 +1963,17 @@ type ChatBotHubServer interface {
 	BotAction(context.Context, *BotActionRequest) (*BotActionReply, error)
 	BotFilter(context.Context, *BotFilterRequest) (*OperationReply, error)
 	BotMomentFilter(context.Context, *BotFilterRequest) (*OperationReply, error)
+	GetBotChatRooms(context.Context, *GetBotChatRoomsRequest) (*GetBotChatRoomsResponse, error)
+	GetBotChatRoom(context.Context, *GetBotChatRoomRequest) (*GetBotChatRoomResponse, error)
+	UpdateBotChatRoom(context.Context, *UpdateBotChatRoomRequest) (*UpdateBotChatRoomResponse, error)
 	FilterCreate(context.Context, *FilterCreateRequest) (*OperationReply, error)
 	FilterNext(context.Context, *FilterNextRequest) (*OperationReply, error)
 	RouterBranch(context.Context, *RouterBranchRequest) (*OperationReply, error)
 	FilterFill(context.Context, *FilterFillRequest) (*FilterFillReply, error)
+	// tunnel that connect streaming server and chathub server
+	StreamingTunnel(ChatBotHub_StreamingTunnelServer) error
+	// streaming rpc
+	StreamingCtrl(context.Context, *StreamingCtrlRequest) (*OperationReply, error)
 }
 
 // UnimplementedChatBotHubServer can be embedded to have forward compatible implementations.
@@ -1371,6 +2004,15 @@ func (*UnimplementedChatBotHubServer) BotFilter(ctx context.Context, req *BotFil
 func (*UnimplementedChatBotHubServer) BotMomentFilter(ctx context.Context, req *BotFilterRequest) (*OperationReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BotMomentFilter not implemented")
 }
+func (*UnimplementedChatBotHubServer) GetBotChatRooms(ctx context.Context, req *GetBotChatRoomsRequest) (*GetBotChatRoomsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBotChatRooms not implemented")
+}
+func (*UnimplementedChatBotHubServer) GetBotChatRoom(ctx context.Context, req *GetBotChatRoomRequest) (*GetBotChatRoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBotChatRoom not implemented")
+}
+func (*UnimplementedChatBotHubServer) UpdateBotChatRoom(ctx context.Context, req *UpdateBotChatRoomRequest) (*UpdateBotChatRoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateBotChatRoom not implemented")
+}
 func (*UnimplementedChatBotHubServer) FilterCreate(ctx context.Context, req *FilterCreateRequest) (*OperationReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FilterCreate not implemented")
 }
@@ -1382,6 +2024,12 @@ func (*UnimplementedChatBotHubServer) RouterBranch(ctx context.Context, req *Rou
 }
 func (*UnimplementedChatBotHubServer) FilterFill(ctx context.Context, req *FilterFillRequest) (*FilterFillReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FilterFill not implemented")
+}
+func (*UnimplementedChatBotHubServer) StreamingTunnel(srv ChatBotHub_StreamingTunnelServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamingTunnel not implemented")
+}
+func (*UnimplementedChatBotHubServer) StreamingCtrl(ctx context.Context, req *StreamingCtrlRequest) (*OperationReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StreamingCtrl not implemented")
 }
 
 func RegisterChatBotHubServer(s *grpc.Server, srv ChatBotHubServer) {
@@ -1540,6 +2188,60 @@ func _ChatBotHub_BotMomentFilter_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatBotHub_GetBotChatRooms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBotChatRoomsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatBotHubServer).GetBotChatRooms(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chatbothub.ChatBotHub/GetBotChatRooms",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatBotHubServer).GetBotChatRooms(ctx, req.(*GetBotChatRoomsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatBotHub_GetBotChatRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBotChatRoomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatBotHubServer).GetBotChatRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chatbothub.ChatBotHub/GetBotChatRoom",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatBotHubServer).GetBotChatRoom(ctx, req.(*GetBotChatRoomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatBotHub_UpdateBotChatRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBotChatRoomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatBotHubServer).UpdateBotChatRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chatbothub.ChatBotHub/UpdateBotChatRoom",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatBotHubServer).UpdateBotChatRoom(ctx, req.(*UpdateBotChatRoomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatBotHub_FilterCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FilterCreateRequest)
 	if err := dec(in); err != nil {
@@ -1612,6 +2314,50 @@ func _ChatBotHub_FilterFill_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatBotHub_StreamingTunnel_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ChatBotHubServer).StreamingTunnel(&chatBotHubStreamingTunnelServer{stream})
+}
+
+type ChatBotHub_StreamingTunnelServer interface {
+	Send(*EventReply) error
+	Recv() (*EventRequest, error)
+	grpc.ServerStream
+}
+
+type chatBotHubStreamingTunnelServer struct {
+	grpc.ServerStream
+}
+
+func (x *chatBotHubStreamingTunnelServer) Send(m *EventReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *chatBotHubStreamingTunnelServer) Recv() (*EventRequest, error) {
+	m := new(EventRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _ChatBotHub_StreamingCtrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StreamingCtrlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatBotHubServer).StreamingCtrl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chatbothub.ChatBotHub/StreamingCtrl",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatBotHubServer).StreamingCtrl(ctx, req.(*StreamingCtrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ChatBotHub_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "chatbothub.ChatBotHub",
 	HandlerType: (*ChatBotHubServer)(nil),
@@ -1645,6 +2391,18 @@ var _ChatBotHub_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ChatBotHub_BotMomentFilter_Handler,
 		},
 		{
+			MethodName: "GetBotChatRooms",
+			Handler:    _ChatBotHub_GetBotChatRooms_Handler,
+		},
+		{
+			MethodName: "GetBotChatRoom",
+			Handler:    _ChatBotHub_GetBotChatRoom_Handler,
+		},
+		{
+			MethodName: "updateBotChatRoom",
+			Handler:    _ChatBotHub_UpdateBotChatRoom_Handler,
+		},
+		{
 			MethodName: "FilterCreate",
 			Handler:    _ChatBotHub_FilterCreate_Handler,
 		},
@@ -1660,11 +2418,21 @@ var _ChatBotHub_serviceDesc = grpc.ServiceDesc{
 			MethodName: "FilterFill",
 			Handler:    _ChatBotHub_FilterFill_Handler,
 		},
+		{
+			MethodName: "StreamingCtrl",
+			Handler:    _ChatBotHub_StreamingCtrl_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "EventTunnel",
 			Handler:       _ChatBotHub_EventTunnel_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "StreamingTunnel",
+			Handler:       _ChatBotHub_StreamingTunnel_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
