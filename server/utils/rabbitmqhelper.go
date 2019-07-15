@@ -56,6 +56,11 @@ func (w *RabbitMQWrapper) Reconnect() error {
 		return nil
 	}
 
+	if w.mqChannel != nil {
+		w.mqChannel.Close()
+		w.mqChannel = nil
+	}
+
 	w.mqConn = o.RabbitMQConnect(w.config)
 	if o.Err != nil {
 		return o.Err
@@ -116,6 +121,9 @@ func (w *RabbitMQWrapper) Send(queue string, body string) error {
 			Body:         []byte(body),
 		})
 	if err != nil {
+		w.mqChannel.Close()
+		w.mqChannel = nil
+		
 		w.mqConn.Close()
 		w.mqConn = nil
 		return err
