@@ -72,6 +72,11 @@ func (hub *ChatHub) init() {
 		return
 	}
 
+	if o.EnsuredMongoIndexes(hub.mongoDb); o.Err != nil {
+		hub.Error(o.Err, "mongo ensure indexes fail")
+		return
+	}
+
 	hub.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", hub.Config.Redis.Host, hub.Config.Redis.Port),
 		hub.Config.Redis.Db, hub.Config.Redis.Password)
