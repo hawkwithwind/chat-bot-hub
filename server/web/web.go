@@ -102,6 +102,11 @@ func (ctx *WebServer) init() error {
 	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
 	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
 
+	if o.EnsuredMongoIndexes(ctx.mongoDb); o.Err != nil {
+		ctx.Error(o.Err, "mongo ensure indexes fail")
+		return o.Err
+	}
+
 	if o.Err != nil {
 		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
 	} else {

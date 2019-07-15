@@ -101,8 +101,6 @@ func (o *ErrorHandler) CreateChatRoom(db *mgo.Database, botId string, peerId str
 func (o *ErrorHandler) GetChatRooms(db *mgo.Database, botIds []string, chatType string, fromRoomId string, limit int32) []*pb.ChatRoom {
 	criteria := bson.M{}
 
-	//o.EnsureChatRoomIndexes(db)
-
 	if fromRoomId != "" {
 		fromRoom := o.GetChatRoomWithId(db, fromRoomId)
 
