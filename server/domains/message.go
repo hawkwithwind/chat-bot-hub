@@ -123,7 +123,8 @@ func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messa
 
 	for _, message := range messages {
 		if val, ok := fromUserMap.Load(message.FromUser); ok {
-			if user := val.(*ChatUser); user != nil {
+			if val != nil {
+				user := val.(*ChatUser)
 				message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
 			}
 		}
