@@ -171,13 +171,38 @@ func (o *ErrorHandler) GetWechatMessageWithMsgId(db *mgo.Database, msgId string)
 	return result
 }
 
-func (o *ErrorHandler) CreateMessageIndexes(db *mgo.Database) {
+func (o *ErrorHandler) EnsureMessageIndexes(db *mgo.Database) {
 	col := db.C(WechatMessageCollection)
-	for _, key := range []string{"msgId", "fromUser", "toUser", "groupId", "timestamp"} {
+	indexes := []map[string]interface{}{
+		{
+			"Key":    []string{"msgId"},
+			"Unique": true,
+		},
+		{
+			"Key":    []string{"fromUser"},
+			"Unique": false,
+		},
+		{
+			"Key":    []string{"toUser"},
+			"Unique": false,
+		},
+		{
+			"Key":    []string{"groupId"},
+			"Unique": false,
+		}, {
+			"Key":    []string{"timestamp"},
+			"Unique": false,
+		}, {
+			"Key":    []string{"updatedAt"},
+			"Unique": false,
+		},
+	}
+
+	for _, obj := range indexes {
 		o.Err = col.EnsureIndex(mgo.Index{
-			Key:        []string{key},
-			Unique:     true,
-			DropDups:   true,
+			Key:        obj["Key"].([]string),
+			Unique:     obj["Unique"].(bool),
+			DropDups:   obj["Unique"].(bool),
 			Background: true,
 			Sparse:     true,
 		})

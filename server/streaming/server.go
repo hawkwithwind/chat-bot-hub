@@ -72,6 +72,11 @@ func (server *Server) init() error {
 		return o.Err
 	}
 
+	if o.EnsuredMongoIndexes(server.mongoDb); o.Err != nil {
+		server.Error(o.Err, "mongo ensure indexes fail")
+		return o.Err
+	}
+
 	server.restfulclient = httpx.NewHttpClient()
 
 	ossClient, err := oss.New(server.Config.Oss.Region, server.Config.Oss.Accesskeyid, server.Config.Oss.Accesskeysecret, oss.UseCname(true))
