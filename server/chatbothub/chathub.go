@@ -290,6 +290,7 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 	}
 
 	imageId := ""
+	thumbnailId := ""
 
 	if inEvent.EventType == IMAGEMESSAGE {
 		imageId = o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
@@ -297,7 +298,12 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 			hub.Error(o.Err, "image message must contains imageId", bodyString)
 			return nil, o.Err
 		}
-
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "image message does not contain thumbnailId", bodyString)
+			thumbnailId = imageId
+			o.Err = nil
+		}
 	} else if inEvent.EventType == EMOJIMESSAGE {
 		imageId = o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
@@ -306,6 +312,13 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		}
 
 		bodyJSON["imageId"] = imageId
+
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", false, "")
+		if o.Err != nil {
+			hub.Error(o.Err, "image message does not contain thumbnailId", bodyString)
+			thumbnailId = imageId
+			o.Err = nil
+		}		
 	}
 
 	if imageId != "" {
@@ -314,6 +327,15 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imageId)
 		} else {
 			bodyJSON["signedUrl"] = signedURL
+		}
+	}
+
+	if thumbnailId != "" {
+		signedThumbnail, err := utils.GenSignedURL(hub.ossBucket, thumbnailId, inEvent.EventType)
+		if err != nil {
+			hub.Error(o.Err, "cannot get aliyun oss thumbnail url [%s]", thumbnailId)
+		} else {
+			bodyJSON["signedThumbnail"] = signedThumbnail
 		}
 	}
 
@@ -386,6 +408,7 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			toUser := o.FromMapString("toUserName", bodyJSON, "actionBody.toUserName", false, "")
 			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
 			imageId := o.FromMapString("imageId", bodyJSON, "actionReply.actionBody", true, "")
+			thumbnailId := o.FromMapString("thumbnailId", bodyJSON, "actionReply.actionBody", true, "")
 
 			groupId := ""
 			if regexp.MustCompile(`@chatroom$`).MatchString(toUser) {
@@ -408,6 +431,7 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 				"toUser":      toUser,
 				"groupId":     groupId,
 				"imageId":     imageId,
+				"thumbnailId": thumbnailId,
 				"content":     content,
 				"timestamp":   time.Now().Unix(),
 				"mType":       mType,

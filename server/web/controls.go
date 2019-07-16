@@ -1302,6 +1302,7 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
         mType:     this.mType,
         subType:   this.subType,
         imageId:   this.imageId,
+        thumbnailId: this.thumbnailId,
         groupId:   this.groupId,
         fromUser:  this.fromUser,
         toUser:    this.toUser,
