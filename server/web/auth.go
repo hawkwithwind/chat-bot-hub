@@ -281,8 +281,13 @@ func (ctx *WebServer) login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	fmt.Println(user.AccountName)
+	fmt.Println(utils.HexString(utils.CheckSum([]byte(user.Password))))
+	
 	foundcount := 0
 	for _, acc := range ctx.accounts.accounts {
+		fmt.Println(acc.AccountName, acc.Secret)
+		
 		secret := utils.HexString(utils.CheckSum([]byte(user.Password)))
 		if acc.AccountName == user.AccountName && acc.Secret == secret {
 			foundcount += 1
