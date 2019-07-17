@@ -231,7 +231,7 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	daykey := ar.redisDayKey()
 	hourkey := ar.redisHourKey()
 	minutekey := ar.redisMinuteKey()
-	keyExpire := 7 * 24 * 60 * 60
+	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
 	minuteExpire := 60
