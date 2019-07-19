@@ -318,7 +318,7 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 			hub.Error(o.Err, "image message does not contain thumbnailId", bodyString)
 			thumbnailId = imageId
 			o.Err = nil
-		}		
+		}
 	}
 
 	if imageId != "" {
@@ -407,8 +407,20 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			bodyJSON := o.FromJson(actionBody["body"].(string))
 			toUser := o.FromMapString("toUserName", bodyJSON, "actionBody.toUserName", false, "")
 			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
-			imageId := o.FromMapString("imageId", bodyJSON, "actionReply.actionBody", true, "")
-			thumbnailId := o.FromMapString("thumbnailId", bodyJSON, "actionReply.actionBody", true, "")
+			description := content
+			imageId := o.FromMapString("imageId", resultData, "actionReply.result.data.imageId", true, "")
+			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, imageId)
+
+			// 尝试用 actionReply 中的数据 override
+			resultContent := o.FromMapString("content", resultData, "actionReply.result.data.content", true, "")
+			if resultContent != "" {
+				content = resultContent
+			}
+
+			resultDescription := o.FromMapString("description", resultData, "actionReply.result.data.description", true, "")
+			if resultDescription != "" {
+				description = resultDescription
+			}
 
 			groupId := ""
 			if regexp.MustCompile(`@chatroom$`).MatchString(toUser) {
@@ -435,11 +447,20 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 				"content":     content,
 				"timestamp":   time.Now().Unix(),
 				"mType":       mType,
-				"description": content,
+				"description": description,
 			}
 
 			hub.saveMessageToDB(bot, msg)
 			hub.updateChatRoom(bot, msg)
+
+			// signedUrl, signedThumbnail 不需要保存到数据库
+			if imageId != "" {
+				msg["signedUrl"], _ = utils.GenSignedURL(hub.ossBucket, imageId, "IMAGEMESSAGE")
+			}
+
+			if thumbnailId != "" {
+				msg["signedThumbnail"], _ = utils.GenSignedURL(hub.ossBucket, thumbnailId, "IMAGEMESSAGE", oss.Process("image/resize,l_160"))
+			}
 
 			var eventType string
 			if imageId != "" {
