@@ -5,7 +5,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
-func GenSignedURL(ossBucket *oss.Bucket, imageId string, messageType string) (string, error) {
+func GenSignedURL(ossBucket *oss.Bucket, imageId string, messageType string, options ...oss.Option) (string, error) {
 	if imageId == "" {
 		return "", fmt.Errorf("imageId is required")
 	}
@@ -20,5 +20,5 @@ func GenSignedURL(ossBucket *oss.Bucket, imageId string, messageType string) (st
 		return "", fmt.Errorf("unkown message type to generate signed oss url for message type: %s\n", messageType)
 	}
 
-	return ossBucket.SignURL(imageKey, oss.HTTPGet, 60)
+	return ossBucket.SignURL(imageKey, oss.HTTPGet, 60, options...)
 }
