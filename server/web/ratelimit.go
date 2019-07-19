@@ -20,7 +20,7 @@ var (
 		chatbothub.CreateRoom:    30,
 		chatbothub.AddRoomMember: 60,
 		chatbothub.SyncContact:   1,
-		chatbothub.SnsTimeline:   20,
+		chatbothub.SnsTimeline:   200,
 	}
 
 	minuteLimit map[string]int = map[string]int{
@@ -28,7 +28,7 @@ var (
 		chatbothub.AcceptUser:      1,
 		chatbothub.CreateRoom:      1,
 		chatbothub.SyncContact:     1,
-		chatbothub.SnsTimeline:     1,
+		chatbothub.SnsTimeline:     60,
 		chatbothub.SendTextMessage: 60,
 		chatbothub.SendAppMessage:  60,
 		chatbothub.GetContact:      30,
