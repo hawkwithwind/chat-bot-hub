@@ -24,6 +24,7 @@ type MsgSource struct {
 type WechatMessageContact struct {
 	NickName string `json:"nickName"`
 	Avatar   string `json:"avatar"`
+	WxId     string `json:"wxId"`
 }
 
 type WechatMessage struct {
@@ -78,7 +79,7 @@ func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, messag
 		return err
 	}
 
-	message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
+	message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String, WxId: user.UserName}
 
 	return o.Err
 }
@@ -127,7 +128,7 @@ func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messa
 		if val, ok := fromUserMap.Load(message.FromUser); ok {
 			if val != nil {
 				user := val.(*ChatUser)
-				message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String}
+				message.FromUserContact = &WechatMessageContact{NickName: user.NickName, Avatar: user.Avatar.String, WxId: user.UserName}
 			}
 		}
 	}
