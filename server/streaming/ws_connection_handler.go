@@ -19,11 +19,21 @@ type GetConversationMessagesParams struct {
 	FromMessageId string `json:"fromMessageId"` // 以 fromMessageId 为界限获取消息。direction 为 old 必填；new 选填，空则返回最新一页数据，非空则可表示短信重连后获取更新数据
 }
 
-type SendMessageParams struct {
-	BotLogin   string   `json:"botLogin"`
+type SendMessage struct {
+	BotLogin string      `json:"botLogin"`
+	Type     string      `json:"type"`
+	Params   interface{} `json:"params"`
+}
+
+type SendTextMessageParams struct {
 	ToUserName string   `json:"toUserName"`
 	Content    string   `json:"content"`
 	AtList     []string `json:"atList"`
+}
+
+type SendImageMessageParams struct {
+	ToUserName string `json:"toUserName"`
+	Payload    string `json:"payload"`
 }
 
 type GetBotUnreadMessagesParams struct {
@@ -65,15 +75,35 @@ func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error)
 }
 
 func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{}, error) {
-	params := &SendMessageParams{}
-	if err := mapstructure.Decode(payload, params); err != nil {
+	sendMessage := &SendMessage{}
+	if err := mapstructure.Decode(payload, sendMessage); err != nil {
 		return nil, err
 	}
 
-	jsonstr, _ := json.Marshal(params)
+	// 将 sendMessage.Params decode 成各种 params object 然后再 marshall 只是为了校验数据
 
-	if _, err := wsConnection.SendHubBotAction(params.BotLogin, "SendTextMessage", string(jsonstr)); err != nil {
-		return nil, err
+	switch sendMessage.Type {
+	case "text":
+		sendTextMessageParams := &SendTextMessageParams{}
+		if err := mapstructure.Decode(sendMessage.Params, sendTextMessageParams); err != nil {
+			return nil, err
+		}
+
+		jsonStr, _ := json.Marshal(sendTextMessageParams)
+		if _, err := wsConnection.SendHubBotAction(sendMessage.BotLogin, "SendTextMessage", string(jsonStr)); err != nil {
+			return nil, err
+		}
+
+	case "image":
+		sendImageMessageParams := &SendImageMessageParams{}
+		if err := mapstructure.Decode(sendMessage.Params, sendImageMessageParams); err != nil {
+			return nil, err
+		}
+
+		jsonStr, _ := json.Marshal(sendImageMessageParams)
+		if _, err := wsConnection.SendHubBotAction(sendMessage.BotLogin, "SendImageMessage", string(jsonStr)); err != nil {
+			return nil, err
+		}
 	}
 
 	return "success", nil
@@ -145,7 +175,7 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 
 			meta := o.GetChatUnreadMessagesMeta(wsConnection.server.mongoDb, botLoginCache[p.BotId], p.PeerId, p.FromMessageId)
 
-			if meta.LatestMessage != nil {
+			if meta != nil && meta.LatestMessage != nil {
 				o.FillWechatMessagesImageSignedURL(wsConnection.server.ossBucket, []*domains.WechatMessage{meta.LatestMessage})
 			}
 
