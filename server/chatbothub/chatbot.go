@@ -100,6 +100,7 @@ const (
 	AddLabel                 string = "AddLabel"
 	DeleteLabel              string = "DeleteLabel"
 	SetLabel                 string = "SetLabel"
+	GetRequestToken          string = "GetRequestToken"
 )
 
 func (bot *ChatBot) Info(msg string, v ...interface{}) {
@@ -430,6 +431,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		AddLabel:                 (*ChatBot).AddLabel,
 		DeleteLabel:              (*ChatBot).DeleteLabel,
 		SetLabel:                 (*ChatBot).SetLabel,
+		GetRequestToken:          (*ChatBot).GetRequestToken,
 	}
 
 	if m, ok := actionMap[actionType]; ok {
@@ -510,6 +512,18 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 		o.Err = utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
 	}
+}
+
+func (bot *ChatBot) GetRequestToken(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+
+	params := []ActionParam{
+		NewActionParam("ghName", true, ""),
+		NewActionParam("url", true, ""),
+	}
+
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err	
 }
 
 func (bot *ChatBot) GetLabelList(actionType string, arId string, body string) error {

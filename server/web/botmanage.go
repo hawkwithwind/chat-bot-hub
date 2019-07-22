@@ -790,6 +790,12 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if login == "" {
+		if bot.Login != "" {
+			login = bot.Login
+		}
+	}
+	
 	logininfo := ""
 	if bot.LoginInfo.Valid {
 		logininfo = bot.LoginInfo.String
