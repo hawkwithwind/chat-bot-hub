@@ -427,6 +427,19 @@
         commonParams.labelId,
         commonParams.userId,
       ],
+      "GetRequestToken": [
+        {
+          "name": "ghName",
+          "display": "公众号ID",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "url",
+          "display": "url",
+          "type": "string",
+          "required": true,
+        },
+      ]
     }
 
     $scope.close = () => {
