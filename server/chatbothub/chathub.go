@@ -843,7 +843,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}()
 
 						} else {
-
 							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,

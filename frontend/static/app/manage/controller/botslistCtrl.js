@@ -439,8 +439,27 @@
           "type": "string",
           "required": true,
         },
-      ]
+      ],
+      "RequestUrl": [
+        {
+          "name": "url",
+          "display": "url",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "xKey",
+          "display": "xKey",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "xUin",
+          "display": "xUin",
+          "type": "string",
+          "required": true,
+        },
+      ],
     }
+    
 
     $scope.close = () => {
       $uibModalInstance.dismiss();
