@@ -276,11 +276,9 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 	if inEvent.EventType == MESSAGE {
 		var msgStr string
 		err := json.Unmarshal([]byte(inEvent.Body), &msgStr)
-		if err != nil {
-			hub.Error(o.Err, "cannot parse %s", inEvent.Body)
-			return nil, err
+		if err == nil {
+			bodyString = msgStr
 		}
-		bodyString = msgStr
 	}
 
 	bodyJSON := o.FromJson(bodyString)
@@ -321,22 +319,11 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		}
 	}
 
-	if imageId != "" {
-		signedURL, err := utils.GenSignedURL(hub.ossBucket, imageId, inEvent.EventType)
-		if err != nil {
-			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imageId)
-		} else {
-			bodyJSON["signedUrl"] = signedURL
-		}
-	}
-
-	if thumbnailId != "" {
-		signedThumbnail, err := utils.GenSignedURL(hub.ossBucket, thumbnailId, inEvent.EventType)
-		if err != nil {
-			hub.Error(o.Err, "cannot get aliyun oss thumbnail url [%s]", thumbnailId)
-		} else {
-			bodyJSON["signedThumbnail"] = signedThumbnail
-		}
+	if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, imageId, thumbnailId, inEvent.EventType); err != nil {
+		hub.Error(err, "error occurred while generate signed image url")
+	} else {
+		bodyJSON["signedUrl"] = signedURL
+		bodyJSON["signedThumbnail"] = signedThumbnail
 	}
 
 	bodyJSON = o.ReplaceWechatMsgSource(bodyJSON)
@@ -454,12 +441,11 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			hub.updateChatRoom(bot, msg)
 
 			// signedUrl, signedThumbnail 不需要保存到数据库
-			if imageId != "" {
-				msg["signedUrl"], _ = utils.GenSignedURL(hub.ossBucket, imageId, "IMAGEMESSAGE")
-			}
-
-			if thumbnailId != "" {
-				msg["signedThumbnail"], _ = utils.GenSignedURL(hub.ossBucket, thumbnailId, "IMAGEMESSAGE", oss.Process("image/resize,l_160"))
+			if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, imageId, thumbnailId, "IMAGEMESSAGE"); err != nil {
+				hub.Error(err, "error occurred while sign image url")
+			} else {
+				msg["signedUrl"] = signedURL
+				msg["signedThumbnail"] = signedThumbnail
 			}
 
 			var eventType string

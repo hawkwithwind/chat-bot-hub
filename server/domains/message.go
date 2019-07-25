@@ -47,7 +47,7 @@ type WechatMessage struct {
 	UpdatedAt       time.Time             `json:"updateAt" bson:"updatedAt"`
 	FromUserContact *WechatMessageContact `json:"fromUserContact,omitempty" bson:"-"`
 	SignedUrl       string                `json:"signedUrl,omitempty" bson:"-"`
-	SignedThumbnail string                `json:"signedThumbnail,omitempty" bson:"="`
+	SignedThumbnail string                `json:"signedThumbnail,omitempty" bson:"-"`
 }
 
 type UnreadMessageMeta struct {
@@ -140,12 +140,10 @@ func (o *ErrorHandler) FillWechatMessagesImageSignedURL(ossBucket *oss.Bucket, m
 	for _, message := range messages {
 		if message.MType == 3 {
 			// 图片消息
-			message.SignedUrl, _ = utils.GenSignedURL(ossBucket, message.ImageId, "IMAGEMESSAGE")
-			message.SignedThumbnail, _ = utils.GenSignedURL(ossBucket, message.ThumbnailId, "IMAGEMESSAGE")
+			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, message.ImageId, message.ThumbnailId, "IMAGEMESSAGE")
 		} else if message.MType == 47 {
 			// emoji 消息
-			message.SignedUrl, _ = utils.GenSignedURL(ossBucket, message.ImageId, "EMOJIMESSAGE")
-			message.SignedThumbnail, _ = utils.GenSignedURL(ossBucket, message.ThumbnailId, "EMOJIMESSAGE")
+			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, message.ImageId, message.ThumbnailId, "EMOJIMESSAGE")
 		}
 	}
 }
