@@ -874,13 +874,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					hub.Info("status message\n%s\n", in.Body)
 
+					bodyString := in.Body
+
 					var msg string
-					o.Err = json.Unmarshal([]byte(in.Body), &msg)
-					if o.Err != nil {
-						hub.Error(o.Err, "cannot parse %s", in.Body)
+					if err := json.Unmarshal([]byte(in.Body), &msg); err == nil {
+						bodyString = msg
 					}
 
-					bodym := o.FromJson(msg)
+					bodym := o.FromJson(bodyString)
 					hub.Info("status message %v", bodym)
 
 					// if o.Err == nil {
