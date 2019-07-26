@@ -5,16 +5,23 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
-func genSignedURL(ossBucket *oss.Bucket, imageId string, messageType string, options ...oss.Option) (string, error) {
+type MessageType int
+
+const (
+	MessageTypeImage = iota
+	MessageTypeEmoji
+)
+
+func genSignedURL(ossBucket *oss.Bucket, imageId string, messageType MessageType, options ...oss.Option) (string, error) {
 	if imageId == "" {
 		return "", fmt.Errorf("imageId is required")
 	}
 
 	imageKey := ""
 
-	if messageType == "IMAGEMESSAGE" {
+	if messageType == MessageTypeImage {
 		imageKey = "chathub/images/" + imageId
-	} else if messageType == "EMOJIMESSAGE" {
+	} else if messageType == MessageTypeEmoji {
 		imageKey = "chathub/emoji/" + imageId
 	} else {
 		return "", fmt.Errorf("unkown message type to generate signed oss url for message type: %s\n", messageType)
@@ -24,7 +31,7 @@ func genSignedURL(ossBucket *oss.Bucket, imageId string, messageType string, opt
 }
 
 // 生成 image 和 thumbnailImage url，如果 thumbnailId 不存在，那么用 imageId + image process 方式生成 thumb
-func GenSignedURLPair(ossBucket *oss.Bucket, imageId string, thumbImageId string, messageType string) (string, string, error) {
+func GenSignedURLPair(ossBucket *oss.Bucket, messageType MessageType, imageId string, thumbImageId string) (string, string, error) {
 	if imageId == "" {
 		return "", "", fmt.Errorf("imageId must be supplied")
 	}
@@ -40,7 +47,14 @@ func GenSignedURLPair(ossBucket *oss.Bucket, imageId string, thumbImageId string
 			return "", "", fmt.Errorf("fail to generate signed thumbnail url for thumbImageId: %s", thumbImageId)
 		}
 	} else {
-		if signedThumbnail, err = genSignedURL(ossBucket, imageId, messageType, oss.Process("image/resize,l_160")); err != nil {
+		if messageType == MessageTypeImage {
+			signedThumbnail, err = genSignedURL(ossBucket, imageId, messageType, oss.Process("image/resize,l_160"))
+		} else if messageType == MessageTypeEmoji {
+			// emoji 不需要缩放
+			signedThumbnail, err = genSignedURL(ossBucket, imageId, messageType)
+		}
+
+		if err != nil {
 			return "", "", fmt.Errorf("fail to generate signed thumbnail url for imageId: %s", imageId)
 		}
 	}

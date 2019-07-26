@@ -140,10 +140,10 @@ func (o *ErrorHandler) FillWechatMessagesImageSignedURL(ossBucket *oss.Bucket, m
 	for _, message := range messages {
 		if message.MType == 3 {
 			// 图片消息
-			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, message.ImageId, message.ThumbnailId, "IMAGEMESSAGE")
+			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, message.ImageId, message.ThumbnailId)
 		} else if message.MType == 47 {
 			// emoji 消息
-			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, message.ImageId, message.ThumbnailId, "EMOJIMESSAGE")
+			message.SignedUrl, message.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeEmoji, message.ImageId, message.ThumbnailId)
 		}
 	}
 }
@@ -172,6 +172,16 @@ func (o *ErrorHandler) GetWechatMessageWithMsgId(db *mgo.Database, msgId string)
 	}
 
 	return result
+}
+
+func (o *ErrorHandler) ContainsWechatMessageWithMsgId(db *mgo.Database, msgId string) (bool, error) {
+	var count int
+	count, o.Err = db.C(WechatMessageCollection).Find(bson.M{"msgId": msgId}).Count()
+	if o.Err != nil {
+		return false, o.Err
+	}
+
+	return count > 0, nil
 }
 
 func (o *ErrorHandler) EnsureMessageIndexes(db *mgo.Database) {
@@ -282,6 +292,20 @@ func (o *ErrorHandler) buildGetMessagesCriteria(userId string, peerId string) bs
 
 	if strings.Index(peerId, "@chatroom") != -1 {
 		criteria["groupId"] = peerId
+
+		// 下面条件目的是为了去重，如果两个 bot 同再一个聊天室，那么每个 bot 都会收到相同消息，并且 msgid 不一样
+		// 有两种情况：
+		// 1. 别人发送的消息, 那么 toUser 必定是自己
+		// 2. 自己发送的消息，那么 fromUser 是自己，并且 toUser 和 groupId 相同
+		criteria["$or"] = []bson.M{
+			{
+				"toUser": userId,
+			},
+			{
+				"toUser":   peerId,
+				"fromUser": userId,
+			},
+		}
 	} else {
 		criteria["groupId"] = ""
 

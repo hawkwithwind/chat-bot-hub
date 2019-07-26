@@ -268,6 +268,24 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 	}()
 }
 
+func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) error {
+	o := ErrorHandler{}
+
+	messageId := o.FromMapString("msgId", messageBodyJSON, "actionBody", false, "")
+	if o.Err != nil {
+		hub.Error(o.Err, "message must contains msgId %v", messageBodyJSON)
+		return o.Err
+	}
+
+	if contains, err := o.ContainsWechatMessageWithMsgId(hub.mongoDb, messageId); err == nil {
+		if contains {
+			return fmt.Errorf("received duplicated message: %s", messageId)
+		}
+	}
+
+	return nil
+}
+
 func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
 	o := ErrorHandler{}
 
@@ -287,22 +305,26 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		return nil, o.Err
 	}
 
+	if err := hub.checkIsDupMessage(bodyJSON); err != nil {
+		return nil, err
+	}
+
 	imageId := ""
 	thumbnailId := ""
+	var messageType utils.MessageType
 
+	// image 和 emoji 消息，imageId 是必须的，thumbnailId 没有的话，会根据 imageId 自动生成缩略图链接
 	if inEvent.EventType == IMAGEMESSAGE {
+		messageType = utils.MessageTypeImage
 		imageId = o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "image message must contains imageId", bodyString)
 			return nil, o.Err
 		}
-		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", false, "")
-		if o.Err != nil {
-			hub.Error(o.Err, "image message does not contain thumbnailId", bodyString)
-			thumbnailId = imageId
-			o.Err = nil
-		}
+
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", true, "")
 	} else if inEvent.EventType == EMOJIMESSAGE {
+		messageType = utils.MessageTypeEmoji
 		imageId = o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "emoji message must contains emojiId", bodyString)
@@ -311,19 +333,16 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 
 		bodyJSON["imageId"] = imageId
 
-		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", false, "")
-		if o.Err != nil {
-			hub.Error(o.Err, "image message does not contain thumbnailId", bodyString)
-			thumbnailId = imageId
-			o.Err = nil
-		}
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", true, "")
 	}
 
-	if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, imageId, thumbnailId, inEvent.EventType); err != nil {
-		hub.Error(err, "error occurred while generate signed image url")
-	} else {
-		bodyJSON["signedUrl"] = signedURL
-		bodyJSON["signedThumbnail"] = signedThumbnail
+	if imageId != "" {
+		if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, messageType, imageId, thumbnailId); err != nil {
+			hub.Error(err, "error occurred while generate signed image url")
+		} else {
+			bodyJSON["signedUrl"] = signedURL
+			bodyJSON["signedThumbnail"] = signedThumbnail
+		}
 	}
 
 	bodyJSON = o.ReplaceWechatMsgSource(bodyJSON)
@@ -441,11 +460,13 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			hub.updateChatRoom(bot, msg)
 
 			// signedUrl, signedThumbnail 不需要保存到数据库
-			if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, imageId, thumbnailId, "IMAGEMESSAGE"); err != nil {
-				hub.Error(err, "error occurred while sign image url")
-			} else {
-				msg["signedUrl"] = signedURL
-				msg["signedThumbnail"] = signedThumbnail
+			if imageId != "" {
+				if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, utils.MessageTypeImage, imageId, thumbnailId); err != nil {
+					hub.Error(err, "error occurred while sign image url")
+				} else {
+					msg["signedUrl"] = signedURL
+					msg["signedThumbnail"] = signedThumbnail
+				}
 			}
 
 			var eventType string
