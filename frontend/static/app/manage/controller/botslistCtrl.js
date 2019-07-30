@@ -201,6 +201,13 @@
     $scope.data.login = login
 
     const commonParams = {
+      "fromUserName": {
+        "name": "fromUserName",
+        "display": "发件人",
+        "type": "string",
+        "required": true,
+        "comment": "发件人的wxid",
+      },
       "toUserName" : {
         "name": "toUserName",
         "display": "收件人",
@@ -295,8 +302,15 @@
           "name": "object",
           "display": "消息体",
           "type": "longstring",
-          "required": true,
+          "required": false,
           "comment": "json结构的消息体",
+        },
+        {
+          "name": "xml",
+          "dispaly": "xml",
+          "type": "longstring",
+          "required": false,
+          "comment": "xml结构的消息体，object和xml至少有一个必须",
         }
       ],
       "GetContact": [
@@ -317,9 +331,16 @@
         }
       ],
       "AcceptUser": [
+        commonParams.fromUserName,
         commonParams.stranger,
         commonParams.ticket,
-        commonParams.verifyMessage,
+        {
+          "name": "content",
+          "display": "content",
+          "type": "string",
+          "required": false,
+          "comment": "验证信息",
+        },
       ],
       "SayHello": [
         commonParams.stranger,
@@ -427,7 +448,39 @@
         commonParams.labelId,
         commonParams.userId,
       ],
+      "GetRequestToken": [
+        {
+          "name": "ghName",
+          "display": "公众号ID",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "url",
+          "display": "url",
+          "type": "string",
+          "required": true,
+        },
+      ],
+      "RequestUrl": [
+        {
+          "name": "url",
+          "display": "url",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "xKey",
+          "display": "xKey",
+          "type": "string",
+          "required": true,
+        }, {
+          "name": "xUin",
+          "display": "xUin",
+          "type": "string",
+          "required": true,
+        },
+      ],
     }
+    
 
     $scope.close = () => {
       $uibModalInstance.dismiss();

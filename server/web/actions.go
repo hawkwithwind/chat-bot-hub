@@ -868,12 +868,14 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					if len(foundms) == 0 {
-						if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-							if err := ctx.fluentLogger.Post(tag, m); err != nil {
-								ctx.Error(err, "push moment to fluentd failed")
+						if ctx.fluentLogger != nil {
+							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+								if err := ctx.fluentLogger.Post(tag, m); err != nil {
+									ctx.Error(err, "push moment to fluentd failed")
+								}
+							} else {
+								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						} else {
-							ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 						}
 					}
 
@@ -923,6 +925,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)
 			}
 
+		case chatbothub.RequestUrl:
+			ctx.Info("[RequestUrl] receive %d bytes", len(o.ToJson(localar)))
+			
 		default:
 			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}

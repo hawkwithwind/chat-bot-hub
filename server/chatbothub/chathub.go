@@ -268,6 +268,24 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 	}()
 }
 
+func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) error {
+	o := ErrorHandler{}
+
+	messageId := o.FromMapString("msgId", messageBodyJSON, "actionBody", false, "")
+	if o.Err != nil {
+		hub.Error(o.Err, "message must contains msgId %v", messageBodyJSON)
+		return o.Err
+	}
+
+	if contains, err := o.ContainsWechatMessageWithMsgId(hub.mongoDb, messageId); err == nil {
+		if contains {
+			return fmt.Errorf("received duplicated message: %s", messageId)
+		}
+	}
+
+	return nil
+}
+
 func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
 	o := ErrorHandler{}
 
@@ -276,11 +294,9 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 	if inEvent.EventType == MESSAGE {
 		var msgStr string
 		err := json.Unmarshal([]byte(inEvent.Body), &msgStr)
-		if err != nil {
-			hub.Error(o.Err, "cannot parse %s", inEvent.Body)
-			return nil, err
+		if err == nil {
+			bodyString = msgStr
 		}
-		bodyString = msgStr
 	}
 
 	bodyJSON := o.FromJson(bodyString)
@@ -289,16 +305,26 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		return nil, o.Err
 	}
 
-	imageId := ""
+	if err := hub.checkIsDupMessage(bodyJSON); err != nil {
+		return nil, err
+	}
 
+	imageId := ""
+	thumbnailId := ""
+	var messageType utils.MessageType
+
+	// image 和 emoji 消息，imageId 是必须的，thumbnailId 没有的话，会根据 imageId 自动生成缩略图链接
 	if inEvent.EventType == IMAGEMESSAGE {
+		messageType = utils.MessageTypeImage
 		imageId = o.FromMapString("imageId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "image message must contains imageId", bodyString)
 			return nil, o.Err
 		}
 
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", true, "")
 	} else if inEvent.EventType == EMOJIMESSAGE {
+		messageType = utils.MessageTypeEmoji
 		imageId = o.FromMapString("emojiId", bodyJSON, "actionBody", false, "")
 		if o.Err != nil {
 			hub.Error(o.Err, "emoji message must contains emojiId", bodyString)
@@ -306,14 +332,16 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		}
 
 		bodyJSON["imageId"] = imageId
+
+		thumbnailId = o.FromMapString("thumbnailId", bodyJSON, "actionBody", true, "")
 	}
 
 	if imageId != "" {
-		signedURL, err := utils.GenSignedURL(hub.ossBucket, imageId, inEvent.EventType)
-		if err != nil {
-			hub.Error(o.Err, "cannot get aliyun oss image url [%s]", imageId)
+		if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, messageType, imageId, thumbnailId); err != nil {
+			hub.Error(err, "error occurred while generate signed image url")
 		} else {
 			bodyJSON["signedUrl"] = signedURL
+			bodyJSON["signedThumbnail"] = signedThumbnail
 		}
 	}
 
@@ -385,7 +413,20 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			bodyJSON := o.FromJson(actionBody["body"].(string))
 			toUser := o.FromMapString("toUserName", bodyJSON, "actionBody.toUserName", false, "")
 			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
-			imageId := o.FromMapString("imageId", bodyJSON, "actionReply.actionBody", true, "")
+			description := content
+			imageId := o.FromMapString("imageId", resultData, "actionReply.result.data.imageId", true, "")
+			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, imageId)
+
+			// 尝试用 actionReply 中的数据 override
+			resultContent := o.FromMapString("content", resultData, "actionReply.result.data.content", true, "")
+			if resultContent != "" {
+				content = resultContent
+			}
+
+			resultDescription := o.FromMapString("description", resultData, "actionReply.result.data.description", true, "")
+			if resultDescription != "" {
+				description = resultDescription
+			}
 
 			groupId := ""
 			if regexp.MustCompile(`@chatroom$`).MatchString(toUser) {
@@ -408,14 +449,25 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 				"toUser":      toUser,
 				"groupId":     groupId,
 				"imageId":     imageId,
+				"thumbnailId": thumbnailId,
 				"content":     content,
 				"timestamp":   time.Now().Unix(),
 				"mType":       mType,
-				"description": content,
+				"description": description,
 			}
 
 			hub.saveMessageToDB(bot, msg)
 			hub.updateChatRoom(bot, msg)
+
+			// signedUrl, signedThumbnail 不需要保存到数据库
+			if imageId != "" {
+				if signedURL, signedThumbnail, err := utils.GenSignedURLPair(hub.ossBucket, utils.MessageTypeImage, imageId, thumbnailId); err != nil {
+					hub.Error(err, "error occurred while sign image url")
+				} else {
+					msg["signedUrl"] = signedURL
+					msg["signedThumbnail"] = signedThumbnail
+				}
+			}
 
 			var eventType string
 			if imageId != "" {
@@ -798,7 +850,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}()
 
 						} else {
-
 							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,
@@ -823,13 +874,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if bot.ClientType == WECHATBOT {
 					hub.Info("status message\n%s\n", in.Body)
 
+					bodyString := in.Body
+
 					var msg string
-					o.Err = json.Unmarshal([]byte(in.Body), &msg)
-					if o.Err != nil {
-						hub.Error(o.Err, "cannot parse %s", in.Body)
+					if err := json.Unmarshal([]byte(in.Body), &msg); err == nil {
+						bodyString = msg
 					}
 
-					bodym := o.FromJson(msg)
+					bodym := o.FromJson(bodyString)
 					hub.Info("status message %v", bodym)
 
 					// if o.Err == nil {

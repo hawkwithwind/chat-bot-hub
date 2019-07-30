@@ -185,8 +185,6 @@ func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (
 
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
-	o := &ErrorHandler{}
-
 	var bot *ChatBot
 	if req.ClientId == "" {
 		bot = hub.GetAvailableBot(req.ClientType)
@@ -194,11 +192,31 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		bot = hub.GetBot(req.ClientId)
 	}
 
+	o := &ErrorHandler{}
 	if bot != nil {
-		if o.Err == nil {
-			bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
+		if req.BotId == "" {
+			return &pb.BotLoginReply{
+				Msg: fmt.Sprintf("Login Bot Failed, BotId not set"),
+				ClientError: &pb.OperationReply{
+					Code:    int32(utils.PARAM_REQUIRED),
+					Message: fmt.Sprintf("Login Bot Failed, BotId not set"),
+				},
+			}, nil
 		}
 
+		thebot := hub.GetBotById(req.BotId)
+		if thebot != nil {
+			return &pb.BotLoginReply{
+				Msg: fmt.Sprintf("bot %s already login, should not login again", req.BotId),
+				ClientError: &pb.OperationReply{
+					Code:    int32(utils.STATUS_INCONSISTENT),
+					Message: fmt.Sprintf("bot %s already login, should not login again", req.BotId),
+				},
+			}, nil
+		}
+				
+		
+		bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 		body := o.ToJson(LoginBody{
 			BotId:     req.BotId,
 			Login:     req.Login,

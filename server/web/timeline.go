@@ -75,6 +75,10 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 	}
 
 	for _, bot := range botsreply.BotsInfo {
+		if bot.BotId == "" {
+			continue
+		}
+		
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return
@@ -120,6 +124,10 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 	}
 
 	for _, bot := range botsreply.BotsInfo {
+		if bot.BotId == "" {
+			continue
+		}
+		
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return

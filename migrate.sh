@@ -34,6 +34,7 @@ init*)
 	       mysql:8.0 \
 	       --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci && \
 	docker logs -f --tail 100 chatbothub_mysql_init
+    trap : INT
     docker stop chatbothub_mysql_init
     ;;
 
