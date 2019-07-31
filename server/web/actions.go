@@ -925,6 +925,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				ctx.Info("client %s not support SnsTimeline", thebotinfo.ClientType)
 			}
 
+		case chatbothub.RequestUrl:
+			ctx.Info("[RequestUrl] receive %d bytes", len(o.ToJson(localar)))
+			
 		default:
 			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}
