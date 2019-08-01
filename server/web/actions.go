@@ -1007,7 +1007,10 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o.ok(w, "", actionReply)
+	o.ok(w, "", map[string]interface{} {
+		"actionRequestId": ar.ActionRequestId,
+		"actionReply": actionReply,
+	})
 }
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
@@ -1024,7 +1027,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 			fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
 		return nil
 	}
-
+	
 	if hourCount > hourlimit {
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
 			fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
