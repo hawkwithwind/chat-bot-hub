@@ -157,6 +157,11 @@ func (ctx *WebServer) init() error {
 		ctx.Error(err, "declare queue contactinfo failed")
 		return err
 	}
+	err = ctx.rabbitmq.DeclareQueue(utils.CH_GetContact, true, false, false, false)
+	if err != nil {
+		ctx.Error(err, "declare queue getcontact failed")
+		return err
+	}
 
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
@@ -173,6 +178,11 @@ func (ctx *WebServer) init() error {
 		ctx.mqConsume(utils.CH_ContactInfo, utils.CONSU_WEB_ContactInfo)
 	}()
 	ctx.Info("begin consume rabbitmq contactinfo ...")
+
+	go func() {
+		ctx.mqConsume(utils.CH_GetContact, utils.CONSU_WEB_GetContact)
+	}()
+	ctx.Info("begin consume rabbitmq getcontact ...")
 
 	return nil
 }

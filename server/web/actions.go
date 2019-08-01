@@ -917,7 +917,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 						}
 					}
 					if _, ok := newMomentIds[minItem.MomentId]; ok {
-						ctx.Info("saving new moment tail b[%s] %s", thebotinfo.Login, minItem.MomentId)
+						ctx.Info("saving new moment tail b[%s] %s",
+							thebotinfo.Login, minItem.MomentId)
 						o.SaveMomentCrawlTail(ctx.redispool, thebotinfo.BotId, minItem.MomentId)
 					}
 				}

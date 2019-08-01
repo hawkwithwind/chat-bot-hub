@@ -23,8 +23,10 @@ type RabbitMQConfig struct {
 const (
 	CH_BotNotify          string = "botNotify"
 	CH_ContactInfo        string = "contactInfo"
+	CH_GetContact         string = "getContact"
 	CONSU_WEB_BotNotify   string = "webBotNotify"
 	CONSU_WEB_ContactInfo string = "webContactInfo"
+	CONSU_WEB_GetContact  string = "webGetContact"
 )
 
 const (
