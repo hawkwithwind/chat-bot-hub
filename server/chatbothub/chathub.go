@@ -97,7 +97,12 @@ func (hub *ChatHub) init() {
 		hub.Error(err, "declare queue contactinfo failed")
 		return
 	}
-
+	err = hub.rabbitmq.DeclareQueue(utils.CH_GetContact, true, false, false, false)
+	if err != nil {
+		hub.Error(err, "declare queue getcontact failed")
+		return
+	}
+	
 	// set global variable chathub
 	chathub = hub
 
@@ -850,7 +855,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}()
 
 						} else {
-							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							channelName := utils.CH_BotNotify
+							if actionType == GetContact {
+								channelName = utils.CH_GetContact
+							}
+							o.Err = hub.rabbitmq.Send(channelName, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,
 								Body: o.ToJson(domains.ActionRequest{
