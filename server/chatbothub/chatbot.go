@@ -604,38 +604,17 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		labelId := o.FromMapString("labelId", bodym, "actionbody", false, "")
+		labelIdList := o.FromMapString("labelIdList", bodym, "actionbody", false, "")
 
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
 
-		if strings.Contains(labelId, ",") {
-			// labelstrings := strings.Split(labelId, ",")
-			// labels := []int64{}
-			// for _, l := range labelstrings {
-			// 	labels = append(labels, o.ParseInt(l, 10, 64))
-			// 	if o.Err != nil {
-			// 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-			// 	}
-			// }
-
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
-				"userId":      userId,
-				"labelIdList": labelId,
-			}))
-		} else {
-			labelIdnumber := o.ParseInt(labelId, 10, 64)
-			if o.Err != nil {
-				return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-			}
-
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
-				"userId":  userId,
-				"labelId": labelIdnumber,
-			}))
-		}
-
+		o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+			"userId":      userId,
+			"labelIdList": labelIdList,
+		}))
+		
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
