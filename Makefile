@@ -9,9 +9,6 @@ PROTOC_PATH=/opt/programs/protoc/bin
 
 GOIMAGE=golang:1.11-alpine3.8
 
-alpine_mirror=mirrors.cloud.aliyuncs.com
-debian_mirror=mirrors.cloud.aliyuncs.com
-
 SOURCES=$(shell find server -type f -name '*.go' -not -path "./vendor/*")
 BASE=$(GOPATH)/src/$(PACKAGE)
 
@@ -75,7 +72,7 @@ test: $(SOURCES) $(RUNTIME_PATH) build-golang-image
         -e HTTPS_PROXY=$(https_proxy) \
         -e HTTP_PROXY=$(http_proxy) \
         -e DBPATH="$(TESTDBPATH)" \
-        --net=chatbothub_default \
+        --net=host \
 	-v $(GOPATH)/src:/go/src \
 	-v $(GOPATH)/pkg:/go/pkg \
 	-v $(shell pwd)/$(RUNTIME_PATH):/go/bin/${GOOS}_${GOARCH} \
