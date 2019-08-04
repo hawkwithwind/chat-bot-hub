@@ -7,7 +7,7 @@ x-defualts: &defaults
   build:
     context: docker/runtime
     args:
-      - mirror=$alpine_mirror
+      - mirror=mirrors.cloud.aliyuncs.com
       
   depends_on:
     - redis
@@ -31,6 +31,8 @@ services:
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - chatbothub-mysql:/var/lib/mysql
+    ports:
+      - '3306:3306'
       
   web:
     <<: *defaults
@@ -38,9 +40,7 @@ services:
     env_file:
       - ./mysql.env
       - ./rabbitmq.env
-    ports:
-      - '9000:9000'
-
+    
   hub:
     <<: *defaults
     command: ./app/server -s hub
@@ -56,6 +56,8 @@ services:
   streaming:
     <<: *defaults
     command: ./app/server -s streaming
+    env_file:
+      - ./mysql.env
     ports:
       - '13148:13148'
       
@@ -78,6 +80,16 @@ services:
     ports:
       - '5672:5672'
       - '15672:15672'
+
+  nginx:
+    restart: always
+    image: nginx:1.17-alpine
+    networks:
+      - chatbothub-network
+    volumes:
+      - ./config/web.conf:/etc/nginx/conf.d/web.conf
+    ports:
+      - '9000:9000'
 
 volumes:
   chatbothub-mysql:
