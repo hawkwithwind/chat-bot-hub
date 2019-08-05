@@ -628,7 +628,8 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 				BotId: botId,
 			})
 			if o.Err != nil {
-				return
+				web.Info("cannot shutdown bot {%s}, ignore {%s}", botId, o.Err)
+				o.Err = nil
 			}
 
 			if opreply.Code != 0 {
