@@ -608,6 +608,7 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 	switch bot.ChatbotType {
 	case chatbothub.WECHATBOT:
 		if bot.LoginInfo.Valid {
+			web.Info("clearlogininfo 1")
 			//info := chatbothub.LoginInfo{}
 			//err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
 			// this err can be ignored
@@ -621,21 +622,32 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 
 			o.UpdateBot(tx, bot)
 			if o.Err != nil {
+				web.Info("clearlogininfo 1.5 %#v", o.Err)
 				return
 			}
+			
+			web.Info("clearlogininfo 2")
 
 			opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
 				BotId: botId,
 			})
+			
 			if o.Err != nil {
 				web.Info("cannot shutdown bot {%s}, ignore {%s}", botId, o.Err)
 				o.Err = nil
 			}
 
+			web.Info("clearlogininfo 3")
+
 			if opreply.Code != 0 {
 				web.Info("cannot shutdown bot {%s}, ignore [%d] {%s}", botId, opreply.Code, opreply.Message)
 			}
-		}
+
+
+			web.Info("clearlogininfo 4")
+		} else {
+			web.Info("clearlogininfo 5")
+		}		 
 	default:
 		o.Err = fmt.Errorf("c[%s] not supported currently.", bot.ChatbotType)
 		return
