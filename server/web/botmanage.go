@@ -2,7 +2,7 @@ package web
 
 import (
 	"database/sql"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -608,15 +608,16 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 	switch bot.ChatbotType {
 	case chatbothub.WECHATBOT:
 		if bot.LoginInfo.Valid {
-			info := chatbothub.LoginInfo{}
-			err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
+			//info := chatbothub.LoginInfo{}
+			//err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
 			// this err can be ignored
-			if err == nil {
-				info.Token = ""
-				bot.LoginInfo.String = o.ToJson(info)
-			} else {
-				bot.LoginInfo.String = "{}"
-			}
+			// if err == nil {
+			// 	info.Token = ""
+			// 	bot.LoginInfo.String = o.ToJson(info)
+			// } else {
+			// 	bot.LoginInfo.String = "{}"
+			// }
+			bot.LoginInfo.String = "{}"
 
 			o.UpdateBot(tx, bot)
 			if o.Err != nil {
