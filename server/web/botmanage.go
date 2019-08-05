@@ -578,25 +578,36 @@ func (web *WebServer) botShutdown(w http.ResponseWriter, r *http.Request) {
 func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	web.Info("clearlogininfo 0.1")
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
 	accountName := o.getAccountName(r)
 
+	web.Info("clearlogininfo 0.2")
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
+
+	web.Info("clearlogininfo 0.3")
 
 	o.CheckBotOwnerById(tx, botId, accountName)
 	if o.Err != nil {
 		return
 	}
 
+	web.Info("clearlogininfo 0.4")
+
 	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
 	}
+
+	web.Info("clearlogininfo 0.5")
 
 	defer wrapper.Cancel()
 
@@ -605,6 +616,8 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	web.Info("clearlogininfo 0.6")
+	
 	switch bot.ChatbotType {
 	case chatbothub.WECHATBOT:
 		if bot.LoginInfo.Valid {
