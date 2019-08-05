@@ -633,10 +633,7 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 			}
 
 			if opreply.Code != 0 {
-				o.Err = utils.NewClientError(
-					utils.ClientErrorCode(opreply.Code),
-					fmt.Errorf(opreply.Message))
-				return
+				web.Info("cannot shutdown bot {%s}, ignore [%d] {%s}", botId, opreply.Code, opreply.Message)
 			}
 		}
 	default:
