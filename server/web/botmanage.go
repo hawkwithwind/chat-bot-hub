@@ -578,36 +578,25 @@ func (web *WebServer) botShutdown(w http.ResponseWriter, r *http.Request) {
 func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
-	defer o.BackEndError(web)
-
-	web.Info("clearlogininfo 0.1")
 
 	vars := mux.Vars(r)
 	botId := vars["botId"]
 
 	accountName := o.getAccountName(r)
 
-	web.Info("clearlogininfo 0.2")
-
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
-
-	web.Info("clearlogininfo 0.3")
 
 	o.CheckBotOwnerById(tx, botId, accountName)
 	if o.Err != nil {
 		return
 	}
 
-	web.Info("clearlogininfo 0.4")
-
 	wrapper, err := web.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err
 		return
 	}
-
-	web.Info("clearlogininfo 0.5")
 
 	defer wrapper.Cancel()
 
@@ -616,12 +605,9 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	web.Info("clearlogininfo 0.6")
-	
 	switch bot.ChatbotType {
 	case chatbothub.WECHATBOT:
 		if bot.LoginInfo.Valid {
-			web.Info("clearlogininfo 1")
 			//info := chatbothub.LoginInfo{}
 			//err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
 			// this err can be ignored
@@ -635,12 +621,9 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 
 			o.UpdateBot(tx, bot)
 			if o.Err != nil {
-				web.Info("clearlogininfo 1.5 %#v", o.Err)
 				return
 			}
 			
-			web.Info("clearlogininfo 2")
-
 			opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
 				BotId: botId,
 			})
@@ -650,17 +633,10 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 				o.Err = nil
 			}
 
-			web.Info("clearlogininfo 3")
-
 			if opreply.Code != 0 {
 				web.Info("cannot shutdown bot {%s}, ignore [%d] {%s}", botId, opreply.Code, opreply.Message)
 			}
-
-
-			web.Info("clearlogininfo 4")
-		} else {
-			web.Info("clearlogininfo 5")
-		}		 
+		}
 	default:
 		o.Err = fmt.Errorf("c[%s] not supported currently.", bot.ChatbotType)
 		return
