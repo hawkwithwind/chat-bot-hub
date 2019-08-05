@@ -484,6 +484,7 @@
           "required": true,
         },
       ],
+      "SyncContact": [],
     }
     
 
