@@ -191,21 +191,21 @@ func (o *ErrorHandler) SelectByCriteria(
 		limitclause,
 	)
 
-	sqlcountquery := fmt.Sprintf("SELECT COUNT(*) FROM %s %s",
-		sd.SelectFrom(),
-		whereclauseString,
-	)
+	// sqlcountquery := fmt.Sprintf("SELECT COUNT(*) FROM %s %s",
+	// 	sd.SelectFrom(),
+	// 	whereclauseString,
+	// )
 
 	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
+	
+	// var counts []int64
+	// ctxcc, _ := o.DefaultContext()
+	// o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)
+	// if o.Err != nil {
+	// 	return []interface{}{}, utils.Paging{}
+	// }
 
-	var counts []int64
-	ctxcc, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)
-	if o.Err != nil {
-		return []interface{}{}, utils.Paging{}
-	}
-
-	count := counts[0]
+	count := int64(0) //counts[0]
 
 	ctx, _ := o.DefaultContext()
 	var rows *sqlx.Rows
