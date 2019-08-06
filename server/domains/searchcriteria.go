@@ -197,7 +197,7 @@ func (o *ErrorHandler) SelectByCriteria(
 	// )
 
 	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
-	
+
 	// var counts []int64
 	// ctxcc, _ := o.DefaultContext()
 	// o.Err = q.SelectContext(ctxcc, &counts, sqlcountquery, whereparams...)

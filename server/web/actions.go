@@ -712,7 +712,12 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return nil
 			}
 
-			if info.UserName[:5] != "wxid_" {
+			// if info.UserName[:5] != "wxid_" {
+			// 	ctx.Info("search user not friend, ignore for now.\n%v", info)
+			// 	return nil
+			// }
+
+			if len(info.UserName) > 20 {
 				ctx.Info("search user not friend, ignore for now.\n%v", info)
 				return nil
 			}
@@ -928,7 +933,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		case chatbothub.RequestUrl:
 			ctx.Info("[RequestUrl] receive %d bytes", len(o.ToJson(localar)))
-			
+
 		default:
 			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}
@@ -1007,9 +1012,9 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o.ok(w, "", map[string]interface{} {
+	o.ok(w, "", map[string]interface{}{
 		"actionRequestId": ar.ActionRequestId,
-		"actionReply": actionReply,
+		"actionReply":     actionReply,
 	})
 }
 
@@ -1027,7 +1032,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 			fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
 		return nil
 	}
-	
+
 	if hourCount > hourlimit {
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
 			fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))

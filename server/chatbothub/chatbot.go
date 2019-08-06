@@ -614,7 +614,7 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 			"userId":      userId,
 			"labelIdList": labelIdList,
 		}))
-		
+
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))

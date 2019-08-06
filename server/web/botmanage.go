@@ -623,11 +623,11 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 			if o.Err != nil {
 				return
 			}
-			
+
 			opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
 				BotId: botId,
 			})
-			
+
 			if o.Err != nil {
 				web.Info("cannot shutdown bot {%s}, ignore {%s}", botId, o.Err)
 				o.Err = nil
@@ -795,7 +795,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 			login = bot.Login
 		}
 	}
-	
+
 	logininfo := ""
 	if bot.LoginInfo.Valid {
 		logininfo = bot.LoginInfo.String

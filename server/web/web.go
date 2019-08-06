@@ -75,6 +75,8 @@ type WebServer struct {
 	accounts      Accounts
 
 	rabbitmq *utils.RabbitMQWrapper
+
+	contactInfoDispatcher *ContactInfoDispatcher
 }
 
 func (ctx *WebServer) init() error {
@@ -93,7 +95,7 @@ func (ctx *WebServer) init() error {
 		FluentHost:   ctx.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
-	
+
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
 	}

@@ -3,7 +3,6 @@ package chatbothub
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/globalsign/mgo"
 	"io"
 	"log"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo"
 	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -102,7 +102,7 @@ func (hub *ChatHub) init() {
 		hub.Error(err, "declare queue getcontact failed")
 		return
 	}
-	
+
 	// set global variable chathub
 	chathub = hub
 
