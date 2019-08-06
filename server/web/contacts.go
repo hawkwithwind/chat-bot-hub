@@ -4,11 +4,47 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
+
+type ContactInfoDispatcher struct {
+	mux   sync.Mutex
+	pipes map[string]chan chan domains.ChatUser
+}
+
+// send to channel maybe block, this func must call as go routine
+func (cd *ContactInfoDispatcher) Listen(username string, ch chan domains.ChatUser) {
+	cd.mux.Lock()
+	defer cd.mux.Unlock()
+
+	if _, ok := cd.pipes[username]; !ok {
+		cd.pipes[username] = make(chan chan domains.ChatUser)
+	}
+
+	cd.pipes[username] <- ch
+}
+
+func (cd *ContactInfoDispatcher) Notify(username string, chatuser domains.ChatUser) {
+	cd.mux.Lock()
+	defer cd.mux.Unlock()
+
+	if pipe, ok := cd.pipes[username]; ok {
+		// remove this key, currently in lock.
+		delete(cd.pipes, username)
+
+		// send to channel maybe block, use go routine
+		go func() {
+			for ch := range pipe {
+				fmt.Printf("[sync get contact debug] notify %s", username)
+				ch <- chatuser
+			}
+		}()
+	}
+}
 
 type ContactRawInfo struct {
 	raw string
