@@ -2,9 +2,15 @@ package web
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"time"
+
+	"encoding/json"
+
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/web"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 func (server *WebServer) GetChatUser(_ context.Context, req *pb.GetChatUserRequest) (*pb.GetChatUserResponse, error) {
@@ -26,6 +32,85 @@ func (server *WebServer) GetChatUser(_ context.Context, req *pb.GetChatUserReque
 	response.Payload = payload
 
 	return response, nil
+}
+
+func (server *WebServer) GetChatUserSync(_ context.Context, req *pb.GetChatUserSyncRequest) (*pb.GetChatUserResponse, error) {
+	o := ErrorHandler{}
+
+	// 1. do same thing with getchatuser, if not null, return
+	tx := o.Begin(server.db)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+	defer o.CommitOrRollback(tx)
+
+	user := o.GetChatUserByName(tx, req.Type, req.UserName)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	if user != nil {
+		server.Info("[sync get chatuser debug] get chatuser by db")
+		response := &pb.GetChatUserResponse{}
+		payload, _ := json.Marshal(user)
+		response.Payload = payload
+
+		return response, nil
+	}
+
+	// 2. if get null from db call get contacts
+	if len(req.BotLogin) == 0 {
+		return nil, fmt.Errorf(
+			"can not find user: %s %s, botLogin is null", req.UserName, req.Type)
+	}
+
+	wrapper, err := server.NewGRPCWrapper()
+	if err != nil {
+		return nil, err
+	}
+
+	defer wrapper.Cancel()
+
+	ar := o.NewActionRequest(req.BotLogin, chatbothub.GetContact,
+		o.ToJson(map[string]interface{}{
+			"userId": req.UserName,
+		}), "NEW")
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	server.Info("[sync get chatuser debug] call grpc")
+	actionReply := o.CreateAndRunAction(server, ar)
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	if actionReply.ClientError.Code != 0 {
+		return nil, utils.NewClientError(
+			utils.ClientErrorCode(actionReply.ClientError.Code),
+			fmt.Errorf(actionReply.ClientError.Message))
+	}
+
+	// 3. wait for async return
+	ch := make(chan domains.ChatUser)
+	go server.contactInfoDispatcher.Listen(req.UserName, ch)
+
+	server.Info("[sync get chatuser debug] wait for reply")
+
+	select {
+	case chatuser := <-ch:
+		server.Info("[sync get chatuser debug] get reply from channel")
+		return &pb.GetChatUserResponse{
+			Payload: []byte(o.ToJson(chatuser)),
+		}, nil
+
+	case <-time.After(3 * time.Second):
+		server.Info("[sync get chatuser debug] wait reply timeout")
+		return nil, fmt.Errorf(
+			"cannot find user: %s %s %s, getcontact timeout",
+			req.UserName, req.Type, req.BotLogin)
+	}
 }
 
 func (server *WebServer) GetBot(_ context.Context, req *pb.GetBotRequest) (*pb.GetBotResponse, error) {

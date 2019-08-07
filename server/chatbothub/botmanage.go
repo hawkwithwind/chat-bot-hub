@@ -214,8 +214,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				},
 			}, nil
 		}
-				
-		
+
 		bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 		body := o.ToJson(LoginBody{
 			BotId:     req.BotId,

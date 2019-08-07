@@ -469,7 +469,8 @@ type ActionParam struct {
 	Name         string
 	FromName     string
 	HasDefault   bool
-	DefaultValue string
+	DefaultValue interface{}
+	Type         string
 }
 
 func NewActionParamCName(name string, fromName string, hasdefault bool, defaultvalue string) ActionParam {
@@ -478,6 +479,7 @@ func NewActionParamCName(name string, fromName string, hasdefault bool, defaultv
 		FromName:     fromName,
 		HasDefault:   hasdefault,
 		DefaultValue: defaultvalue,
+		Type:         "string",
 	}
 }
 
@@ -487,6 +489,17 @@ func NewActionParam(name string, hasdefault bool, defaultvalue string) ActionPar
 		FromName:     name,
 		HasDefault:   hasdefault,
 		DefaultValue: defaultvalue,
+		Type:         "string",
+	}
+}
+
+func NewActionParamFloat(name string, hasdefault bool, defaultvalue float64) ActionParam {
+	return ActionParam{
+		Name:         name,
+		FromName:     name,
+		HasDefault:   hasdefault,
+		DefaultValue: defaultvalue,
+		Type:         "float",
 	}
 }
 
@@ -501,7 +514,13 @@ func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body stri
 
 		parammap := make(map[string]interface{})
 		for _, p := range params {
-			paramvalue := o.FromMapString(p.FromName, bodym, "actionbody", p.HasDefault, p.DefaultValue)
+			var paramvalue interface{}
+			if p.Type == "float" {
+				paramvalue = o.FromMapFloat(p.FromName, bodym, "actionbody", p.HasDefault, p.DefaultValue.(float64))
+
+			} else {
+				paramvalue = o.FromMapString(p.FromName, bodym, "actionbody", p.HasDefault, p.DefaultValue.(string))
+			}
 			if o.Err != nil {
 				o.Err = utils.NewClientError(utils.PARAM_REQUIRED, o.Err)
 				return
@@ -526,7 +545,7 @@ func (bot *ChatBot) RequestUrl(actionType string, arId string, body string) erro
 	}
 
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
-	return o.Err	
+	return o.Err
 }
 
 func (bot *ChatBot) GetRequestToken(actionType string, arId string, body string) error {
@@ -538,7 +557,7 @@ func (bot *ChatBot) GetRequestToken(actionType string, arId string, body string)
 	}
 
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
-	return o.Err	
+	return o.Err
 }
 
 func (bot *ChatBot) GetLabelList(actionType string, arId string, body string) error {
@@ -585,37 +604,16 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 	if bot.ClientType == WECHATBOT {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		labelId := o.FromMapString("labelId", bodym, "actionbody", false, "")
+		labelIdList := o.FromMapString("labelIdList", bodym, "actionbody", false, "")
 
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
 
-		if strings.Contains(labelId, ",") {
-			// labelstrings := strings.Split(labelId, ",")
-			// labels := []int64{}
-			// for _, l := range labelstrings {
-			// 	labels = append(labels, o.ParseInt(l, 10, 64))
-			// 	if o.Err != nil {
-			// 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-			// 	}
-			// }
-
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
-				"userId":      userId,
-				"labelIdList": labelId,
-			}))
-		} else {
-			labelIdnumber := o.ParseInt(labelId, 10, 64)
-			if o.Err != nil {
-				return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-			}
-
-			o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
-				"userId":  userId,
-				"labelId": labelIdnumber,
-			}))
-		}
+		o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
+			"userId":      userId,
+			"labelIdList": labelIdList,
+		}))
 
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
@@ -688,9 +686,9 @@ func (bot *ChatBot) SnsobjectOP(actionType string, arId string, body string) err
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("momentId", false, ""),
-		NewActionParam("type", false, ""),
+		NewActionParamFloat("type", false, 0),
 		NewActionParam("commentId", false, ""),
-		NewActionParam("commentType", false, ""),
+		NewActionParamFloat("commentType", false, 0),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err

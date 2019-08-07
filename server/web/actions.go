@@ -712,7 +712,12 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return nil
 			}
 
-			if info.UserName[:5] != "wxid_" {
+			// if info.UserName[:5] != "wxid_" {
+			// 	ctx.Info("search user not friend, ignore for now.\n%v", info)
+			// 	return nil
+			// }
+
+			if len(info.UserName) > 20 {
 				ctx.Info("search user not friend, ignore for now.\n%v", info)
 				return nil
 			}
@@ -917,7 +922,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 						}
 					}
 					if _, ok := newMomentIds[minItem.MomentId]; ok {
-						ctx.Info("saving new moment tail b[%s] %s", thebotinfo.Login, minItem.MomentId)
+						ctx.Info("saving new moment tail b[%s] %s",
+							thebotinfo.Login, minItem.MomentId)
 						o.SaveMomentCrawlTail(ctx.redispool, thebotinfo.BotId, minItem.MomentId)
 					}
 				}
@@ -927,7 +933,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		case chatbothub.RequestUrl:
 			ctx.Info("[RequestUrl] receive %d bytes", len(o.ToJson(localar)))
-			
+
 		default:
 			ctx.Info("[DEFAULT Action Reply] %s\n", o.ToJson(localar))
 		}
@@ -1006,7 +1012,10 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o.ok(w, "", actionReply)
+	o.ok(w, "", map[string]interface{}{
+		"actionRequestId": ar.ActionRequestId,
+		"actionReply":     actionReply,
+	})
 }
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {

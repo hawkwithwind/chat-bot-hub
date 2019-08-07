@@ -3,7 +3,6 @@ package chatbothub
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/globalsign/mgo"
 	"io"
 	"log"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/getsentry/raven-go"
+	"github.com/globalsign/mgo"
 	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -95,6 +95,11 @@ func (hub *ChatHub) init() {
 	err = hub.rabbitmq.DeclareQueue(utils.CH_ContactInfo, true, false, false, false)
 	if err != nil {
 		hub.Error(err, "declare queue contactinfo failed")
+		return
+	}
+	err = hub.rabbitmq.DeclareQueue(utils.CH_GetContact, true, false, false, false)
+	if err != nil {
+		hub.Error(err, "declare queue getcontact failed")
 		return
 	}
 
@@ -850,7 +855,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}()
 
 						} else {
-							o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							channelName := utils.CH_BotNotify
+							if actionType == GetContact {
+								channelName = utils.CH_GetContact
+							}
+							o.Err = hub.rabbitmq.Send(channelName, o.ToJson(models.MqEvent{
 								BotId:     bot.BotId,
 								EventType: ACTIONREPLY,
 								Body: o.ToJson(domains.ActionRequest{

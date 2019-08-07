@@ -445,7 +445,12 @@
         commonParams.labelId,
       ],
       "SetLabel": [
-        commonParams.labelId,
+        {
+          "name": "labelIdList",
+          "display": "标签Id列表，逗号分隔",
+          "type": "string",
+          "required": true,
+        },
         commonParams.userId,
       ],
       "GetRequestToken": [
@@ -479,6 +484,7 @@
           "required": true,
         },
       ],
+      "SyncContact": [],
     }
     
 

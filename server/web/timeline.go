@@ -78,7 +78,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimeline(w http.ResponseWriter, r *ht
 		if bot.BotId == "" {
 			continue
 		}
-		
+
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return
@@ -127,7 +127,7 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 		if bot.BotId == "" {
 			continue
 		}
-		
+
 		botinfo := o.getTheBot(wrapper, bot.BotId)
 		if o.Err != nil {
 			return

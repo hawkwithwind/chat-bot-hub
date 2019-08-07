@@ -7,7 +7,6 @@ import (
 	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	_ "github.com/golang/protobuf/ptypes/any"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -72,6 +71,61 @@ func (m *GetChatUserRequest) GetType() string {
 	return ""
 }
 
+type GetChatUserSyncRequest struct {
+	UserName             string   `protobuf:"bytes,1,opt,name=userName,proto3" json:"userName,omitempty"`
+	Type                 string   `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	BotLogin             string   `protobuf:"bytes,3,opt,name=botLogin,proto3" json:"botLogin,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetChatUserSyncRequest) Reset()         { *m = GetChatUserSyncRequest{} }
+func (m *GetChatUserSyncRequest) String() string { return proto.CompactTextString(m) }
+func (*GetChatUserSyncRequest) ProtoMessage()    {}
+func (*GetChatUserSyncRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_461bb3ac99194e85, []int{1}
+}
+
+func (m *GetChatUserSyncRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetChatUserSyncRequest.Unmarshal(m, b)
+}
+func (m *GetChatUserSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetChatUserSyncRequest.Marshal(b, m, deterministic)
+}
+func (m *GetChatUserSyncRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetChatUserSyncRequest.Merge(m, src)
+}
+func (m *GetChatUserSyncRequest) XXX_Size() int {
+	return xxx_messageInfo_GetChatUserSyncRequest.Size(m)
+}
+func (m *GetChatUserSyncRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetChatUserSyncRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetChatUserSyncRequest proto.InternalMessageInfo
+
+func (m *GetChatUserSyncRequest) GetUserName() string {
+	if m != nil {
+		return m.UserName
+	}
+	return ""
+}
+
+func (m *GetChatUserSyncRequest) GetType() string {
+	if m != nil {
+		return m.Type
+	}
+	return ""
+}
+
+func (m *GetChatUserSyncRequest) GetBotLogin() string {
+	if m != nil {
+		return m.BotLogin
+	}
+	return ""
+}
+
 type GetChatUserResponse struct {
 	Payload              []byte   `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -83,7 +137,7 @@ func (m *GetChatUserResponse) Reset()         { *m = GetChatUserResponse{} }
 func (m *GetChatUserResponse) String() string { return proto.CompactTextString(m) }
 func (*GetChatUserResponse) ProtoMessage()    {}
 func (*GetChatUserResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_461bb3ac99194e85, []int{1}
+	return fileDescriptor_461bb3ac99194e85, []int{2}
 }
 
 func (m *GetChatUserResponse) XXX_Unmarshal(b []byte) error {
@@ -122,7 +176,7 @@ func (m *GetBotRequest) Reset()         { *m = GetBotRequest{} }
 func (m *GetBotRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBotRequest) ProtoMessage()    {}
 func (*GetBotRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_461bb3ac99194e85, []int{2}
+	return fileDescriptor_461bb3ac99194e85, []int{3}
 }
 
 func (m *GetBotRequest) XXX_Unmarshal(b []byte) error {
@@ -161,7 +215,7 @@ func (m *GetBotResponse) Reset()         { *m = GetBotResponse{} }
 func (m *GetBotResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBotResponse) ProtoMessage()    {}
 func (*GetBotResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_461bb3ac99194e85, []int{3}
+	return fileDescriptor_461bb3ac99194e85, []int{4}
 }
 
 func (m *GetBotResponse) XXX_Unmarshal(b []byte) error {
@@ -200,7 +254,7 @@ func (m *ValidateTokenRequest) Reset()         { *m = ValidateTokenRequest{} }
 func (m *ValidateTokenRequest) String() string { return proto.CompactTextString(m) }
 func (*ValidateTokenRequest) ProtoMessage()    {}
 func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_461bb3ac99194e85, []int{4}
+	return fileDescriptor_461bb3ac99194e85, []int{5}
 }
 
 func (m *ValidateTokenRequest) XXX_Unmarshal(b []byte) error {
@@ -239,7 +293,7 @@ func (m *ValidateTokenResponse) Reset()         { *m = ValidateTokenResponse{} }
 func (m *ValidateTokenResponse) String() string { return proto.CompactTextString(m) }
 func (*ValidateTokenResponse) ProtoMessage()    {}
 func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_461bb3ac99194e85, []int{5}
+	return fileDescriptor_461bb3ac99194e85, []int{6}
 }
 
 func (m *ValidateTokenResponse) XXX_Unmarshal(b []byte) error {
@@ -269,6 +323,7 @@ func (m *ValidateTokenResponse) GetPayload() []byte {
 
 func init() {
 	proto.RegisterType((*GetChatUserRequest)(nil), "chatbotweb.GetChatUserRequest")
+	proto.RegisterType((*GetChatUserSyncRequest)(nil), "chatbotweb.GetChatUserSyncRequest")
 	proto.RegisterType((*GetChatUserResponse)(nil), "chatbotweb.GetChatUserResponse")
 	proto.RegisterType((*GetBotRequest)(nil), "chatbotweb.GetBotRequest")
 	proto.RegisterType((*GetBotResponse)(nil), "chatbotweb.GetBotResponse")
@@ -279,28 +334,29 @@ func init() {
 func init() { proto.RegisterFile("web.proto", fileDescriptor_461bb3ac99194e85) }
 
 var fileDescriptor_461bb3ac99194e85 = []byte{
-	// 323 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0x5f, 0x4b, 0x02, 0x41,
-	0x14, 0xc5, 0xdb, 0x28, 0xcb, 0x5b, 0x16, 0x4c, 0x06, 0x3a, 0x0f, 0x69, 0x03, 0x41, 0x44, 0xac,
-	0xf4, 0xe7, 0x0b, 0xb4, 0x05, 0xd2, 0x4b, 0x88, 0x94, 0x3d, 0xcf, 0xb4, 0xb7, 0x5d, 0xd1, 0x76,
-	0x36, 0xf7, 0x6e, 0x83, 0x1f, 0xbd, 0xb7, 0x70, 0x6c, 0x5c, 0x33, 0xcb, 0xb7, 0x3d, 0x7b, 0xcf,
-	0xfc, 0x2e, 0xe7, 0x70, 0xa1, 0x6c, 0x50, 0xf9, 0xe9, 0x48, 0x93, 0x66, 0xf0, 0x12, 0x4b, 0x52,
-	0x9a, 0x0c, 0x2a, 0x5e, 0x8f, 0xb4, 0x8e, 0x86, 0xd8, 0xb2, 0x13, 0x95, 0xbf, 0xb6, 0x64, 0x32,
-	0x9e, 0xda, 0xc4, 0x1d, 0xb0, 0x36, 0xd2, 0x6d, 0x2c, 0xe9, 0x29, 0xc3, 0x51, 0x17, 0xdf, 0x73,
-	0xcc, 0x88, 0x71, 0xd8, 0xce, 0x33, 0x1c, 0x3d, 0xc8, 0x37, 0xac, 0x79, 0x4d, 0xef, 0xb4, 0xdc,
-	0x9d, 0x69, 0xc6, 0x60, 0x83, 0xc6, 0x29, 0xd6, 0xd6, 0xed, 0x7f, 0xfb, 0x2d, 0x5a, 0x70, 0xf0,
-	0x83, 0x92, 0xa5, 0x3a, 0xc9, 0x90, 0xd5, 0x60, 0x2b, 0x95, 0xe3, 0xa1, 0x96, 0xa1, 0xa5, 0xec,
-	0x76, 0x9d, 0x14, 0x27, 0x50, 0x69, 0x23, 0x05, 0x9a, 0xdc, 0xc6, 0x2a, 0x6c, 0x2a, 0x4d, 0xf7,
-	0xe1, 0xf7, 0xba, 0xa9, 0x10, 0x67, 0xb0, 0xe7, 0x6c, 0x2b, 0x91, 0xe7, 0x50, 0xed, 0xc9, 0x61,
-	0x3f, 0x94, 0x84, 0x8f, 0x7a, 0x80, 0xc9, 0x1c, 0x99, 0x26, 0xda, 0x91, 0xad, 0x10, 0x17, 0x70,
-	0xb8, 0xe0, 0x5e, 0xb5, 0xe0, 0xf2, 0xd3, 0x03, 0x98, 0x44, 0x0c, 0x34, 0x3d, 0xa3, 0x62, 0x1d,
-	0xd8, 0x89, 0x8a, 0xcc, 0xec, 0xc8, 0x2f, 0x0a, 0xf7, 0x7f, 0x57, 0xca, 0x1b, 0x7f, 0xce, 0xa7,
-	0x8b, 0xc5, 0x1a, 0xbb, 0x81, 0x52, 0x64, 0xd3, 0xb2, 0xfa, 0x82, 0xb9, 0x28, 0x8a, 0xf3, 0x65,
-	0xa3, 0x19, 0xa2, 0x07, 0x95, 0x8f, 0xf9, 0x58, 0xac, 0x39, 0x6f, 0x5f, 0xd6, 0x0f, 0x3f, 0xfe,
-	0xc7, 0xe1, 0xb8, 0xc1, 0x35, 0x34, 0x12, 0x24, 0x3f, 0x96, 0x66, 0x60, 0xfa, 0x14, 0x9b, 0x7e,
-	0x12, 0xba, 0x67, 0x71, 0xae, 0x7c, 0x83, 0x2a, 0xd8, 0x2f, 0xba, 0xe9, 0x4c, 0x4e, 0xab, 0xe3,
-	0xa9, 0x92, 0xbd, 0xb1, 0xab, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb8, 0x7b, 0x62, 0x96, 0x97,
-	0x02, 0x00, 0x00,
+	// 350 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xdf, 0x4e, 0xf2, 0x40,
+	0x10, 0xc5, 0x3f, 0xf8, 0x14, 0x65, 0x14, 0x49, 0x56, 0x34, 0xb5, 0x17, 0x82, 0x9b, 0x98, 0x18,
+	0x63, 0x6a, 0xfc, 0xf3, 0x02, 0x56, 0x13, 0x62, 0x62, 0x0c, 0x41, 0x45, 0x6f, 0x77, 0xe9, 0xa4,
+	0x6d, 0xc0, 0x6e, 0xa5, 0x83, 0x0d, 0xcf, 0xe9, 0x0b, 0x99, 0x16, 0x97, 0x16, 0x04, 0x31, 0xde,
+	0xf5, 0x74, 0xcf, 0xfe, 0x66, 0x76, 0x4e, 0x06, 0xca, 0x31, 0x4a, 0x2b, 0x1c, 0x28, 0x52, 0x0c,
+	0xba, 0x9e, 0x20, 0xa9, 0x28, 0x46, 0xc9, 0x6f, 0x80, 0x35, 0x91, 0xae, 0x3d, 0x41, 0x4f, 0x11,
+	0x0e, 0xda, 0xf8, 0x36, 0xc4, 0x88, 0x98, 0x09, 0xeb, 0xc3, 0x08, 0x07, 0xf7, 0xe2, 0x15, 0x8d,
+	0x42, 0xa3, 0x70, 0x54, 0x6e, 0x4f, 0x34, 0x63, 0xb0, 0x42, 0xa3, 0x10, 0x8d, 0x62, 0xfa, 0x3f,
+	0xfd, 0xe6, 0x0e, 0xec, 0xe6, 0x28, 0x0f, 0xa3, 0xa0, 0xfb, 0x47, 0x52, 0xe2, 0x97, 0x8a, 0xee,
+	0x94, 0xeb, 0x07, 0xc6, 0xff, 0xb1, 0x5f, 0x6b, 0x7e, 0x0a, 0xdb, 0x53, 0xbd, 0x46, 0xa1, 0x0a,
+	0x22, 0x64, 0x06, 0xac, 0x85, 0x62, 0xd4, 0x57, 0xc2, 0x49, 0x2b, 0x6c, 0xb6, 0xb5, 0xe4, 0x87,
+	0x50, 0x69, 0x22, 0xd9, 0x8a, 0x74, 0x37, 0x35, 0x58, 0x95, 0x8a, 0x6e, 0x9d, 0xaf, 0x56, 0xc6,
+	0x82, 0x1f, 0xc3, 0x96, 0xb6, 0x2d, 0x45, 0x9e, 0x40, 0xad, 0x23, 0xfa, 0xbe, 0x23, 0x08, 0x1f,
+	0x55, 0x0f, 0x83, 0x1c, 0x99, 0x12, 0xad, 0xc9, 0xa9, 0xe0, 0x67, 0xb0, 0x33, 0xe3, 0x5e, 0x56,
+	0xe0, 0xfc, 0xa3, 0x08, 0x90, 0x3c, 0xd1, 0x56, 0xf4, 0x8c, 0x92, 0xb5, 0x60, 0xc3, 0xcd, 0xde,
+	0xcc, 0xf6, 0xad, 0x2c, 0x3b, 0xeb, 0x7b, 0x70, 0x66, 0x7d, 0xe1, 0xf9, 0xb8, 0x30, 0xff, 0xc7,
+	0x5e, 0xa0, 0xea, 0x4e, 0x67, 0xc5, 0xf8, 0x82, 0x5b, 0xb9, 0x20, 0x7f, 0x43, 0xbe, 0x82, 0x92,
+	0x9b, 0xce, 0x91, 0xed, 0xcd, 0x98, 0xb3, 0x08, 0x4c, 0x73, 0xde, 0xd1, 0x04, 0xd1, 0x81, 0xca,
+	0x7b, 0x7e, 0x60, 0xac, 0x91, 0xb7, 0xcf, 0x9b, 0xbc, 0x79, 0xf0, 0x83, 0x43, 0x73, 0xed, 0x4b,
+	0xa8, 0x07, 0x48, 0x96, 0x27, 0xe2, 0x5e, 0xec, 0x93, 0x17, 0xfb, 0x81, 0xa3, 0xaf, 0x79, 0x43,
+	0x69, 0xc5, 0x28, 0xed, 0x6a, 0x36, 0xf5, 0x56, 0xb2, 0x26, 0xad, 0x82, 0x2c, 0xa5, 0xfb, 0x72,
+	0xf1, 0x19, 0x00, 0x00, 0xff, 0xff, 0xe2, 0xce, 0x53, 0x90, 0x3c, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -316,6 +372,7 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ChatBotWebClient interface {
 	GetChatUser(ctx context.Context, in *GetChatUserRequest, opts ...grpc.CallOption) (*GetChatUserResponse, error)
+	GetChatUserSync(ctx context.Context, in *GetChatUserSyncRequest, opts ...grpc.CallOption) (*GetChatUserResponse, error)
 	GetBot(ctx context.Context, in *GetBotRequest, opts ...grpc.CallOption) (*GetBotResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 }
@@ -331,6 +388,15 @@ func NewChatBotWebClient(cc *grpc.ClientConn) ChatBotWebClient {
 func (c *chatBotWebClient) GetChatUser(ctx context.Context, in *GetChatUserRequest, opts ...grpc.CallOption) (*GetChatUserResponse, error) {
 	out := new(GetChatUserResponse)
 	err := c.cc.Invoke(ctx, "/chatbotweb.ChatBotWeb/getChatUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatBotWebClient) GetChatUserSync(ctx context.Context, in *GetChatUserSyncRequest, opts ...grpc.CallOption) (*GetChatUserResponse, error) {
+	out := new(GetChatUserResponse)
+	err := c.cc.Invoke(ctx, "/chatbotweb.ChatBotWeb/getChatUserSync", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -358,6 +424,7 @@ func (c *chatBotWebClient) ValidateToken(ctx context.Context, in *ValidateTokenR
 // ChatBotWebServer is the server API for ChatBotWeb service.
 type ChatBotWebServer interface {
 	GetChatUser(context.Context, *GetChatUserRequest) (*GetChatUserResponse, error)
+	GetChatUserSync(context.Context, *GetChatUserSyncRequest) (*GetChatUserResponse, error)
 	GetBot(context.Context, *GetBotRequest) (*GetBotResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 }
@@ -368,6 +435,9 @@ type UnimplementedChatBotWebServer struct {
 
 func (*UnimplementedChatBotWebServer) GetChatUser(ctx context.Context, req *GetChatUserRequest) (*GetChatUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChatUser not implemented")
+}
+func (*UnimplementedChatBotWebServer) GetChatUserSync(ctx context.Context, req *GetChatUserSyncRequest) (*GetChatUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChatUserSync not implemented")
 }
 func (*UnimplementedChatBotWebServer) GetBot(ctx context.Context, req *GetBotRequest) (*GetBotResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBot not implemented")
@@ -394,6 +464,24 @@ func _ChatBotWeb_GetChatUser_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatBotWebServer).GetChatUser(ctx, req.(*GetChatUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatBotWeb_GetChatUserSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatUserSyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatBotWebServer).GetChatUserSync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chatbotweb.ChatBotWeb/GetChatUserSync",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatBotWebServer).GetChatUserSync(ctx, req.(*GetChatUserSyncRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -441,6 +529,10 @@ var _ChatBotWeb_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "getChatUser",
 			Handler:    _ChatBotWeb_GetChatUser_Handler,
+		},
+		{
+			MethodName: "getChatUserSync",
+			Handler:    _ChatBotWeb_GetChatUserSync_Handler,
 		},
 		{
 			MethodName: "getBot",

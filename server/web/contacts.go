@@ -4,11 +4,47 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
+
+type ContactInfoDispatcher struct {
+	mux   sync.Mutex
+	pipes map[string]chan chan domains.ChatUser
+}
+
+// send to channel maybe block, this func must call as go routine
+func (cd *ContactInfoDispatcher) Listen(username string, ch chan domains.ChatUser) {
+	cd.mux.Lock()
+	defer cd.mux.Unlock()
+
+	if _, ok := cd.pipes[username]; !ok {
+		cd.pipes[username] = make(chan chan domains.ChatUser)
+	}
+
+	cd.pipes[username] <- ch
+}
+
+func (cd *ContactInfoDispatcher) Notify(username string, chatuser domains.ChatUser) {
+	cd.mux.Lock()
+	defer cd.mux.Unlock()
+
+	if pipe, ok := cd.pipes[username]; ok {
+		// remove this key, currently in lock.
+		delete(cd.pipes, username)
+
+		// send to channel maybe block, use go routine
+		go func() {
+			for ch := range pipe {
+				fmt.Printf("[sync get contact debug] notify %s", username)
+				ch <- chatuser
+			}
+		}()
+	}
+}
 
 type ContactRawInfo struct {
 	raw string
@@ -105,7 +141,7 @@ func (web *WebServer) processUsers() {
 
 		select {
 		case ccinfo := <-web.contactParser.userPipe:
-			web.Info("[contacts debug] receive user info")
+			//web.Info("[contacts debug] receive user info")
 
 			info := ccinfo.body
 			thebotinfo := ccinfo.bot
@@ -136,9 +172,9 @@ func (web *WebServer) processUsers() {
 		} else {
 			//web.Info("[contacts debug] isTimeout %v, users[%d]", isTimeout, len(users))
 
-			if len(users) > 0 {
-				web.Info("[contacts debug] stock user %d", len(users))
-			}
+			// if len(users) > 0 {
+			// 	web.Info("[contacts debug] stock user %d", len(users))
+			// }
 		}
 	}
 }
@@ -163,6 +199,23 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 	for _, dbu := range dbusers {
 		findm[dbu.UserName] = dbu.ChatUserId
 	}
+
+	/*
+	 *  lookup sync-get-contact maps, notify if needed
+	 */
+
+	go func() {
+		if web.contactInfoDispatcher == nil {
+			web.Info("[sync get contact debug] web.contactInfoDispatcher is nil")
+			return
+		}
+
+		for _, dbu := range dbusers {
+			web.contactInfoDispatcher.Notify(dbu.UserName, dbu)
+		}
+	}()
+
+	// ------- sync-get-contact notify end ------
 
 	if o.Err != nil {
 		web.Error(o.Err, "[Contacts debug] failed to save users [%d]", len(users))
@@ -210,7 +263,7 @@ func (web *WebServer) processGroups() {
 
 		select {
 		case cpinfo := <-web.contactParser.groupPipe:
-			web.Info("[contacts group debug] receive group info")
+			//web.Info("[contacts group debug] receive group info")
 
 			info := cpinfo.body
 			thebotinfo := cpinfo.bot
@@ -408,7 +461,7 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 func (web *WebServer) processContacts() {
 	for {
 		raw := <-web.contactParser.rawPipe
-		web.Info("[contacts debug] get raw")
+		//web.Info("[contacts debug] get raw")
 		o := &ErrorHandler{}
 
 		info := WechatContactInfo{}
@@ -433,7 +486,7 @@ func (web *WebServer) processContacts() {
 
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
-			web.Info("[contacts debug] receive raw users")
+			//web.Info("[contacts debug] receive raw users")
 			web.contactParser.userPipe <- ContactProcessInfo{info, raw.bot}
 		}
 	}

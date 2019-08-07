@@ -2,7 +2,7 @@ package web
 
 import (
 	"database/sql"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -608,15 +608,16 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 	switch bot.ChatbotType {
 	case chatbothub.WECHATBOT:
 		if bot.LoginInfo.Valid {
-			info := chatbothub.LoginInfo{}
-			err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
+			//info := chatbothub.LoginInfo{}
+			//err := json.Unmarshal([]byte(bot.LoginInfo.String), &info)
 			// this err can be ignored
-			if err == nil {
-				info.Token = ""
-				bot.LoginInfo.String = o.ToJson(info)
-			} else {
-				bot.LoginInfo.String = "{}"
-			}
+			// if err == nil {
+			// 	info.Token = ""
+			// 	bot.LoginInfo.String = o.ToJson(info)
+			// } else {
+			// 	bot.LoginInfo.String = "{}"
+			// }
+			bot.LoginInfo.String = "{}"
 
 			o.UpdateBot(tx, bot)
 			if o.Err != nil {
@@ -626,15 +627,14 @@ func (web *WebServer) clearBotLoginInfo(w http.ResponseWriter, r *http.Request) 
 			opreply := o.BotShutdown(wrapper, &pb.BotLogoutRequest{
 				BotId: botId,
 			})
+
 			if o.Err != nil {
-				return
+				web.Info("cannot shutdown bot {%s}, ignore {%s}", botId, o.Err)
+				o.Err = nil
 			}
 
 			if opreply.Code != 0 {
-				o.Err = utils.NewClientError(
-					utils.ClientErrorCode(opreply.Code),
-					fmt.Errorf(opreply.Message))
-				return
+				web.Info("cannot shutdown bot {%s}, ignore [%d] {%s}", botId, opreply.Code, opreply.Message)
 			}
 		}
 	default:
@@ -795,7 +795,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 			login = bot.Login
 		}
 	}
-	
+
 	logininfo := ""
 	if bot.LoginInfo.Valid {
 		logininfo = bot.LoginInfo.String
