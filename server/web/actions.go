@@ -1007,6 +1007,8 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx.Info("ar is " + o.ToJson(ar))
+
 	actionReply := o.CreateAndRunAction(ctx, ar)
 	if o.Err != nil {
 		return
