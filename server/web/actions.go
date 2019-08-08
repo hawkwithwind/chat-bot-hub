@@ -1053,6 +1053,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
+		web.Error(o.Err, o.ToJson(ar));
 		return nil
 	}
 
