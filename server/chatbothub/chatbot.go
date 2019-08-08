@@ -747,11 +747,15 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	bot.Info("send app message " + content)
 
 	contentm := o.FromJson(content)
+
+	bot.Info("send app message 001")
 	if o.Err != nil {
 		bot.Info("cannot parse json " + content)
 		
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
+
+	bot.Info("send app message 002")
 
 	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
 		"toUserName": toUserName,
@@ -1129,7 +1133,11 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
+		bot.Info("send text message 001")
 		bodym := o.FromJson(body)
+		if o.Err != nil {
+			bot.Info("parse body failed " + body)
+		}
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		content_if := o.FromMap("content", bodym, "actionbody", nil)
 
@@ -1139,6 +1147,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 
 		switch content := content_if.(type) {
 		case string:
+			bot.Info("send text message string")
 			var atList []interface{}
 			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 				atList = atListptr.([]interface{})
@@ -1152,6 +1161,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 			}))
 
 		case map[string]interface{}:
+			bot.Info("send text message map")
 			msg_if := o.FromMap("msg", content, "content", nil)
 
 			var msg WechatMsg

@@ -177,6 +177,7 @@ func (ctx *ErrorHandler) BotAction(w *rpc.GRPCWrapper, req *pb.BotActionRequest)
 	}
 
 	if actionreply, err := w.HubClient.BotAction(w.Context, req); err != nil {
+		fmt.Println("bot action err")
 		ctx.Err = err
 		return nil
 	} else if actionreply == nil {
