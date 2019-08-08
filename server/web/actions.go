@@ -1011,6 +1011,7 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 	actionReply := o.CreateAndRunAction(ctx, ar)
 	if o.Err != nil {
+		ctx.Info("create and run action failed")
 		return
 	}
 
@@ -1053,9 +1054,11 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}
 
+	web.Info("action request is " + o.ToJson(ar))
+	
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
-		web.Error(o.Err, o.ToJson(ar));
+		web.Error(o.Err, "ar is " +  o.ToJson(ar));
 		return nil
 	}
 
