@@ -744,6 +744,8 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
+	bot.Info("send app message " + content)
+
 	contentm := o.FromJson(content)
 	if o.Err != nil {
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)

@@ -498,9 +498,9 @@
       if (!data.actionBody) {
         data.actionBody = JSON.stringify({})
       } else {
-        if(data.actionBody.object) {
-          data.actionBody.object = JSON.parse(data.actionBody.object)
-        }
+        // if(data.actionBody.object) {
+        //   data.actionBody.object = JSON.parse(data.actionBody.object)
+        // }
         
         if(data.actionBody.memberList) {
           data.actionBody.memberList = JSON.parse(data.actionBody.memberList)
