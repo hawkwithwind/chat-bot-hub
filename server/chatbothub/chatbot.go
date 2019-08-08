@@ -748,6 +748,8 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 
 	contentm := o.FromJson(content)
 	if o.Err != nil {
+		bot.Info("cannot parse json " + content)
+		
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
