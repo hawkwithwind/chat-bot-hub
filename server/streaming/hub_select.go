@@ -23,7 +23,7 @@ func (server *Server) listen(client pb.ChatBotHubClient) error {
 	go func() {
 		register := pb.EventRequest{
 			EventType:  "REGISTER",
-			ClientId:   "stream001",
+			ClientId:   server.Config.ClientId,
 			ClientType: "streaming",
 			Body:       "",
 		}
@@ -45,7 +45,7 @@ func (server *Server) listen(client pb.ChatBotHubClient) error {
 			case <-ticker.C:
 				ping := pb.EventRequest{
 					EventType:  "PING",
-					ClientId:   "stream001",
+					ClientId:   server.Config.ClientId,
 					ClientType: "streaming",
 					Body:       "",
 				}
