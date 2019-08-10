@@ -9,6 +9,8 @@ import (
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	
 )
 
 type ContactInfoDispatcher struct {
@@ -312,6 +314,7 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 	for _, cg := range groups {
 		owners = append(owners, o.NewChatUser(cg.chatgroup.Owner, cg.bot.ClientType, ""))
 	}
+	
 	theowners := o.FindOrCreateChatUsers(tx, owners)
 	if o.Err != nil {
 		return o.Err
@@ -333,6 +336,24 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 			savegroups = append(savegroups, cg.chatgroup)
 		} else {
 			web.Info("save group %s owner %s failed", cg.chatgroup.GroupName, cg.chatgroup.Owner)
+		}
+	}
+
+	// 2.5 send get room members actions to hub
+	for _, cg := range groups {
+		oa := &ErrorHandler{}
+		// new error handler, ignore these error
+		ar := oa.NewActionRequest(cg.bot.Login, chatbothub.GetRoomMembers, o.ToJson(
+			map[string]interface{}{
+				"groupId": cg.chatgroup.GroupName,
+			}), "NEW")
+		actionreply := oa.CreateAndRunAction(web, ar)
+
+		if oa.Err != nil {
+			web.Error(oa.Err, "get roommembers %s failed", cg.chatgroup.GroupName)
+		}
+		if actionreply.Success == false {
+			web.Info("get roommember %s failed %v", cg.chatgroup.GroupName, actionreply)
 		}
 	}
 
@@ -461,7 +482,7 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 func (web *WebServer) processContacts() {
 	for {
 		raw := <-web.contactParser.rawPipe
-		web.Info("[contacts debug] get raw")
+		//web.Info("[contacts debug] get raw")
 		o := &ErrorHandler{}
 
 		info := WechatContactInfo{}
@@ -479,7 +500,7 @@ func (web *WebServer) processContacts() {
 
 		// insert or update contact for this contact
 		if regexp.MustCompile(`@chatroom$`).MatchString(info.UserName) {
-			web.Info("[contacts debug] receive raw groups")
+			//web.Info("[contacts debug] receive raw groups")
 			if len(info.ChatRoomOwner) == 0 {
 				continue
 			}
