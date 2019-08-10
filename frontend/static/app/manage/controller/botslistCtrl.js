@@ -117,6 +117,18 @@
       })
     }
 
+    $scope.clearLoginInfo = (row) => {
+      buildPromise(buildModelResId('bots', row.botId + '/clearlogininfo').update((data) => {
+        toastr.success(data, '清除成功')
+      }))
+    }
+
+    $scope.shutdown = (row) => {
+      buildPromise(buildModelResId('bots', row.botId + '/shutdown').update((data) => {
+        toastr.success(data, '关闭成功')
+      }))
+    }
+
     $scope.botAction = (row) => {
       $modal.open({
 	templateUrl: 'botActionTemplate',

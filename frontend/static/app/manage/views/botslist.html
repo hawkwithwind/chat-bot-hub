@@ -39,8 +39,9 @@
 	      </span>
 	      <span ng-if="row.clientType == 'WECHATBOT'">
 		<a href="javascript:;" ng-click="wechatLogin(row)">登录</a> |
-		<a href="javascript:;" ng-click="showWechatLogin(row)">密码</a> |
-		<a href="javascript:;" ng-click="showScanUrl(row)">取码</a>
+                <a href="javascript:;" ng-click="showScanUrl(row)">取码</a> | <br/>
+		<a href="javascript:;" ng-click="clearLoginInfo(row)">清除登录数据</a> |
+                <a href="javascript:;" ng-click="shutdown(row)">关闭客户端</a>
 	      </span>
 	    </span>
 	    <span ng-if="row.status==200">

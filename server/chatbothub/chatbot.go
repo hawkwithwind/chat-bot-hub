@@ -47,6 +47,8 @@ func (status ChatBotStatus) String() string {
 type LoginInfo struct {
 	WxData string `json:"wxData,omitempty"`
 	Token  string `json:"token,omitempty"`
+	LongServerList []interface{} `json:"LongServerList,omitempty"`
+	ShortServerList []interface{} `json:"ShortServerList,omitempty"`
 }
 
 type ChatBot struct {
@@ -230,7 +232,7 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+func (bot *ChatBot) loginStaging(botId string, login string, loginInfo LoginInfo) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginStaging", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -248,15 +250,15 @@ func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, toke
 
 	bot.BotId = botId
 	bot.Login = login
-	bot.LoginInfo.WxData = wxdata
-	bot.LoginInfo.Token = token
+	bot.LoginInfo = loginInfo
+	
 	bot.ScanUrl = ""
 
 	bot.Status = LoggingStaging
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(botId string, login string, loginInfo LoginInfo) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared && bot.Status != LoggingStaging {
@@ -274,8 +276,7 @@ func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token s
 
 	bot.BotId = botId
 	bot.Login = login
-	bot.LoginInfo.WxData = wxdata
-	bot.LoginInfo.Token = token
+	bot.LoginInfo = loginInfo
 	bot.ScanUrl = ""
 
 	bot.Status = WorkingLoggedIn
@@ -744,6 +745,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
+	bot.Info("send app message 001")
 	bot.Info("send app message " + content)
 
 	contentm := o.FromJson(content)

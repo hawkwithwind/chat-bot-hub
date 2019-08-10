@@ -308,61 +308,48 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		return o.Err
 	}
 
-	ifmap := o.FromJson(thebotinfo.LoginInfo)
-
-	var localmap map[string]interface{}
-	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
-		localmap = o.FromJson(bot.LoginInfo.String)
-	} else {
-		localmap = make(map[string]interface{})
+	//ifmap := o.FromJson(thebotinfo.LoginInfo)
+	var logininfo chatbothub.LoginInfo
+	o.Err = json.Unmarshal([]byte(thebotinfo.LoginInfo), &logininfo)
+	if o.Err != nil {
+		return o.Err
 	}
 
+	var localinfo chatbothub.LoginInfo
+	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
+		o.Err = json.Unmarshal([]byte(bot.LoginInfo.String), &localinfo)
+	} else {
+		localinfo = chatbothub.LoginInfo{}
+	}
 	if o.Err != nil {
 		return o.Err
 	}
 
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
-		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
-			localmap["token"] = tokenptr.(string)
+		if len(logininfo.Token) > 0 {
+			localinfo.Token = logininfo.Token
 		}
-		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
 		return nil
 
 	case chatbothub.LOGINDONE:
-		var oldtoken string
-		var oldwxdata string
-		if oldtokenptr, ok := ifmap["token"]; ok {
-			oldtoken = oldtokenptr.(string)
-		} else {
-			oldtoken = ""
+		if len(logininfo.Token) > 0 {
+			localinfo.Token = logininfo.Token
 		}
-		if tokenptr := o.FromMap(
-			"token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
-			tk := tokenptr.(string)
-			if len(tk) > 0 {
-				localmap["token"] = tk
-			}
+		if len(logininfo.WxData) > 0 {
+			localinfo.WxData = logininfo.WxData
 		}
-		if oldwxdataptr, ok := ifmap["wxData"]; ok {
-			oldwxdata = oldwxdataptr.(string)
-		} else {
-			oldwxdata = ""
+		if len(logininfo.LongServerList) > 0 {
+			localinfo.LongServerList = logininfo.LongServerList
 		}
-		if wxdataptr := o.FromMap(
-			"wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
-			wd := wxdataptr.(string)
-			if len(wd) > 0 {
-				localmap["wxData"] = wd
-			}
+		if len(logininfo.ShortServerList) > 0 {
+			localinfo.ShortServerList = logininfo.ShortServerList
 		}
-		if o.Err != nil {
-			return o.Err
-		}
-
-		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
 
 		ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)

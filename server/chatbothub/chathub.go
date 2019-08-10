@@ -563,11 +563,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var userName string
 					var wxData string
 					var token string
+					var longServerList []interface{}
+					var shortServerList []interface{}
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
+						longServerList = o.ListValue(
+							o.FromMap("LongServerList",body,"eventRequest.body", []interface{}{}),
+							true, []interface{}{})
+						shortServerList = o.ListValue(
+							o.FromMap("ShortServerList",body,"eventRequest.body",[]interface{}{}),
+							true, []interface{}{})
 					}
 
 					if o.Err != nil {
@@ -600,7 +608,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						bot, o.Err = bot.loginStaging(botId, userName, wxData, token)
+						bot, o.Err = bot.loginStaging(botId, userName, LoginInfo{
+							WxData: wxData,
+							Token: token,
+							LongServerList: longServerList,
+							ShortServerList: shortServerList,
+						})
+						
 						if o.Err != nil {
 							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
 							bot.logout()
@@ -691,7 +705,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
+						thebot, o.Err = bot.loginDone(botId, userName, LoginInfo{
+							WxData: wxData,
+							Token: token,
+							LongServerList: longServerList,
+							ShortServerList: shortServerList,
+						})
 					}
 
 					if o.Err == nil {
@@ -703,7 +722,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone("", "", "", "")
+						thebot, o.Err = bot.loginDone("", "", LoginInfo{})
 					}
 				} else {
 					if o.Err == nil {
