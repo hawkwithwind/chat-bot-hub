@@ -228,11 +228,18 @@ ON DUPLICATE KEY UPDATE
 		"nickname",
 		"owner",
 		"avatar",
-		"membercount",
-		"maxmembercount",
 		"ext",
 	} {
 		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
+	}
+
+
+	for _, field := range []string{
+		"membercount",
+		"maxmembercount",
+	} {
+		vls = append(vls, fmt.Sprintf("%s=IF(VALUES(%s) > 0, VALUES(%s), %s)",
 			field, field, field, field))
 	}
 
