@@ -797,6 +797,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
 
+			// 3. update group membercount
+			chatgroup.MemberCount = len(chatgroupMembers)
+			o.SaveChatGroup(tx, chatgroup)
+
 		case chatbothub.GetLabelList:
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
