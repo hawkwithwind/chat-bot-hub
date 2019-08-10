@@ -49,7 +49,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = fmt.Errorf("cannot find filter %s", filterId)
 			return
 		}
-		//ctx.Info("creating filter %s", filter.FilterId)
+		ctx.Info("creating filter %s", filter.FilterId)
 
 		// generate filter in chathub
 		var body string
@@ -85,7 +85,7 @@ func (o *ErrorHandler) CreateFilterChain(
 
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
-				//ctx.Info("generate KVRouter children")
+				ctx.Info("generate KVRouter children")
 				if bodym == nil {
 					o.Err = utils.NewClientError(utils.PARAM_INVALID,
 						fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body))
@@ -98,7 +98,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						for value, fid := range vm {
 							switch childFilterId := fid.(type) {
 							case string:
-								//ctx.Info("creating child filter %s", childFilterId)
+								ctx.Info("creating child filter %s", childFilterId)
 								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 								if o.Err != nil {
 									return
@@ -133,11 +133,11 @@ func (o *ErrorHandler) CreateFilterChain(
 					}
 				}
 			case chatbothub.REGEXROUTER:
-				//ctx.Info("generate RegexRouter children")
+				ctx.Info("generate RegexRouter children")
 				for regstr, v := range bodym {
 					switch childFilterId := v.(type) {
 					case string:
-						//ctx.Info("creating child filter %s", childFilterId)
+						ctx.Info("creating child filter %s", childFilterId)
 						o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 						if o.Err != nil {
 							return
@@ -192,7 +192,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			lastFilterId = currentFilterId
 			currentFilterId = filter.Next.String
 		} else {
-			//ctx.Info("filter %s next is null, init filters finished", filterId)
+			ctx.Info("filter %s next is null, init filters finished", filterId)
 			break
 		}
 	}

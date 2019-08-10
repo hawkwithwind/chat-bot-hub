@@ -461,7 +461,7 @@ func (web *WebServer) saveOneGroup(info WechatContactInfo, thebotinfo *pb.BotsIn
 func (web *WebServer) processContacts() {
 	for {
 		raw := <-web.contactParser.rawPipe
-		//web.Info("[contacts debug] get raw")
+		web.Info("[contacts debug] get raw")
 		o := &ErrorHandler{}
 
 		info := WechatContactInfo{}
@@ -471,7 +471,7 @@ func (web *WebServer) processContacts() {
 			continue
 		}
 
-		//ctx.Info("contact [%s - %s]", info.UserName, info.NickName)
+		web.Info("contact [%s - %s]", info.UserName, info.NickName)
 		if len(info.UserName) == 0 {
 			web.Info("username not found, ignoring %s", raw.raw)
 			continue
@@ -483,7 +483,7 @@ func (web *WebServer) processContacts() {
 			if len(info.ChatRoomOwner) == 0 {
 				continue
 			}
-
+			
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
 			//web.Info("[contacts debug] receive raw users")
