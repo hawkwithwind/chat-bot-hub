@@ -25,6 +25,4 @@ RUN locale -a
 RUN npm config set registry=http://registry.npm.taobao.org -g
 RUN npm install --global gulp@4.0.0
 
-USER node
-
 WORKDIR /home/work
