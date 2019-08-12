@@ -347,7 +347,7 @@
           "name": "EncryptUserName",
           "display": "EncryptUserName",
           "type": "string",
-          "required": false,
+          "required": true,
         },
         commonParams.ticket,
         {
