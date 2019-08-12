@@ -420,7 +420,7 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
 			description := content
 			imageId := o.FromMapString("imageId", resultData, "actionReply.result.data.imageId", true, "")
-			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, imageId)
+			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, "")
 
 			// 尝试用 actionReply 中的数据 override
 			resultContent := o.FromMapString("content", resultData, "actionReply.result.data.content", true, "")
@@ -571,10 +571,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 						longServerList = o.ListValue(
-							o.FromMap("LongServerList",body,"eventRequest.body", []interface{}{}),
+							o.FromMap("LongServerList", body, "eventRequest.body", []interface{}{}),
 							true, []interface{}{})
 						shortServerList = o.ListValue(
-							o.FromMap("ShortServerList",body,"eventRequest.body",[]interface{}{}),
+							o.FromMap("ShortServerList", body, "eventRequest.body", []interface{}{}),
 							true, []interface{}{})
 					}
 
@@ -609,12 +609,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						bot, o.Err = bot.loginStaging(botId, userName, LoginInfo{
-							WxData: wxData,
-							Token: token,
-							LongServerList: longServerList,
+							WxData:          wxData,
+							Token:           token,
+							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
-						
+
 						if o.Err != nil {
 							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
 							bot.logout()
@@ -706,9 +706,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						thebot, o.Err = bot.loginDone(botId, userName, LoginInfo{
-							WxData: wxData,
-							Token: token,
-							LongServerList: longServerList,
+							WxData:          wxData,
+							Token:           token,
+							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
 					}

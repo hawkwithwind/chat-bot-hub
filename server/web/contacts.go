@@ -8,9 +8,8 @@ import (
 	"time"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
-	
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type ContactInfoDispatcher struct {
@@ -27,7 +26,9 @@ func (cd *ContactInfoDispatcher) Listen(username string, ch chan domains.ChatUse
 		cd.pipes[username] = make(chan chan domains.ChatUser)
 	}
 
-	cd.pipes[username] <- ch
+	go func() {
+		cd.pipes[username] <- ch
+	}()
 }
 
 func (cd *ContactInfoDispatcher) Notify(username string, chatuser domains.ChatUser) {
@@ -314,7 +315,7 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 	for _, cg := range groups {
 		owners = append(owners, o.NewChatUser(cg.chatgroup.Owner, cg.bot.ClientType, ""))
 	}
-	
+
 	theowners := o.FindOrCreateChatUsers(tx, owners)
 	if o.Err != nil {
 		return o.Err
@@ -504,7 +505,7 @@ func (web *WebServer) processContacts() {
 			if len(info.ChatRoomOwner) == 0 {
 				continue
 			}
-			
+
 			web.contactParser.groupPipe <- ContactProcessInfo{info, raw.bot}
 		} else {
 			//web.Info("[contacts debug] receive raw users")

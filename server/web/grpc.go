@@ -86,7 +86,7 @@ func (server *WebServer) GetChatUserSync(_ context.Context, req *pb.GetChatUserS
 		return nil, o.Err
 	}
 
-	if actionReply.ClientError.Code != 0 {
+	if actionReply.ClientError != nil && actionReply.ClientError.Code != 0 {
 		return nil, utils.NewClientError(
 			utils.ClientErrorCode(actionReply.ClientError.Code),
 			fmt.Errorf(actionReply.ClientError.Message))
