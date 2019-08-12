@@ -343,6 +343,7 @@
         }
       ],
       "AcceptUser": [
+        commonParams.fromUserName,
         {
           "name": "EncryptUserName",
           "display": "EncryptUserName",
