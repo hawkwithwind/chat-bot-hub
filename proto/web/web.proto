@@ -13,6 +13,9 @@ service ChatBotWeb {
   rpc getChatUserSync (GetChatUserSyncRequest) returns (GetChatUserResponse) {}
   rpc getBot (GetBotRequest) returns (GetBotResponse) {}
   rpc validateToken (ValidateTokenRequest) returns (ValidateTokenResponse) {}
+  rpc GetBotChatRooms (GetBotChatRoomsRequest) returns (GetBotChatRoomsResponse) {}
+  rpc GetBotChatRoom (GetBotChatRoomRequest) returns (GetBotChatRoomResponse) {}
+  rpc updateBotChatRoom (UpdateBotChatRoomRequest) returns (UpdateBotChatRoomResponse) {}
 }
 
 message GetChatUserRequest {
@@ -44,4 +47,50 @@ message ValidateTokenRequest {
 
 message ValidateTokenResponse {
   bytes payload = 1;
+}
+
+message GetBotChatRoomsRequest {
+  repeated string botIds = 1;
+  string fromRoomId = 2;
+  int32 limit = 3;
+  string chatType = 4;
+}
+
+message GetBotChatRoomsResponse {
+  repeated ChatRoom items = 1;
+}
+
+message GetBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+  bool createIfNotExist = 3;
+}
+
+message GetBotChatRoomResponse {
+  ChatRoom chatRoom = 1;
+}
+
+message UpdateBotChatRoomRequest {
+  string botId = 1;
+  string peerId = 2;
+}
+
+message UpdateBotChatRoomResponse {
+}
+
+message ChatRoom {
+  // @inject_tag: json:"-" bson:"_id"
+  bytes objectId = 1;
+  // @inject_tag: bson:"-"
+  string id = 2;
+  // @inject_tag: bson:"botId"
+  string botId = 3;
+  // @inject_tag: bson:"peerId"
+  string peerId = 4;
+  // @inject_tag: bson:"createdAt"
+  uint64 createdAt = 5;
+  // @inject_tag: bson:"updatedAt"
+  uint64 updatedAt = 6;
+  // @inject_tag: bson:"chatType"
+  string chatType = 7;
 }
