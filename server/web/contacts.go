@@ -300,6 +300,53 @@ func (web *WebServer) processGroups() {
 	}
 }
 
+const SyncGroupMembersIntervalSeconds float64 = 3600
+
+func (web *WebServer) syncGroupMembers(botLogin string, clientType string, groupId string, force bool, cachedGroup *domains.ChatGroup) {
+	// 非 force，最多每一个小时同步一次
+	if !force {
+		group := cachedGroup
+		if group == nil {
+			o := ErrorHandler{}
+
+			tx := o.Begin(web.db)
+			if o.Err != nil {
+				return
+			}
+			defer o.CommitOrRollback(tx)
+
+			group = o.GetChatGroupByName(tx, clientType, groupId)
+			if o.Err != nil {
+				web.Error(o.Err, "error occurred while get group by name")
+				return
+			}
+		}
+		// 最多一个小时同步一次
+		if group.LastSyncMembersAt.Valid {
+			duration := time.Now().Sub(group.LastSyncMembersAt.Time)
+			if duration.Seconds() <= SyncGroupMembersIntervalSeconds {
+				return
+			}
+		}
+	}
+
+	o := &ErrorHandler{}
+	ar := o.NewActionRequest(botLogin, chatbothub.GetRoomMembers, o.ToJson(
+		map[string]interface{}{
+			"groupId": groupId,
+		}), "NEW")
+
+	actionreply := o.CreateAndRunAction(web, ar)
+
+	if o.Err != nil {
+		web.Error(o.Err, "get roommembers %s failed", groupId)
+	}
+
+	if actionreply.Success == false {
+		web.Info("get roommember %s failed %v", groupId, actionreply)
+	}
+}
+
 func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 	o := &ErrorHandler{}
 	defer o.BackEndError(web)
@@ -342,20 +389,7 @@ func (web *WebServer) saveGroups(groups []ProcessGroupInfo) error {
 
 	// 2.5 send get room members actions to hub
 	for _, cg := range groups {
-		oa := &ErrorHandler{}
-		// new error handler, ignore these error
-		ar := oa.NewActionRequest(cg.bot.Login, chatbothub.GetRoomMembers, o.ToJson(
-			map[string]interface{}{
-				"groupId": cg.chatgroup.GroupName,
-			}), "NEW")
-		actionreply := oa.CreateAndRunAction(web, ar)
-
-		if oa.Err != nil {
-			web.Error(oa.Err, "get roommembers %s failed", cg.chatgroup.GroupName)
-		}
-		if actionreply.Success == false {
-			web.Info("get roommember %s failed %v", cg.chatgroup.GroupName, actionreply)
-		}
+		go web.syncGroupMembers(cg.bot.Login, cg.bot.ClientType, cg.chatgroup.GroupName, true, nil)
 	}
 
 	savedgroups := o.FindOrCreateChatGroups(tx, savegroups)

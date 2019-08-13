@@ -1,0 +1,1 @@
+ALTER TABLE `chatgroups` DROP COLUMN `lastsyncmembersat`

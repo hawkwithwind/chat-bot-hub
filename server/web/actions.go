@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/go-sql-driver/mysql"
 	"net/http"
 	"time"
 
@@ -348,7 +349,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if len(logininfo.ShortServerList) > 0 {
 			localinfo.ShortServerList = logininfo.ShortServerList
 		}
-		
+
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
 
@@ -419,10 +420,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		go func() {
 			if bot.Callback.Valid {
-				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
-					bot, eventType, bodystr), 5, 1); err != nil {
-					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
-				}
+				//if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
+				//	bot, eventType, bodystr), 5, 1); err != nil {
+				//	//ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
+				//}
 			}
 		}()
 
@@ -477,6 +478,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						return o.Err
 					}
+
+					go ctx.syncGroupMembers(thebotinfo.Login, thebotinfo.ClientType, message.GroupId, false, chatgroup)
 				}
 			}
 
@@ -799,6 +802,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 			// 3. update group membercount
 			chatgroup.MemberCount = len(chatgroupMembers)
+			chatgroup.LastSyncMembersAt = mysql.NullTime{
+				Time:  time.Now(),
+				Valid: true,
+			}
 			o.UpdateChatGroup(tx, chatgroup)
 
 		case chatbothub.GetLabelList:
@@ -1046,10 +1053,10 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	}
 
 	web.Info("action request is " + o.ToJson(ar))
-	
+
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
-		web.Error(o.Err, "ar is " +  o.ToJson(ar));
+		web.Error(o.Err, "ar is "+o.ToJson(ar))
 		return nil
 	}
 
