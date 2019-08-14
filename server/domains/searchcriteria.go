@@ -157,6 +157,10 @@ func (o *ErrorHandler) SelectByCriteria(
 	paging := utils.Paging{}
 	o.Err = json.Unmarshal([]byte(o.ToJson(pagingraw)), &paging)
 
+	if paging.PageSize <= 0 {
+		paging.PageSize = 100
+	}
+
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		return []interface{}{}, utils.Paging{}
