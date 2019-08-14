@@ -344,7 +344,12 @@
       ],
       "AcceptUser": [
         commonParams.fromUserName,
-        commonParams.stranger,
+        {
+          "name": "EncryptUserName",
+          "display": "EncryptUserName",
+          "type": "string",
+          "required": true,
+        },
         commonParams.ticket,
         {
           "name": "content",

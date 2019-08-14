@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
+	pb "github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"strings"
 	"time"
 )

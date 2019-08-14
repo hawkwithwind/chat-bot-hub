@@ -59,17 +59,18 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
-func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage) error {
+func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, botLogin string) error {
 	if message.FromUserContact != nil {
 		return nil
 	}
 
-	request := &chatbotweb.GetChatUserRequest{
+	request := &chatbotweb.GetChatUserSyncRequest{
 		Type:     "WECHATBOT",
 		UserName: message.FromUser,
+		BotLogin: botLogin,
 	}
 
-	res, err := wrapper.WebClient.GetChatUser(wrapper.Context, request)
+	res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, messag
 	return o.Err
 }
 
-func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage) error {
+func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage, botLogin string) error {
 	fromUserMap := &sync.Map{}
 	for _, message := range messages {
 		fromUserMap.Store(message.FromUser, nil)
@@ -101,12 +102,13 @@ func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messa
 
 			fromUser := key.(string)
 
-			request := &chatbotweb.GetChatUserRequest{
+			request := &chatbotweb.GetChatUserSyncRequest{
 				Type:     "WECHATBOT",
 				UserName: fromUser,
+				BotLogin: botLogin,
 			}
 
-			res, err := wrapper.WebClient.GetChatUser(wrapper.Context, request)
+			res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)
 			if err != nil {
 				return
 			}

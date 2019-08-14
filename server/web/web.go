@@ -186,7 +186,9 @@ func (ctx *WebServer) init() error {
 	}()
 	ctx.Info("begin consume rabbitmq getcontact ...")
 
-	ctx.contactInfoDispatcher = &ContactInfoDispatcher{}
+	ctx.contactInfoDispatcher = &ContactInfoDispatcher{
+		pipes: make(map[string]chan chan domains.ChatUser),
+	}
 
 	return nil
 }

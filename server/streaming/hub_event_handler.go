@@ -36,7 +36,7 @@ func (server *Server) onHubEvent(event *pb.EventReply) {
 		wechatMessage := domains.WechatMessage{}
 		err := json.Unmarshal([]byte(event.Body), &wechatMessage)
 		if err != nil {
-			fmt.Printf("[save message debug] unmarshal json failed %s\n", event.Body)
+			fmt.Printf("[on hub event] unmarshal json failed %s\n", event.Body)
 			return
 		}
 
@@ -47,8 +47,14 @@ func (server *Server) onHubEvent(event *pb.EventReply) {
 		}
 		defer wrapper.Cancel()
 
+		bot, err := server.getBotById(event.BotId)
+		if err != nil {
+			server.Error(err, "get bot failed %v", event.BotId)
+			return
+		}
+
 		o := &ErrorHandler{}
-		_ = o.FillWechatMessageContact(wrapper, &wechatMessage)
+		_ = o.FillWechatMessageContact(wrapper, &wechatMessage, bot.Login)
 
 		server.forwardMessage(&wechatMessage, event.BotId)
 

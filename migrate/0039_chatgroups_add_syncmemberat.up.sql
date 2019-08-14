@@ -1,0 +1,1 @@
+ALTER TABLE `chatgroups` ADD `lastsyncmembersat` DATETIME DEFAULT NULL;
