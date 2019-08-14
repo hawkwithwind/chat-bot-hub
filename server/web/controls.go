@@ -643,6 +643,9 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.ParseForm()
+	q := o.getStringValue(r.Form, "q")
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -657,15 +660,16 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := o.ToJson(map[string]interface{}{
-		"find": map[string]interface{}{
-			"groupname": map[string]interface{}{
-				"in": []string{
-					groupname,
-				},
+	querym := o.FromJson(q)
+	querym["find"] = map[string]interface{}{
+		"groupname": map[string]interface{}{
+			"in": []string{
+				groupname,
 			},
 		},
-	})
+	}
+
+	query := o.ToJson(querym)
 
 	web.Info("search groupmembers\n%s\n", query)
 
