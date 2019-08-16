@@ -1084,7 +1084,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		}
 	}
 
-	o.SaveActionRequest(web.redispool, ar)
+	o.SaveActionRequestWLimit(web.redispool, ar, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
 
