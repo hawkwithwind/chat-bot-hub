@@ -207,6 +207,45 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	return results
 }
 
+func (o *ErrorHandler) ActionCountDaily(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	dayKeyPattern := ar.redisDayKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, dayKeyPattern)
+}
+
+func (o *ErrorHandler) ActionCountHourly(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	hourKeyPattern := ar.redisHourKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, hourKeyPattern)
+}
+
+func (o *ErrorHandler) ActionCountMinutely(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	minuteKeyPattern := ar.redisMinuteKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, minuteKeyPattern)
+}
+
 func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, int, int) {
 	if o.Err != nil {
 		return 0, 0, 0

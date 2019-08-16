@@ -13,6 +13,7 @@ var (
 		chatbothub.CreateRoom:    100,
 		chatbothub.AddRoomMember: 200,
 		chatbothub.SyncContact:   5,
+		chatbothub.GetContact:    -1,
 	}
 
 	hourLimit map[string]int = map[string]int{
