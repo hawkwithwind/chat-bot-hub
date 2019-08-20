@@ -207,6 +207,45 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	return results
 }
 
+func (o *ErrorHandler) ActionCountDaily(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	dayKeyPattern := ar.redisDayKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, dayKeyPattern)
+}
+
+func (o *ErrorHandler) ActionCountHourly(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	hourKeyPattern := ar.redisHourKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, hourKeyPattern)
+}
+
+func (o *ErrorHandler) ActionCountMinutely(pool *redis.Pool, ar *ActionRequest) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	minuteKeyPattern := ar.redisMinuteKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, minuteKeyPattern)
+}
+
 func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, int, int) {
 	if o.Err != nil {
 		return 0, 0, 0
@@ -220,6 +259,47 @@ func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, in
 	defer conn.Close()
 
 	return o.RedisMatchCount(conn, dayKeyPattern), o.RedisMatchCount(conn, hourKeyPattern), o.RedisMatchCount(conn, minuteKeyPattern)
+}
+
+func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionRequest, daylimit, hourlimit, minutelimit int) {
+	if o.Err != nil {
+		return
+	}
+
+	key := ar.redisKey()
+	daykey := ar.redisDayKey()
+	hourkey := ar.redisHourKey()
+	minutekey := ar.redisMinuteKey()
+	keyExpire := 24 * 60 * 60
+	dayExpire := 24 * 60 * 60
+	hourExpire := 60 * 60
+	minuteExpire := 60
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	arstr := o.ToJson(ar)
+	
+	o.RedisSend(conn, "MULTI")
+	o.RedisSend(conn, "SET", key, arstr)
+	o.RedisSend(conn, "EXPIRE", key, keyExpire)
+
+	if daylimit > 0 {
+		o.RedisSend(conn, "SET", daykey, "1")
+		o.RedisSend(conn, "EXPIRE", daykey, dayExpire)
+	}
+
+	if hourlimit > 0 {
+		o.RedisSend(conn, "SET", hourkey, "1")
+		o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
+	}
+
+	if minutelimit > 0 {
+		o.RedisSend(conn, "SET", minutekey, "1")
+		o.RedisSend(conn, "EXPIRE", minutekey, minuteExpire)
+	}
+	
+	o.RedisDo(conn, timeout, "EXEC")
 }
 
 func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
