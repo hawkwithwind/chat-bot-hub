@@ -71,6 +71,7 @@ type WebServer struct {
 	db            *dbx.Database
 	store         *sessions.CookieStore
 	mongoDb       *mgo.Database
+	mongoMomentDb *mgo.Database
 	contactParser *ContactParser
 	accounts      Accounts
 
@@ -95,6 +96,7 @@ func (ctx *WebServer) init() error {
 		FluentHost:   ctx.Config.Fluent.Host,
 		WriteTimeout: 60 * time.Second,
 	})
+	ctx.Info("Fluent host: %s, port: %d", ctx.Config.Fluent.Host, ctx.Config.Fluent.Port)
 
 	if err != nil {
 		ctx.Error(err, "create fluentlogger failed")
@@ -119,6 +121,12 @@ func (ctx *WebServer) init() error {
 		//		ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
 		//	}
 		//}
+	}
+
+	ctx.mongoMomentDb = o.NewMongoMomentConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+
+	if o.EnsureTimelineIndexes(ctx.mongoMomentDb); o.Err != nil {
+		ctx.Error(o.Err, "mongo ensure moment indexes fail")
 	}
 
 	retryTimes := 7
@@ -450,6 +458,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
 	r.HandleFunc("/bots/{botId}/crawltimeline", server.validate(server.NotifyWechatBotCrawlTimeline)).Methods("POST")
+	r.HandleFunc("/bots/wechatbots/notify/updatetimeline", server.NotifyWechatBotsUpdateTimeline).Methods("POST")
 
 	// account login and auth (auth.go)
 	r.HandleFunc("/login", server.login).Methods("POST")
@@ -463,6 +472,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/{domain}/search", server.validate(server.Search)).Methods("GET", "POST")
 	r.HandleFunc("/{mapkey}/messages", server.validate(server.SearchMessage)).Methods("GET", "POST")
 	r.HandleFunc("/{chatEntity}/{chatEntityId}/messages", server.validate(server.GetChatMessage)).Methods("GET")
+	r.HandleFunc("/{botId}/timelines", server.validate(server.GetTimelines)).Methods("GET")
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("app/static")))
 

@@ -138,3 +138,43 @@ WHERE momentcode=?
 	o.Err = q.SelectContext(ctx, &moments, query, momentCode)
 	return moments
 }
+
+func (o *ErrorHandler) GetMomentCountWithBotId(q dbx.Queryable, botId string) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	const query string = `SELECT COUNT(*) FROM moments WHERE botid=?`
+	var count []int64
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &count, query, botId)
+
+	return count[0]
+}
+
+func processPage(o *ErrorHandler, q dbx.Queryable, botId string, page int64, pageSize int64, pageCount int64, process func(histories []string, page int64)) {
+	const query string = `SELECT momentcode FROM moments WHERE botid=? LIMIT ?, ?`
+	var momentCodes []string
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &momentCodes, query, botId, (page-1)*pageSize, pageSize)
+
+	if len(momentCodes) == 0 {
+		return
+	}
+
+	process(momentCodes, page)
+
+	if pageCount > page {
+		processPage(o, q, botId, page+1, pageSize, pageCount, process)
+	}
+}
+
+func (o *ErrorHandler) ProcessByPages(q dbx.Queryable, botId string, pageSize int64, process func(histories []string, page int64)) {
+	momentCount := o.GetMomentCountWithBotId(q, botId)
+	pageCount := momentCount / pageSize
+	if momentCount%pageSize != 0 {
+		pageCount += 1
+	}
+
+	processPage(o, q, botId, 1, pageSize, pageCount, process)
+}

@@ -836,6 +836,39 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				}
 			}
 
+		case chatbothub.SnsGetObject:
+			ctx.Info("SnsGetObject")
+			acresult := domains.ActionResult{}
+			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
+			if o.Err != nil {
+				ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(localar))
+				return o.Err
+			}
+
+			if thebotinfo.ClientType == "WECHATBOT" {
+				weMomentWrap := models.WechatSnsMomentWrap{}
+				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &weMomentWrap)
+				if o.Err != nil {
+					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
+					return o.Err
+				}
+
+				ctx.Info("SnsGetObject data: [%s]", o.ToJson(acresult.Data))
+
+				wechatSnsMoment := weMomentWrap.Data
+				wechatTimeline := domains.WechatTimeline{}
+				wechatTimeline.Id = wechatSnsMoment.MomentId
+				wechatTimeline.BotId = wechatSnsMoment.BotId
+				wechatTimeline.NickName = wechatSnsMoment.NickName
+				wechatTimeline.UserName = wechatSnsMoment.UserName
+				wechatTimeline.Description = wechatSnsMoment.Description
+				wechatTimeline.CreateTime = wechatSnsMoment.CreateTime
+				wechatTimeline.Comment = wechatSnsMoment.Comment
+				wechatTimeline.Like = wechatSnsMoment.Like
+				o.UpdateWechatTimelines(ctx.mongoMomentDb, []domains.WechatTimeline{wechatTimeline})
+				ctx.Info("update SnsGetObject data")
+			}
+
 		case chatbothub.SnsTimeline:
 			ctx.Info("snstimeline")
 			acresult := domains.ActionResult{}
@@ -856,6 +889,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				ctx.Info("Wechat Sns Timeline")
 				newMomentIds := map[string]int{}
 				for _, m := range wetimeline.Data {
+					m.BotId = botId
 					ctx.Info("---\n%s at %d from %s %s\n%s",
 						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
 
@@ -873,15 +907,28 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					if len(foundms) == 0 {
-						if ctx.fluentLogger != nil {
-							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-								if err := ctx.fluentLogger.Post(tag, m); err != nil {
-									ctx.Error(err, "push moment to fluentd failed")
+						//just for test start
+						//wechatTimeline := domains.WechatTimeline{}
+						//wechatTimeline.Id = m.MomentId
+						//wechatTimeline.BotId = m.BotId
+						//wechatTimeline.NickName = m.NickName
+						//wechatTimeline.UserName = m.UserName
+						//wechatTimeline.Description = m.Description
+						//wechatTimeline.CreateTime = m.CreateTime
+						//o.UpdateWechatTimelines(ctx.mongoMomentDb, []domains.WechatTimeline{wechatTimeline})
+						//end
+
+						go func() {
+							if ctx.fluentLogger != nil {
+								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+									if err := ctx.fluentLogger.Post(tag, m); err != nil {
+										ctx.Error(err, "push moment to fluentd failed")
+									}
+								} else {
+									ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 								}
-							} else {
-								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						}
+						}()
 					}
 
 					if o.Err != nil {

@@ -168,3 +168,62 @@ func (web *WebServer) NotifyWechatBotsCrawlTimelineTail(w http.ResponseWriter, r
 
 	o.ok(w, "", actionReplys)
 }
+
+func (web *WebServer) NotifyWechatBotsUpdateTimeline(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	web.Info("notify update timeline")
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	actionReplys := []pb.BotActionReply{}
+
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
+	defer wrapper.Cancel()
+
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{})
+	if o.Err != nil {
+		return
+	}
+	if botsreply == nil {
+		o.Err = fmt.Errorf("get bots failed")
+		return
+	}
+
+	for _, bot := range botsreply.BotsInfo {
+		if bot.BotId == "" {
+			continue
+		}
+
+		botinfo := o.getTheBot(wrapper, bot.BotId)
+		if o.Err != nil {
+			return
+		}
+
+		o.ProcessByPages(tx, bot.BotId, 5, func(histories []string, page int64) {
+			for _, momentCode := range histories {
+				web.Info("botId[%s] process page[%d] momentId[%s] len[%d]", bot.BotId, page, momentCode, len(histories))
+				ar := o.NewActionRequest(botinfo.Login, "SnsGetObject", o.ToJson(map[string]interface{}{
+					"momentId": momentCode,
+				}), "NEW")
+				if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
+					actionReplys = append(actionReplys, *actionReply)
+				}
+
+				if o.Err != nil {
+					return
+				}
+			}
+		})
+	}
+
+	o.ok(w, "", actionReplys)
+}

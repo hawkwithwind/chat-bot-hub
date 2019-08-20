@@ -45,6 +45,7 @@ func (tasks *Tasks) Serve() error {
 
 	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWechatBotsCrawlTimeline() })
 	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWechatBotsCrawlTimelineTail() })
+	tasks.cron.AddFunc("0 */2 * * * *", func() { tasks.NotifyWechatBotsUpdateTimeline() })
 
 	tasks.cron.Start()
 	return nil
@@ -76,6 +77,22 @@ func (tasks Tasks) NotifyWechatBotsCrawlTimelineTail() {
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
 		tasks.Error(err, "call crawltimelinetail failed")
+	} else {
+		o := &ErrorHandler{}
+		tasks.Info("call returned %s", o.ToJson(ret))
+	}
+}
+
+func (tasks Tasks) NotifyWechatBotsUpdateTimeline() {
+	baseUrl := tasks.WebBaseUrl
+	notifyPath := "/bots/wechatbots/notify/updatetimeline"
+
+	tasks.Info("trigger update timeline ...")
+
+	if ret, err := httpx.RestfulCallRetry(tasks.restfulclient,
+		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseUrl, notifyPath)),
+		3, 1); err != nil {
+		tasks.Error(err, "call updatetimeline failed")
 	} else {
 		o := &ErrorHandler{}
 		tasks.Info("call returned %s", o.ToJson(ret))

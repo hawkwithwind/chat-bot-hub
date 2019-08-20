@@ -947,6 +947,101 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (web *WebServer) GetTimelines(writer http.ResponseWriter, request *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(writer)
+	defer o.BackEndError(web)
+
+	vars := mux.Vars(request)
+	botId := vars["botId"]
+	web.Info("[GetTimelines] botId \n %s", botId)
+
+	request.ParseForm()
+	accountName := o.getAccountName(request)
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	account := o.GetAccountByName(tx, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	if account == nil {
+		o.Err = utils.NewClientError(utils.RESOURCE_ACCESS_DENIED,
+			fmt.Errorf("account not exists"))
+		return
+	}
+
+	botLogin := ""
+	theBot := o.GetBotByIdNull(tx, botId)
+	if o.Err != nil {
+		return
+	}
+
+	if theBot != nil {
+		botLogin = theBot.Login
+	} else {
+		o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND, fmt.Errorf("botId %s not found", botId))
+		return
+	}
+
+	o.CheckBotOwner(tx, botLogin, accountName)
+	if o.Err != nil {
+		return
+	}
+
+	query := o.getStringValueDefault(request.Form, "q", "{}")
+	if o.Err != nil {
+		return
+	}
+
+	querym := o.FromJson(query)
+	if o.Err != nil {
+		o.Err = utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		return
+	}
+
+	paging := utils.Paging{}
+	if pgquery, ok := querym["paging"]; !ok {
+		paging = utils.Paging{
+			Page:     1,
+			PageSize: 20,
+		}
+	} else {
+		o.Err = json.Unmarshal([]byte(o.ToJson(pgquery)), &paging)
+		if o.Err != nil {
+			o.Err = nil
+			paging = utils.Paging{
+				Page:     1,
+				PageSize: 20,
+			}
+		}
+
+		if paging.Page <= 0 {
+			paging.Page = 1
+		}
+	}
+
+	criteria := bson.M{}
+	criteria["botId"] = bson.M{"$eq": botId}
+	web.Info("[TIMELINES] CRITERIA \n %s", o.ToJson(criteria))
+
+	wms := o.GetWechatTimelines(web.mongoMomentDb.C(
+		domains.WechatTimelineCollection,
+	).Find(criteria).Sort(
+		"-createTime",
+	).Skip(
+		int((paging.Page - 1) * paging.PageSize),
+	).Limit(int(paging.PageSize)))
+
+	if o.Err != nil {
+		return
+	}
+
+	o.ok(writer, "", wms)
+}
+
 func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
