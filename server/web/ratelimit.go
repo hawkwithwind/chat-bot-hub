@@ -31,7 +31,7 @@ var (
 		chatbothub.SyncContact:     1,
 		chatbothub.SnsTimeline:     60,
 		chatbothub.SendTextMessage: 100,
-		chatbothub.SendAppMessage:  60,
+		chatbothub.SendAppMessage:  200,
 		chatbothub.GetContact:      30,
 	}
 )
