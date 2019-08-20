@@ -588,7 +588,13 @@ func (server *WebServer) Serve() {
 	waitGroup.Add(2)
 
 	go func() {
-		_ = server.serveHTTP(ctx)
+		for true {
+			if r := recover(); r != nil {
+				server.Error(fmt.Errorf(fmt.Sprintf("%v", r)), "Web server recovers from panic")
+			}
+			
+			_ = server.serveHTTP(ctx)
+		}
 
 		// try to stop grpc server
 		cancelFunc()
