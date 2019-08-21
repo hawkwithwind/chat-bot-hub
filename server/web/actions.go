@@ -434,7 +434,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		}
 
-	case chatbothub.MESSAGE:
+	case chatbothub.MESSAGE, chatbothub.IMAGEMESSAGE, chatbothub.EMOJIMESSAGE:
 		msg := bodystr
 		if o.Err != nil {
 			return o.Err
@@ -487,10 +487,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 		}
-
-	//case chatbothub.IMAGEMESSAGE:
-
-	//case chatbothub.EMOJIMESSAGE:
 
 	case chatbothub.ACTIONREPLY:
 		reqstr := bodystr
