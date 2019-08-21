@@ -858,7 +858,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatSnsMoment := weMomentWrap.Data
 				wechatTimeline := domains.WechatTimeline{}
 				wechatTimeline.Id = wechatSnsMoment.MomentId
-				wechatTimeline.BotId = wechatSnsMoment.BotId
+				wechatTimeline.BotId = botId
 				wechatTimeline.NickName = wechatSnsMoment.NickName
 				wechatTimeline.UserName = wechatSnsMoment.UserName
 				wechatTimeline.Description = wechatSnsMoment.Description

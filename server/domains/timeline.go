@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"time"
 )
 
 type WechatTimeline struct {
-	Id          string      `bson:"id"`
-	BotId       string      `bson:"botId"`
-	NickName    string      `bson:"nickName"`
-	UserName    string      `bson:"userName"`
-	CreateTime  int         `bson:"createTime"`
-	Description string      `bson:"description"`
-	Comment     interface{} `bson:"comment"`
-	Like        interface{} `bson:"like"`
-	UpdatedAt   time.Time   `bson:"updatedAt"`
+	Id          string               `bson:"id"`
+	BotId       string               `bson:"botId"`
+	NickName    string               `bson:"nickName"`
+	UserName    string               `bson:"userName"`
+	CreateTime  int                  `bson:"createTime"`
+	Description string               `bson:"description"`
+	Comment     []*models.SnsComment `bson:"comment"`
+	Like        []*models.SnsLike    `bson:"like"`
+	UpdatedAt   time.Time            `bson:"updatedAt"`
 }
 
 const (
@@ -60,8 +61,13 @@ func (o *ErrorHandler) UpdateWechatTimelines(db *mgo.Database, timelines []Wecha
 	for _, timeline := range timelines {
 		timeline.UpdatedAt = time.Now()
 		_, o.Err = col.Upsert(
-			bson.M{"id": timeline.Id},
-			bson.M{"$set": timeline},
+			bson.M{
+				"id":    timeline.Id,
+				"botId": timeline.BotId,
+			},
+			bson.M{
+				"$set": timeline,
+			},
 		)
 
 		if o.Err != nil {
