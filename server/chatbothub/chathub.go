@@ -515,7 +515,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
 				thebot.LastPing = ts
-				
+
 				if bot := hub.GetBot(in.ClientId); bot != nil {
 					hub.SetBot(in.ClientId, thebot)
 				}
@@ -534,7 +534,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
-				
+
 				if newbot.canReLogin() {
 					//relogin the bot
 					o := ErrorHandler{}
@@ -556,13 +556,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
-				go func (bot *ChatBot) {
+				go func(bot *ChatBot) {
 					if err = bot.pingloop(); err != nil {
 						hub.Error(err, "c[%s]%s disconnected", bot.ClientType, bot.ClientId)
 
 						hub.DropBot(bot.ClientId)
 					}
-				} (newbot)
+				}(newbot)
 			}
 		} else {
 			var bot *ChatBot
@@ -772,7 +772,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
-				
+
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     thebot.BotId,

@@ -45,9 +45,9 @@ func (status ChatBotStatus) String() string {
 }
 
 type LoginInfo struct {
-	WxData string `json:"wxData,omitempty"`
-	Token  string `json:"token,omitempty"`
-	LongServerList []interface{} `json:"LongServerList,omitempty"`
+	WxData          string        `json:"wxData,omitempty"`
+	Token           string        `json:"token,omitempty"`
+	LongServerList  []interface{} `json:"LongServerList,omitempty"`
 	ShortServerList []interface{} `json:"ShortServerList,omitempty"`
 }
 
@@ -150,7 +150,7 @@ func (bot *ChatBot) register(clientId string, clientType string,
 
 func (bot *ChatBot) pingloop() error {
 	o := ErrorHandler{}
-	
+
 	for true {
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  PING,
@@ -272,7 +272,7 @@ func (bot *ChatBot) loginStaging(botId string, login string, loginInfo LoginInfo
 	bot.BotId = botId
 	bot.Login = login
 	bot.LoginInfo = loginInfo
-	
+
 	bot.ScanUrl = ""
 
 	bot.Status = LoggingStaging
@@ -774,7 +774,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	bot.Info("send app message 001")
 	if o.Err != nil {
 		bot.Info("cannot parse json " + content)
-		
+
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 

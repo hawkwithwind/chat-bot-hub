@@ -1021,7 +1021,7 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
-	
+
 	dayCount := 0
 	if daylimit > 0 {
 		dayCount = o.ActionCountDaily(web.redispool, ar)
@@ -1036,7 +1036,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	if minutelimit > 0 {
 		minuteCount = o.ActionCountMinutely(web.redispool, ar)
 	}
-	
+
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
 	if o.Err != nil {
 		return nil

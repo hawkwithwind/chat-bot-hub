@@ -279,7 +279,7 @@ func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionReque
 	defer conn.Close()
 
 	arstr := o.ToJson(ar)
-	
+
 	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
 	o.RedisSend(conn, "EXPIRE", key, keyExpire)
@@ -298,7 +298,7 @@ func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionReque
 		o.RedisSend(conn, "SET", minutekey, "1")
 		o.RedisSend(conn, "EXPIRE", minutekey, minuteExpire)
 	}
-	
+
 	o.RedisDo(conn, timeout, "EXEC")
 }
 
