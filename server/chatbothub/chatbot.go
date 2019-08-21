@@ -148,6 +148,27 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	return bot, nil
 }
 
+func (bot *ChatBot) pingloop() error {
+	o := ErrorHandler{}
+	
+	for true {
+		o.sendEvent(bot.tunnel, &pb.EventReply{
+			EventType:  PING,
+			ClientType: bot.ClientType,
+			ClientId:   bot.ClientId,
+			Body:       "ping from server",
+		})
+
+		if o.Err != nil {
+			return o.Err
+		}
+
+		time.Sleep(3 * time.Second)
+	}
+
+	return nil
+}
+
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,

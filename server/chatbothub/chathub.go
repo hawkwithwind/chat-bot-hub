@@ -273,22 +273,23 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 	}()
 }
 
-func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) error {
+func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) (bool, error) {
 	o := ErrorHandler{}
 
 	messageId := o.FromMapString("msgId", messageBodyJSON, "actionBody", false, "")
 	if o.Err != nil {
 		hub.Error(o.Err, "message must contains msgId %v", messageBodyJSON)
-		return o.Err
+		return true, o.Err
 	}
 
 	if contains, err := o.ContainsWechatMessageWithMsgId(hub.mongoDb, messageId); err == nil {
 		if contains {
-			return fmt.Errorf("received duplicated message: %s", messageId)
+			hub.Info("received duplicated message: %s", messageId)
+			return true, nil
 		}
 	}
 
-	return nil
+	return false, nil
 }
 
 func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
@@ -310,8 +311,12 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		return nil, o.Err
 	}
 
-	if err := hub.checkIsDupMessage(bodyJSON); err != nil {
+	isdup, err := hub.checkIsDupMessage(bodyJSON)
+	if err != nil {
 		return nil, err
+	}
+	if isdup {
+		return nil, nil
 	}
 
 	imageId := ""
@@ -359,6 +364,9 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 	if err != nil {
 		return err
 	}
+	if bodyJSON == nil {
+		return nil
+	}
 
 	o := ErrorHandler{}
 	newBodyStr := o.ToJson(bodyJSON)
@@ -378,7 +386,10 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 		hub.Info("message[%d] exceeds 32*1024\n%s\n", len(newBodyStr), newBodyStr)
 
 		go func() {
-			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+			resp, err := httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+			if err != nil {
+				hub.Error(err, "notify web failed %v", resp)
+			}
 		}()
 	} else {
 		err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
@@ -495,7 +506,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			return err
 		}
 
-		if in.EventType == PING {
+		if in.EventType == PING || in.EventType == PONG {
 			thebot := hub.GetBot(in.ClientId)
 			if thebot != nil {
 				ts := time.Now().UnixNano() / 1e6
@@ -504,7 +515,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Error(err, "send PING to c[%s] FAILED %s [%s]", in.ClientType, err.Error(), in.ClientId)
 				}
 				thebot.LastPing = ts
-
+				
 				if bot := hub.GetBot(in.ClientId); bot != nil {
 					hub.SetBot(in.ClientId, thebot)
 				}
@@ -523,7 +534,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			} else {
 				hub.SetBot(in.ClientId, newbot)
 				hub.Info("c[%s] registered [%s]", in.ClientType, in.ClientId)
-
+				
 				if newbot.canReLogin() {
 					//relogin the bot
 					o := ErrorHandler{}
@@ -544,6 +555,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.Error(o.Err, "c[%s] %s relogin failed", in.ClientType, in.ClientId)
 					}
 				}
+
+				go func (bot *ChatBot) {
+					if err = bot.pingloop(); err != nil {
+						hub.Error(err, "c[%s]%s disconnected", bot.ClientType, bot.ClientId)
+
+						hub.DropBot(bot.ClientId)
+					}
+				} (newbot)
 			}
 		} else {
 			var bot *ChatBot
@@ -753,15 +772,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
-				// if o.Err == nil {
-				// 	go func() {
-				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 			thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
-				// 			hub.Error(err, "webnotify updatetoken failed\n")
-				// 		}
-				// 	}()
-				// }
-
+				
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     thebot.BotId,
@@ -773,15 +784,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
-				// if o.Err == nil {
-				// 	go func() {
-				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 			bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-				// 			hub.Error(err, "webnotify friendrequest failed\n")
-				// 		}
-				// 	}()
-				// }
-
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
@@ -792,14 +794,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case CONTACTSYNCDONE:
 				hub.Info("contact sync done")
-
-				// go func() {
-				// 	if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 		bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
-				// 		hub.Error(err, "webnotify contactsync done failed\n")
-				// 	}
-				// }()
-
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
