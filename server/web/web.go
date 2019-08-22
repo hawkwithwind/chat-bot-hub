@@ -592,7 +592,7 @@ func (server *WebServer) Serve() {
 			if r := recover(); r != nil {
 				server.Error(fmt.Errorf(fmt.Sprintf("%v", r)), "Web server recovers from panic")
 			}
-			
+
 			_ = server.serveHTTP(ctx)
 		}
 

@@ -45,9 +45,9 @@ func (status ChatBotStatus) String() string {
 }
 
 type LoginInfo struct {
-	WxData string `json:"wxData,omitempty"`
-	Token  string `json:"token,omitempty"`
-	LongServerList []interface{} `json:"LongServerList,omitempty"`
+	WxData          string        `json:"wxData,omitempty"`
+	Token           string        `json:"token,omitempty"`
+	LongServerList  []interface{} `json:"LongServerList,omitempty"`
 	ShortServerList []interface{} `json:"ShortServerList,omitempty"`
 }
 
@@ -68,6 +68,7 @@ type ChatBot struct {
 	filter       Filter
 	momentFilter Filter
 	logger       *log.Logger
+	pinglooping  bool
 }
 
 const (
@@ -132,6 +133,24 @@ func (bot *ChatBot) canReLogin() bool {
 		len(bot.LoginInfo.Token) > 0
 }
 
+func (bot *ChatBot) clearLoginInfo() {
+	bot.BotId = ""
+	bot.Login = ""
+	bot.LoginInfo.WxData = ""
+	bot.LoginInfo.Token = ""
+}
+
+func (bot *ChatBot) closePingloop() {
+	bot.Info("c[%s] closing pingloop", bot.ClientId)
+	
+	bot.Status = BeginNew
+
+	for bot.pinglooping {
+		bot.Info("c[%s] wait for pingloop %v", bot.ClientId, bot.pinglooping)
+		time.Sleep(300 * time.Millisecond)
+	}
+}
+
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
 
@@ -139,13 +158,55 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	// 	return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
 	// }
 
+	bot.closePingloop()
+	
 	bot.ClientId = clientId
 	bot.ClientType = clientType
-	bot.StartAt = time.Now().UnixNano() / 1e6
+	ts := time.Now().UnixNano() / 1e6
+	bot.StartAt = ts
+	bot.LastPing = ts
 	bot.tunnel = tunnel
 	bot.Status = BeginRegistered
 
 	return bot, nil
+}
+
+func (bot *ChatBot) pingloop() error {
+	o := ErrorHandler{}
+	trycount := 0
+	bot.pinglooping = true
+	
+	for true {
+		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
+		
+		if bot.Status == BeginNew {
+			bot.Info("c[%s] status %v, stop pingloop...", bot.ClientId, bot.Status)
+			bot.pinglooping = false
+			return nil
+		}
+		
+		o.sendEvent(bot.tunnel, &pb.EventReply{
+			EventType:  PING,
+			ClientType: bot.ClientType,
+			ClientId:   bot.ClientId,
+			Body:       "ping from server",
+		})
+
+		if o.Err != nil {
+			bot.Status = FailingDisconnected
+			
+			trycount += 1
+			if trycount > 10 {
+				return o.Err
+			}
+		} else {
+			trycount = 0
+		}
+		
+		time.Sleep(1 * time.Second)
+	}
+	
+	return nil
 }
 
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
@@ -251,7 +312,7 @@ func (bot *ChatBot) loginStaging(botId string, login string, loginInfo LoginInfo
 	bot.BotId = botId
 	bot.Login = login
 	bot.LoginInfo = loginInfo
-	
+
 	bot.ScanUrl = ""
 
 	bot.Status = LoggingStaging
@@ -753,7 +814,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	bot.Info("send app message 001")
 	if o.Err != nil {
 		bot.Info("cannot parse json " + content)
-		
+
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
