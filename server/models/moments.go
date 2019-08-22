@@ -2,6 +2,7 @@ package models
 
 type WechatSnsMoment struct {
 	BotId       string        `msg:"botId"`
+	Avatar      string        `msg:"avatar"`
 	CreateTime  int           `json:"createTime" msg:"createTime"`
 	Description string        `json:"description" msg:"description"`
 	MomentId    string        `json:"id" msg:"id"`

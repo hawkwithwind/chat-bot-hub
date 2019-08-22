@@ -10,6 +10,7 @@ import (
 
 type WechatTimeline struct {
 	Id          string               `json:"id" bson:"id"`
+	Avatar      string               `json:"avatar" bson:"avatar"`
 	BotId       string               `json:"botId" bson:"botId"`
 	NickName    string               `json:"nickName" bson:"nickName"`
 	UserName    string               `json:"userName" bson:"userName"`
@@ -56,6 +57,29 @@ func (o *ErrorHandler) EnsureTimelineIndexes(db *mgo.Database) {
 		if o.Err != nil {
 			return
 		}
+	}
+}
+
+func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline) {
+	col := db.C(WechatTimelineCollection)
+
+	now := time.Now()
+	_, o.Err = col.Upsert(
+		bson.M{
+			"id":    timeline.Id,
+			"botId": timeline.BotId,
+		},
+		bson.M{
+			"$set": bson.M{
+				"updatedAt": now,
+				"comment":   timeline.Comment,
+				"like":      timeline.Like,
+			},
+		},
+	)
+
+	if o.Err != nil {
+		return
 	}
 }
 

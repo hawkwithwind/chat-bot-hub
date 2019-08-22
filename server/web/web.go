@@ -104,27 +104,18 @@ func (ctx *WebServer) init() error {
 
 	o := &ErrorHandler{}
 	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
-	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
-
-	if o.EnsuredMongoIndexes(ctx.mongoDb); o.Err != nil {
-		ctx.Error(o.Err, "mongo ensure indexes fail")
-		return o.Err
-	}
 
 	if o.Err != nil {
 		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
-	} else {
-		//if client != nil {
-		//	contx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		//	o.Err = client.Disconnect(contx)
-		//	if o.Err != nil {
-		//		ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
-		//	}
-		//}
+		return o.Err
+	}
+	ctx.Info("connect to mongo success, host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+
+	if o.EnsuredMongoIndexes(ctx.mongoDb); o.Err != nil {
+		ctx.Error(o.Err, "mongo ensure indexes fail")
 	}
 
 	ctx.mongoMomentDb = o.NewMongoMomentConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
-
 	if o.EnsureTimelineIndexes(ctx.mongoMomentDb); o.Err != nil {
 		ctx.Error(o.Err, "mongo ensure moment indexes fail")
 	}

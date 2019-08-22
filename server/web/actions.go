@@ -859,13 +859,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline := domains.WechatTimeline{}
 				wechatTimeline.Id = wechatSnsMoment.MomentId
 				wechatTimeline.BotId = botId
-				wechatTimeline.NickName = wechatSnsMoment.NickName
-				wechatTimeline.UserName = wechatSnsMoment.UserName
-				wechatTimeline.Description = wechatSnsMoment.Description
-				wechatTimeline.CreateTime = wechatSnsMoment.CreateTime
 				wechatTimeline.Comment = wechatSnsMoment.Comment
 				wechatTimeline.Like = wechatSnsMoment.Like
-				o.UpdateWechatTimelines(ctx.mongoMomentDb, []domains.WechatTimeline{wechatTimeline})
+				o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
 				ctx.Info("update SnsGetObject data")
 			}
 
@@ -889,15 +885,17 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				ctx.Info("Wechat Sns Timeline")
 				newMomentIds := map[string]int{}
 				for _, m := range wetimeline.Data {
-					m.BotId = botId
-					ctx.Info("---\n%s at %d from %s %s\n%s",
-						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
-
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
 						return o.Err
 					}
+
+					m.BotId = botId
+					if chatuser.Avatar.Valid {
+						m.Avatar = chatuser.Avatar.String
+					}
+					ctx.Info("---\n%s at %d from %s %s %s\n%s", m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Avatar, m.Description)
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
@@ -915,6 +913,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 						//wechatTimeline.UserName = m.UserName
 						//wechatTimeline.Description = m.Description
 						//wechatTimeline.CreateTime = m.CreateTime
+						//wechatTimeline.Avatar = m.Avatar
 						//o.UpdateWechatTimelines(ctx.mongoMomentDb, []domains.WechatTimeline{wechatTimeline})
 						//end
 
