@@ -68,6 +68,7 @@ type ChatBot struct {
 	filter       Filter
 	momentFilter Filter
 	logger       *log.Logger
+	pinglooping  bool
 }
 
 const (
@@ -132,6 +133,24 @@ func (bot *ChatBot) canReLogin() bool {
 		len(bot.LoginInfo.Token) > 0
 }
 
+func (bot *ChatBot) clearLoginInfo() {
+	bot.BotId = ""
+	bot.Login = ""
+	bot.LoginInfo.WxData = ""
+	bot.LoginInfo.Token = ""
+}
+
+func (bot *ChatBot) closePingloop() {
+	bot.Info("c[%s] closing pingloop", bot.ClientId)
+	
+	bot.Status = BeginNew
+
+	for bot.pinglooping {
+		bot.Info("c[%s] wait for pingloop %v", bot.ClientId, bot.pinglooping)
+		time.Sleep(300 * time.Millisecond)
+	}
+}
+
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
 
@@ -139,9 +158,13 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	// 	return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
 	// }
 
+	bot.closePingloop()
+	
 	bot.ClientId = clientId
 	bot.ClientType = clientType
-	bot.StartAt = time.Now().UnixNano() / 1e6
+	ts := time.Now().UnixNano() / 1e6
+	bot.StartAt = ts
+	bot.LastPing = ts
 	bot.tunnel = tunnel
 	bot.Status = BeginRegistered
 
@@ -150,8 +173,18 @@ func (bot *ChatBot) register(clientId string, clientType string,
 
 func (bot *ChatBot) pingloop() error {
 	o := ErrorHandler{}
-
+	trycount := 0
+	bot.pinglooping = true
+	
 	for true {
+		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
+		
+		if bot.Status == BeginNew {
+			bot.Info("c[%s] status %v, stop pingloop...", bot.ClientId, bot.Status)
+			bot.pinglooping = false
+			return nil
+		}
+		
 		o.sendEvent(bot.tunnel, &pb.EventReply{
 			EventType:  PING,
 			ClientType: bot.ClientType,
@@ -160,12 +193,19 @@ func (bot *ChatBot) pingloop() error {
 		})
 
 		if o.Err != nil {
-			return o.Err
+			bot.Status = FailingDisconnected
+			
+			trycount += 1
+			if trycount > 10 {
+				return o.Err
+			}
+		} else {
+			trycount = 0
 		}
-
-		time.Sleep(3 * time.Second)
+		
+		time.Sleep(1 * time.Second)
 	}
-
+	
 	return nil
 }
 
