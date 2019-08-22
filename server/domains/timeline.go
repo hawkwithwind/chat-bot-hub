@@ -9,15 +9,15 @@ import (
 )
 
 type WechatTimeline struct {
-	Id          string               `bson:"id"`
-	BotId       string               `bson:"botId"`
-	NickName    string               `bson:"nickName"`
-	UserName    string               `bson:"userName"`
-	CreateTime  int                  `bson:"createTime"`
-	Description string               `bson:"description"`
-	Comment     []*models.SnsComment `bson:"comment"`
-	Like        []*models.SnsLike    `bson:"like"`
-	UpdatedAt   time.Time            `bson:"updatedAt"`
+	Id          string               `json:"id" bson:"id"`
+	BotId       string               `json:"botId" bson:"botId"`
+	NickName    string               `json:"nickName" bson:"nickName"`
+	UserName    string               `json:"userName" bson:"userName"`
+	CreateTime  int                  `json:"createTime" bson:"createTime"`
+	Description string               `json:"description" bson:"description"`
+	Comment     []*models.SnsComment `json:"comment" bson:"comment"`
+	Like        []*models.SnsLike    `json:"like" bson:"like"`
+	UpdatedAt   time.Time            `json:"updatedAt" bson:"updatedAt"`
 }
 
 const (
@@ -29,7 +29,11 @@ func (o *ErrorHandler) EnsureTimelineIndexes(db *mgo.Database) {
 	indexes := []map[string]interface{}{
 		{
 			"Key":    []string{"id"},
-			"Unique": true,
+			"Unique": false,
+		},
+		{
+			"Key":    []string{"botId"},
+			"Unique": false,
 		},
 		{
 			"Key":    []string{"nickName"},
