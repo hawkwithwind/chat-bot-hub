@@ -185,7 +185,9 @@ func (ctx *WebServer) init() error {
 	}()
 	ctx.Info("begin consume rabbitmq getcontact ...")
 
-	ctx.contactInfoDispatcher = &ContactInfoDispatcher{}
+	ctx.contactInfoDispatcher = &ContactInfoDispatcher{
+		pipes: make(map[string]chan chan domains.ChatUser),
+	}
 
 	return nil
 }
@@ -587,7 +589,13 @@ func (server *WebServer) Serve() {
 	waitGroup.Add(2)
 
 	go func() {
-		_ = server.serveHTTP(ctx)
+		for true {
+			if r := recover(); r != nil {
+				server.Error(fmt.Errorf(fmt.Sprintf("%v", r)), "Web server recovers from panic")
+			}
+
+			_ = server.serveHTTP(ctx)
+		}
 
 		// try to stop grpc server
 		cancelFunc()

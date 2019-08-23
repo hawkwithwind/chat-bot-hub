@@ -45,8 +45,10 @@ func (status ChatBotStatus) String() string {
 }
 
 type LoginInfo struct {
-	WxData string `json:"wxData,omitempty"`
-	Token  string `json:"token,omitempty"`
+	WxData          string        `json:"wxData,omitempty"`
+	Token           string        `json:"token,omitempty"`
+	LongServerList  []interface{} `json:"LongServerList,omitempty"`
+	ShortServerList []interface{} `json:"ShortServerList,omitempty"`
 }
 
 type ChatBot struct {
@@ -66,6 +68,7 @@ type ChatBot struct {
 	filter       Filter
 	momentFilter Filter
 	logger       *log.Logger
+	pinglooping  bool
 }
 
 const (
@@ -130,6 +133,24 @@ func (bot *ChatBot) canReLogin() bool {
 		len(bot.LoginInfo.Token) > 0
 }
 
+func (bot *ChatBot) clearLoginInfo() {
+	bot.BotId = ""
+	bot.Login = ""
+	bot.LoginInfo.WxData = ""
+	bot.LoginInfo.Token = ""
+}
+
+func (bot *ChatBot) closePingloop() {
+	bot.Info("c[%s] closing pingloop", bot.ClientId)
+	
+	bot.Status = BeginNew
+
+	for bot.pinglooping {
+		bot.Info("c[%s] wait for pingloop %v", bot.ClientId, bot.pinglooping)
+		time.Sleep(300 * time.Millisecond)
+	}
+}
+
 func (bot *ChatBot) register(clientId string, clientType string,
 	tunnel pb.ChatBotHub_EventTunnelServer) (*ChatBot, error) {
 
@@ -137,13 +158,55 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	// 	return bot, fmt.Errorf("bot status %s cannot register", bot.Status)
 	// }
 
+	bot.closePingloop()
+	
 	bot.ClientId = clientId
 	bot.ClientType = clientType
-	bot.StartAt = time.Now().UnixNano() / 1e6
+	ts := time.Now().UnixNano() / 1e6
+	bot.StartAt = ts
+	bot.LastPing = ts
 	bot.tunnel = tunnel
 	bot.Status = BeginRegistered
 
 	return bot, nil
+}
+
+func (bot *ChatBot) pingloop() error {
+	o := ErrorHandler{}
+	trycount := 0
+	bot.pinglooping = true
+	
+	for true {
+		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
+		
+		if bot.Status == BeginNew {
+			bot.Info("c[%s] status %v, stop pingloop...", bot.ClientId, bot.Status)
+			bot.pinglooping = false
+			return nil
+		}
+		
+		o.sendEvent(bot.tunnel, &pb.EventReply{
+			EventType:  PING,
+			ClientType: bot.ClientType,
+			ClientId:   bot.ClientId,
+			Body:       "ping from server",
+		})
+
+		if o.Err != nil {
+			bot.Status = FailingDisconnected
+			
+			trycount += 1
+			if trycount > 10 {
+				return o.Err
+			}
+		} else {
+			trycount = 0
+		}
+		
+		time.Sleep(1 * time.Second)
+	}
+	
+	return nil
 }
 
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
@@ -230,7 +293,7 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+func (bot *ChatBot) loginStaging(botId string, login string, loginInfo LoginInfo) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginStaging", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
@@ -248,15 +311,15 @@ func (bot *ChatBot) loginStaging(botId string, login string, wxdata string, toke
 
 	bot.BotId = botId
 	bot.Login = login
-	bot.LoginInfo.WxData = wxdata
-	bot.LoginInfo.Token = token
+	bot.LoginInfo = loginInfo
+
 	bot.ScanUrl = ""
 
 	bot.Status = LoggingStaging
 	return bot, nil
 }
 
-func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token string) (*ChatBot, error) {
+func (bot *ChatBot) loginDone(botId string, login string, loginInfo LoginInfo) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginDone", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared && bot.Status != LoggingStaging {
@@ -274,8 +337,7 @@ func (bot *ChatBot) loginDone(botId string, login string, wxdata string, token s
 
 	bot.BotId = botId
 	bot.Login = login
-	bot.LoginInfo.WxData = wxdata
-	bot.LoginInfo.Token = token
+	bot.LoginInfo = loginInfo
 	bot.ScanUrl = ""
 
 	bot.Status = WorkingLoggedIn
@@ -744,10 +806,19 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
+	bot.Info("send app message 001")
+	bot.Info("send app message " + content)
+
 	contentm := o.FromJson(content)
+
+	bot.Info("send app message 001")
 	if o.Err != nil {
+		bot.Info("cannot parse json " + content)
+
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
+
+	bot.Info("send app message 002")
 
 	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
 		"toUserName": toUserName,
@@ -1125,7 +1196,11 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 	o := &ErrorHandler{}
 
 	if bot.ClientType == WECHATBOT {
+		bot.Info("send text message 001")
 		bodym := o.FromJson(body)
+		if o.Err != nil {
+			bot.Info("parse body failed " + body)
+		}
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
 		content_if := o.FromMap("content", bodym, "actionbody", nil)
 
@@ -1135,6 +1210,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 
 		switch content := content_if.(type) {
 		case string:
+			bot.Info("send text message string")
 			var atList []interface{}
 			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 				atList = atListptr.([]interface{})
@@ -1148,6 +1224,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 			}))
 
 		case map[string]interface{}:
+			bot.Info("send text message map")
 			msg_if := o.FromMap("msg", content, "content", nil)
 
 			var msg WechatMsg

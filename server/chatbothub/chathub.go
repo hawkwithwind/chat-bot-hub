@@ -273,22 +273,23 @@ func (hub *ChatHub) updateChatRoom(bot *ChatBot, msgJson map[string]interface{})
 	}()
 }
 
-func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) error {
+func (hub *ChatHub) checkIsDupMessage(messageBodyJSON map[string]interface{}) (bool, error) {
 	o := ErrorHandler{}
 
 	messageId := o.FromMapString("msgId", messageBodyJSON, "actionBody", false, "")
 	if o.Err != nil {
 		hub.Error(o.Err, "message must contains msgId %v", messageBodyJSON)
-		return o.Err
+		return true, o.Err
 	}
 
 	if contains, err := o.ContainsWechatMessageWithMsgId(hub.mongoDb, messageId); err == nil {
 		if contains {
-			return fmt.Errorf("received duplicated message: %s", messageId)
+			hub.Info("received duplicated message: %s", messageId)
+			return true, nil
 		}
 	}
 
-	return nil
+	return false, nil
 }
 
 func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[string]interface{}, error) {
@@ -310,8 +311,12 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 		return nil, o.Err
 	}
 
-	if err := hub.checkIsDupMessage(bodyJSON); err != nil {
+	isdup, err := hub.checkIsDupMessage(bodyJSON)
+	if err != nil {
 		return nil, err
+	}
+	if isdup {
+		return nil, nil
 	}
 
 	imageId := ""
@@ -359,6 +364,9 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 	if err != nil {
 		return err
 	}
+	if bodyJSON == nil {
+		return nil
+	}
 
 	o := ErrorHandler{}
 	newBodyStr := o.ToJson(bodyJSON)
@@ -378,7 +386,10 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 		hub.Info("message[%d] exceeds 32*1024\n%s\n", len(newBodyStr), newBodyStr)
 
 		go func() {
-			_, _ = httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+			resp, err := httpx.RestfulCallRetry(hub.restfulclient, bot.WebNotifyRequest(hub.WebBaseUrl, inEvent.EventType, newBodyStr), 5, 1)
+			if err != nil {
+				hub.Error(err, "notify web failed %v", resp)
+			}
 		}()
 	} else {
 		err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
@@ -420,7 +431,7 @@ func (hub *ChatHub) onSendMessage(bot *ChatBot, actionType string, actionBody ma
 			content := o.FromMapString("content", bodyJSON, "actionReply.actionBody", true, "")
 			description := content
 			imageId := o.FromMapString("imageId", resultData, "actionReply.result.data.imageId", true, "")
-			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, imageId)
+			thumbnailId := o.FromMapString("thumbnailId", resultData, "actionReply.result.data.imageId.thumbnailId", true, "")
 
 			// 尝试用 actionReply 中的数据 override
 			resultContent := o.FromMapString("content", resultData, "actionReply.result.data.content", true, "")
@@ -495,7 +506,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			return err
 		}
 
-		if in.EventType == PING {
+		if in.EventType == PING || in.EventType == PONG {
 			thebot := hub.GetBot(in.ClientId)
 			if thebot != nil {
 				ts := time.Now().UnixNano() / 1e6
@@ -543,7 +554,17 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if o.Err != nil {
 						hub.Error(o.Err, "c[%s] %s relogin failed", in.ClientType, in.ClientId)
 					}
+				} else {
+					// cannot relogin, should clear botId
+					bot.clearLoginInfo()
 				}
+
+				go func(bot *ChatBot) {
+					if err = bot.pingloop(); err != nil {
+						hub.Error(err, "c[%s]%s disconnected", bot.ClientType, bot.ClientId)
+						hub.DropBot(bot.ClientId)
+					}
+				} (newbot)
 			}
 		} else {
 			var bot *ChatBot
@@ -563,11 +584,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					var userName string
 					var wxData string
 					var token string
+					var longServerList []interface{}
+					var shortServerList []interface{}
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
+						longServerList = o.ListValue(
+							o.FromMap("LongServerList", body, "eventRequest.body", []interface{}{}),
+							true, []interface{}{})
+						shortServerList = o.ListValue(
+							o.FromMap("ShortServerList", body, "eventRequest.body", []interface{}{}),
+							true, []interface{}{})
 					}
 
 					if o.Err != nil {
@@ -595,12 +624,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}
 
 							hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+							findbot.closePingloop()
 							hub.DropBot(findbot.ClientId)
 						}
 					}
 
 					if o.Err == nil {
-						bot, o.Err = bot.loginStaging(botId, userName, wxData, token)
+						bot, o.Err = bot.loginStaging(botId, userName, LoginInfo{
+							WxData:          wxData,
+							Token:           token,
+							LongServerList:  longServerList,
+							ShortServerList: shortServerList,
+						})
+
 						if o.Err != nil {
 							hub.Error(o.Err, "[LOGIN MIGRATE] b[%s] loginstage failed, logout", bot.BotId)
 							bot.logout()
@@ -651,6 +687,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 												}
 
 												hub.Info("[LOGIN MIGRATE] drop bot %s", findbot.BotId)
+												findbot.closePingloop()
 												hub.DropBot(findbot.ClientId)
 											}
 
@@ -691,7 +728,12 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone(botId, userName, wxData, token)
+						thebot, o.Err = bot.loginDone(botId, userName, LoginInfo{
+							WxData:          wxData,
+							Token:           token,
+							LongServerList:  longServerList,
+							ShortServerList: shortServerList,
+						})
 					}
 
 					if o.Err == nil {
@@ -703,7 +745,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				} else if bot.ClientType == QQBOT {
 					if o.Err == nil {
-						thebot, o.Err = bot.loginDone("", "", "", "")
+						thebot, o.Err = bot.loginDone("", "", LoginInfo{})
 					}
 				} else {
 					if o.Err == nil {
@@ -734,14 +776,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				if o.Err == nil {
 					thebot, o.Err = bot.updateToken(userName, token)
 				}
-				// if o.Err == nil {
-				// 	go func() {
-				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 			thebot.WebNotifyRequest(hub.WebBaseUrl, UPDATETOKEN, ""), 5, 1); err != nil {
-				// 			hub.Error(err, "webnotify updatetoken failed\n")
-				// 		}
-				// 	}()
-				// }
 
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
@@ -754,15 +788,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case FRIENDREQUEST:
 				var reqstr string
 				reqstr, o.Err = bot.friendRequest(in.Body)
-				// if o.Err == nil {
-				// 	go func() {
-				// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 			bot.WebNotifyRequest(hub.WebBaseUrl, FRIENDREQUEST, reqstr), 5, 1); err != nil {
-				// 			hub.Error(err, "webnotify friendrequest failed\n")
-				// 		}
-				// 	}()
-				// }
-
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
@@ -773,14 +798,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case CONTACTSYNCDONE:
 				hub.Info("contact sync done")
-
-				// go func() {
-				// 	if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-				// 		bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTSYNCDONE, ""), 5, 1); err != nil {
-				// 		hub.Error(err, "webnotify contactsync done failed\n")
-				// 	}
-				// }()
-
 				if o.Err == nil {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
@@ -805,6 +822,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				// after drop the bot, it wont have any reference to it
 				// so that it should be recycled by then
 
+				thebot.closePingloop()
 				hub.DropBot(thebot.ClientId)
 				hub.Info("drop c[%s]\n%#v", thebot.ClientId, hub.bots)
 
@@ -871,7 +889,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						}
 					}
 				}
-
+				
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
@@ -893,15 +911,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					bodym := o.FromJson(bodyString)
 					hub.Info("status message %v", bodym)
 
-					// if o.Err == nil {
-					// 	go func() {
-					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-					// 			bot.WebNotifyRequest(hub.WebBaseUrl, STATUSMESSAGE, in.Body), 5, 1); err != nil {
-					// 			hub.Error(err, "webnotify statusmessage failed\n")
-					// 		}
-					// 	}()
-					// }
-
 					if o.Err == nil {
 						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
@@ -913,19 +922,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case CONTACTINFO:
 				if bot.ClientType == WECHATBOT {
-					//hub.Info("contact info \n%s\n", in.Body)
-
-					//bodym := o.FromJson(in.Body)
-					//hub.Info("contact info %v", bodym)
-
-					// if o.Err == nil {
-					// 	go func() {
-					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-					// 			bot.WebNotifyRequest(hub.WebBaseUrl, CONTACTINFO, in.Body), 5, 1); err != nil {
-					// 			hub.Error(err, "webnotify contact info failed\n")
-					// 		}
-					// 	}()
-					// }
+					hub.Info("contact info \n%s\n", in.Body)
 
 					if o.Err == nil {
 						o.Err = hub.rabbitmq.Send(utils.CH_ContactInfo, o.ToJson(models.MqEvent{
@@ -939,18 +936,6 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case GROUPINFO:
 				if bot.ClientType == WECHATBOT {
 					hub.Info("group info \n%s\n", in.Body)
-
-					//bodym := o.FromJson(in.Body)
-					//hub.Info("group info %v", bodym)
-
-					// if o.Err == nil {
-					// 	go func() {
-					// 		if _, err := httpx.RestfulCallRetry(hub.restfulclient,
-					// 			bot.WebNotifyRequest(hub.WebBaseUrl, GROUPINFO, in.Body), 5, 1); err != nil {
-					// 			hub.Error(err, "webnotify group info failed\n")
-					// 		}
-					// 	}()
-					// }
 
 					if o.Err == nil {
 						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{

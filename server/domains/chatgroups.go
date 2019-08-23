@@ -15,21 +15,22 @@ import (
 )
 
 type ChatGroup struct {
-	ChatGroupId    string         `db:"chatgroupid"`
-	GroupName      string         `db:"groupname"`
-	Type           string         `db:"type"`
-	Alias          sql.NullString `db:"alias"`
-	NickName       string         `db:"nickname"`
-	Owner          string         `db:"owner"`
-	Avatar         sql.NullString `db:"avatar"`
-	MemberCount    int            `db:"membercount"`
-	MaxMemberCount int            `db:"maxmembercount"`
-	Ext            sql.NullString `db:"ext"`
-	LastMsgId      sql.NullString `db:"lastmsgid"`
-	LastSendAt     mysql.NullTime `db:"lastsendat"`
-	CreateAt       mysql.NullTime `db:"createat"`
-	UpdateAt       mysql.NullTime `db:"updateat"`
-	DeleteAt       mysql.NullTime `db:"deleteat"`
+	ChatGroupId       string         `db:"chatgroupid"`
+	GroupName         string         `db:"groupname"`
+	Type              string         `db:"type"`
+	Alias             sql.NullString `db:"alias"`
+	NickName          string         `db:"nickname"`
+	Owner             string         `db:"owner"`
+	Avatar            sql.NullString `db:"avatar"`
+	MemberCount       int            `db:"membercount"`
+	MaxMemberCount    int            `db:"maxmembercount"`
+	Ext               sql.NullString `db:"ext"`
+	LastMsgId         sql.NullString `db:"lastmsgid"`
+	LastSendAt        mysql.NullTime `db:"lastsendat"`
+	CreateAt          mysql.NullTime `db:"createat"`
+	UpdateAt          mysql.NullTime `db:"updateat"`
+	DeleteAt          mysql.NullTime `db:"deleteat"`
+	LastSyncMembersAt mysql.NullTime `db:"lastsyncmembersat"`
 }
 
 const (
@@ -202,6 +203,7 @@ SET alias = :alias
 , ext = :ext
 , lastsendat = :lastsendat
 , lastmsgid = :lastmsgid
+, lastsyncmembersat = :lastsyncmembersat
 WHERE chatgroupid = :chatgroupid
 `
 	ctx, _ := o.DefaultContext()
@@ -228,11 +230,17 @@ ON DUPLICATE KEY UPDATE
 		"nickname",
 		"owner",
 		"avatar",
-		"membercount",
-		"maxmembercount",
 		"ext",
 	} {
 		vls = append(vls, fmt.Sprintf("%s=IF(CHAR_LENGTH(VALUES(%s)) > 0, VALUES(%s), %s)",
+			field, field, field, field))
+	}
+
+	for _, field := range []string{
+		"membercount",
+		"maxmembercount",
+	} {
+		vls = append(vls, fmt.Sprintf("%s=IF(VALUES(%s) > 0, VALUES(%s), %s)",
 			field, field, field, field))
 	}
 

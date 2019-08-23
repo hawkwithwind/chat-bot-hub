@@ -86,7 +86,7 @@ func (server *WebServer) GetChatUserSync(_ context.Context, req *pb.GetChatUserS
 		return nil, o.Err
 	}
 
-	if actionReply.ClientError.Code != 0 {
+	if actionReply.ClientError != nil && actionReply.ClientError.Code != 0 {
 		return nil, utils.NewClientError(
 			utils.ClientErrorCode(actionReply.ClientError.Code),
 			fmt.Errorf(actionReply.ClientError.Message))
@@ -145,5 +145,47 @@ func (server *WebServer) ValidateToken(_ context.Context, req *pb.ValidateTokenR
 	payload, _ := json.Marshal(user)
 	response.Payload = payload
 
+	return response, nil
+}
+
+func (server *WebServer) GetBotChatRooms(ctx context.Context, request *pb.GetBotChatRoomsRequest) (*pb.GetBotChatRoomsResponse, error) {
+	o := &domains.ErrorHandler{}
+
+	chatRooms := o.GetChatRooms(server.mongoDb, request.BotIds, request.ChatType, request.FromRoomId, request.Limit)
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	response := &pb.GetBotChatRoomsResponse{}
+	response.Items = chatRooms
+
+	return response, nil
+}
+
+func (server *WebServer) GetBotChatRoom(ctx context.Context, request *pb.GetBotChatRoomRequest) (*pb.GetBotChatRoomResponse, error) {
+	o := &ErrorHandler{}
+
+	response := &pb.GetBotChatRoomResponse{}
+
+	room := o.GetChatRoomWithPeerId(server.mongoDb, request.BotId, request.PeerId)
+	if room != nil {
+		response.ChatRoom = room
+	} else if request.CreateIfNotExist {
+		response.ChatRoom = o.CreateChatRoom(server.mongoDb, request.BotId, request.PeerId)
+	}
+
+	return response, o.Err
+}
+
+func (server *WebServer) UpdateBotChatRoom(ctx context.Context, request *pb.UpdateBotChatRoomRequest) (*pb.UpdateBotChatRoomResponse, error) {
+	o := &ErrorHandler{}
+	o.UpdateOrCreateChatRoom(server.mongoDb, request.BotId, request.PeerId)
+
+	if o.Err != nil {
+		return nil, o.Err
+	}
+
+	response := &pb.UpdateBotChatRoomResponse{}
 	return response, nil
 }

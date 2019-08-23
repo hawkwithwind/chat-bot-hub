@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/metadata"
@@ -53,27 +52,6 @@ const (
 	Moment  ResourceType = 2
 )
 
-func (wsConnection *WsConnection) getBotById(botId string) (*domains.Bot, error) {
-	wrapper, err := wsConnection.server.NewWebGRPCWrapper()
-	if err != nil {
-		return nil, err
-	}
-	defer wrapper.Cancel()
-
-	req := &chatbotweb.GetBotRequest{BotId: botId}
-	res, err := wrapper.WebClient.GetBot(wrapper.Context, req)
-	if err != nil {
-		return nil, err
-	}
-
-	var bot domains.Bot
-	if err = json.Unmarshal(res.Payload, &bot); err != nil {
-		return nil, err
-	}
-
-	return &bot, nil
-}
-
 func (wsConnection *WsConnection) onSendMessage(payload interface{}) (interface{}, error) {
 	sendMessage := &SendMessage{}
 	if err := mapstructure.Decode(payload, sendMessage); err != nil {
@@ -119,7 +97,7 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 
 	o := &ErrorHandler{}
 
-	bot, err := wsConnection.getBotById(params.BotId)
+	bot, err := wsConnection.server.getBotById(params.BotId)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +111,7 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 	}
 	defer wrapper.Cancel()
 
-	_ = o.FillWechatMessagesContact(wrapper, messages)
+	_ = o.FillWechatMessagesContact(wrapper, messages, bot.Login)
 	o.FillWechatMessagesImageSignedURL(server.ossBucket, messages)
 
 	return messages, o.Err
@@ -149,7 +127,7 @@ func (wsConnection *WsConnection) onGetUnreadMessagesMeta(payload interface{}) (
 
 	for _, p := range params {
 		if botLoginCache[p.BotId] == "" {
-			bot, err := wsConnection.getBotById(p.BotId)
+			bot, err := wsConnection.server.getBotById(p.BotId)
 			if err != nil {
 				return nil, err
 			}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/go-sql-driver/mysql"
 	"net/http"
 	"time"
 
@@ -49,7 +50,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			o.Err = fmt.Errorf("cannot find filter %s", filterId)
 			return
 		}
-		//ctx.Info("creating filter %s", filter.FilterId)
+		ctx.Info("creating filter %s", filter.FilterId)
 
 		// generate filter in chathub
 		var body string
@@ -85,7 +86,7 @@ func (o *ErrorHandler) CreateFilterChain(
 
 			switch filter.FilterType {
 			case chatbothub.KVROUTER:
-				//ctx.Info("generate KVRouter children")
+				ctx.Info("generate KVRouter children")
 				if bodym == nil {
 					o.Err = utils.NewClientError(utils.PARAM_INVALID,
 						fmt.Errorf("Error generate KVRouter children: cannot parse filter.body %s", body))
@@ -98,7 +99,7 @@ func (o *ErrorHandler) CreateFilterChain(
 						for value, fid := range vm {
 							switch childFilterId := fid.(type) {
 							case string:
-								//ctx.Info("creating child filter %s", childFilterId)
+								ctx.Info("creating child filter %s", childFilterId)
 								o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 								if o.Err != nil {
 									return
@@ -133,11 +134,11 @@ func (o *ErrorHandler) CreateFilterChain(
 					}
 				}
 			case chatbothub.REGEXROUTER:
-				//ctx.Info("generate RegexRouter children")
+				ctx.Info("generate RegexRouter children")
 				for regstr, v := range bodym {
 					switch childFilterId := v.(type) {
 					case string:
-						//ctx.Info("creating child filter %s", childFilterId)
+						ctx.Info("creating child filter %s", childFilterId)
 						o.CreateFilterChain(ctx, tx, wrapper, childFilterId)
 						if o.Err != nil {
 							return
@@ -192,7 +193,7 @@ func (o *ErrorHandler) CreateFilterChain(
 			lastFilterId = currentFilterId
 			currentFilterId = filter.Next.String
 		} else {
-			//ctx.Info("filter %s next is null, init filters finished", filterId)
+			ctx.Info("filter %s next is null, init filters finished", filterId)
 			break
 		}
 	}
@@ -308,61 +309,48 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		return o.Err
 	}
 
-	ifmap := o.FromJson(thebotinfo.LoginInfo)
-
-	var localmap map[string]interface{}
-	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
-		localmap = o.FromJson(bot.LoginInfo.String)
-	} else {
-		localmap = make(map[string]interface{})
+	//ifmap := o.FromJson(thebotinfo.LoginInfo)
+	var logininfo chatbothub.LoginInfo
+	o.Err = json.Unmarshal([]byte(thebotinfo.LoginInfo), &logininfo)
+	if o.Err != nil {
+		return o.Err
 	}
 
+	var localinfo chatbothub.LoginInfo
+	if bot.LoginInfo.Valid && len(bot.LoginInfo.String) > 0 {
+		o.Err = json.Unmarshal([]byte(bot.LoginInfo.String), &localinfo)
+	} else {
+		localinfo = chatbothub.LoginInfo{}
+	}
 	if o.Err != nil {
 		return o.Err
 	}
 
 	switch eventType {
 	case chatbothub.UPDATETOKEN:
-		if tokenptr := o.FromMap("token", ifmap, "botsInfo[0].LoginInfo.Token", nil); tokenptr != nil {
-			localmap["token"] = tokenptr.(string)
+		if len(logininfo.Token) > 0 {
+			localinfo.Token = logininfo.Token
 		}
-		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
 		return nil
 
 	case chatbothub.LOGINDONE:
-		var oldtoken string
-		var oldwxdata string
-		if oldtokenptr, ok := ifmap["token"]; ok {
-			oldtoken = oldtokenptr.(string)
-		} else {
-			oldtoken = ""
+		if len(logininfo.Token) > 0 {
+			localinfo.Token = logininfo.Token
 		}
-		if tokenptr := o.FromMap(
-			"token", ifmap, "botsInfo[0].LoginInfo.Token", oldtoken); tokenptr != nil {
-			tk := tokenptr.(string)
-			if len(tk) > 0 {
-				localmap["token"] = tk
-			}
+		if len(logininfo.WxData) > 0 {
+			localinfo.WxData = logininfo.WxData
 		}
-		if oldwxdataptr, ok := ifmap["wxData"]; ok {
-			oldwxdata = oldwxdataptr.(string)
-		} else {
-			oldwxdata = ""
+		if len(logininfo.LongServerList) > 0 {
+			localinfo.LongServerList = logininfo.LongServerList
 		}
-		if wxdataptr := o.FromMap(
-			"wxData", ifmap, "botsInfo[0].LoginInfo.WxData", oldwxdata); wxdataptr != nil {
-			wd := wxdataptr.(string)
-			if len(wd) > 0 {
-				localmap["wxData"] = wd
-			}
-		}
-		if o.Err != nil {
-			return o.Err
+		if len(logininfo.ShortServerList) > 0 {
+			localinfo.ShortServerList = logininfo.ShortServerList
 		}
 
-		bot.LoginInfo = sql.NullString{String: o.ToJson(localmap), Valid: true}
+		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
 
 		ctx.Info("update bot login (%s)->(%s)", bot.Login, thebotinfo.Login)
@@ -432,10 +420,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		go func() {
 			if bot.Callback.Valid {
-				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
-					bot, eventType, bodystr), 5, 1); err != nil {
-					ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
-				}
+				//if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
+				//	bot, eventType, bodystr), 5, 1); err != nil {
+				//	//ctx.Error(err, "callback statusmessage failed\n%v\n", resp)
+				//}
 			}
 		}()
 
@@ -446,7 +434,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		}
 
-	case chatbothub.MESSAGE:
+	case chatbothub.MESSAGE, chatbothub.IMAGEMESSAGE, chatbothub.EMOJIMESSAGE:
 		msg := bodystr
 		if o.Err != nil {
 			return o.Err
@@ -490,6 +478,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						return o.Err
 					}
+
+					go ctx.syncGroupMembers(thebotinfo.Login, thebotinfo.ClientType, message.GroupId, false, chatgroup)
 				}
 			}
 
@@ -497,10 +487,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 		}
-
-	//case chatbothub.IMAGEMESSAGE:
-
-	//case chatbothub.EMOJIMESSAGE:
 
 	case chatbothub.ACTIONREPLY:
 		reqstr := bodystr
@@ -810,6 +796,14 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				o.UpdateOrCreateGroupMembers(tx, chatgroupMembers)
 			}
 
+			// 3. update group membercount
+			chatgroup.MemberCount = len(chatgroupMembers)
+			chatgroup.LastSyncMembersAt = mysql.NullTime{
+				Time:  time.Now(),
+				Valid: true,
+			}
+			o.UpdateChatGroup(tx, chatgroup)
+
 		case chatbothub.GetLabelList:
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
@@ -1053,8 +1047,11 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx.Info("ar is " + o.ToJson(ar))
+
 	actionReply := o.CreateAndRunAction(ctx, ar)
 	if o.Err != nil {
+		ctx.Info("create and run action failed")
 		return
 	}
 
@@ -1065,14 +1062,28 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
+	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 
-	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
+	dayCount := 0
+	if daylimit > 0 {
+		dayCount = o.ActionCountDaily(web.redispool, ar)
+	}
+
+	hourCount := 0
+	if hourlimit > 0 {
+		hourCount = o.ActionCountHourly(web.redispool, ar)
+	}
+
+	minuteCount := 0
+	if minutelimit > 0 {
+		minuteCount = o.ActionCountMinutely(web.redispool, ar)
+	}
+
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
 	if o.Err != nil {
 		return nil
 	}
 
-	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 	if dayCount > daylimit {
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
 			fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
@@ -1097,8 +1108,11 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}
 
+	web.Info("action request is " + o.ToJson(ar))
+
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
 	if o.Err != nil {
+		web.Error(o.Err, "ar is "+o.ToJson(ar))
 		return nil
 	}
 
@@ -1112,7 +1126,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		}
 	}
 
-	o.SaveActionRequest(web.redispool, ar)
+	o.SaveActionRequestWLimit(web.redispool, ar, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
 

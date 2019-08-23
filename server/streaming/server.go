@@ -1,8 +1,10 @@
 package streaming
 
 import (
+	"encoding/json"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
+	chatbotweb "github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
@@ -108,4 +110,25 @@ func (server *Server) Serve() error {
 	server.StartHubClient()
 
 	return server.ServeWebsocketServer()
+}
+
+func (server *Server) getBotById(botId string) (*domains.Bot, error) {
+	wrapper, err := server.NewWebGRPCWrapper()
+	if err != nil {
+		return nil, err
+	}
+	defer wrapper.Cancel()
+
+	req := &chatbotweb.GetBotRequest{BotId: botId}
+	res, err := wrapper.WebClient.GetBot(wrapper.Context, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var bot domains.Bot
+	if err = json.Unmarshal(res.Payload, &bot); err != nil {
+		return nil, err
+	}
+
+	return &bot, nil
 }

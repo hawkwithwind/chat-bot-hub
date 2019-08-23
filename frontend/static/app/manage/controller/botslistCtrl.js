@@ -117,6 +117,18 @@
       })
     }
 
+    $scope.clearLoginInfo = (row) => {
+      buildPromise(buildModelResId('bots', row.botId + '/clearlogininfo').update((data) => {
+        toastr.success(data, '清除成功')
+      }))
+    }
+
+    $scope.shutdown = (row) => {
+      buildPromise(buildModelResId('bots', row.botId + '/shutdown').update((data) => {
+        toastr.success(data, '关闭成功')
+      }))
+    }
+
     $scope.botAction = (row) => {
       $modal.open({
 	templateUrl: 'botActionTemplate',
@@ -332,7 +344,12 @@
       ],
       "AcceptUser": [
         commonParams.fromUserName,
-        commonParams.stranger,
+        {
+          "name": "EncryptUserName",
+          "display": "EncryptUserName",
+          "type": "string",
+          "required": true,
+        },
         commonParams.ticket,
         {
           "name": "content",
@@ -498,6 +515,10 @@
       if (!data.actionBody) {
         data.actionBody = JSON.stringify({})
       } else {
+        // if(data.actionBody.object) {
+        //   data.actionBody.object = JSON.parse(data.actionBody.object)
+        // }
+        
         if(data.actionBody.memberList) {
           data.actionBody.memberList = JSON.parse(data.actionBody.memberList)
         }
