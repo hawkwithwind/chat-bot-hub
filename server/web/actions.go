@@ -860,10 +860,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline.BotId = botId
 				wechatTimeline.Comment = wechatSnsMoment.Comment
 				wechatTimeline.Like = wechatSnsMoment.Like
-				o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
+				updated := o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
 
-				if o.Err != nil && o.Err.Error() == "not found" {
-					ctx.Info("update SnsGetObject success")
+				if updated > 0 {
+					ctx.Info("update[%d] snsGetObject success", updated)
 				}
 			}
 

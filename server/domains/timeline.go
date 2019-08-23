@@ -60,11 +60,12 @@ func (o *ErrorHandler) EnsureTimelineIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline) {
+func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline) int {
 	col := db.C(WechatTimelineCollection)
 
 	now := time.Now()
-	o.Err = col.Update(
+	var info *mgo.ChangeInfo
+	info, o.Err = col.UpdateAll(
 		bson.M{
 			"id":    timeline.Id,
 			"botId": timeline.BotId,
@@ -77,6 +78,12 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 			},
 		},
 	)
+
+	if info == nil || o.Err != nil {
+		return 0
+	}
+
+	return info.Updated
 }
 
 func (o *ErrorHandler) UpdateWechatTimelines(db *mgo.Database, timelines []WechatTimeline) {
