@@ -837,7 +837,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 		case chatbothub.SnsGetObject:
-			ctx.Info("SnsGetObject")
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
@@ -862,7 +861,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline.Comment = wechatSnsMoment.Comment
 				wechatTimeline.Like = wechatSnsMoment.Like
 				o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
-				ctx.Info("update SnsGetObject data")
+
+				if o.Err == nil {
+					ctx.Info("update SnsGetObject success")
+				}
 			}
 
 		case chatbothub.SnsTimeline:
