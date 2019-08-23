@@ -208,9 +208,9 @@ func (web *WebServer) NotifyWechatBotsUpdateTimeline(w http.ResponseWriter, r *h
 			return
 		}
 
-		o.ProcessByPages(tx, bot.BotId, 5, func(histories []string, page int64) {
+		o.ProcessByPages(tx, bot.BotId, 10, func(histories []string, page int64) {
+			web.Info("botId[%s] process page[%d] len[%d]", bot.BotId, page, len(histories))
 			for _, momentCode := range histories {
-				web.Info("botId[%s] process page[%d] momentId[%s] len[%d]", bot.BotId, page, momentCode, len(histories))
 				ar := o.NewActionRequest(botinfo.Login, "SnsGetObject", o.ToJson(map[string]interface{}{
 					"momentId": momentCode,
 				}), "NEW")
