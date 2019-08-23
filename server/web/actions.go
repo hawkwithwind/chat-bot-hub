@@ -862,7 +862,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline.Like = wechatSnsMoment.Like
 				o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
 
-				if o.Err == nil {
+				if o.Err != nil && o.Err.Error() == "not found" {
 					ctx.Info("update SnsGetObject success")
 				}
 			}

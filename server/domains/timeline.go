@@ -64,7 +64,7 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 	col := db.C(WechatTimelineCollection)
 
 	now := time.Now()
-	_, o.Err = col.Upsert(
+	o.Err = col.Update(
 		bson.M{
 			"id":    timeline.Id,
 			"botId": timeline.BotId,
@@ -77,10 +77,6 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 			},
 		},
 	)
-
-	if o.Err != nil {
-		return
-	}
 }
 
 func (o *ErrorHandler) UpdateWechatTimelines(db *mgo.Database, timelines []WechatTimeline) {
