@@ -769,7 +769,7 @@ func (ctx *WebServer) updateBot(w http.ResponseWriter, r *http.Request) {
 func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
-	defer o.BackEndError(w)
+	defer o.BackEndError(ctx)
 
 	r.ParseForm()
 	botId := o.getStringValue(r.Form, "botId")
