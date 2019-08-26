@@ -845,7 +845,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
-				ctx.Info("c data: [%s]", o.ToJson(acresult.Data))
+				ctx.Info("SnsGetObject data: [%s]", o.ToJson(acresult.Data))
 
 				weMomentWrap := models.WechatSnsMomentWrap{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &weMomentWrap)
