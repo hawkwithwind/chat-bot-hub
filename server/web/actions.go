@@ -845,14 +845,14 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
+				ctx.Info("c data: [%s]", o.ToJson(acresult.Data))
+
 				weMomentWrap := models.WechatSnsMomentWrap{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &weMomentWrap)
 				if o.Err != nil {
 					ctx.Error(o.Err, "cannot parse\n%s\n", o.ToJson(acresult.Data))
 					return o.Err
 				}
-
-				ctx.Info("SnsGetObject data: [%s]", o.ToJson(acresult.Data))
 
 				wechatSnsMoment := weMomentWrap.Data
 				wechatTimeline := domains.WechatTimeline{}
