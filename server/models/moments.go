@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type WechatSnsMoment struct {
 	BotId       string        `msg:"botId"`
 	Avatar      string        `msg:"avatar"`
@@ -12,7 +10,6 @@ type WechatSnsMoment struct {
 	UserName    string        `json:"userName" msg:"userName"`
 	Comment     []*SnsComment `json:"comment,omitempty" msg:"comment"`
 	Like        []*SnsLike    `json:"like,omitempty" msg:"like"`
-	UpdatedAt   time.Time     `json:"updatedAt" msg:"updatedAt"`
 }
 
 type WechatSnsTimeline struct {
