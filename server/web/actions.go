@@ -839,7 +839,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
-				ctx.Info("SnsGetObject data: [%s]", o.ToJson(acresult.Data))
+				ctx.Info("SnsGetObject botId[%s] data: [%s]", thebotinfo.BotId, o.ToJson(acresult.Data))
 
 				weMomentWrap := models.WechatSnsMomentWrap{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &weMomentWrap)
@@ -851,7 +851,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatSnsMoment := weMomentWrap.Data
 				wechatTimeline := domains.WechatTimeline{}
 				wechatTimeline.Id = wechatSnsMoment.MomentId
-				wechatTimeline.BotId = botId
+				wechatTimeline.BotId = thebotinfo.BotId
 				wechatTimeline.Comment = wechatSnsMoment.Comment
 				wechatTimeline.Like = wechatSnsMoment.Like
 				updated := o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
@@ -887,7 +887,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 						return o.Err
 					}
 
-					m.BotId = botId
+					m.BotId = thebotinfo.BotId
 					if chatuser.Avatar.Valid {
 						m.Avatar = chatuser.Avatar.String
 					}
@@ -895,24 +895,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
-					foundms := o.GetMomentByCode(tx, m.MomentId)
-					if o.Err != nil {
-						return o.Err
-					}
-
-					if len(foundms) == 0 {
-						//just for test start
-						//wechatTimeline := domains.WechatTimeline{}
-						//wechatTimeline.Id = m.MomentId
-						//wechatTimeline.BotId = m.BotId
-						//wechatTimeline.NickName = m.NickName
-						//wechatTimeline.UserName = m.UserName
-						//wechatTimeline.Description = m.Description
-						//wechatTimeline.CreateTime = m.CreateTime
-						//wechatTimeline.Avatar = m.Avatar
-						//o.UpdateWechatTimelines(ctx.mongoMomentDb, []domains.WechatTimeline{wechatTimeline})
-						//end
-
+					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						go func() {
 							if ctx.fluentLogger != nil {
 								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
@@ -924,13 +907,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 								}
 							}
 						}()
-					}
 
-					if o.Err != nil {
-						return o.Err
-					}
-
-					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
 						_, o.Err = wrapper.HubClient.FilterFill(wrapper.Context, &pb.FilterFillRequest{
