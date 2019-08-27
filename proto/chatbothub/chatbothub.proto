@@ -38,6 +38,8 @@ service ChatBotHub {
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
   rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
 
+  rpc WebShortCallResponse (EventReply) returns (OperationReply) {}
+
   // tunnel that connect streaming server and chathub server
   rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
   

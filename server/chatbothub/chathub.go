@@ -200,6 +200,8 @@ const (
 	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
 	BOTACTION       string = "BOTACTION"
 	ACTIONREPLY     string = "ACTIONREPLY"
+	WEBSHORTCALL    string = "WEBSHORTCALL"
+	WEBSHORTCALLRESPONSE string = "WEBSHORTCALLRESPONSE"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -942,6 +944,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							BotId:     bot.BotId,
 							EventType: GROUPINFO,
 							Body:      in.Body,
+						}))
+					}
+				}
+
+			case WEBSHORTCALL:
+				if bot.ClientType == WECHATBOT {
+					hub.Info("WEBSHORTCALL \n%s\n", in.Body)
+
+					if o.Err == nil {
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId: bot.BotId,
+							EventType: WEBSHORTCALL,
+							Body: in.Body,
 						}))
 					}
 				}

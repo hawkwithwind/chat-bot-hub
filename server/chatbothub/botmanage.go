@@ -299,3 +299,38 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
 	}
 }
+
+func (hub *ChatHub) WebShortCallResponse (ctx context.Context, req *pb.EventReply) (*pb.OperationReply, error) {
+	o := &ErrorHandler{}
+
+	bot := hub.GetBotById(req.BotId)
+
+	if bot == nil {
+		o.Err = fmt.Errorf("b[%s] not found", req.ClientId)
+	}
+
+	req.ClientType = bot.ClientType
+	req.ClientId = bot.ClientId
+	
+	if o.Err == nil {
+		hub.Info("calling c[%s] WebShortCall Response \n %s", bot.ClientId, req.Body)
+		o.sendEvent(bot.tunnel, req)
+	}
+
+	if o.Err != nil {
+		switch clientError := o.Err.(type) {
+		case *utils.ClientError:
+			return  &pb.OperationReply{
+				Code:    int32(clientError.Code),
+				Message: clientError.Error(),
+			}, nil
+		default:
+			return &pb.OperationReply{
+				Code:    int32(utils.UNKNOWN),
+				Message: o.Err.Error(),
+			}, nil
+		}
+	} else {
+		return &pb.OperationReply{Code:0, Message:"Done"}, nil
+	}
+}

@@ -949,6 +949,44 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}()
 
+	case chatbothub.WEBSHORTCALL:
+		go func() {
+			if bot.Callback.Valid {
+				resp, err := httpx.RestfulCallRetry(ctx.restfulclient,
+					webCallbackRequest(bot, eventType, bodystr), 5, 1)
+				if err != nil {
+					ctx.Error(err, "web short call failed")
+				} else {
+					ctx.Info("web short call resp [%d]\n", resp.StatusCode)
+					if resp.StatusCode == 200 {
+						ctx.Info("web short call returned %s", resp.Body)
+						
+						wrapper, err := ctx.NewGRPCWrapper()
+						if err != nil {
+							o.Err = err
+							return
+						}
+
+						opreply, err := wrapper.HubClient.WebShortCallResponse(
+							wrapper.Context,
+							&pb.EventReply{
+								EventType: chatbothub.WEBSHORTCALLRESPONSE,
+								Body: resp.Body,
+								BotId: bot.BotId,
+							},
+						)
+						
+						if err != nil {
+							o.Err = err
+							return
+						}
+
+						ctx.Info("web short call response call hub %s", o.ToJson(opreply))
+					}
+				}
+			}
+		}()
+		
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 		return o.Err
