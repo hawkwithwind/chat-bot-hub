@@ -33,6 +33,7 @@ var (
 		chatbothub.SendTextMessage: 100,
 		chatbothub.SendAppMessage:  60,
 		chatbothub.GetContact:      30,
+		chatbothub.SnsGetObject:    200,
 	}
 )
 
