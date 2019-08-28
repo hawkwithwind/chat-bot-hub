@@ -1043,29 +1043,25 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 
-	dayCount := 0
+	dayCount := -2
 	if daylimit > 0 {
 		dayCount = o.ActionCountDaily(web.redispool, ar)
 	}
 
-	hourCount := 0
+	hourCount := -2
 	if hourlimit > 0 {
 		hourCount = o.ActionCountHourly(web.redispool, ar)
 	}
 
-	minuteCount := 0
+	minuteCount := -2
 	if minutelimit > 0 {
 		minuteCount = o.ActionCountMinutely(web.redispool, ar)
 	}
 
-	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
-	web.Info("action[%s] count %d, %d, %d", ar.ActionType, dayCount, hourCount, minuteCount)
+	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
 	if o.Err != nil {
 		return nil
 	}
-
-	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
-	web.Info("action[%s] limit count %d, %d, %d", ar.ActionType, daylimit, hourlimit, minutelimit)
 
 	if dayCount > daylimit {
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
