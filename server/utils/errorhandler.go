@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"runtime/debug"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
@@ -226,6 +227,7 @@ func (ctx *ErrorHandler) GetResponseBody(resp *httpx.RestfulResponse) map[string
 
 func (o *ErrorHandler) Recover(name string) {
 	if r := recover(); r != nil {
-		fmt.Printf("recover from go[%s] with context: %v", name, r)
+		fmt.Printf("recover from go[%s] with context: %v\n", name, r)
+		fmt.Println(string(debug.Stack()))
 	}
 }
