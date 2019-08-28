@@ -362,9 +362,11 @@ func (hub *ChatHub) verifyMessage(bot *ChatBot, inEvent *pb.EventRequest) (map[s
 func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) error {
 	bodyJSON, err := hub.verifyMessage(bot, inEvent)
 	if err != nil {
+		hub.Info("[FILTER DEBUG] verify failed %v", err)
 		return err
 	}
 	if bodyJSON == nil {
+		hub.Info("[FILTER DEBUG] verify failed json nil")
 		return nil
 	}
 
@@ -380,6 +382,8 @@ func (hub *ChatHub) onReceiveMessage(bot *ChatBot, inEvent *pb.EventRequest) err
 		if err := bot.filter.Fill(newBodyStr); err != nil {
 			return err
 		}
+	} else {
+		hub.Info("[FILTER DEBUG] c[%s] filter is nil", bot.ClientId)
 	}
 
 	if len(newBodyStr) > 32*1024 {
@@ -891,8 +895,13 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
+				hub.Info("[FILTER DEBUG] onReceiveMessage")
+				
 				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
+					if o.Err != nil {
+						hub.Info("[FILTER DEBUG] onReceiveMessage failed %v ", o.Err)
+					}
 				} else {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
