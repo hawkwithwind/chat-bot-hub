@@ -34,6 +34,7 @@ var (
 		chatbothub.SendTextMessage: 100,
 		chatbothub.SendAppMessage:  200,
 		chatbothub.GetContact:      30,
+		chatbothub.SnsGetObject:    200,
 	}
 )
 

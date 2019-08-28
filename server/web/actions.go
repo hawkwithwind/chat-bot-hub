@@ -1058,10 +1058,14 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		minuteCount = o.ActionCountMinutely(web.redispool, ar)
 	}
 
-	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
+	dayCount, hourCount, minuteCount := o.ActionCount(web.redispool, ar)
+	web.Info("action[%s] count %d, %d, %d", ar.ActionType, dayCount, hourCount, minuteCount)
 	if o.Err != nil {
 		return nil
 	}
+
+	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
+	web.Info("action[%s] limit count %d, %d, %d", ar.ActionType, daylimit, hourlimit, minutelimit)
 
 	if dayCount > daylimit {
 		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,

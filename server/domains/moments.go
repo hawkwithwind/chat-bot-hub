@@ -153,7 +153,7 @@ func (o *ErrorHandler) GetMomentCountWithBotId(q dbx.Queryable, botId string) in
 }
 
 func processPage(o *ErrorHandler, q dbx.Queryable, botId string, page int64, pageSize int64, pageCount int64, process func(histories []string, page int64)) {
-	const query string = `SELECT momentcode FROM moments WHERE DATE_SUB(CURDATE(), INTERVAL 1 DAY) <= date(sendat) AND botid=? LIMIT ?, ?`
+	const query string = `SELECT momentcode FROM moments WHERE DATE_SUB(CURDATE(), INTERVAL 1 DAY) <= date(sendat) AND botid=? ORDER BY sendat desc LIMIT ?, ?`
 	var momentCodes []string
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &momentCodes, query, botId, (page-1)*pageSize, pageSize)

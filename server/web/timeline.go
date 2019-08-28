@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hawkwithwind/mux"
 
@@ -198,6 +199,8 @@ func (web *WebServer) NotifyWechatBotsUpdateTimeline(w http.ResponseWriter, r *h
 		return
 	}
 
+	var at = "SnsGetObject"
+
 	for _, bot := range botsreply.BotsInfo {
 		if bot.BotId == "" {
 			continue
@@ -211,17 +214,20 @@ func (web *WebServer) NotifyWechatBotsUpdateTimeline(w http.ResponseWriter, r *h
 		o.ProcessByPages(tx, bot.BotId, 10, func(histories []string, page int64) {
 			web.Info("botId[%s] process page[%d] len[%d]", bot.BotId, page, len(histories))
 			for _, momentCode := range histories {
-				ar := o.NewActionRequest(botinfo.Login, "SnsGetObject", o.ToJson(map[string]interface{}{
+				ar := o.NewActionRequest(botinfo.Login, at, o.ToJson(map[string]interface{}{
 					"momentId": momentCode,
 				}), "NEW")
 				if actionReply := o.CreateAndRunAction(web, ar); actionReply != nil {
 					actionReplys = append(actionReplys, *actionReply)
+					web.Info("create and run mc[%s] ok", momentCode)
 				}
 
 				if o.Err != nil {
+					web.Info("create and run %s error[%s]", at, o.Err.Error())
 					return
 				}
 			}
+			time.Sleep(time.Duration(page+1) * time.Second)
 		})
 	}
 
