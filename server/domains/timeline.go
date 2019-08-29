@@ -2,9 +2,14 @@ package domains
 
 import (
 	"fmt"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/beevik/etree"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/google/uuid"
 	"github.com/hawkwithwind/chat-bot-hub/server/models"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"strconv"
 	"time"
 )
 
@@ -19,6 +24,29 @@ type WechatTimeline struct {
 	Comment     []*models.SnsComment `json:"comment" bson:"comment"`
 	Like        []*models.SnsLike    `json:"like" bson:"like"`
 	UpdatedAt   time.Time            `json:"updatedAt" bson:"updatedAt"`
+	Extraction  *Extraction          `bson:"extraction"`
+}
+
+type Extraction struct {
+	Location    string   `json:"location"`
+	ContentDesc string   `json:"contentDesc"`
+	MediaList   []*Media `json:"mediaList"`
+}
+
+type Media struct {
+	Id              string `json:"id"`
+	Type            int    `json:"type"`
+	Url             string `json:"url"`
+	SignedUrl       string `json:"signedUrl"`
+	Thumb           string `json:"thumb"`
+	SignedThumbnail string `json:"signedThumbnail"`
+	Size            *Size  `json:"size"`
+}
+
+type Size struct {
+	Width     string `json:"width"`
+	Height    string `json:"height"`
+	TotalSize string `json:"totalSize"`
 }
 
 const (
@@ -60,7 +88,62 @@ func (o *ErrorHandler) EnsureTimelineIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline) int {
+func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline, ossBucket *oss.Bucket) int {
+	doc := etree.NewDocument()
+	if o.Err = doc.ReadFromString(timeline.Description); o.Err != nil {
+		return 0
+	}
+
+	extraction := &Extraction{}
+	root := doc.SelectElement("TimelineObject")
+	if root == nil {
+		return 0
+	}
+
+	if content := root.SelectElement("contentDesc"); content != nil {
+		extraction.ContentDesc = content.Text()
+	}
+	if location := root.SelectElement("location"); location != nil {
+		extraction.Location = location.SelectAttrValue("poiName", "")
+	}
+	if contentObject := root.SelectElement("ContentObject"); contentObject != nil {
+		if eMediaList := contentObject.SelectElement("mediaList"); eMediaList != nil {
+			var mediaList []*Media
+			for _, eMedia := range eMediaList.SelectElements("media") {
+				media := &Media{}
+				if eid := eMedia.SelectElement("id"); eid != nil {
+					media.Id = eid.Text()
+				}
+				if eType := eMedia.SelectElement("type"); eType != nil {
+					media.Type, _ = strconv.Atoi(eType.Text())
+				}
+				var rid uuid.UUID
+				if rid, o.Err = uuid.NewRandom(); o.Err == nil {
+					imageId := timeline.UserName + "-" + rid.String()
+					thumbId := imageId + "-thumbnail"
+					media.SignedUrl, media.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, imageId, thumbId)
+				}
+
+				if url := eMedia.SelectElement("url"); url != nil {
+					media.Url = url.Text()
+				}
+				if thumb := eMedia.SelectElement("thumb"); thumb != nil {
+					media.Thumb = thumb.Text()
+				}
+
+				size := &Size{}
+				if eSize := eMedia.SelectElement("size"); eSize != nil {
+					size.Width = eSize.SelectAttrValue("width", "0")
+					size.Height = eSize.SelectAttrValue("height", "0")
+					size.TotalSize = eSize.SelectAttrValue("totalSize", "0")
+				}
+				media.Size = size
+				mediaList = append(mediaList, media)
+			}
+			extraction.MediaList = mediaList
+		}
+	}
+
 	col := db.C(WechatTimelineCollection)
 
 	now := time.Now()
@@ -72,9 +155,10 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 		},
 		bson.M{
 			"$set": bson.M{
-				"updatedAt": now,
-				"comment":   timeline.Comment,
-				"like":      timeline.Like,
+				"updatedAt":  now,
+				"comment":    timeline.Comment,
+				"like":       timeline.Like,
+				"extraction": extraction,
 			},
 		},
 	)

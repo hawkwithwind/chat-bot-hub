@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -48,6 +49,7 @@ type WebConfig struct {
 	Redis    utils.RedisConfig
 	Fluent   utils.FluentConfig
 	Mongo    utils.MongoConfig
+	Oss      utils.OssConfig
 	Rabbitmq utils.RabbitMQConfig
 
 	SecretPhrase string
@@ -74,6 +76,9 @@ type WebServer struct {
 	mongoMomentDb *mgo.Database
 	contactParser *ContactParser
 	accounts      Accounts
+
+	ossClient *oss.Client
+	ossBucket *oss.Bucket
 
 	rabbitmq *utils.RabbitMQWrapper
 
@@ -141,6 +146,21 @@ func (ctx *WebServer) init() error {
 		ctx.Info("set database max conn %d", ctx.Config.Database.MaxConnectNum)
 		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
 	}
+
+	ossClient, err := oss.New(ctx.Config.Oss.Region, ctx.Config.Oss.Accesskeyid, ctx.Config.Oss.Accesskeysecret, oss.UseCname(true))
+	if err != nil {
+		ctx.Error(err, "cannot create ossClient")
+		return err
+	}
+
+	ossBucket, err := ossClient.Bucket(ctx.Config.Oss.Bucket)
+	if err != nil {
+		ctx.Error(err, "cannot get oss bucket")
+		return err
+	}
+
+	ctx.ossClient = ossClient
+	ctx.ossBucket = ossBucket
 
 	ctx.rabbitmq = o.NewRabbitMQWrapper(ctx.Config.Rabbitmq)
 	err = ctx.rabbitmq.Reconnect()

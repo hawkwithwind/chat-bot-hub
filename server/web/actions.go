@@ -839,7 +839,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 
 			if thebotinfo.ClientType == "WECHATBOT" {
-				ctx.Info("SnsGetObject botId[%s] data: [%s]", thebotinfo.BotId, o.ToJson(acresult.Data))
+				ctx.Info("---BotId[%s] SnsGetObject data:%s", thebotinfo.BotId, o.ToJson(acresult.Data))
 
 				weMomentWrap := models.WechatSnsMomentWrap{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &weMomentWrap)
@@ -852,12 +852,19 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline := domains.WechatTimeline{}
 				wechatTimeline.Id = wechatSnsMoment.MomentId
 				wechatTimeline.BotId = thebotinfo.BotId
+				wechatTimeline.UserName = wechatSnsMoment.UserName
 				wechatTimeline.Comment = wechatSnsMoment.Comment
 				wechatTimeline.Like = wechatSnsMoment.Like
-				updated := o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline)
+				wechatTimeline.Description = wechatSnsMoment.Description
+				updated := o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline, ctx.ossBucket)
 
 				if updated > 0 {
 					ctx.Info("update[%d] snsGetObject success", updated)
+				}
+
+				if o.Err != nil {
+					ctx.Info("update[%s] snsGetObject failed [%s]", wechatTimeline.Id, o.Err.Error())
+					return o.Err
 				}
 			}
 
@@ -896,17 +903,15 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
-						go func() {
-							if ctx.fluentLogger != nil {
-								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-									if err := ctx.fluentLogger.Post(tag, m); err != nil {
-										ctx.Error(err, "push moment to fluentd failed")
-									}
-								} else {
-									ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
+						if ctx.fluentLogger != nil {
+							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+								if err := ctx.fluentLogger.Post(tag, m); err != nil {
+									ctx.Error(err, "push moment to fluentd failed")
 								}
+							} else {
+								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						}()
+						}
 
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
@@ -916,6 +921,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 							Body:   o.ToJson(m),
 						})
 						newMomentIds[m.MomentId] = 1
+
+						moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
+						o.SaveMoment(tx, moment)
 					} else {
 						ctx.Info("ignore fill moment b[%s] %s", thebotinfo.Login, m.MomentId)
 					}
@@ -923,9 +931,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						return o.Err
 					}
-
-					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
-					o.SaveMoment(tx, moment)
 				}
 
 				if o.Err != nil {
