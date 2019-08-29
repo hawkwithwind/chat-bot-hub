@@ -24,7 +24,7 @@ type WechatTimeline struct {
 	Comment     []*models.SnsComment `json:"comment" bson:"comment"`
 	Like        []*models.SnsLike    `json:"like" bson:"like"`
 	UpdatedAt   time.Time            `json:"updatedAt" bson:"updatedAt"`
-	Extraction  *Extraction          `bson:"extraction"`
+	Extraction  *Extraction          `json:"extraction" bson:"extraction"`
 }
 
 type Extraction struct {
@@ -189,6 +189,17 @@ func (o *ErrorHandler) UpdateWechatTimelines(db *mgo.Database, timelines []Wecha
 			return
 		}
 	}
+}
+
+func (o *ErrorHandler) GetTimelineByBotAndCode(db *mgo.Database, botId string, momentCode string) *WechatTimeline {
+	result := &WechatTimeline{}
+
+	o.Err = db.C(WechatTimelineCollection).Find(bson.M{"botId": botId, "id": momentCode}).One(result)
+	if o.Err != nil {
+		return nil
+	}
+
+	return result
 }
 
 func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query) []*WechatTimeline {

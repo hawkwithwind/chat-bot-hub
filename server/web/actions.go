@@ -902,7 +902,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
-					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
+					if foundm := o.GetTimelineByBotAndCode(ctx.mongoMomentDb, thebotinfo.BotId, m.MomentId); foundm == nil {
 						if ctx.fluentLogger != nil {
 							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
 								if err := ctx.fluentLogger.Post(tag, m); err != nil {
@@ -921,9 +921,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 							Body:   o.ToJson(m),
 						})
 						newMomentIds[m.MomentId] = 1
-
-						moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
-						o.SaveMoment(tx, moment)
 					} else {
 						ctx.Info("ignore fill moment b[%s] %s", thebotinfo.Login, m.MomentId)
 					}
@@ -931,6 +928,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						return o.Err
 					}
+
+					moment := o.NewMoment(thebotinfo.BotId, m.MomentId, m.CreateTime, chatuser.ChatUserId)
+					o.SaveMoment(tx, moment)
 				}
 
 				if o.Err != nil {
