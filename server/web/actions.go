@@ -898,20 +898,22 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if chatuser.Avatar.Valid {
 						m.Avatar = chatuser.Avatar.String
 					}
-					ctx.Info("---\n%s at %d from %s %s %s\n%s", m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Avatar, m.Description)
+					ctx.Info("---\n%s %s at %d from %s %s %s\n%s", thebotinfo.BotId, m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Avatar, m.Description)
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
 					if foundm := o.GetTimelineByBotAndCode(ctx.mongoMomentDb, thebotinfo.BotId, m.MomentId); foundm == nil {
-						if ctx.fluentLogger != nil {
-							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-								if err := ctx.fluentLogger.Post(tag, m); err != nil {
-									ctx.Error(err, "push moment to fluentd failed")
+						go func() {
+							if ctx.fluentLogger != nil {
+								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+									if err := ctx.fluentLogger.Post(tag, m); err != nil {
+										ctx.Error(err, "push moment to fluentd failed")
+									}
+								} else {
+									ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 								}
-							} else {
-								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						}
+						}()
 
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)

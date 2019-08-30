@@ -1,30 +1,33 @@
 package domains
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/beevik/etree"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/google/uuid"
-	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
+	"io"
+	"net/http"
 	"strconv"
 	"time"
 )
 
 type WechatTimeline struct {
-	Id          string               `json:"id" bson:"id"`
-	Avatar      string               `json:"avatar" bson:"avatar"`
-	BotId       string               `json:"botId" bson:"botId"`
-	NickName    string               `json:"nickName" bson:"nickName"`
-	UserName    string               `json:"userName" bson:"userName"`
-	CreateTime  int                  `json:"createTime" bson:"createTime"`
-	Description string               `json:"description" bson:"description"`
-	Comment     []*models.SnsComment `json:"comment" bson:"comment"`
-	Like        []*models.SnsLike    `json:"like" bson:"like"`
-	UpdatedAt   time.Time            `json:"updatedAt" bson:"updatedAt"`
-	Extraction  *Extraction          `json:"extraction" bson:"extraction"`
+	Id          string      `json:"id" bson:"id"`
+	Avatar      string      `json:"avatar" bson:"avatar"`
+	BotId       string      `json:"botId" bson:"botId"`
+	NickName    string      `json:"nickName" bson:"nickName"`
+	UserName    string      `json:"userName" bson:"userName"`
+	CreateTime  int         `json:"createTime" bson:"createTime"`
+	Description string      `json:"description" bson:"description"`
+	Comment     interface{} `json:"comment" bson:"comment"`
+	Like        interface{} `json:"like" bson:"like"`
+	UpdatedAt   time.Time   `json:"updatedAt" bson:"updatedAt"`
+	Extraction  *Extraction `json:"extraction" bson:"extraction"`
 }
 
 type Extraction struct {
@@ -36,10 +39,10 @@ type Extraction struct {
 type Media struct {
 	Id              string `json:"id"`
 	Type            int    `json:"type"`
-	Url             string `json:"url"`
-	SignedUrl       string `json:"signedUrl"`
-	Thumb           string `json:"thumb"`
-	SignedThumbnail string `json:"signedThumbnail"`
+	ImageId         string `json:"imageId"`
+	SignedUrl       string `json:"signedUrl,omitempty"`
+	ThumbnailId     string `json:"thumbnailId"`
+	SignedThumbnail string `json:"signedThumbnail,omitempty"`
 	Size            *Size  `json:"size"`
 }
 
@@ -88,16 +91,47 @@ func (o *ErrorHandler) EnsureTimelineIndexes(db *mgo.Database) {
 	}
 }
 
-func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline, ossBucket *oss.Bucket) int {
+func GetAndUploadObject(ossBucket *oss.Bucket, urlToGet string, imageKey string) {
+	if urlToGet == "" || imageKey == "" {
+		return
+	}
+
+	o := ErrorHandler{}
+	var resp *http.Response
+
+	resp, o.Err = http.Get(urlToGet)
+	if o.Err != nil {
+		fmt.Println("download file error:", o.Err, urlToGet)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	reader := bufio.NewReaderSize(resp.Body, 32*1024)
+	buf := new(bytes.Buffer)
+	io.Copy(buf, reader)
+
+	o.Err = ossBucket.PutObject(imageKey, bytes.NewReader(buf.Bytes()))
+	if o.Err != nil {
+		fmt.Println("upload file error:", o.Err, imageKey)
+		return
+	}
+
+	fmt.Println("upload file " + imageKey + " success")
+}
+
+func parseTimelineObject(timeline WechatTimeline, ossBucket *oss.Bucket) *Extraction {
+	o := &ErrorHandler{}
 	doc := etree.NewDocument()
+
 	if o.Err = doc.ReadFromString(timeline.Description); o.Err != nil {
-		return 0
+		return nil
 	}
 
 	extraction := &Extraction{}
 	root := doc.SelectElement("TimelineObject")
 	if root == nil {
-		return 0
+		return nil
 	}
 
 	if content := root.SelectElement("contentDesc"); content != nil {
@@ -118,17 +152,29 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 					media.Type, _ = strconv.Atoi(eType.Text())
 				}
 				var rid uuid.UUID
+				var imageId, thumbId string
 				if rid, o.Err = uuid.NewRandom(); o.Err == nil {
-					imageId := timeline.UserName + "-" + rid.String()
-					thumbId := imageId + "-thumbnail"
-					media.SignedUrl, media.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, imageId, thumbId)
+					imageId = timeline.UserName + "-" + rid.String()
+					thumbId = imageId + "-thumbnail"
+					media.ImageId = imageId
+					media.ThumbnailId = thumbId
 				}
 
 				if url := eMedia.SelectElement("url"); url != nil {
-					media.Url = url.Text()
+					url := url.Text()
+
+					imageKey := "chathub/images/" + imageId
+					go func() {
+						GetAndUploadObject(ossBucket, url, imageKey)
+					}()
 				}
 				if thumb := eMedia.SelectElement("thumb"); thumb != nil {
-					media.Thumb = thumb.Text()
+					thumb := thumb.Text()
+
+					imageKey := "chathub/images/" + thumbId
+					go func() {
+						GetAndUploadObject(ossBucket, thumb, imageKey)
+					}()
 				}
 
 				size := &Size{}
@@ -144,24 +190,52 @@ func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTim
 		}
 	}
 
+	return extraction
+}
+
+func (o *ErrorHandler) UpdateWechatTimeline(db *mgo.Database, timeline WechatTimeline, ossBucket *oss.Bucket) int {
+	var info *mgo.ChangeInfo
+	var extraction *Extraction
 	col := db.C(WechatTimelineCollection)
+	wtl := o.GetTimelineByBotAndCode(db, timeline.BotId, timeline.Id)
+
+	if o.Err != nil {
+		return 0
+	}
 
 	now := time.Now()
-	var info *mgo.ChangeInfo
-	info, o.Err = col.UpdateAll(
-		bson.M{
-			"id":    timeline.Id,
-			"botId": timeline.BotId,
-		},
-		bson.M{
-			"$set": bson.M{
-				"updatedAt":  now,
-				"comment":    timeline.Comment,
-				"like":       timeline.Like,
-				"extraction": extraction,
+	if wtl.Extraction == nil {
+		extraction = parseTimelineObject(timeline, ossBucket)
+
+		info, o.Err = col.UpdateAll(
+			bson.M{
+				"id":    timeline.Id,
+				"botId": timeline.BotId,
 			},
-		},
-	)
+			bson.M{
+				"$set": bson.M{
+					"updatedAt":  now,
+					"comment":    timeline.Comment,
+					"like":       timeline.Like,
+					"extraction": extraction,
+				},
+			},
+		)
+	} else {
+		info, o.Err = col.UpdateAll(
+			bson.M{
+				"id":    timeline.Id,
+				"botId": timeline.BotId,
+			},
+			bson.M{
+				"$set": bson.M{
+					"updatedAt": now,
+					"comment":   timeline.Comment,
+					"like":      timeline.Like,
+				},
+			},
+		)
+	}
 
 	if info == nil || o.Err != nil {
 		return 0
@@ -202,7 +276,7 @@ func (o *ErrorHandler) GetTimelineByBotAndCode(db *mgo.Database, botId string, m
 	return result
 }
 
-func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query) []*WechatTimeline {
+func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query, ossBucket *oss.Bucket) []*WechatTimeline {
 	if o.Err != nil {
 		return []*WechatTimeline{}
 	}
@@ -212,6 +286,15 @@ func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query) []*WechatTimeline {
 	o.Err = query.All(&wt)
 	if o.Err != nil {
 		return []*WechatTimeline{}
+	}
+
+	//to signed img url
+	for _, timeline := range wt {
+		if timeline.Extraction != nil && timeline.Extraction.MediaList != nil {
+			for _, media := range timeline.Extraction.MediaList {
+				media.SignedUrl, media.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, media.ImageId, media.ThumbnailId)
+			}
+		}
 	}
 
 	return wt
@@ -230,7 +313,7 @@ func (o *ErrorHandler) buildGetTimelinesCriteria(userName string) bson.M {
 	return criteria
 }
 
-func (o *ErrorHandler) GetTimelineHistories(db *mgo.Database, userName string, direction string) []*WechatTimeline {
+func (o *ErrorHandler) GetTimelineHistories(db *mgo.Database, userName string, direction string, ossBucket *oss.Bucket) []*WechatTimeline {
 	criteria := o.buildGetTimelinesCriteria(userName)
 
 	if o.Err != nil {
@@ -251,7 +334,7 @@ func (o *ErrorHandler) GetTimelineHistories(db *mgo.Database, userName string, d
 			"createTime",
 		).Limit(pageSize)
 
-		result = o.GetWechatTimelines(query)
+		result = o.GetWechatTimelines(query, ossBucket)
 		if o.Err != nil {
 			return nil
 		}
@@ -264,7 +347,7 @@ func (o *ErrorHandler) GetTimelineHistories(db *mgo.Database, userName string, d
 			"-createTime",
 		).Limit(pageSize)
 
-		result = o.GetWechatTimelines(query)
+		result = o.GetWechatTimelines(query, ossBucket)
 		if o.Err != nil {
 			return nil
 		}

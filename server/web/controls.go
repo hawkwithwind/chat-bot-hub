@@ -1037,7 +1037,7 @@ func (web *WebServer) GetTimelines(writer http.ResponseWriter, request *http.Req
 		"-createTime",
 	).Skip(
 		int((paging.Page - 1) * paging.PageSize),
-	).Limit(int(paging.PageSize)))
+	).Limit(int(paging.PageSize)), web.ossBucket)
 
 	if o.Err != nil {
 		return
