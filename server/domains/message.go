@@ -3,15 +3,15 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/mitchellh/mapstructure"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	"github.com/mitchellh/mapstructure"
-	"strings"
 	"sync"
+	"strings"
 	"time"
 )
 
@@ -59,15 +59,16 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
-func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, botLogin string) error {
+
+func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, bot *Bot) error {
 	if message.FromUserContact != nil {
 		return nil
 	}
 
 	request := &chatbotweb.GetChatUserSyncRequest{
-		Type:     "WECHATBOT",
+		Type:     bot.ChatbotType,
 		UserName: message.FromUser,
-		BotLogin: botLogin,
+		BotLogin: bot.Login,
 	}
 
 	res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)
@@ -85,7 +86,7 @@ func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, messag
 	return o.Err
 }
 
-func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage, botLogin string) error {
+func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage, bot *Bot) error {
 	fromUserMap := &sync.Map{}
 	for _, message := range messages {
 		fromUserMap.Store(message.FromUser, nil)
@@ -103,9 +104,9 @@ func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messa
 			fromUser := key.(string)
 
 			request := &chatbotweb.GetChatUserSyncRequest{
-				Type:     "WECHATBOT",
+				Type:     bot.ChatbotType,
 				UserName: fromUser,
-				BotLogin: botLogin,
+				BotLogin: bot.Login,
 			}
 
 			res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)

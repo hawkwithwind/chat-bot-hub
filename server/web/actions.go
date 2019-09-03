@@ -285,14 +285,15 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
 		ctx.Info("[contacts debug] bot notify received raw")
 		return nil
 	}
-
+	
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
 		return o.Err
@@ -380,7 +381,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.FRIENDREQUEST:
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
 		rlogin := ""
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
@@ -430,7 +432,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.GROUPINFO:
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
 
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 
 		}
 
@@ -440,7 +443,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			message := models.WechatMessage{}
 			o.Err = json.Unmarshal([]byte(msg), &message)
 			if o.Err != nil {
@@ -812,7 +816,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 
-			if thebotinfo.ClientType == "WECHATBOT" {
+			if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+				thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 				labels := models.WechatChatContactLabels{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &labels)
 				if o.Err != nil {
@@ -839,7 +844,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 
-			if thebotinfo.ClientType == "WECHATBOT" {
+			if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+				thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 				wetimeline := models.WechatSnsTimeline{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
 				if o.Err != nil {

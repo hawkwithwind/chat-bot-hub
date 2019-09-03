@@ -441,7 +441,7 @@ func (ctx *WebServer) scanCreateBot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if clientType != "WECHATBOT" {
+	if clientType != chatbothub.WECHATBOT && clientType != chatbothub.WECHATMACPRO {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("scan create bot %s not supported", clientType))
 		return
 	}

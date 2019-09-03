@@ -374,6 +374,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 		"types": map[string]string{
 			"QQBOT":     "QQ",
 			"WECHATBOT": "微信",
+			"WECHATMACPRO": "微信macpro",
 		},
 		"status": map[int]string{
 			0:   "未连接",

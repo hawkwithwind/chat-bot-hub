@@ -174,6 +174,7 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 
 const (
 	WECHATBOT string = "WECHATBOT"
+	WECHATMACPRO string = "WEHCATMACPRO"
 	QQBOT     string = "QQBOT"
 )
 
@@ -584,7 +585,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var botId string
 					var userName string
@@ -760,7 +761,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case LOGINSCAN:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var scanUrl string
 					if body != nil {
@@ -899,7 +900,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				hub.Info("[FILTER DEBUG] onReceiveMessage")
 				
-				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
 					if o.Err != nil {
 						hub.Info("[FILTER DEBUG] onReceiveMessage failed %v ", o.Err)
@@ -909,7 +910,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case STATUSMESSAGE:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("status message\n%s\n", in.Body)
 
 					bodyString := in.Body
@@ -932,7 +933,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case CONTACTINFO:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("contact info \n%s\n", in.Body)
 
 					if o.Err == nil {
@@ -945,7 +946,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case GROUPINFO:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("group info \n%s\n", in.Body)
 
 					if o.Err == nil {
@@ -958,7 +959,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case WEBSHORTCALL:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("WEBSHORTCALL \n%s\n", in.Body)
 
 					if o.Err == nil {
