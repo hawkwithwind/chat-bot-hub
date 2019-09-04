@@ -853,7 +853,21 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				wechatTimeline.Id = wechatSnsMoment.MomentId
 				wechatTimeline.BotId = thebotinfo.BotId
 				wechatTimeline.UserName = wechatSnsMoment.UserName
-				wechatTimeline.Comment = wechatSnsMoment.Comment
+
+				if wechatSnsMoment.Comment != nil {
+					var comments []models.SnsComment
+					for _, comment := range wechatSnsMoment.Comment {
+						if comment.ReplyUserName != "" {
+							chatuser := o.GetChatUserByName(tx, thebotinfo.ClientType, comment.ReplyUserName)
+							if chatuser != nil {
+								comment.ReplyNickName = chatuser.NickName
+							}
+						}
+						comments = append(comments, comment)
+					}
+					wechatTimeline.Comment = comments
+				}
+
 				wechatTimeline.Like = wechatSnsMoment.Like
 				wechatTimeline.Description = wechatSnsMoment.Description
 				updated := o.UpdateWechatTimeline(ctx.mongoMomentDb, wechatTimeline, ctx.ossBucket)

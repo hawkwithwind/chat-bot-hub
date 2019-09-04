@@ -9,6 +9,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/google/uuid"
+	"github.com/hawkwithwind/chat-bot-hub/server/models"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"io"
 	"net/http"
@@ -17,23 +18,38 @@ import (
 )
 
 type WechatTimeline struct {
-	Id          string      `json:"id" bson:"id"`
-	Avatar      string      `json:"avatar" bson:"avatar"`
-	BotId       string      `json:"botId" bson:"botId"`
-	NickName    string      `json:"nickName" bson:"nickName"`
-	UserName    string      `json:"userName" bson:"userName"`
-	CreateTime  int         `json:"createTime" bson:"createTime"`
-	Description string      `json:"description" bson:"description"`
-	Comment     interface{} `json:"comment" bson:"comment"`
-	Like        interface{} `json:"like" bson:"like"`
-	UpdatedAt   time.Time   `json:"updatedAt" bson:"updatedAt"`
-	Extraction  *Extraction `json:"extraction" bson:"extraction"`
+	Id          string              `json:"id" bson:"id"`
+	Avatar      string              `json:"avatar" bson:"avatar"`
+	BotId       string              `json:"botId" bson:"botId"`
+	NickName    string              `json:"nickName" bson:"nickName"`
+	UserName    string              `json:"userName" bson:"userName"`
+	CreateTime  int                 `json:"createTime" bson:"createTime"`
+	Description string              `json:"description" bson:"description"`
+	Comment     []models.SnsComment `json:"comment" bson:"comment"`
+	Like        []models.SnsLike    `json:"like" bson:"like"`
+	UpdatedAt   time.Time           `json:"updatedAt" bson:"updatedAt"`
+	Extraction  *Extraction         `json:"extraction" bson:"extraction"`
 }
 
 type Extraction struct {
-	Location    string   `json:"location"`
-	ContentDesc string   `json:"contentDesc"`
-	MediaList   []*Media `json:"mediaList"`
+	AppInfo       *AppInfo       `json:"appInfo"`
+	Location      string         `json:"location"`
+	ContentDesc   string         `json:"contentDesc"`
+	ContentObject *ContentObject `json:"contentObject"`
+}
+
+type AppInfo struct {
+	Id      string `json:"id"`
+	Version string `json:"version"`
+	AppName string `json:"appName"`
+}
+
+type ContentObject struct {
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	ContentUrl   string   `json:"contentUrl"`
+	ContentStyle int      `json:"contentStyle"`
+	MediaList    []*Media `json:"mediaList"`
 }
 
 type Media struct {
@@ -137,10 +153,40 @@ func parseTimelineObject(timeline WechatTimeline, ossBucket *oss.Bucket) *Extrac
 	if content := root.SelectElement("contentDesc"); content != nil {
 		extraction.ContentDesc = content.Text()
 	}
+
 	if location := root.SelectElement("location"); location != nil {
 		extraction.Location = location.SelectAttrValue("poiName", "")
 	}
+
+	if eAppInfo := root.SelectElement("AppInfo"); eAppInfo != nil {
+		extraction.AppInfo = &AppInfo{}
+
+		if id := eAppInfo.SelectElement("id"); id != nil {
+			extraction.AppInfo.Id = id.Text()
+		}
+		if version := eAppInfo.SelectElement("version"); version != nil {
+			extraction.AppInfo.Version = version.Text()
+		}
+		if appName := eAppInfo.SelectElement("appName"); appName != nil {
+			extraction.AppInfo.AppName = appName.Text()
+		}
+	}
+
+	extraction.ContentObject = &ContentObject{}
+
 	if contentObject := root.SelectElement("ContentObject"); contentObject != nil {
+		if eTitle := contentObject.SelectElement("title"); eTitle != nil {
+			extraction.ContentObject.Title = eTitle.Text()
+		}
+		if eDescription := contentObject.SelectElement("description"); eDescription != nil {
+			extraction.ContentObject.Description = eDescription.Text()
+		}
+		if eContentUrl := contentObject.SelectElement("contentUrl"); eContentUrl != nil {
+			extraction.ContentObject.ContentUrl = eContentUrl.Text()
+		}
+		if eContentStyle := contentObject.SelectElement("contentStyle"); eContentStyle != nil {
+			extraction.ContentObject.ContentStyle, _ = strconv.Atoi(eContentStyle.Text())
+		}
 		if eMediaList := contentObject.SelectElement("mediaList"); eMediaList != nil {
 			var mediaList []*Media
 			for _, eMedia := range eMediaList.SelectElements("media") {
@@ -186,7 +232,7 @@ func parseTimelineObject(timeline WechatTimeline, ossBucket *oss.Bucket) *Extrac
 				media.Size = size
 				mediaList = append(mediaList, media)
 			}
-			extraction.MediaList = mediaList
+			extraction.ContentObject.MediaList = mediaList
 		}
 	}
 
@@ -290,8 +336,8 @@ func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query, ossBucket *oss.Bucke
 
 	//to signed img url
 	for _, timeline := range wt {
-		if timeline.Extraction != nil && timeline.Extraction.MediaList != nil {
-			for _, media := range timeline.Extraction.MediaList {
+		if timeline.Extraction != nil && timeline.Extraction.ContentObject.MediaList != nil {
+			for _, media := range timeline.Extraction.ContentObject.MediaList {
 				media.SignedUrl, media.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, media.ImageId, media.ThumbnailId)
 			}
 		}

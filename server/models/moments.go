@@ -1,15 +1,19 @@
 package models
 
 type WechatSnsMoment struct {
-	BotId       string      `msg:"botId"`
-	Avatar      string      `msg:"avatar"`
-	CreateTime  int         `json:"createTime" msg:"createTime"`
-	Description string      `json:"description" msg:"description"`
-	MomentId    string      `json:"id" msg:"id"`
-	NickName    string      `json:"nickName" msg:"nickName"`
-	UserName    string      `json:"userName" msg:"userName"`
-	Comment     interface{} `json:"comment,omitempty" msg:"comment"`
-	Like        interface{} `json:"like,omitempty" msg:"like"`
+	BotId       string `msg:"botId"`
+	Avatar      string `msg:"avatar"`
+	CreateTime  int    `json:"createTime" msg:"createTime"`
+	Description string `json:"description" msg:"description"`
+	MomentId    string `json:"id" msg:"id"`
+	NickName    string `json:"nickName" msg:"nickName"`
+	UserName    string `json:"userName" msg:"userName"`
+}
+
+type WechatSnsMomentExpand struct {
+	WechatSnsMoment
+	Comment []SnsComment `json:"comment,omitempty" msg:"comment"`
+	Like    []SnsLike    `json:"like,omitempty" msg:"like"`
 }
 
 type WechatSnsTimeline struct {
@@ -21,9 +25,9 @@ type WechatSnsTimeline struct {
 }
 
 type WechatSnsMomentWrap struct {
-	Data    WechatSnsMoment `json:"data"`
-	Message string          `json:"message"`
-	Status  int             `json:"status"`
+	Data    WechatSnsMomentExpand `json:"data"`
+	Message string                `json:"message"`
+	Status  int                   `json:"status"`
 }
 
 type SnsComment struct {
@@ -38,6 +42,7 @@ type SnsComment struct {
 	NickName      string `json:"nickName"`
 	UserName      string `json:"userName"`
 	ReplyUserName string `json:"replyUserName"`
+	ReplyNickName string `json:"replyNickName"`
 }
 
 type SnsLike struct {
