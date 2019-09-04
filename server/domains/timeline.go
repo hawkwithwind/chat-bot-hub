@@ -158,7 +158,7 @@ func parseTimelineObject(timeline WechatTimeline, ossBucket *oss.Bucket) *Extrac
 		extraction.Location = location.SelectAttrValue("poiName", "")
 	}
 
-	if eAppInfo := root.SelectElement("AppInfo"); eAppInfo != nil {
+	if eAppInfo := root.SelectElement("appInfo"); eAppInfo != nil {
 		extraction.AppInfo = &AppInfo{}
 
 		if id := eAppInfo.SelectElement("id"); id != nil {
