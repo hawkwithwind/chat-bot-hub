@@ -174,7 +174,7 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 
 const (
 	WECHATBOT string = "WECHATBOT"
-	WECHATMACPRO string = "WEHCATMACPRO"
+	WECHATMACPRO string = "WECHATMACPRO"
 	QQBOT     string = "QQBOT"
 )
 
