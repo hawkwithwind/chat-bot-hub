@@ -380,6 +380,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 	case chatbothub.FRIENDREQUEST:
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
+
+		requestStr := bodystr
+		
 		rlogin := ""
 		if thebotinfo.ClientType == chatbothub.WECHATBOT {
 			reqm := o.FromJson(bodystr)
@@ -389,17 +392,32 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
 		} else if thebotinfo.ClientType == chatbothub.WECHATMACPRO {
-			var msg chatbothub.WechatMacproFriendRequestPackage
+			var msg chatbothub.WechatMacproFriendRequest
 			o.Err = json.Unmarshal([]byte(bodystr), &msg)
 			if o.Err != nil {
 				return o.Err
 			}
-			rlogin = msg.Friendship.Payload.ContactId
+			rlogin = msg.ContactId
 			ctx.Info("%v\n%s", msg, rlogin)
+
+			requestStr = o.ToJson(chatbothub.WechatFriendRequest{
+				FromUserName: msg.ContactId,
+				FromNickName: "",
+				Content: msg.Hello,
+				EncryptUserName: msg.Stranger,
+				Ticket: msg.Ticket,
+				Raw: bodystr,
+			})
+
+			if o.Err != nil {
+				return o.Err
+			}
+			
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, bodystr, "NEW")
+		
+		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, requestStr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {

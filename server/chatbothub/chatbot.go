@@ -419,9 +419,10 @@ type WechatFriendRequest struct {
 	Sourceusername   string    `xml:"sourceusername,attr" json:"sourceusername"`
 	Sourcenickname   string    `xml:"sourcenickname,attr" json:"sourcenickname"`
 	BrandList        BrandList `xml:"brandlist" json:"brandlist"`
+	Raw              string    `xml:"raw" json:"raw"`
 }
 
-type WechatMacproFriendRequestPayload struct {
+type WechatMacproFriendRequest struct {
 	ContactId string `json:"contactId"`
 	Hello string `json:"hello"`
 	Id string `json:"id"`
@@ -429,15 +430,6 @@ type WechatMacproFriendRequestPayload struct {
 	Ticket string `json:"ticket"`
 	Timestamp int64 `json:"timestamp"`
 	Type int `json:"type"`
-}
-
-type WechatMacproFriendRequest struct {
-	Id string `json:"id"`
-	Payload WechatMacproFriendRequestPayload `json:"payload"`
-}
-
-type WechatMacproFriendRequestPackage struct {
-	Friendship WechatMacproFriendRequest `json:"friendship"`
 }
 
 func (bot *ChatBot) friendRequest(body string) (string, error) {
@@ -879,21 +871,20 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 			"ticket":   msg.Ticket,
 		}))
 	} else if bot.ClientType == WECHATMACPRO {
-		var msg WechatMacproFriendRequestPackage
+		var msg WechatMacproFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
 
-		bot.Info("Action AcceptUser %s\n%s", msg.Friendship.Payload.Stranger,
-			msg.Friendship.Payload.Ticket)
+		bot.Info("Action AcceptUser %s\n%s", msg.Stranger, msg.Ticket)
 		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
-			"stranger": msg.Friendship.Payload.Stranger,
-			"ticket": msg.Friendship.Payload.Ticket,
-			"payloadid": msg.Friendship.Payload.Id,
-			"payloadtype": msg.Friendship.Payload.Type,
-			"payloadcontactid": msg.Friendship.Payload.ContactId,
-			"content": msg.Friendship.Payload.Hello,
+			"stranger": msg.Stranger,
+			"ticket": msg.Ticket,
+			"payloadid": msg.Id,
+			"payloadtype": msg.Type,
+			"payloadcontactid": msg.ContactId,
+			"content": msg.Hello,
 		}))
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
