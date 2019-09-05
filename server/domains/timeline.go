@@ -336,7 +336,7 @@ func (o *ErrorHandler) GetWechatTimelines(query *mgo.Query, ossBucket *oss.Bucke
 
 	//to signed img url
 	for _, timeline := range wt {
-		if timeline.Extraction != nil && timeline.Extraction.ContentObject.MediaList != nil {
+		if timeline.Extraction != nil && timeline.Extraction.ContentObject != nil && timeline.Extraction.ContentObject.MediaList != nil {
 			for _, media := range timeline.Extraction.ContentObject.MediaList {
 				media.SignedUrl, media.SignedThumbnail, _ = utils.GenSignedURLPair(ossBucket, utils.MessageTypeImage, media.ImageId, media.ThumbnailId)
 			}
