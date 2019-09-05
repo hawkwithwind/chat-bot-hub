@@ -878,14 +878,7 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 		}
 
 		bot.Info("Action AcceptUser %s\n%s", msg.Stranger, msg.Ticket)
-		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
-			"stranger": msg.Stranger,
-			"ticket": msg.Ticket,
-			"payloadid": msg.Id,
-			"payloadtype": msg.Type,
-			"payloadcontactid": msg.ContactId,
-			"content": msg.Hello,
-		}))
+		o.SendAction(bot, arId, AcceptUser, body)
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
