@@ -342,7 +342,7 @@ func (web *WebServer) syncGroupMembers(botLogin string, clientType string, group
 		web.Error(o.Err, "get roommembers %s failed", groupId)
 	}
 
-	if actionreply.Success == false {
+	if actionreply == nil || actionreply.Success == false {
 		web.Info("get roommember %s failed %v", groupId, actionreply)
 	}
 }
