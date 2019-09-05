@@ -670,6 +670,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
+
+					if _, ok := frm["raw"]; ok {
+						// friend request has raw means this acceptUser actionBody is raw
+						// now replace this actionBody with WechatFriendRequest one
+						localar.ActionBody = fr.RequestBody
+						ctx.Info("replace actionBody to %s", fr.RequestBody)
+					}
 				}
 			}
 		case chatbothub.DeleteContact:
