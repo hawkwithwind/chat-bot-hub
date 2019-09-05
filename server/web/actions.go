@@ -381,14 +381,21 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.FRIENDREQUEST:
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
 		rlogin := ""
-		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
-			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT {
 			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
+		} else if thebotinfo.ClientType == chatbothub.WECHATMACPRO {
+			var msg chatbothub.WechatMacproFriendRequestPackage
+			o.Err = json.Unmarshal([]byte(bodystr), &msg)
+			if o.Err != nil {
+				return o.Err
+			}
+			rlogin = msg.Friendship.Payload.ContactId
+			ctx.Info("%v\n%s", msg, rlogin)
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}

@@ -421,13 +421,31 @@ type WechatFriendRequest struct {
 	BrandList        BrandList `xml:"brandlist" json:"brandlist"`
 }
 
+type WechatMacproFriendRequestPayload struct {
+	ContactId string `json:"contactId"`
+	Hello string `json:"hello"`
+	Id string `json:"id"`
+	Stranger string `json:"stranger"`
+	Ticket string `json:"ticket"`
+	Timestamp int64 `json:"timestamp"`
+	Type int `json:"type"`
+}
+
+type WechatMacproFriendRequest struct {
+	Id string `json:"id"`
+	Payload WechatMacproFriendRequestPayload `json:"payload"`
+}
+
+type WechatMacproFriendRequestPackage struct {
+	Friendship WechatMacproFriendRequest `json:"friendship"`
+}
+
 func (bot *ChatBot) friendRequest(body string) (string, error) {
 	o := &ErrorHandler{}
-
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
-		bodydata := o.FromJson(body)
-		content := o.FromMap("content", bodydata, "body", nil)
-
+	bodydata := o.FromJson(body)
+	content := o.FromMap("content", bodydata, "body", nil)
+	
+	if bot.ClientType == WECHATBOT {
 		if content != nil {
 			var msg WechatFriendRequest
 			o.FromXML(content.(string), &msg)
@@ -435,6 +453,12 @@ func (bot *ChatBot) friendRequest(body string) (string, error) {
 			return msgstr, o.Err
 		} else {
 			return "", fmt.Errorf("c[%s] request should have xml content", bot.ClientType)
+		}
+	} else if bot.ClientType == WECHATMACPRO {
+		if content != nil {
+			return o.ToJson(content), o.Err
+		} else {
+			return "", fmt.Errorf("c[%s] request should have json content", bot.ClientType)
 		}
 	} else {
 		return "", fmt.Errorf("c[%s] not support friend request", bot.ClientType)
@@ -806,19 +830,13 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
 
-	bot.Info("send app message 001")
-	bot.Info("send app message " + content)
-
 	contentm := o.FromJson(content)
 
-	bot.Info("send app message 001")
 	if o.Err != nil {
 		bot.Info("cannot parse json " + content)
 
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 	}
-
-	bot.Info("send app message 002")
 
 	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
 		"toUserName": toUserName,
@@ -848,7 +866,7 @@ func (bot *ChatBot) SearchContact(actionType string, arId string, body string) e
 
 func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT {
 		var msg WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		if o.Err != nil {
@@ -859,6 +877,23 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
 			"stranger": msg.EncryptUserName,
 			"ticket":   msg.Ticket,
+		}))
+	} else if bot.ClientType == WECHATMACPRO {
+		var msg WechatMacproFriendRequestPackage
+		o.Err = json.Unmarshal([]byte(body), &msg)
+		if o.Err != nil {
+			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		}
+
+		bot.Info("Action AcceptUser %s\n%s", msg.Friendship.Payload.Stranger,
+			msg.Friendship.Payload.Ticket)
+		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
+			"stranger": msg.Friendship.Payload.Stranger,
+			"ticket": msg.Friendship.Payload.Ticket,
+			"payloadid": msg.Friendship.Payload.Id,
+			"payloadtype": msg.Friendship.Payload.Type,
+			"payloadcontactid": msg.Friendship.Payload.ContactId,
+			"content": msg.Friendship.Payload.Hello,
 		}))
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
