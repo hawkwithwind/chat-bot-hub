@@ -587,7 +587,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
 			bodym := o.FromJson(localar.ActionBody)
-			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", true, "")
 
 			if o.Err != nil {
 				return o.Err
@@ -616,6 +616,11 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						o.Err = nil
 						continue
+					}
+
+					if rlogin == "" {
+						rlogin = o.FromMapString("fromUserName", frm, "requestBody", false, "")
+						ctx.Info("updated acceptuser rlogin with [%s]", rlogin)
 					}
 
 					avatar := o.FromMapString("smallheadimgurl", frm, "requestBody", true, "")
