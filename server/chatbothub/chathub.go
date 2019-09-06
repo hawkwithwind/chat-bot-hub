@@ -840,7 +840,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Info("ACTIONREPLY %s", in.Body)
 				}
 
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var actionBody map[string]interface{}
 					var result map[string]interface{}
@@ -895,6 +895,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}))
 						}
 					}
+				} else {
+					hub.Info("c[%s] not support event %s", bot.ClientId, in.EventType)
 				}
 				
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
