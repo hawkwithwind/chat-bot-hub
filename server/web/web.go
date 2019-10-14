@@ -426,6 +426,10 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/chatgroups", server.validate(server.getChatGroups)).Methods("GET")
 	r.HandleFunc("/chatgroups/{groupname}/members", server.validate(server.getGroupMembers)).Methods("GET")
 
+	// client control (clients.go)
+	r.HandleFunc("/clients", server.validate(server.getClients)).Methods("GET")
+	r.HandleFunc("/clients/{clientId}/shutdown", server.validate(server.clientShutdown)).Methods("POST")
+	
 	// bot CURD and login (botmanage.go)
 	r.HandleFunc("/botlogin", server.validate(server.botLogin)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/logout", server.validate(server.botLogout)).Methods("POST")
