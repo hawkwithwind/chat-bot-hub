@@ -189,6 +189,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 	var bot *ChatBot
 	if req.ClientId == "" {
 		bot = hub.GetAvailableBot(req.ClientType)
+		req.ClientId = bot.ClientId
 	} else {
 		bot = hub.GetBot(req.ClientId)
 	}
