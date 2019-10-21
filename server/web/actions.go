@@ -1042,6 +1042,55 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	return o.Err
 }
 
+func (o *ErrorHandler) insertUserAlias(q dbx.Queryable, ctype string, actionm map[string]interface{}, fieldname string) map[string]interface{} {
+
+	if o.Err != nil {
+		return actionm
+	}
+		
+	if userId, ok := actionm[fieldname]; ok {
+		switch uid := userId.(type) {
+		case string:
+			chatuser := o.GetChatUserByName(q, ctype, uid)
+			if chatuser != nil {
+				actionm["alias"] = chatuser.Alias
+			}
+		}
+	}
+	
+	return actionm
+}
+
+func (o *ErrorHandler) insertUserAliasList(q dbx.Queryable, ctype string, actionm map[string]interface{}, fieldname string) map[string]interface{} {
+
+	if o.Err != nil {
+		return actionm
+	}
+
+	if userList, ok := actionm[fieldname]; ok {
+		switch ulist := userList.(type) {
+		case []interface{}:
+			uns := []string{}
+			for _, u := range ulist {
+				uns = append(uns, u.(string))
+			}
+			chatusers := o.GetChatUsersByNames(q, ctype, uns)
+			aliasList := []string{}
+			for _, ch := range chatusers {
+				alias := ""
+				if ch.Alias.Valid {
+					alias = ch.Alias.String
+				}
+				aliasList = append(aliasList, alias)
+			}
+			actionm["aliasList"] = aliasList
+		}
+	}
+	
+	return actionm
+}
+
+
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
 	defer o.WebError(w)
@@ -1086,57 +1135,18 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// find toUserName or userId or userList from param list,
+	// find toUserName, userId, memberId, userList, memberList or atList from param list,
 	// if found, insert alias, aliasList to the param list
-	if userId, ok := actionm["userId"]; ok {
-		switch uid := userId.(type) {
-		case string:
-			chatuser := o.GetChatUserByName(tx, bot.ChatbotType, uid)
-			if chatuser != nil {
-				actionm["alias"] = chatuser.Alias
-			}
-		}
+	for _, fieldname := range []string{"userId", "toUserName", "memberId"} {
+		actionm = o.insertUserAlias(tx, bot.ChatbotType, actionm, fieldname)
 	}
-	if o.Err != nil {
-		return
-	}
-
-	if toUserName, ok := actionm["toUserName"]; ok {
-		switch uid := toUserName.(type) {
-		case string:
-			chatuser := o.GetChatUserByName(tx, bot.ChatbotType, uid)
-			if chatuser != nil {
-				actionm["alias"] = chatuser.Alias
-			}
-		}
+	for _, fieldname := range []string{"userList", "memberList", "atList"} {
+		actionm = o.insertUserAliasList(tx, bot.ChatbotType, actionm, fieldname)
 	}
 	if o.Err != nil {
 		return
 	}
 	
-	if userList, ok := actionm["userList"]; ok {
-		switch ulist := userList.(type) {
-		case []interface{}:
-			uns := []string{}
-			for _, u := range ulist {
-				uns = append(uns, u.(string))
-			}
-			chatusers := o.GetChatUsersByNames(tx, bot.ChatbotType, uns)
-			aliasList := []string{}
-			for _, ch := range chatusers {
-				alias := ""
-				if ch.Alias.Valid {
-					alias = ch.Alias.String
-				}
-				aliasList = append(aliasList, alias)
-			}
-			actionm["aliasList"] = aliasList
-		}
-	}
-	if o.Err != nil {
-		return
-	}
-		
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))

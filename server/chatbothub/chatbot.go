@@ -683,6 +683,7 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
+		alias :=  o.FromMapString("alias", bodym, "actionbody", true, "")
 		labelIdList := o.FromMapString("labelIdList", bodym, "actionbody", false, "")
 
 		if o.Err != nil {
@@ -691,6 +692,7 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 
 		o.SendAction(bot, arId, SetLabel, o.ToJson(map[string]interface{}{
 			"userId":      userId,
+			"alias":       alias,
 			"labelIdList": labelIdList,
 		}))
 
@@ -715,6 +717,7 @@ func (bot *ChatBot) SnsUserPage(actionType string, arId string, body string) err
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 		NewActionParam("momentId", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
@@ -734,6 +737,7 @@ func (bot *ChatBot) SnsComment(actionType string, arId string, body string) erro
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 		NewActionParam("momentId", false, ""),
 		NewActionParam("content", false, ""),
 	}
@@ -746,6 +750,7 @@ func (bot *ChatBot) SnsLike(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 		NewActionParam("momentId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
@@ -786,6 +791,7 @@ func (bot *ChatBot) DeleteContact(actionType string, arId string, body string) e
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -818,6 +824,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	}
 
 	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+	alias :=  o.FromMapString("alias", bodym, "actionbody", true, "")
 	content := o.FromMapString("object", bodym, "actionbody", false, "")
 	if o.Err != nil {
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
@@ -833,6 +840,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 
 	o.Err = bot.SendTextMessage("SendTextMessage", arId, o.ToJson(map[string]interface{}{
 		"toUserName": toUserName,
+		"alias":      alias,
 		"content":    contentm,
 	}))
 
@@ -843,6 +851,7 @@ func (bot *ChatBot) GetContact(actionType string, arId string, body string) erro
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -852,6 +861,7 @@ func (bot *ChatBot) SearchContact(actionType string, arId string, body string) e
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -895,16 +905,19 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		bot.Info("Create Room")
 		bodym := o.FromJson(body)
 		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
+		aliasList := o.ListValue(o.FromMap("aliasList", bodym, "actionbody", []interface{}{}), true, nil)
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
 
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
 			"userList": memberList,
+			"aliasList": aliasList,
 		}))
 
 		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{}{
 			"userList": memberList,
+			"aliasList": aliasList,
 		}))
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
@@ -919,6 +932,7 @@ func (bot *ChatBot) DeleteRoomMember(actionType string, arId string, body string
 	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -939,6 +953,7 @@ func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string
 	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
+		alias := o.FromMapString("alias", bodym, "actionbody", true, "")
 		style_f := o.FromMapFloat("style", bodym, "actionbody", false, 0.0)
 		style := int(style_f)
 		bot.Info("get contact QRCode %s %d", userId, style)
@@ -949,6 +964,7 @@ func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string
 
 		o.SendAction(bot, arId, GetContactQRCode, o.ToJson(map[string]interface{}{
 			"userId": userId,
+			"alias":  alias,
 			"style":  style,
 		}))
 	} else {
@@ -974,6 +990,7 @@ func (bot *ChatBot) AddRoomMember(actionType string, arId string, body string) e
 	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -984,6 +1001,7 @@ func (bot *ChatBot) InviteRoomMember(actionType string, arId string, body string
 	params := []ActionParam{
 		NewActionParam("groupId", false, ""),
 		NewActionParamCName("userId", "memberId", false, ""),
+		NewActionParam("alias", true, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
 	return o.Err
@@ -1221,6 +1239,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 			bot.Info("parse body failed " + body)
 		}
 		toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
+		alias := o.FromMapString("alias", bodym, "actionbody", true, "")
 		content_if := o.FromMap("content", bodym, "actionbody", nil)
 
 		if o.Err != nil {
@@ -1230,15 +1249,22 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 		switch content := content_if.(type) {
 		case string:
 			var atList []interface{}
+			var atAliasList []interface{}
+			
 			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 				atList = atListptr.([]interface{})
+			}
+			if atAliasListptr := o.FromMap("atAliasList", bodym, "actionbody", []interface{}{}); atAliasListptr != nil {
+				atAliasList = atAliasListptr.([]interface{})
 			}
 			
 			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
 				"toUserName": toUserName,
+				"alias":      alias,
 				"content":    content,
 				"atList":     atList,
+				"atAliasList": atAliasList,
 			}))
 
 		case map[string]interface{}:
@@ -1260,6 +1286,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 					if appmsg.Type == "5" {
 						o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 							"toUserName": toUserName,
+							"alias":      alias,
 							"object": map[string]interface{}{
 								"appid":    appmsg.Attributions.Appid,
 								"sdkver":   appmsg.Attributions.Sdkver,
@@ -1357,6 +1384,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 				if len(xml) > 0 {
 					o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 						"toUserName": toUserName,
+						"alias":      alias,
 						"xml":        xml,
 					}))
 				}
@@ -1382,6 +1410,7 @@ func (bot *ChatBot) SendImageResourceMessage(actionType string, arId string, bod
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("toUserName", false, ""),
+		NewActionParam("alias", true, ""),
 		NewActionParam("imageId", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
@@ -1392,6 +1421,7 @@ func (bot *ChatBot) SendImageMessage(actionType string, arId string, body string
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("toUserName", false, ""),
+		NewActionParam("alias", true, ""),
 		NewActionParam("payload", false, ""),
 	}
 	o.CommonActionDispatch(bot, arId, body, actionType, params)
