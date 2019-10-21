@@ -336,13 +336,16 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
 		return nil
-
+		
 	case chatbothub.LOGINDONE:
 		if len(logininfo.Token) > 0 {
 			localinfo.Token = logininfo.Token
 		}
 		if len(logininfo.WxData) > 0 {
 			localinfo.WxData = logininfo.WxData
+		}
+		if len(logininfo.Alias) > 0 {
+			localinfo.Alias = logininfo.Alias
 		}
 		if len(logininfo.LongServerList) > 0 {
 			localinfo.LongServerList = logininfo.LongServerList
@@ -1077,6 +1080,63 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
+
+	actionm := o.FromJson(actionBody)
+	if o.Err != nil {
+		return
+	}
+
+	// find toUserName or userId or userList from param list,
+	// if found, insert alias, aliasList to the param list
+	if userId, ok := actionm["userId"]; ok {
+		switch uid := userId.(type) {
+		case string:
+			chatuser := o.GetChatUserByName(tx, bot.ChatbotType, uid)
+			if chatuser != nil {
+				actionm["alias"] = chatuser.Alias
+			}
+		}
+	}
+	if o.Err != nil {
+		return
+	}
+
+	if toUserName, ok := actionm["toUserName"]; ok {
+		switch uid := toUserName.(type) {
+		case string:
+			chatuser := o.GetChatUserByName(tx, bot.ChatbotType, uid)
+			if chatuser != nil {
+				actionm["alias"] = chatuser.Alias
+			}
+		}
+	}
+	if o.Err != nil {
+		return
+	}
+	
+	if userList, ok := actionm["userList"]; ok {
+		switch ulist := userList.(type) {
+		case []interface{}:
+			uns := []string{}
+			for _, u := range ulist {
+				uns = append(uns, u.(string))
+			}
+			chatusers := o.GetChatUsersByNames(tx, bot.ChatbotType, uns)
+			aliasList := []string{}
+			for _, ch := range chatusers {
+				alias := ""
+				if ch.Alias.Valid {
+					alias = ch.Alias.String
+				}
+				aliasList = append(aliasList, alias)
+			}
+			actionm["aliasList"] = aliasList
+		}
+	}
+	if o.Err != nil {
+		return
+	}
+		
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))

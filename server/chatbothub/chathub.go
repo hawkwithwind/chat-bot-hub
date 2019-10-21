@@ -589,6 +589,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					body := o.FromJson(in.Body)
 					var botId string
 					var userName string
+					var alias string
 					var wxData string
 					var token string
 					var longServerList []interface{}
@@ -596,6 +597,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
+						alias = o.FromMapString("alias", body, "eventRequest.body", true, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 						longServerList = o.ListValue(
@@ -640,6 +642,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						bot, o.Err = bot.loginStaging(botId, userName, LoginInfo{
 							WxData:          wxData,
 							Token:           token,
+							Alias:           alias,
 							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
@@ -738,6 +741,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						thebot, o.Err = bot.loginDone(botId, userName, LoginInfo{
 							WxData:          wxData,
 							Token:           token,
+							Alias:           alias,
 							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
