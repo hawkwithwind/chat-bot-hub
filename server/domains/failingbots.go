@@ -9,17 +9,19 @@ import (
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
-type FailingAction struct {}
-
-func (fa *FailingAction) redisKey(actionType string) string {
-	return fmt.Sprint("FAILING:%s", actionType)
-}
 
 type FailingBot struct {
 	ClientType string          `json:"clientType"`
 	ClientId   string          `json:"clientId"`
 	Login      string          `json:"login"`
 	FailAt     utils.JSONTime  `json:"-"`
+}
+
+func (fb *FailingBot) actionRedisKey() string {
+	return fmt.Sprintf("FAILING:%s:%s:%s",
+		fb.ClientType,
+		fb.ClientId,
+		fb.Login)
 }
 
 func (fb *FailingBot) redisKey() string {
@@ -69,5 +71,41 @@ func (o *ErrorHandler) RecoverFailingBot(pool *redis.Pool, recoverTime int64) {
 	o.RedisDo(conn, timeout, "ZREMRANGEBYSCORE", key, "-inf", ts)
 }
 
+func (o *ErrorHandler) AddBotFailingAction(pool *redis.Pool, fb *FailingBot, actionType string) {
+	if o.Err != nil {
+		return
+	}
+
+	key := fb.actionRedisKey()
+	score := fb.FailAt.Time.Unix()
+	
+	conn := pool.Get()
+	defer conn.Close()
+
+	if o.Err != nil {
+		return
+	}
+	
+	o.RedisDo(conn, timeout, "ZADD", key, score, actionType)
+}
+
+func (o *ErrorHandler) RecoverBotFailingAction(pool *redis.Pool, recoverTime int64) {
+	if o.Err != nil {
+		return
+	}
+	
+	ts := time.Now().Unix()
+	ts -= recoverTime
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	keys := o.RedisMatch(conn, "FAILING:*")
+	o.RedisSend(conn, "MULTI")
+	for _, key := range keys {
+		o.RedisSend(conn, "ZREMRANGEBYSCORE", key, "-inf", ts)
+	}
+	o.RedisDo(conn, timeout, "EXEC")
+}
 
 

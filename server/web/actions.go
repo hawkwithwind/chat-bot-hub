@@ -583,9 +583,15 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
 			count := o.FailingActionCount(ctx.redispool, localar, thebotinfo,
 				ctx.Config.ActionHealthCheck.CheckTime)
-			if count >= ctx.Config.ActionHealthCheck.FailingCount &&
-				count >= ctx.Config.ActionHealthCheck.FailingRate {
-				o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
+			ncount := o.ActionRequestCountByTime(ctx.redispool, localar,
+				ctx.Config.ActionHealthCheck.CheckTime)
+
+			if ncount > 0 {
+				rate := float64(count) / float64(ncount)
+				if count >= ctx.Config.ActionHealthCheck.FailingCount &&
+					rate >= ctx.Config.ActionHealthCheck.FailingRate {
+					o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
+				}
 			}
 		}
 
