@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"strconv"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -58,6 +59,20 @@ func (ar *ActionRequest) redisMinuteKey() string {
 
 func (ar *ActionRequest) redisMinuteKeyPattern() string {
 	return fmt.Sprintf("ARMINUTE:%s:%s:*", ar.Login, ar.ActionType)
+}
+
+func (ar *ActionRequest) redisFailKey(bot *pb.BotsInfo) string {
+	return fmt.Sprintf(
+		"ARFAIL:%s:%s:%s:%s:%s",
+		bot.ClientType, bot.ClientId, ar.Login, ar.ActionType, ar.ActionRequestId)
+}
+
+func (ar *ActionRequest) redisFailKeyPattern(bot *pb.BotsInfo) string {
+	return fmt.Sprintf("ARFAIL:%s:%s:%s:%s:*", bot.ClientType, bot.ClientId, ar.Login, ar.ActionType)
+}
+
+func (ar *ActionRequest) redisFailKeyBotPattern(bot *pb.BotsInfo) string {
+	return fmt.Sprintf("ARFAIL:%s:%s:%s:*", bot.ClientType, bot.ClientId, ar.Login)
 }
 
 func (o *ErrorHandler) NewActionRequest(login string, actiontype string, actionbody string, status string) *ActionRequest {
@@ -174,6 +189,36 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	return count
 }
 
+func (o *ErrorHandler) RedisMatchCountCond(conn redis.Conn, keyPattern string, cmp func(string)bool) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	key := "0"
+	count := 0
+	for true {
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err == nil {
+			if len(ret) != 2 {
+				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
+				return count
+			}
+		}
+		key = o.RedisString(ret[0])
+		for _, line := range o.RedisValue(ret[1]) {
+			if cmp(line.(string)) {
+				count += 1
+			}
+		}
+		
+		if key == "0" {
+			break
+		}
+	}
+
+	return count
+}
+
 func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	if o.Err != nil {
 		return []string{}
@@ -259,6 +304,56 @@ func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, in
 	defer conn.Close()
 
 	return o.RedisMatchCount(conn, dayKeyPattern), o.RedisMatchCount(conn, hourKeyPattern), o.RedisMatchCount(conn, minuteKeyPattern)
+}
+
+func (o *ErrorHandler) SaveFailingActionRequest(pool *redis.Pool,  ar *ActionRequest, bot *pb.BotsInfo) {
+	key := ar.redisFailKey(bot)
+	ts := time.Now().Unix()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	o.RedisSend(conn, "MULTI")
+	o.RedisSend(conn, "SET", key, ts)
+	o.RedisSend(conn, "EXPIRE", key, 60*60)
+	o.RedisDo(conn, timeout, "EXEC")
+}
+
+func (o *ErrorHandler) FailingActionCount(pool *redis.Pool, ar *ActionRequest, bot *pb.BotsInfo, checkTimeout int64) int {
+	if o.Err != nil {
+		return 0
+	}
+	
+	keyPattern := ar.redisFailKeyPattern(bot)
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	ts := time.Now().Unix()
+
+	cmp := func (a string) bool {
+		failAt, err := strconv.ParseInt(a, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		return failAt < ts	
+	}
+
+	return o.RedisMatchCountCond(conn, keyPattern, cmp)
+}
+
+func (o *ErrorHandler) FailingBotActionCount(pool *redis.Pool, ar *ActionRequest, bot *pb.BotsInfo, checkTimeout int64) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	keyPattern := ar.redisFailKeyBotPattern(bot)
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	return o.RedisMatchCount(conn, keyPattern)
 }
 
 func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionRequest, daylimit, hourlimit, minutelimit int) {

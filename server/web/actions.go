@@ -579,6 +579,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 
+		if localar.Status == "Failed" {
+			o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
+		}
+
 		switch localar.ActionType {
 		case chatbothub.SendImageMessage:
 			ctx.Info("[Action Reply] %s SendImageMessage")
