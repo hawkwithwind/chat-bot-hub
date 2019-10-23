@@ -55,6 +55,9 @@ type WebConfig struct {
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
+
+	ActionHealthCheck HealthCheckConfig
+	BotHealthCheck    HealthCheckConfig
 }
 
 type WebServer struct {

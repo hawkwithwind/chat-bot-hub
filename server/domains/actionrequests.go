@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"strconv"
+	"strings"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -32,6 +33,15 @@ type ActionResult struct {
 const (
 	timeout time.Duration = time.Duration(10) * time.Second
 )
+
+func arQuotaKeyToArId(key string) (string, error) {
+	t := strings.Split(key, ":")
+	if len(t) != 4 {
+		return "", fmt.Errorf("expected key %s", key)
+	}
+
+	return t[len(t)-1], nil
+}
 
 func (ar *ActionRequest) redisKey() string {
 	return fmt.Sprintf("AR:%s", ar.ActionRequestId)
@@ -341,6 +351,37 @@ func (o *ErrorHandler) FailingActionCount(pool *redis.Pool, ar *ActionRequest, b
 	}
 
 	return o.RedisMatchCountCond(conn, keyPattern, cmp)
+}
+
+func (o *ErrorHandler) ActionRequestCountByTime(pool *redis.Pool, ar *ActionRequest, checkTimeout int64) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	keypattern := ar.redisHourKeyPattern()
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	keys := o.RedisMatch(conn, keypattern)
+	ts := time.Now().Unix()
+	ts -= checkTimeout
+
+	count := 0
+
+	for _, key := range keys {
+		arId, err := arQuotaKeyToArId(key)
+		if err != nil {
+			continue
+		}
+
+		ar := o.GetActionRequest(pool, arId)
+		if ar.CreateAt.Time.Unix() > ts {
+			count += 1
+		}
+	}
+
+	return count
 }
 
 func (o *ErrorHandler) FailingBotActionCount(pool *redis.Pool, ar *ActionRequest, bot *pb.BotsInfo, checkTimeout int64) int {

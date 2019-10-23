@@ -37,6 +37,13 @@ var (
 	}
 )
 
+type HealthCheckConfig struct {
+	FailingCount int     `yaml:"failingCount"`
+	FailingRate  float64 `yaml:"failingRate"`
+	CheckTime    int64   `yaml:"checkTime"`
+	RecoverTime  int64   `yaml:"recoverTime"`
+}
+
 func (o *ErrorHandler) GetRateLimit(actionType string) (int, int, int) {
 	minlimit := minuteDefaultLimit
 	if mlimit, ok := minuteLimit[actionType]; ok {

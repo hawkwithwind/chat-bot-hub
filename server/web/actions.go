@@ -581,6 +581,12 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		if localar.Status == "Failed" {
 			o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
+			count := o.FailingActionCount(ctx.redispool, localar, thebotinfo,
+				ctx.Config.ActionHealthCheck.CheckTime)
+			if count >= ctx.Config.ActionHealthCheck.FailingCount &&
+				count >= ctx.Config.ActionHealthCheck.FailingRate {
+				o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
+			}
 		}
 
 		switch localar.ActionType {
