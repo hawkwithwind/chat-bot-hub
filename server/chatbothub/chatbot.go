@@ -197,6 +197,7 @@ func (bot *ChatBot) pingloop() error {
 			
 			trycount += 1
 			if trycount > 10 {
+				bot.pinglooping = false
 				return o.Err
 			}
 		} else {
