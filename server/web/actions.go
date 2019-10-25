@@ -442,6 +442,18 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}()
 
+	case chatbothub.ROOMJOIN:
+		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
+
+		go func() {
+			if bot.Callback.Valid {
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
+					bot, eventType, bodystr), 5, 1); err != nil {
+					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
+				}
+			}
+		}()
+
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
