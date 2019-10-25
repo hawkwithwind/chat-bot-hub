@@ -580,19 +580,11 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 
 		if localar.Status == "Failed" {
-			o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
-			count := o.FailingActionCount(ctx.redispool, localar, thebotinfo,
-				ctx.Config.ActionHealthCheck.CheckTime)
-			ncount := o.ActionRequestCountByTime(ctx.redispool, localar,
-				ctx.Config.ActionHealthCheck.CheckTime)
-
-			if ncount > 0 {
-				rate := float64(count) / float64(ncount)
-				if count >= ctx.Config.ActionHealthCheck.FailingCount &&
-					rate >= ctx.Config.ActionHealthCheck.FailingRate {
-					o.SaveFailingActionRequest(ctx.redispool, localar, thebotinfo)
-				}
-			}
+			conn := ctx.redispool.Get()
+			defer conn.Close()
+			
+			o.SaveFailingActionRequest(conn, localar,
+				ctx.Config.ActionHealthCheck, ctx.Config.BotHealthCheck)
 		}
 
 		switch localar.ActionType {
@@ -995,7 +987,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if o.Err != nil {
 			return o.Err
 		}
-		o.SaveActionRequest(ctx.redispool, localar)
+		//o.SaveActionRequest(ctx.redispool, localar)
+		o.UpdateActionRequest(ctx.redispool, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
@@ -1178,7 +1171,11 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		}
 	}
 
-	o.SaveActionRequestWLimit(web.redispool, ar, daylimit, hourlimit, minutelimit)
+	ar.ClientType = actionReply.ClientType
+	ar.ClientId = actionReply.ClientId
+
+	o.SaveActionRequestWLimit(web.redispool, ar,
+		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
 

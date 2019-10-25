@@ -153,6 +153,8 @@ message BotActionReply {
   string msg = 3;
   string body = 4;
   OperationReply clientError = 5;
+  string clientType = 6;
+  string clientId = 7;
 }
 
 message FilterFillRequest {

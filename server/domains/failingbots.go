@@ -3,12 +3,18 @@ package domains
 import (
 	"fmt"
 	"time"
+	"strconv"
 	"github.com/gomodule/redigo/redis"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
 )
 
+type HealthCheckConfig struct {
+	FailingCount int     `yaml:"failingCount"`
+	FailingRate  float64 `yaml:"failingRate"`
+	CheckTime    int64   `yaml:"checkTime"`
+	RecoverTime  int64   `yaml:"recoverTime"`
+}
 
 type FailingBot struct {
 	ClientType string          `json:"clientType"`
@@ -28,14 +34,16 @@ func (fb *FailingBot) redisKey() string {
 	return "FAILINGBOT"
 }
 
-func (fb *FailingBot) NewFailingBot(bot *pb.BotsInfo) {
-	fb.ClientType = bot.ClientType
-	fb.ClientId = bot.ClientId
-	fb.Login = bot.Login
+func (o *ErrorHandler) NewFailingBot(ar *ActionRequest) *FailingBot {
+	fb := &FailingBot{}
+	fb.ClientType = ar.ClientType
+	fb.ClientId = ar.ClientId
+	fb.Login = ar.Login
 	fb.FailAt = utils.JSONTime{Time: time.Now()}
+	return fb
 }
 
-func (o *ErrorHandler) AddFailingBot(pool *redis.Pool, fb *FailingBot) {
+func (o *ErrorHandler) AddFailingBot(conn redis.Conn, fb *FailingBot) {
 	if o.Err != nil {
 		return
 	}
@@ -44,9 +52,6 @@ func (o *ErrorHandler) AddFailingBot(pool *redis.Pool, fb *FailingBot) {
 	member := o.ToJson(fb)
 	score := fb.FailAt.Time.Unix()
 	
-	conn := pool.Get()
-	defer conn.Close()
-
 	if o.Err != nil {
 		return
 	}
@@ -71,20 +76,13 @@ func (o *ErrorHandler) RecoverFailingBot(pool *redis.Pool, recoverTime int64) {
 	o.RedisDo(conn, timeout, "ZREMRANGEBYSCORE", key, "-inf", ts)
 }
 
-func (o *ErrorHandler) AddBotFailingAction(pool *redis.Pool, fb *FailingBot, actionType string) {
+func (o *ErrorHandler) AddBotFailingAction(conn redis.Conn, fb *FailingBot, actionType string) {
 	if o.Err != nil {
 		return
 	}
 
 	key := fb.actionRedisKey()
 	score := fb.FailAt.Time.Unix()
-	
-	conn := pool.Get()
-	defer conn.Close()
-
-	if o.Err != nil {
-		return
-	}
 	
 	o.RedisDo(conn, timeout, "ZADD", key, score, actionType)
 }
@@ -109,3 +107,90 @@ func (o *ErrorHandler) RecoverBotFailingAction(pool *redis.Pool, recoverTime int
 }
 
 
+func (o *ErrorHandler) SaveActionRequestFailLog(conn redis.Conn, ar *ActionRequest) {
+	key := ar.redisFailKey()
+	ts := time.Now().Unix()
+
+	o.RedisSend(conn, "MULTI")
+	o.RedisSend(conn, "SET", key, ts)
+	o.RedisSend(conn, "EXPIRE", key, 60*60)
+	o.RedisDo(conn, timeout, "EXEC")
+}
+
+func (o *ErrorHandler) FailingActionCount(conn redis.Conn, keyPattern string, checkTimeout int64) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	ts := time.Now().Unix() - checkTimeout
+	
+	cmp := func (c redis.Conn, key string) bool {
+		oc := &ErrorHandler{}
+		
+		t := oc.RedisString(oc.RedisDo(c, timeout, "GET", key))
+		if oc.Err != nil {
+			return false
+		}
+		
+		failAt, err := strconv.ParseInt(t, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		return failAt < ts
+	}
+
+	return o.RedisMatchCountCond(conn, keyPattern, cmp)
+}
+
+func (o *ErrorHandler) ActionRequestCountByTime(conn redis.Conn, keyPattern string, checkTimeout int64) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	ts := time.Now().Unix() - checkTimeout
+	
+	cmp := func (c redis.Conn, key string) bool {
+		oc := &ErrorHandler{}
+		arId, err := arQuotaKeyToArId(key)
+		if err != nil {
+			return false
+		}
+
+		ar := oc.GetActionRequest_(conn, arId)
+		return ar.CreateAt.Time.Unix() > ts
+	}	
+
+	return o.RedisMatchCountCond(conn, keyPattern, cmp)
+}
+
+
+func (o *ErrorHandler) SaveFailingActionRequest(conn redis.Conn, ar *ActionRequest, actionCheck, botCheck HealthCheckConfig) {
+	if o.Err != nil {
+		return
+	}
+	
+	fb := o.NewFailingBot(ar)
+	
+	count := o.FailingActionCount(conn, ar.redisFailKeyPattern(), actionCheck.CheckTime)
+	ncount := o.ActionRequestCountByTime(conn, ar.redisHourKey(), actionCheck.CheckTime)
+
+	if ncount > 0 {
+		rate := float64(count) / float64(ncount)
+		if count >= actionCheck.FailingCount &&
+			rate >= actionCheck.FailingRate {
+			o.AddBotFailingAction(conn, fb, ar.ActionType)
+		}
+	}
+
+	bcount := o.FailingActionCount(conn, ar.redisFailKeyBotPattern(), botCheck.CheckTime)
+	bncount := o.ActionRequestCountByTime(conn, ar.redisHourLoginKeyPattern(), botCheck.CheckTime)
+
+	if bncount > 0 {
+		rate := float64(bcount) / float64(bncount)
+		if count >= botCheck.FailingCount &&
+			rate >= botCheck.FailingRate {
+			o.AddFailingBot(conn, fb)
+		}
+	}
+}

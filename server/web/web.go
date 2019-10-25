@@ -56,8 +56,9 @@ type WebConfig struct {
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
 
-	ActionHealthCheck HealthCheckConfig
-	BotHealthCheck    HealthCheckConfig
+	ActionHealthCheck domains.HealthCheckConfig
+	BotHealthCheck    domains.HealthCheckConfig
+	ActionTimeout     int
 }
 
 type WebServer struct {
@@ -80,6 +81,7 @@ type WebServer struct {
 	rabbitmq *utils.RabbitMQWrapper
 
 	contactInfoDispatcher *ContactInfoDispatcher
+	artl *ActionRequestTimeoutListener
 }
 
 func (ctx *WebServer) init() error {
@@ -171,6 +173,10 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
+
+	ctx.artl = ctx.NewActionRequestTimeoutListener()
+	ctx.artl.Serve()
+	ctx.Info("begin serve actionrequest timeout listener ...")
 
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
@@ -450,7 +456,8 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/botaction/{login}", server.validate(server.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
 	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
-
+	r.HandleFunc("/bots/wechatbots/notify/recoverfailingactions", server.notifyRecoverFailingActions).Methods("POST")
+	
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")
