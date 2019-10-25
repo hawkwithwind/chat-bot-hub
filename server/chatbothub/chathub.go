@@ -203,6 +203,7 @@ const (
 	ACTIONREPLY     string = "ACTIONREPLY"
 	WEBSHORTCALL    string = "WEBSHORTCALL"
 	WEBSHORTCALLRESPONSE string = "WEBSHORTCALLRESPONSE"
+	ROOMJOIN        string = "ROOMJOIN"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -911,12 +912,23 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
 
+			case ROOMJOIN:
+				if bot.ClientType == WECHATMACPRO {
+					hub.Info("ROOMJOIN\n%s\n", in.Body)
+
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     bot.BotId,
+						EventType: ROOMJOIN,
+						Body:      in.Body,
+					}))
+				}
+
 			case STATUSMESSAGE:
 				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("status message\n%s\n", in.Body)
 
 					bodyString := in.Body
-
+					
 					var msg string
 					if err := json.Unmarshal([]byte(in.Body), &msg); err == nil {
 						bodyString = msg
