@@ -448,7 +448,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		go func() {
 			if bot.Callback.Valid {
 				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
-					bot, eventType, ""), 5, 1); err != nil {
+					bot, eventType, bodystr), 5, 1); err != nil {
 					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
 				}
 			}
