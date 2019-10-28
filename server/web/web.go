@@ -175,7 +175,9 @@ func (ctx *WebServer) init() error {
 	ctx.Info("begin serve process contacts ...")
 
 	ctx.artl = ctx.NewActionRequestTimeoutListener()
-	ctx.artl.Serve()
+	go func () {
+		ctx.artl.Serve()
+	}()
 	ctx.Info("begin serve actionrequest timeout listener ...")
 
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
@@ -461,6 +463,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
 	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
 	r.HandleFunc("/bots/wechatbots/notify/recoverfailingactions", server.notifyRecoverFailingActions).Methods("POST")
+	r.HandleFunc("/botaction/failing", server.validate(server.getFailingBots)).Methods("GET")
 	
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")

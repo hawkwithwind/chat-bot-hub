@@ -55,9 +55,9 @@ func (artl *ActionRequestTimeoutListener) Serve() {
 				fmt.Printf("[redis psub debug] %s| <%s>\n", v.Channel, v.Data)
 				artl.handle(string(v.Data))
 			case redis.Subscription:
-				fmt.Printf("[reids psub debug] %s| %s %d\n", v.Channel, v.Kind, v.Count)
+				fmt.Printf("[redis psub debug] %s| %s %d\n", v.Channel, v.Kind, v.Count)
 			case error:
-				fmt.Printf("[reids psub debug] error %v\n", v)
+				fmt.Printf("[redis psub debug] error %v\n", v)
 			}
 		}
 
@@ -86,5 +86,33 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 	}
 
 	return nil
+}
+
+func (web *WebServer) getFailingBots(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return
+	}
+
+	defer wrapper.Cancel()
+
+	conn := web.redispool.Get()
+	defer conn.Close()
+
+	fbs := o.GetFailingBots(conn)
+	fas := o.GetBotFailingActions(conn)
+	
+	if o.Err != nil {
+		return
+	}
+
+	o.ok(w, "", map[string]interface{}{
+		"failingBots": fbs,
+		"failingActions": fas,
+	})
 }
 

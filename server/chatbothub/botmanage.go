@@ -198,7 +198,9 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 	var bot *ChatBot
 	if req.ClientId == "" {
 		bot = hub.GetAvailableBot(req.ClientType)
-		req.ClientId = bot.ClientId
+		if bot != nil {
+			req.ClientId = bot.ClientId
+		}
 	} else {
 		bot = hub.GetBot(req.ClientId)
 	}
@@ -295,6 +297,8 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Code:    int32(clientError.Code),
 					Message: clientError.Error(),
 				},
+				ClientType: bot.ClientType,
+				ClientId: bot.ClientId,
 			}, nil
 		default:
 			return &pb.BotActionReply{
@@ -303,10 +307,17 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Code:    int32(utils.UNKNOWN),
 					Message: o.Err.Error(),
 				},
+				ClientType: bot.ClientType,
+				ClientId: bot.ClientId,
 			}, nil
 		}
 	} else {
-		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
+		return &pb.BotActionReply{
+			Success: true,
+			Msg: "DONE",
+			ClientType: bot.ClientType,
+			ClientId: bot.ClientId,
+		}, nil
 	}
 }
 

@@ -1,0 +1,36 @@
+<div ncy-breadcrumb></div>
+<h3 class="page-title">客户端列表</h3>
+
+<div class="row">
+  <div class="col-xs-6 col-md-12">
+    <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
+	   style="padding:40px;margin:10px;width:auto">
+      <th style="text-align:center">键</th>
+      <th style="text-align:center">失败操作</th>
+      <th style="text-align:center">失败时间</th>
+      
+      <tbody>
+	<tr ng-repeat="row in body.failingActions">
+          <td style="text-align:left;">{{ row.key }}</td>
+          <td style="text-align:left;">{{ row.action }}</td>
+          <td style="text-align:center;width:160px">{{ tsToString(row.timestamp) }}</td>
+	</tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-xs-6 col-md-12">
+    <table datatable="ng" class="row-border table-hover table table-bordered table-striped ng-show"
+	   style="padding:40px;margin:10px;width:auto">
+      <th style="text-align:center">失败客户端</th>
+      <th style="text-align:center">失败时间</th>
+      
+      <tbody>
+	<tr ng-repeat="row in body.failingBots">
+          <td style="text-align:left;">{{ row.key }}</td>
+          <td style="text-align:center;width:160px">{{ tsToString(row.timestamp) }}</td>
+	</tr>
+      </tbody>
+    </table>
+  </div>
+</div>

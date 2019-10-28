@@ -59,6 +59,44 @@ func (o *ErrorHandler) AddFailingBot(conn redis.Conn, fb *FailingBot) {
 	o.RedisDo(conn, timeout, "ZADD", key, score, member)
 }
 
+func (o *ErrorHandler) GetFailingBots(conn redis.Conn) []interface{} {
+	if o.Err != nil {
+		return []interface{}{}
+	}
+
+	fb := &FailingBot{}
+	key := fb.redisKey()
+	ret := o.RedisValue(o.RedisDo(conn, timeout, "ZRANGE", key, "0", "-1", "WITHSCORES"))
+	if o.Err != nil {
+		return []interface{}{}
+	}
+
+	fbs := []string{}
+	for _, k := range ret {
+		switch key := k.(type) {
+		case []uint8 :
+			fbs = append(fbs, string(key))
+		}
+	}
+
+	type FailingBot struct {
+		Key string `json:"key"`
+		Timestamp int64  `json:"timestamp"`
+	}
+
+	failingBots := []interface{}{}
+	
+	for i:=0; i+1<len(fbs); i+=2 {
+		timestamp, _ := strconv.ParseInt(fbs[i+1], 10, 64)
+		failingBots = append(failingBots, FailingBot{
+			Key: fbs[i],
+			Timestamp: timestamp,
+		})
+	}
+
+	return failingBots
+}
+
 func (o *ErrorHandler) RecoverFailingBot(pool *redis.Pool, recoverTime int64) {
 	if o.Err != nil {
 		return
@@ -85,6 +123,53 @@ func (o *ErrorHandler) AddBotFailingAction(conn redis.Conn, fb *FailingBot, acti
 	score := fb.FailAt.Time.Unix()
 	
 	o.RedisDo(conn, timeout, "ZADD", key, score, actionType)
+}
+
+func (o *ErrorHandler) GetBotFailingActions(conn redis.Conn) []interface{} {
+	if o.Err != nil {
+		return []interface{}{}
+	}
+
+	keypattern := "FAILING:*"
+	keys := o.RedisMatch(conn, keypattern)
+
+
+	type FailingAction struct {
+		Key string `json:"key"`
+		Action string `json:"action"`
+		Timestamp int64 `json:"timestamp"`
+	}
+
+	fbs := []interface{}{}
+	
+	for _, key := range keys {
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "ZRANGE", key, "0", "-1", "WITHSCORES"))
+		if o.Err != nil {
+			return []interface{}{}
+		}
+
+		var action string
+		
+		for i, k := range ret {
+			switch v := k.(type) {
+			case []uint8 :
+				value := string(v)
+				switch i % 2 {
+				case 0:
+					action = value
+				case 1:
+					timestamp, _ := strconv.ParseInt(value, 10, 64)
+					fbs = append(fbs, FailingAction{
+						Key: key,
+						Action: action,
+						Timestamp: timestamp,
+					})
+				}				
+			}
+		}
+	}
+	
+	return fbs
 }
 
 func (o *ErrorHandler) RecoverBotFailingAction(pool *redis.Pool, recoverTime int64) {
@@ -137,7 +222,7 @@ func (o *ErrorHandler) FailingActionCount(conn redis.Conn, keyPattern string, ch
 			return false
 		}
 
-		return failAt < ts
+		return failAt > ts
 	}
 
 	return o.RedisMatchCountCond(conn, keyPattern, cmp)
@@ -169,11 +254,18 @@ func (o *ErrorHandler) SaveFailingActionRequest(conn redis.Conn, ar *ActionReque
 	if o.Err != nil {
 		return
 	}
+
+	o.SaveActionRequestFailLog(conn, ar)
+	if o.Err != nil {
+		return
+	}
 	
 	fb := o.NewFailingBot(ar)
 	
 	count := o.FailingActionCount(conn, ar.redisFailKeyPattern(), actionCheck.CheckTime)
-	ncount := o.ActionRequestCountByTime(conn, ar.redisHourKey(), actionCheck.CheckTime)
+	ncount := o.ActionRequestCountByTime(conn, ar.redisHourKeyPattern(), actionCheck.CheckTime)
+
+	fmt.Printf("[action healthy debug] faCount %d, nCount %d\n", count, ncount)
 
 	if ncount > 0 {
 		rate := float64(count) / float64(ncount)
@@ -183,14 +275,59 @@ func (o *ErrorHandler) SaveFailingActionRequest(conn redis.Conn, ar *ActionReque
 		}
 	}
 
+	fmt.Printf("[action healthy debug] key %s\n", ar.redisHourLoginKeyPattern())
+
 	bcount := o.FailingActionCount(conn, ar.redisFailKeyBotPattern(), botCheck.CheckTime)
 	bncount := o.ActionRequestCountByTime(conn, ar.redisHourLoginKeyPattern(), botCheck.CheckTime)
+	fmt.Printf("[action healthy debug] fbCount %d, nCount %d\n", bcount, bncount)
 
 	if bncount > 0 {
 		rate := float64(bcount) / float64(bncount)
-		if count >= botCheck.FailingCount &&
+		if bcount >= botCheck.FailingCount &&
 			rate >= botCheck.FailingRate {
 			o.AddFailingBot(conn, fb)
 		}
 	}
+}
+
+func (o *ErrorHandler) ActionIsHealthy(conn redis.Conn, ar *ActionRequest) bool {
+	if o.Err != nil {
+		return false
+	}
+
+	fb := o.NewFailingBot(ar)
+	key := fb.redisKey()
+	akey := fb.actionRedisKey()
+
+	fbs := o.RedisValue(o.RedisDo(conn, timeout, "ZRANGE", key, "0", "-1"))
+	if o.Err != nil {
+		return false
+	}
+
+	for _, k := range fbs {
+		switch key := k.(type) {
+		case []uint8:
+			if o.ToJson(fb) == string(key) {
+				o.Err = fmt.Errorf("bot %s is failing, call later", akey)
+				return false
+			}
+		}
+	}
+
+	fas := o.RedisValue(o.RedisDo(conn, timeout, "ZRANGE", akey, "0", "-1"))
+	if o.Err != nil {
+		return false
+	}
+
+	for _, k := range fas {
+		switch key := k.(type) {
+		case []uint8:
+			if ar.ActionType == string(key) {
+				o.Err = fmt.Errorf("action %s of %s is failing, call later", ar.ActionType, akey)
+				return false
+			}
+		}
+	}
+
+	return true
 }

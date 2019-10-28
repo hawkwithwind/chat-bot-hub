@@ -593,7 +593,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
-
+			
 			bodym := o.FromJson(localar.ActionBody)
 			rlogin := ""
 			if bot.ChatbotType == chatbothub.WECHATBOT {
@@ -1107,21 +1107,43 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
+
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return nil
+	}
+
+	bot := o.getBotByLogin(wrapper, ar.Login)
+	if o.Err != nil {
+		return nil
+	}
+
+	ar.ClientType = bot.ClientType
+	ar.ClientId = bot.ClientId
+	
+	conn := web.redispool.Get()
+	defer conn.Close()
+
+	if !o.ActionIsHealthy(conn, ar) {
+		return nil
+	}
+	
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 
 	dayCount := -2
 	if daylimit > 0 {
-		dayCount = o.ActionCountDaily(web.redispool, ar)
+		dayCount = o.ActionCountDaily(conn, ar)
 	}
 
 	hourCount := -2
 	if hourlimit > 0 {
-		hourCount = o.ActionCountHourly(web.redispool, ar)
+		hourCount = o.ActionCountHourly(conn, ar)
 	}
 
 	minuteCount := -2
 	if minutelimit > 0 {
-		minuteCount = o.ActionCountMinutely(web.redispool, ar)
+		minuteCount = o.ActionCountMinutely(conn, ar)
 	}
 
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
@@ -1147,12 +1169,6 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}
 
-	wrapper, err := web.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return nil
-	}
-
 	web.Info("action request is " + o.ToJson(ar))
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
@@ -1174,7 +1190,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	ar.ClientType = actionReply.ClientType
 	ar.ClientId = actionReply.ClientId
 
-	o.SaveActionRequestWLimit(web.redispool, ar,
+	o.SaveActionRequestWLimit(conn, ar,
 		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
