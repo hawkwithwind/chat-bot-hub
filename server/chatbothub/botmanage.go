@@ -170,10 +170,19 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
 
-	bot := hub.GetBotById(req.BotId)
-	if bot == nil {
-		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
-		return &pb.OperationReply{Code: 0, Message: "success"}, nil
+	var bot *ChatBot
+	if len(req.BotId) > 0 {
+		bot = hub.GetBotById(req.BotId)
+		if bot == nil {
+			hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
+			return &pb.OperationReply{Code: 0, Message: "success"}, nil
+		}
+	} else if len(req.ClientId) > 0 {
+		bot = hub.GetBot(req.ClientId)
+		if bot == nil {
+			hub.Info("cannot find bot %s for shutdown, ignore", req.ClientId, hub.bots)
+			return &pb.OperationReply{Code: 0, Message: "success"}, nil
+		}
 	}
 
 	_, err := bot.shutdown()
