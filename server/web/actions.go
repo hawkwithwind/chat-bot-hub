@@ -402,7 +402,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 			requestStr = o.ToJson(chatbothub.WechatFriendRequest{
 				FromUserName: msg.ContactId,
-				FromNickName: "",
+				FromNickName: msg.NickName,
+				Alias: msg.Alias,
 				Content: msg.Hello,
 				EncryptUserName: msg.Stranger,
 				Ticket: msg.Ticket,
