@@ -70,7 +70,17 @@
 	  label: '机器人列表',
           parent:'app.manage'
         }
-      });     
+      });
+
+      $stateProvider.state('app.manage.clientslist', {
+        url: "/clientslist",
+        templateUrl: VIEW_PATH + "manage/views/clientslist.html",
+        controller: "clientslistCtrl",
+        ncyBreadcrumb: {
+          label: '客户端列表',
+          parent: 'app.manage'
+        }
+      });
 
       $stateProvider.state('app.manage.chatusers', {
 	url: '/chatusers',
