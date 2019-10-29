@@ -29,7 +29,7 @@ type ChatUser struct {
 	Remark     sql.NullString `db:"remark"`
 	Label      sql.NullString `db:"label"`
 	Isgh       int            `db:"isgh"`
-	Ext        sql.NullString `db:"ext"`
+	Ext        sql.NullString `db:"ext" search:"-"`
 	LastMsgId  sql.NullString `db:"lastmsgid"`
 	LastSendAt mysql.NullTime `db:"lastsendat"`
 	CreateAt   mysql.NullTime `db:"createat"`

@@ -27,6 +27,13 @@ func GetFieldsFromStruct(tablename string, i interface{}) []Field {
 	fs := []Field{}
 	for i := 0; i < t.NumField(); i++ {
 		if tag, ok := t.Field(i).Tag.Lookup("db"); ok {
+			if stag, sok := t.Field(i).Tag.Lookup("search"); sok {
+				if stag == "-" {
+					// ignore search:"-"
+					continue
+				}
+			}
+			
 			fs = append(fs, Field{tablename, tag})
 		}
 	}
