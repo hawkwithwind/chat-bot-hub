@@ -53,7 +53,10 @@ func (artl *ActionRequestTimeoutListener) Serve() {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
 				fmt.Printf("[redis psub debug] %s| <%s>\n", v.Channel, v.Data)
-				artl.handle(string(v.Data))
+				if err := artl.handle(string(v.Data)); err != nil {
+					fmt.Printf("artl handle failed %v\n", err)
+					break
+				}
 			case redis.Subscription:
 				fmt.Printf("[redis psub debug] %s| %s %d\n", v.Channel, v.Kind, v.Count)
 			case error:
@@ -79,6 +82,15 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 	arid := t[len(t)-1]
 
 	ar := o.GetActionRequest_(conn, arid)
+	if o.Err != nil {
+		return o.Err
+	}
+	
+	if ar == nil {
+		fmt.Printf("[ar timeout debug] cannot get ar %s\n", arid)
+		return fmt.Errorf("cannot get ar %s", arid)
+	}
+	
 	if ar.Status == "NEW" {
 		ar.Status = "TIMEOUT"
 		o.UpdateActionRequest_(conn, ar)
