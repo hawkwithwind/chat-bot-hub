@@ -426,6 +426,8 @@ type WechatFriendRequest struct {
 
 type WechatMacproFriendRequest struct {
 	ContactId string `json:"contactId"`
+	Alias string `json:alias`
+	NickName string `json:nickname`
 	Hello string `json:"hello"`
 	Id string `json:"id"`
 	Stranger string `json:"stranger"`
