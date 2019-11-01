@@ -127,11 +127,17 @@ func NewChatBot() *ChatBot {
 }
 
 func (bot *ChatBot) canReLogin() bool {
+	// if bot.ClientType == WECHATMACPRO {
+	// 	return bot.Status == BeginRegistered &&
+	// 		len(bot.BotId) > 0 &&
+	// 		len(bot.Login) > 0
+	// } else {
 	return bot.Status == BeginRegistered &&
 		len(bot.BotId) > 0 &&
 		len(bot.Login) > 0 &&
 		len(bot.LoginInfo.WxData) > 0 &&
 		len(bot.LoginInfo.Token) > 0
+	//}
 }
 
 func (bot *ChatBot) clearLoginInfo() {
