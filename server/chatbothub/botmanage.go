@@ -71,7 +71,7 @@ func (hub *ChatHub) DropBot(clientid string) {
 
 	delete(hub.bots, clientid)
 
-	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
+	//hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
 }
 
 func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
