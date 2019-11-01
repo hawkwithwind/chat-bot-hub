@@ -153,7 +153,7 @@ func (bot *ChatBot) closePingloop() {
 
 	for bot.pinglooping {
 		bot.Info("c[%s] wait for pingloop %v", bot.ClientId, bot.pinglooping)
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -181,6 +181,8 @@ func (bot *ChatBot) pingloop() error {
 	o := ErrorHandler{}
 	trycount := 0
 	bot.pinglooping = true
+
+	flag := 0
 	
 	for true {
 		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
@@ -190,27 +192,31 @@ func (bot *ChatBot) pingloop() error {
 			bot.pinglooping = false
 			return nil
 		}
-		
-		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType:  PING,
-			ClientType: bot.ClientType,
-			ClientId:   bot.ClientId,
-			Body:       "ping from server",
-		})
 
-		if o.Err != nil {
-			bot.Status = FailingDisconnected
-			
-			trycount += 1
-			if trycount > 10 {
-				bot.pinglooping = false
-				return o.Err
+		if flag % 10 == 0 {
+			o.sendEvent(bot.tunnel, &pb.EventReply{
+				EventType:  PING,
+				ClientType: bot.ClientType,
+				ClientId:   bot.ClientId,
+				Body:       "ping from server",
+			})
+
+			if o.Err != nil {
+				bot.Status = FailingDisconnected
+				
+				trycount += 1
+				if trycount > 20 {
+					bot.pinglooping = false
+					return o.Err
+				}
+			} else {
+				trycount = 0
 			}
-		} else {
-			trycount = 0
 		}
+
+		flag += 1
 		
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	
 	return nil
