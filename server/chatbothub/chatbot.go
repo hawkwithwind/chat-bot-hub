@@ -880,20 +880,14 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 			"ticket":   msg.Ticket,
 		}))
 	} else if bot.ClientType == WECHATMACPRO {
-		var msg WechatFriendRequest
+		var msg WechatMacproFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
-				
-		var raw WechatMacproFriendRequest
-		o.Err = json.Unmarshal([]byte(msg.Raw), &raw)
-		if o.Err != nil {
-			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-		}
 
-		bot.Info("Action AcceptUser %s\n%s", raw.Stranger, raw.Ticket)
-		o.SendAction(bot, arId, AcceptUser, msg.Raw)
+		bot.Info("Action AcceptUser %s\n%s", msg.Stranger, msg.Ticket)
+		o.SendAction(bot, arId, AcceptUser, body)
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))
