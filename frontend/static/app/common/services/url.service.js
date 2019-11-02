@@ -6,6 +6,7 @@
       'login': buildUrl('login'),      
       'bots': buildUrl('bots'),
       'clients': buildUrl('clients'),
+      'botaction/failing': buildUrl('botaction/failing'),
       'filters': buildUrl('filters'),
       'consts': buildUrl('consts'),
       'botlogin': buildUrl('botlogin'),

@@ -55,6 +55,34 @@ func (o *ErrorHandler) getTheBot(wrapper *rpc.GRPCWrapper, botId string) *pb.Bot
 	return botsreply.BotsInfo[0]
 }
 
+func (o *ErrorHandler) getBotByLogin(wrapper *rpc.GRPCWrapper, login string) *pb.BotsInfo {
+	botsreply := o.GetBots(wrapper, &pb.BotsRequest{Logins: []string{login}})
+	if o.Err == nil {
+		if len(botsreply.BotsInfo) == 0 {
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} not activated", login),
+			)
+		} else if len(botsreply.BotsInfo) > 1 {
+			o.Err = utils.NewClientError(
+				utils.STATUS_INCONSISTENT,
+				fmt.Errorf("bot {%s} multiple instance {%#v}", login, botsreply.BotsInfo),
+			)
+		}
+	}
+
+	if o.Err != nil {
+		return nil
+	}
+
+	if botsreply == nil || len(botsreply.BotsInfo) == 0 {
+		o.Err = fmt.Errorf("cannot find bots %s", login)
+		return nil
+	}
+
+	return botsreply.BotsInfo[0]
+}
+
 func (ctx *ErrorHandler) BotLogin(w *rpc.GRPCWrapper, req *pb.BotLoginRequest) *pb.BotLoginReply {
 	if ctx.Err != nil {
 		return nil
