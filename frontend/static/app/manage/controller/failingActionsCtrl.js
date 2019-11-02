@@ -23,13 +23,13 @@
 	hours.substr(-2)+':'+minutes.substr(-2)+':'+seconds.substr(-2);
     }
 
-    $scope.recoverAction = (row) = {
+    $scope.recoverAction = (row) => {
       buildPromise(buildModel('botactions/recoveraction', row).update((data) => {
         $scope.refresh()
       }))
     }
 
-    $scope.recoverClient = (row) = {
+    $scope.recoverClient = (row) => {
       buildPromise(buildModel('botactions/recoverclient', row).update((data) => {
         $scope.refresh()
       }))
