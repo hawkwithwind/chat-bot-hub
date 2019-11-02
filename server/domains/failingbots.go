@@ -331,3 +331,21 @@ func (o *ErrorHandler) ActionIsHealthy(conn redis.Conn, ar *ActionRequest) bool 
 
 	return true
 }
+
+func (o *ErrorHandler) RecoverAction(conn redis.Conn, key string, action string) {
+	if o.Err != nil {
+		return
+	}
+
+	o.RedisDo(conn, timeout, "ZREM", key, action)
+}
+
+func (o *ErrorHandler) RecoverClient(conn redis.Conn, key string) {
+	if o.Err != nil {
+		return
+	}
+
+	fb := &FailingBot{}
+
+	o.RedisDo(conn, timeout, "ZREM", fb.redisKey(), key)
+}

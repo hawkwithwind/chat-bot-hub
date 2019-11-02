@@ -8,12 +8,16 @@
       <th style="text-align:center">键</th>
       <th style="text-align:center">失败操作</th>
       <th style="text-align:center">失败时间</th>
+      <th></th>
       
       <tbody>
 	<tr ng-repeat="row in body.failingActions">
           <td style="text-align:left;">{{ row.key }}</td>
           <td style="text-align:left;">{{ row.action }}</td>
           <td style="text-align:center;width:160px">{{ tsToString(row.timestamp) }}</td>
+          <td style="text-align:center;">
+            <a href="javascript:;" ng-click="recoverAction(row)">恢复</a>
+          </td>
 	</tr>
       </tbody>
     </table>
@@ -29,6 +33,9 @@
 	<tr ng-repeat="row in body.failingBots">
           <td style="text-align:left;">{{ row.key }}</td>
           <td style="text-align:center;width:160px">{{ tsToString(row.timestamp) }}</td>
+          <td style="text-align:center;">
+            <a href="javascript:;" ng-click="recoverClient(row)">恢复</a>
+          </td>
 	</tr>
       </tbody>
     </table>

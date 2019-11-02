@@ -7,6 +7,8 @@
       'bots': buildUrl('bots'),
       'clients': buildUrl('clients'),
       'botaction/failing': buildUrl('botaction/failing'),
+      'botaction/recoveraction': buildUrl('botaction/recoveraction'),
+      'botaction/recoverclient': buildUrl('botaction/recoverclient'),
       'filters': buildUrl('filters'),
       'consts': buildUrl('consts'),
       'botlogin': buildUrl('botlogin'),
