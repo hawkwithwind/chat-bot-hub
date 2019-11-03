@@ -52,10 +52,12 @@ func (artl *ActionRequestTimeoutListener) Serve() {
 		for c.Err() == nil {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
-				fmt.Printf("[redis psub debug] %s| <%s>\n", v.Channel, v.Data)
-				if err := artl.handle(string(v.Data)); err != nil {
-					fmt.Printf("artl handle failed %v\n", err)
-					break
+				if strings.HasPrefix(string(v.Data), "ARTIMING:") {
+					fmt.Printf("[redis psub debug] %s| <%s>\n", v.Channel, v.Data)
+					if err := artl.handle(string(v.Data)); err != nil {
+						fmt.Printf("artl handle failed %v\n", err)
+						break
+					}
 				}
 			case redis.Subscription:
 				fmt.Printf("[redis psub debug] %s| %s %d\n", v.Channel, v.Kind, v.Count)
