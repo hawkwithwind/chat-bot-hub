@@ -230,6 +230,7 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 
 	bot.BotId = botId
 	bot.Login = login
+	bot.ScanUrl = ""
 	bot.Status = LoggingPrepared
 	return bot, nil
 }
