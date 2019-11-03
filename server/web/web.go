@@ -463,9 +463,9 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
 	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
 	r.HandleFunc("/bots/wechatbots/notify/recoverfailingactions", server.notifyRecoverFailingActions).Methods("POST")
-	r.HandleFunc("/botaction/failing", server.validate(server.getFailingBots)).Methods("GET")
-	r.HandleFunc("/botaction/recoveraction", server.validate(server.recoverAction)).Methods("POST")
-	r.HandleFunc("/botaction/recoverclient", server.validate(server.recoverClient)).Methods("POST")
+	r.HandleFunc("/botactions/failing", server.validate(server.getFailingBots)).Methods("GET")
+	r.HandleFunc("/botactions/recoveraction", server.validate(server.recoverAction)).Methods("POST")
+	r.HandleFunc("/botactions/recoverclient", server.validate(server.recoverClient)).Methods("POST")
 	
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
