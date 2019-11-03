@@ -612,7 +612,10 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			if bot.ChatbotType == chatbothub.WECHATBOT {
 				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 			} else if bot.ChatbotType == chatbothub.WECHATMACPRO {
-				rlogin = o.FromMapString("contactId", bodym, "actionBody", false, "")
+				rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
+				if len(rlogin) == 0 {
+					rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+				}
 			}
 			ctx.Info("acceptuser rlogin [%s]", rlogin)
 			
