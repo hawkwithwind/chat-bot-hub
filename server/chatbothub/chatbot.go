@@ -302,6 +302,11 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 }
 
 func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
+	if bot.Status != LoggingPrepared {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
+	}
+	
 	bot.ScanUrl = url
 	return bot, nil
 }
