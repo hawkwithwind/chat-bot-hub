@@ -81,7 +81,6 @@ type WebServer struct {
 	rabbitmq *utils.RabbitMQWrapper
 
 	contactInfoDispatcher *ContactInfoDispatcher
-	artl *ActionRequestTimeoutListener
 }
 
 func (ctx *WebServer) init() error {
@@ -173,13 +172,7 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
-
-	ctx.artl = ctx.NewActionRequestTimeoutListener()
-	go func () {
-		ctx.artl.Serve()
-	}()
-	ctx.Info("begin serve actionrequest timeout listener ...")
-
+	
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	go func() {
