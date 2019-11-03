@@ -338,8 +338,9 @@ func (web *WebServer) syncGroupMembers(botLogin string, clientType string, group
 
 	actionreply := o.CreateAndRunAction(web, ar)
 
-	if o.Err != nil {
+	if o.Err != nil || actionreply == nil {
 		web.Error(o.Err, "get roommembers %s failed", groupId)
+		return
 	}
 
 	if actionreply.Success == false {
