@@ -5,12 +5,15 @@ import (
 	"strings"
 	"github.com/gomodule/redigo/redis"
 
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 )
 
 type ActionRequestTimeoutListener struct {
 	pool *redis.Pool
 	db   string
+	tasks *Tasks
 	keypattern string	
 	ActionHealthCheck domains.HealthCheckConfig
 	BotHealthCheck    domains.HealthCheckConfig
@@ -20,6 +23,7 @@ func (tasks *Tasks) NewActionRequestTimeoutListener() *ActionRequestTimeoutListe
 	return &ActionRequestTimeoutListener{
 		pool: tasks.redispool,
 		db: tasks.WebConfig.Redis.Db,
+		tasks: tasks,
 		ActionHealthCheck: tasks.WebConfig.ActionHealthCheck,
 		BotHealthCheck: tasks.WebConfig.BotHealthCheck,
 	}
@@ -80,6 +84,25 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 	if ar.Status == "NEW" {
 		ar.Status = "TIMEOUT"
 		o.UpdateActionRequest_(conn, ar)
+		if o.Err != nil {
+			return o.Err
+		}
+
+		if ar.ActionType == chatbothub.AcceptUser {
+			rr := httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", artl.tasks.WebBaseUrl,
+				"/botactions/timeoutfriendrequest"))
+			o.Err = rr.SetBodyString(o.ToJson(ar), "json", "utf-8")
+			if o.Err != nil {
+				return o.Err
+			}
+			
+			if ret, err := httpx.RestfulCallRetry(artl.tasks.restfulclient, rr, 3, 1); err != nil {
+				artl.tasks.Error(err, "call %s failed", "/botactions/timeoutfriendrequest")
+			} else {
+				artl.tasks.Info("timeout friendrequest %s %s", ar.ActionRequestId, o.ToJson(ret))
+			}
+		}
+		
 		o.SaveFailingActionRequest(conn, ar, artl.ActionHealthCheck, artl.BotHealthCheck)
 	}
 

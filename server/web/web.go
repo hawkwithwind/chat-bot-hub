@@ -459,6 +459,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/botactions/failing", server.validate(server.getFailingBots)).Methods("GET")
 	r.HandleFunc("/botactions/recoveraction", server.validate(server.recoverAction)).Methods("POST")
 	r.HandleFunc("/botactions/recoverclient", server.validate(server.recoverClient)).Methods("POST")
+	r.HandleFunc("/botactions/timeoutfriendrequest", server.timeoutFriendRequest).Methods("POST")
 	
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")

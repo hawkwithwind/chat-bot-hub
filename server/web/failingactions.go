@@ -1,8 +1,13 @@
 package web
 
-import (	
-	"net/http"
+import (
 	"time"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
+
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 )
 
 var (
@@ -74,5 +79,59 @@ func (web *WebServer) recoverClient(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 	
 	o.RecoverClient(conn, key)
+	o.ok(w, "", nil)
+}
+
+func (web *WebServer) timeoutFriendRequest(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	r.ParseForm()
+
+	var b []byte
+	b, o.Err = ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if o.Err != nil {
+		return
+	}
+
+	ar := &domains.ActionRequest{}
+	o.Err = json.Unmarshal(b, ar)
+	if o.Err != nil {
+		return
+	}
+
+	if ar.ActionType == chatbothub.AcceptUser && ar.Status == "TIMEOUT" {
+		tx := o.Begin(web.db)
+		if o.Err != nil {
+			return
+		}
+		defer o.CommitOrRollback(tx)
+
+		frs := o.GetFriendRequestsByLogin(tx, ar.Login, "")
+		bodym := o.FromJson(ar.ActionBody)
+		rlogin := ""
+		if ar.ClientType == chatbothub.WECHATBOT {
+			rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+		} else if ar.ClientType == chatbothub.WECHATMACPRO {
+			rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
+			if len(rlogin) == 0 {
+				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			}
+		}
+		web.Info("timeout acceptuser rlogin [%s]", rlogin)
+
+		for _, fr := range frs {
+			if fr.RequestLogin == rlogin && fr.Status == "NEW" {
+				fr.Status = ar.Status
+				o.UpdateFriendRequest(tx, &fr)
+				web.Info("timeout friendrequest rlogin [%s]", rlogin)
+				break
+			}
+		}
+	}
+
 	o.ok(w, "", nil)
 }
