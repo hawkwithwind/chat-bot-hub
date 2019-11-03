@@ -24,13 +24,13 @@
     }
 
     $scope.recoverAction = (row) => {
-      buildPromise(buildModel('botactions/recoveraction', row).update((data) => {
+      buildPromise(buildModel('botaction/recoveraction', row).update((data) => {
         $scope.refresh()
       }))
     }
 
     $scope.recoverClient = (row) => {
-      buildPromise(buildModel('botactions/recoverclient', row).update((data) => {
+      buildPromise(buildModel('botaction/recoverclient', row).update((data) => {
         $scope.refresh()
       }))
     }
