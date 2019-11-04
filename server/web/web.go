@@ -55,6 +55,10 @@ type WebConfig struct {
 	Sentry       string
 	GithubOAuth  GithubOAuthConfig
 	AllowOrigin  []string
+
+	ActionHealthCheck domains.HealthCheckConfig
+	BotHealthCheck    domains.HealthCheckConfig
+	ActionTimeout     int
 }
 
 type WebServer struct {
@@ -168,7 +172,7 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
-
+	
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	go func() {
@@ -451,7 +455,12 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/botaction/{login}", server.validate(server.botAction)).Methods("POST")
 	r.HandleFunc("/bots/{login}/friendrequests", server.validate(server.getFriendRequests)).Methods("GET")
 	r.HandleFunc("/bots/{botId}/notify", server.botNotify).Methods("Post")
-
+	r.HandleFunc("/bots/wechatbots/notify/recoverfailingactions", server.notifyRecoverFailingActions).Methods("POST")
+	r.HandleFunc("/botactions/failing", server.validate(server.getFailingBots)).Methods("GET")
+	r.HandleFunc("/botactions/recoveraction", server.validate(server.recoverAction)).Methods("POST")
+	r.HandleFunc("/botactions/recoverclient", server.validate(server.recoverClient)).Methods("POST")
+	r.HandleFunc("/botactions/timeoutfriendrequest", server.timeoutFriendRequest).Methods("POST")
+	
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")

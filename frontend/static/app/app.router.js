@@ -82,23 +82,43 @@
         }
       });
 
-      $stateProvider.state('app.manage.chatusers', {
+      $stateProvider.state('app.manage.failingactions', {
+        url: "/failingactions",
+        templateUrl: VIEW_PATH + "manage/views/failingactions.html",
+        controller: "failingActionsCtrl",
+        ncyBreadcrumb: {
+          label: '失败操作列表',
+          parent: 'app.manage'
+        }
+      });      
+
+      $stateProvider.state('app.contacts', {
+        url: '/contacts',
+        template: '<div ui-view class="fade-in-up" style="height: 100%;overflow-x: hidden;overflow-y: auto;"></div>',
+        title: '联系人',
+        ncyBreadcrumb: {
+          label: '联系人',
+          parent:'app'
+        }
+      });      
+
+      $stateProvider.state('app.contacts.chatusers', {
 	url: '/chatusers',
 	templateUrl: VIEW_PATH + 'manage/views/chatusers.html',
 	controller: 'chatusersCtrl',
 	ncyBreadcrumb: {
 	  label: '联系人列表',
-	  parent: 'app.manage'
+	  parent: 'app.contacts'
 	}
       });
 
-      $stateProvider.state('app.manage.chatgroups', {
+      $stateProvider.state('app.contacts.chatgroups', {
 	url: '/chatgroups',
 	templateUrl: VIEW_PATH + 'manage/views/chatgroups.html',
 	controller: 'chatgroupsCtrl',
 	ncyBreadcrumb: {
 	  label: '群列表',
-	  parent: 'app.manage'
+	  parent: 'app.contacts'
 	}
       });
 

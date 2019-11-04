@@ -127,17 +127,17 @@ func NewChatBot() *ChatBot {
 }
 
 func (bot *ChatBot) canReLogin() bool {
-	// if bot.ClientType == WECHATMACPRO {
-	// 	return bot.Status == BeginRegistered &&
-	// 		len(bot.BotId) > 0 &&
-	// 		len(bot.Login) > 0
-	// } else {
-	return bot.Status == BeginRegistered &&
-		len(bot.BotId) > 0 &&
-		len(bot.Login) > 0 &&
-		len(bot.LoginInfo.WxData) > 0 &&
-		len(bot.LoginInfo.Token) > 0
-	//}
+	if bot.ClientType == WECHATMACPRO {
+		return bot.Status == BeginRegistered &&
+			len(bot.BotId) > 0 &&
+			len(bot.Login) > 0
+	} else {
+		return bot.Status == BeginRegistered &&
+			len(bot.BotId) > 0 &&
+			len(bot.Login) > 0 &&
+			len(bot.LoginInfo.WxData) > 0 &&
+			len(bot.LoginInfo.Token) > 0
+	}
 }
 
 func (bot *ChatBot) clearLoginInfo() {
@@ -154,7 +154,7 @@ func (bot *ChatBot) closePingloop() {
 
 	for bot.pinglooping {
 		bot.Info("c[%s] wait for pingloop %v", bot.ClientId, bot.pinglooping)
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -182,6 +182,8 @@ func (bot *ChatBot) pingloop() error {
 	o := ErrorHandler{}
 	trycount := 0
 	bot.pinglooping = true
+
+	flag := 0
 	
 	for true {
 		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
@@ -191,27 +193,31 @@ func (bot *ChatBot) pingloop() error {
 			bot.pinglooping = false
 			return nil
 		}
-		
-		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType:  PING,
-			ClientType: bot.ClientType,
-			ClientId:   bot.ClientId,
-			Body:       "ping from server",
-		})
 
-		if o.Err != nil {
-			bot.Status = FailingDisconnected
-			
-			trycount += 1
-			if trycount > 10 {
-				bot.pinglooping = false
-				return o.Err
+		if flag % 10 == 0 {
+			o.sendEvent(bot.tunnel, &pb.EventReply{
+				EventType:  PING,
+				ClientType: bot.ClientType,
+				ClientId:   bot.ClientId,
+				Body:       "ping from server",
+			})
+
+			if o.Err != nil {
+				bot.Status = FailingDisconnected
+				
+				trycount += 1
+				if trycount > 20 {
+					bot.pinglooping = false
+					return o.Err
+				}
+			} else {
+				trycount = 0
 			}
-		} else {
-			trycount = 0
 		}
+
+		flag += 1
 		
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	
 	return nil
@@ -225,6 +231,7 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 
 	bot.BotId = botId
 	bot.Login = login
+	bot.ScanUrl = ""
 	bot.Status = LoggingPrepared
 	return bot, nil
 }
@@ -297,6 +304,11 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 }
 
 func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
+	if bot.Status != LoggingPrepared {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
+	}
+	
 	bot.ScanUrl = url
 	return bot, nil
 }
