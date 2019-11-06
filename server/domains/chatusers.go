@@ -488,11 +488,8 @@ u.chatuserid
 , u.updateat
 , u.deleteat
 FROM chatusers as u
-LEFT JOIN chatcontacts as c on u.chatuserid = c.chatuserid
-LEFT JOIN bots as b on c.botid = b.botid
 WHERE u.deleteat is NULL
   AND u.isgh=0
-  AND b.accountid = ?
   %s /* username */
   %s /* nickname */
   %s /* type */
@@ -500,6 +497,10 @@ GROUP BY u.chatuserid
 ORDER BY u.createat desc
 LIMIT ?, ?
 `
+	// LEFT JOIN chatcontacts as c on u.chatuserid = c.chatuserid
+	// LEFT JOIN bots as b on c.botid = b.botid
+	// AND b.accountid = ?
+
 	chatusers := []ChatUser{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatusers,
@@ -507,7 +508,7 @@ LIMIT ?, ?
 			o.AndEqualString("username", criteria.UserName),
 			o.AndLikeString("nickname", criteria.NickName),
 			o.AndEqualString("type", criteria.Type)),
-		accountId,
+		//accountId,
 		criteria.UserName.String,
 		fmt.Sprintf("%%%s%%", criteria.NickName.String),
 		criteria.Type.String,
