@@ -746,7 +746,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
-		case chatbothub.SearchContact:
+		case chatbothub.SearchContact, chatbothub.GetContact :
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
