@@ -206,7 +206,7 @@ func (bot *ChatBot) pingloop() error {
 				bot.Status = FailingDisconnected
 				
 				trycount += 1
-				if trycount > 20 {
+				if trycount > 300 {
 					bot.pinglooping = false
 					return o.Err
 				}
