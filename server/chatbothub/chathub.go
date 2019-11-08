@@ -531,6 +531,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
 		} else if in.EventType == REGISTER {
+			hub.Info("REGISTER %#v", in)
+			
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
 				hub.Info("c[%s] not found, create new bot", in.ClientId)
