@@ -691,7 +691,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 											if findbot != nil {
 												hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 													findbot.BotId, findbot.ClientId)
-												findbot, o.Err = findbot.logoutOrShutdown()
+												
+												if bot.ClientType == WECHATMACPRO {
+													if bot.Status != LoggingStaging && bot.Status !=  WorkingLoggedIn {
+														findbot, o.Err = findbot.shutdown()
+													}
+												} else {
+													findbot, o.Err = findbot.logoutOrShutdown()
+												}
+												
 												if o.Err != nil {
 													hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
 														findbot.BotId, findbot.ClientId)
