@@ -76,6 +76,33 @@ func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatCo
 	}
 }
 
+func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, page int64, pagesize int64) []ChatContact{
+	if o.Err != nil {
+		return []ChatContact{}
+	}
+
+	query := `
+SELECT 
+botid,
+chatuserid,
+createat,
+updateat
+FROM chatcontacts
+WHERE deleteat is NULL
+ORDER BY updateat DESC
+LIMIT ?, ?
+`
+
+	chatcontacts := []ChatContact{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, (page-1)*pagesize, pagesize)
+	if o.Err != nil {
+		return []ChatContact{}
+	}
+
+	return chatcontacts	
+}
+
 func (o *ErrorHandler) SaveChatContact(q dbx.Queryable, chatcontact *ChatContact) {
 	if o.Err != nil {
 		return
@@ -163,3 +190,4 @@ UPDATE chatcontacts
 	ctx, _ = o.DefaultContext()
 	_, o.Err = q.ExecContext(ctx, fmt.Sprintf(delquery, strings.Join(chatcontactids, "','")))
 }
+

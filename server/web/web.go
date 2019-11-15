@@ -429,6 +429,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/chatusers", server.validate(server.getChatUsers)).Methods("GET")
 	r.HandleFunc("/chatgroups", server.validate(server.getChatGroups)).Methods("GET")
 	r.HandleFunc("/chatgroups/{groupname}/members", server.validate(server.getGroupMembers)).Methods("GET")
+	r.HandleFunc("/chatcontacts/sync", server.validate(server.syncChatContacts)).Methods("GET")
 
 	// client control (clients.go)
 	r.HandleFunc("/clients", server.validate(server.getClients)).Methods("GET")
