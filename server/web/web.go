@@ -27,6 +27,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/hawkwithwind/mux"
 	//"github.com/streadway/amqp"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/dbx"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -146,6 +147,13 @@ func (ctx *WebServer) init() error {
 		ctx.Info("set database max conn %d", ctx.Config.Database.MaxConnectNum)
 		ctx.db.Conn.SetMaxOpenConns(ctx.Config.Database.MaxConnectNum)
 	}
+
+	go func(db *sqlx.DB) {
+		for {
+			time.Sleep(time.Duration(60) * time.Second)
+			fmt.Println("[WEB] database stats ", o.ToJson(db.Stats()))
+		}
+	}(ctx.db.Conn)
 
 	ctx.rabbitmq = o.NewRabbitMQWrapper(ctx.Config.Rabbitmq)
 	err = ctx.rabbitmq.Reconnect()
