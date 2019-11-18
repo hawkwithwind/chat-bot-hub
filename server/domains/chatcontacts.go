@@ -76,7 +76,7 @@ func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatCo
 	}
 }
 
-func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, page int64, pagesize int64) []ChatContact{
+func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, page int64, pagesize int64) []ChatContact{
 	if o.Err != nil {
 		return []ChatContact{}
 	}
@@ -89,13 +89,29 @@ createat,
 updateat
 FROM chatcontacts
 WHERE deleteat is NULL
+%s
 ORDER BY updateat DESC
-LIMIT ?, ?
+LIMIT %d, %d
 `
+	botcondition := ""
+	if len(botIds) > 0 {
+		placeholders := []string{}
+		for i:=0; i<len(botIds); i++ {
+			placeholders = append(placeholders, "?")
+		}
+		botcondition = fmt.Sprintf("AND botId IN (%s)", strings.Join(placeholders, ","))
+	}
+
+	query = fmt.Sprintf(query, botcondition, (page-1)*pagesize, pagesize)
+
+	botvalues := []interface{}{}
+	for _, v := range botIds {
+		botvalues = append(botvalues, v)
+	}
 
 	chatcontacts := []ChatContact{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &chatcontacts, query, (page-1)*pagesize, pagesize)
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, botvalues...)
 	if o.Err != nil {
 		return []ChatContact{}
 	}

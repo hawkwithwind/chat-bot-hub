@@ -149,6 +149,10 @@ func (ctx *ErrorHandler) NewChatUser(username string, ctype string, nickname str
 		return nil
 	}
 
+	if len(username) < 5 {
+		ctx.Err = fmt.Errorf("username [%s] too short", username)
+	}
+
 	var rid uuid.UUID
 	if rid, ctx.Err = uuid.NewRandom(); ctx.Err != nil {
 		return nil

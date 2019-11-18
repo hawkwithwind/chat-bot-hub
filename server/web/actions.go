@@ -268,7 +268,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	o := ErrorHandler{}
 	defer o.BackEndError(ctx)
 
-	ctx.Info("botNotify %s", botId)
+	//ctx.Info("botNotify %s", botId)
 
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
@@ -290,7 +290,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
-		ctx.Info("[contacts debug] bot notify received raw")
+		//ctx.Info("[contacts debug] bot notify received raw")
 		return nil
 	}
 	

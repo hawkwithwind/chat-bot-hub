@@ -1386,15 +1386,22 @@ func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	page := o.ParseInt(o.getStringValue(r.Form, "page"), 10, 64)
 	pagesize := o.ParseInt(o.getStringValue(r.Form, "pagesize"), 10, 64)
+	botIdsParam := o.getStringValueDefault(r.Form, "botids", "[]")
 
 	if o.Err != nil {
 		return
 	}
 
+	botIds := []string{}
+	o.Err = json.Unmarshal([]byte(botIdsParam), &botIds)
+	if o.Err != nil {
+		return
+	}
+	
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	chatcontacts := o.SyncChatContact(tx, page, pagesize)
+	chatcontacts := o.SyncChatContact(tx, botIds, page, pagesize)
 	if o.Err != nil {
 		return
 	}
