@@ -160,7 +160,7 @@ updateat
 FROM chatcontacts
 WHERE deleteat is NULL
 %s
-ORDER BY updateat
+ORDER BY updateat ASC
 LIMIT %d
 `
 	whereclause := ""
