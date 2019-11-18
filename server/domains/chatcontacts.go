@@ -76,13 +76,83 @@ func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatCo
 	}
 }
 
-func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, page int64, pagesize int64) []ChatContact{
+func (o *ErrorHandler) getChatContactById(q dbx.Queryable, chatcontactid string) *ChatContact {
+	if o.Err != nil {
+		return nil
+	}
+
+	chatcontacts := []ChatContact{}
+
+	query := `
+SELECT 
+chatcontactid,
+updateat 
+FROM chatcontacts
+WHERE deleteat is NULL
+AND chatcontactid = ?`
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, chatcontactid)
+
+	if chatcontact:= o.Head(chatcontacts, fmt.Sprintf("chatcontact %s more than one instance", chatcontactid)); chatcontact != nil {
+		return chatcontact.(*ChatContact)
+	} else {
+		return nil
+	}
+}
+
+func (o *ErrorHandler) getSameUpdateAtCount(q dbx.Queryable, chatcontact *ChatContact) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	counts := []int64{}
+	query := `
+SELECT count(*) 
+FROM chatcontacts
+WHERE deleteat is NULL
+AND updateat = ?`
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &counts, query, chatcontact.UpdateAt)
+
+	if o.Err != nil {
+		return 0
+	}
+
+	if len(counts) == 0 {
+		return 0
+	}
+
+	return counts[0]
+}
+
+func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId string, pagesize int64) []ChatContact{
 	if o.Err != nil {
 		return []ChatContact{}
 	}
 
+	var lastChatContact *ChatContact = nil
+	if len(lastId) > 0 {
+		lastChatContact = o.getChatContactById(q, lastId)
+	}
+
+	if o.Err != nil {
+		return []ChatContact{}
+	}
+
+	var mincount int64 = 0
+	if lastChatContact != nil {
+		mincount = o.getSameUpdateAtCount(q, lastChatContact)
+	}
+
+	fmt.Println("mincount", mincount)
+
+	if pagesize <= mincount {
+		pagesize = mincount + 1
+	}
+		
 	query := `
-SELECT 
+SELECT
+chatcontactid, 
 botid,
 chatuserid,
 createat,
@@ -90,28 +160,32 @@ updateat
 FROM chatcontacts
 WHERE deleteat is NULL
 %s
-ORDER BY updateat DESC
-LIMIT %d, %d
+ORDER BY updateat
+LIMIT %d
 `
-	botcondition := ""
+	whereclause := ""
+	whereparams := []interface{}{}
+
+	if lastChatContact != nil {
+		whereclause += fmt.Sprintf(" AND updateat >= ? ")
+		whereparams = append(whereparams, lastChatContact.UpdateAt)
+	}
+	
 	if len(botIds) > 0 {
 		placeholders := []string{}
-		for i:=0; i<len(botIds); i++ {
+		for _, v := range botIds {
 			placeholders = append(placeholders, "?")
+			whereparams  = append(whereparams, v)
 		}
-		botcondition = fmt.Sprintf("AND botId IN (%s)", strings.Join(placeholders, ","))
+		whereclause += fmt.Sprintf(" AND botId IN (%s) ", strings.Join(placeholders, ","))
 	}
 
-	query = fmt.Sprintf(query, botcondition, (page-1)*pagesize, pagesize)
-
-	botvalues := []interface{}{}
-	for _, v := range botIds {
-		botvalues = append(botvalues, v)
-	}
+	query = fmt.Sprintf(query, whereclause, pagesize)
+	fmt.Println("[sync chatcontacts]", query)
 
 	chatcontacts := []ChatContact{}
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &chatcontacts, query, botvalues...)
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, whereparams...)
 	if o.Err != nil {
 		return []ChatContact{}
 	}

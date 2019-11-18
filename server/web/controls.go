@@ -1384,7 +1384,7 @@ func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
 	defer o.BackEndError(web)
 	
 	r.ParseForm()
-	page := o.ParseInt(o.getStringValue(r.Form, "page"), 10, 64)
+	lastId := o.getStringValueDefault(r.Form, "lastId", "")
 	pagesize := o.ParseInt(o.getStringValue(r.Form, "pagesize"), 10, 64)
 	botIdsParam := o.getStringValueDefault(r.Form, "botids", "[]")
 
@@ -1401,7 +1401,7 @@ func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
-	chatcontacts := o.SyncChatContact(tx, botIds, page, pagesize)
+	chatcontacts := o.SyncChatContact(tx, botIds, lastId, pagesize)
 	if o.Err != nil {
 		return
 	}
