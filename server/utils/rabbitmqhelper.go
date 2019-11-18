@@ -156,6 +156,12 @@ func (w *RabbitMQWrapper) Consume(queue string, consumer string, autoack bool, e
 		w.mqChannel.Qos(100, 0, false)
 	}
 
+	if w.mqChannel == nil {
+		fmt.Println("mqchannel is nil")
+	} else {
+		fmt.Println("mqchannel is not nil")
+	}
+
 	msgs, err := w.mqChannel.Consume(
 		queue,
 		consumer,
