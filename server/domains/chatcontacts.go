@@ -133,6 +133,9 @@ func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId 
 	var lastChatContact *ChatContact = nil
 	if len(lastId) > 0 {
 		lastChatContact = o.getChatContactById(q, lastId)
+		fmt.Printf("lastchatcontact %#v\n", lastChatContact)
+	} else {
+		fmt.Println("lastId is empty")
 	}
 
 	if o.Err != nil {
@@ -181,7 +184,7 @@ LIMIT %d
 	}
 
 	query = fmt.Sprintf(query, whereclause, pagesize)
-	fmt.Println("[sync chatcontacts]", query)
+	fmt.Println("[sync chatcontacts]", query, whereparams)
 
 	chatcontacts := []ChatContact{}
 	ctx, _ := o.DefaultContext()
