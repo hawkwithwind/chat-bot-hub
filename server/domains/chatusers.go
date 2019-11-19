@@ -127,12 +127,9 @@ func (u *ChatUser) Fields() []dbx.Field {
 }
 
 func (u *ChatUser) SelectFrom() string {
-	return TN_CHATUSERS
-	/*
 	return " `chatusers` LEFT JOIN `chatcontacts` " +
 		" ON `chatusers`.`chatuserid` = `chatcontacts`.`chatuserid` " +
 		" LEFT JOIN `bots` ON `bots`.`botid` = `chatcontacts`.`botid` "
-    */
 }
 
 func (u *ChatUser) CriteriaAlias(fieldname string) (dbx.Field, error) {
