@@ -647,6 +647,8 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	q := o.getStringValue(r.Form, "q")
 
+	web.info("[search] q %s", q)
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
