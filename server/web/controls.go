@@ -647,8 +647,6 @@ func (web *WebServer) getGroupMembers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	q := o.getStringValue(r.Form, "q")
 
-	web.Info("[search] q %s", q)
-
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 
@@ -732,7 +730,8 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
-
+	web.Info("[search] q %s", query)
+	
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
