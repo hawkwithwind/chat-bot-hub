@@ -105,7 +105,7 @@ func (o *ErrorHandler) getSameUpdateAtCount(q dbx.Queryable, chatcontact *ChatCo
 		return 0
 	}
 
-	counts := []int64{}
+	counts := []int{}
 	query := `
 SELECT count(*) 
 FROM chatcontacts
@@ -124,7 +124,7 @@ AND updateat = ?`
 		return 0
 	}
 
-	return counts[0]
+	return int64(counts[0])
 }
 
 func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId string, pagesize int64) []ChatContact{
