@@ -112,16 +112,13 @@ FROM chatcontacts
 WHERE deleteat is NULL
 AND updateat = ?`
 	ctx, _ := o.DefaultContext()
-	o.Err = q.SelectContext(ctx, &counts, query, chatcontact.UpdateAt)
-
 	at, _ := chatcontact.UpdateAt.Value()
-
-	fmt.Printf("get sync count %s \n %#v\n %v \n %#v\n %v", query, chatcontact.UpdateAt, at, counts, o.Err)
+	o.Err = q.SelectContext(ctx, &counts, query, at)
 
 	if o.Err != nil {
 		return 0
 	}
-
+	
 	if len(counts) == 0 {
 		return 0
 	}
@@ -137,9 +134,6 @@ func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId 
 	var lastChatContact *ChatContact = nil
 	if len(lastId) > 0 {
 		lastChatContact = o.getChatContactById(q, lastId)
-		fmt.Printf("lastchatcontact %#v\n", lastChatContact)
-	} else {
-		fmt.Println("lastId is empty")
 	}
 
 	if o.Err != nil {
@@ -175,7 +169,8 @@ LIMIT %d
 
 	if lastChatContact != nil {
 		whereclause += fmt.Sprintf(" AND updateat >= ? ")
-		whereparams = append(whereparams, lastChatContact.UpdateAt)
+		at, _ := lastChatContact.UpdateAt.Value()
+		whereparams = append(whereparams, at)
 	}
 	
 	if len(botIds) > 0 {
@@ -189,7 +184,7 @@ LIMIT %d
 
 	query = fmt.Sprintf(query, whereclause, pagesize)
 	fmt.Println("[sync chatcontacts]", query, whereparams)
-
+	
 	chatcontacts := []ChatContact{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatcontacts, query, whereparams...)
