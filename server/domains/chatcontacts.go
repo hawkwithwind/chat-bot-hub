@@ -112,8 +112,7 @@ FROM chatcontacts
 WHERE deleteat is NULL
 AND updateat = ?`
 	ctx, _ := o.DefaultContext()
-	at, _ := chatcontact.UpdateAt.Value()
-	o.Err = q.SelectContext(ctx, &counts, query, at)
+	o.Err = q.SelectContext(ctx, &counts, query, chatcontact.UpdateAt.Time.Format("2006-01-02 15:04:05"))
 
 	if o.Err != nil {
 		return 0
@@ -169,8 +168,7 @@ LIMIT %d
 
 	if lastChatContact != nil {
 		whereclause += fmt.Sprintf(" AND updateat >= ? ")
-		at, _ := lastChatContact.UpdateAt.Value()
-		whereparams = append(whereparams, at)
+		whereparams = append(whereparams, lastChatContact.UpdateAt.Time.Format("2006-01-02 15:04:05"))
 	}
 	
 	if len(botIds) > 0 {
