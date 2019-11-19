@@ -114,7 +114,7 @@ AND updateat = ?`
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &counts, query, chatcontact.UpdateAt)
 
-	fmt.Printf("get sync count %s \n %#v\n %v", query, counts, o.Err)
+	fmt.Printf("get sync count %s \n %#v\n %#v\n %v", query, chatcontact.UpdateAt, counts, o.Err)
 
 	if o.Err != nil {
 		return 0
