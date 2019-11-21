@@ -2,7 +2,7 @@ package domains
 
 import (
 	"fmt"
-	//"time"
+	"time"
 	//"database/sql"
 	"strings"
 
@@ -130,17 +130,30 @@ func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId 
 		return []ChatContact{}
 	}
 
-	var lastChatContact *ChatContact = nil
-	if len(lastId) > 0 {
-		lastChatContact = o.getChatContactById(q, lastId)
-	}
+	// var lastChatContact *ChatContact = nil
+	// if len(lastId) > 0 {
+	// 	lastChatContact = o.getChatContactById(q, lastId)
+	// }
 
-	if o.Err != nil {
+	// if o.Err != nil {
+	// 	return []ChatContact{}
+	// }
+
+	updateat, err := time.Parse("2006-01-02 15:04:05", lastId)
+	if err != nil {
+		o.Err = err
 		return []ChatContact{}
 	}
 
+	lastChatContact := &ChatContact{
+		UpdateAt: mysql.NullTime{
+			Valid: true,
+			Time: updateat,
+		},
+	}
+
 	var mincount int64 = 0
-	if lastChatContact != nil {
+	if len(lastId) > 0 {
 		mincount = o.getSameUpdateAtCount(q, lastChatContact)
 	}
 
