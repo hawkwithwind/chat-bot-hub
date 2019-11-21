@@ -167,17 +167,17 @@ WHERE login=?
 	return frs
 }
 
-func (o *ErrorHandler) SaveContactByAccept (q dbx.Queryable, clientType string, botId string, fr FriendRequest) {
+func (o *ErrorHandler) SaveContactByAccept(q dbx.Queryable, clientType string, botId string, fr FriendRequest) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	wfr := WechatFriendRequest{}
 	o.Err = json.Unmarshal([]byte(fr.RequestBody), &wfr)
 	if o.Err != nil {
 		return
 	}
-	
+
 	iSex := o.ParseInt(wfr.Sex, 10, 64)
 	if o.Err != nil {
 		o.Err = nil

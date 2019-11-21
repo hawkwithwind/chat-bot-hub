@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/robfig/cron"
 	"github.com/gomodule/redigo/redis"
+	"github.com/robfig/cron"
 
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 	"github.com/hawkwithwind/chat-bot-hub/server/web"
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 type ErrorHandler struct {
@@ -29,7 +29,7 @@ type Tasks struct {
 	logger        *log.Logger
 	restfulclient *http.Client
 
-	artl          *ActionRequestTimeoutListener
+	artl *ActionRequestTimeoutListener
 }
 
 func (ctx *Tasks) Info(msg string, v ...interface{}) {
@@ -45,7 +45,7 @@ func (tasks *Tasks) init() {
 	tasks.redispool = utils.NewRedisPool(
 		fmt.Sprintf("%s:%s", tasks.WebConfig.Redis.Host, tasks.WebConfig.Redis.Port),
 		tasks.WebConfig.Redis.Db, tasks.WebConfig.Redis.Password)
-	
+
 	tasks.restfulclient = httpx.NewHttpClient()
 	tasks.logger = log.New(os.Stdout, "[TASKS] ", log.Ldate|log.Ltime)
 	tasks.cron = cron.New()
@@ -53,17 +53,17 @@ func (tasks *Tasks) init() {
 
 func (tasks *Tasks) Serve() error {
 	tasks.init()
-	
+
 	tasks.artl = tasks.NewActionRequestTimeoutListener()
-	go func () {
+	go func() {
 		tasks.artl.Serve()
 	}()
 	tasks.Info("begin serve actionrequest timeout listener ...")
-	
+
 	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimeline") })
 	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimelinetail") })
 	tasks.cron.AddFunc("0 * * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/recoverfailingactions") })
-	
+
 	tasks.cron.Start()
 	return nil
 }
@@ -71,7 +71,7 @@ func (tasks *Tasks) Serve() error {
 func (tasks Tasks) NotifyWebPost(notifypath string) {
 	baseurl := tasks.WebBaseUrl
 	tasks.Info("trigger %s", notifypath)
-	
+
 	if ret, err := httpx.RestfulCallRetry(tasks.restfulclient,
 		httpx.NewRestfulRequest("post", fmt.Sprintf("%s%s", baseurl, notifypath)),
 		3, 1); err != nil {
@@ -81,6 +81,3 @@ func (tasks Tasks) NotifyWebPost(notifypath string) {
 		tasks.Info("call returned %s", o.ToJson(ret))
 	}
 }
-
-
-

@@ -293,7 +293,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		//ctx.Info("[contacts debug] bot notify received raw")
 		return nil
 	}
-	
+
 	tx := o.Begin(ctx.db)
 	if o.Err != nil {
 		return o.Err
@@ -336,7 +336,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		o.UpdateBot(tx, bot)
 		ctx.Info("update bot %v", bot)
 		return nil
-		
+
 	case chatbothub.LOGINDONE:
 		if len(logininfo.Token) > 0 {
 			localinfo.Token = logininfo.Token
@@ -385,7 +385,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
 
 		requestStr := bodystr
-		
+
 		rlogin := ""
 		if thebotinfo.ClientType == chatbothub.WECHATBOT {
 			reqm := o.FromJson(bodystr)
@@ -404,23 +404,23 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			ctx.Info("%v\n%s", msg, rlogin)
 
 			requestStr = o.ToJson(domains.WechatFriendRequest{
-				FromUserName: msg.ContactId,
-				FromNickName: msg.NickName,
-				Alias: msg.Alias,
-				Content: msg.Hello,
+				FromUserName:    msg.ContactId,
+				FromNickName:    msg.NickName,
+				Alias:           msg.Alias,
+				Content:         msg.Hello,
 				EncryptUserName: msg.Stranger,
-				Ticket: msg.Ticket,
-				Raw: bodystr,
+				Ticket:          msg.Ticket,
+				Raw:             bodystr,
 			})
 
 			if o.Err != nil {
 				return o.Err
 			}
-			
+
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		
+
 		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, requestStr, "NEW")
 		o.SaveFriendRequest(tx, fr)
 
@@ -473,16 +473,16 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				fr.Status = "DONE"
 				o.UpdateFriendRequest(tx, &fr)
 				ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
-				
+
 				o.SaveContactByAccept(tx, thebotinfo.ClientType, bot.BotId, fr)
 				if o.Err != nil {
 					o.Err = nil
 				}
-				
+
 				ctx.Info("save user info receiving accept [%s]%s done", wfr.FromUserName, wfr.FromNickName)
 			}
 		}
-		
+
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
@@ -623,7 +623,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if localar.Status == "Failed" {
 			conn := ctx.redispool.Get()
 			defer conn.Close()
-			
+
 			o.SaveFailingActionRequest(conn, localar,
 				ctx.Config.ActionHealthCheck, ctx.Config.BotHealthCheck)
 		}
@@ -634,7 +634,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 		case chatbothub.AcceptUser:
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
-			
+
 			bodym := o.FromJson(localar.ActionBody)
 			rlogin := ""
 			if bot.ChatbotType == chatbothub.WECHATBOT {
@@ -646,7 +646,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				}
 			}
 			ctx.Info("acceptuser rlogin [%s]", rlogin)
-			
+
 			if o.Err != nil {
 				return o.Err
 			}
@@ -662,13 +662,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 					wfr := &domains.WechatFriendRequest{}
 					o.Err = json.Unmarshal([]byte(fr.RequestBody), &wfr)
-					
+
 					o.SaveContactByAccept(tx, thebotinfo.ClientType, bot.BotId, fr)
 					if o.Err != nil {
 						o.Err = nil
 						continue
 					}
-					
+
 					ctx.Info("save user info while accept [%s]%s done", rlogin, wfr.FromNickName)
 
 					if len(wfr.Raw) > 0 {
@@ -716,7 +716,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
-		case chatbothub.SearchContact, chatbothub.GetContact :
+		case chatbothub.SearchContact, chatbothub.GetContact:
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
@@ -999,7 +999,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					ctx.Info("web short call resp [%d]\n", resp.StatusCode)
 					if resp.StatusCode == 200 {
 						ctx.Info("web short call returned %s", resp.Body)
-						
+
 						wrapper, err := ctx.NewGRPCWrapper()
 						if err != nil {
 							o.Err = err
@@ -1010,11 +1010,11 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 							wrapper.Context,
 							&pb.EventReply{
 								EventType: chatbothub.WEBSHORTCALLRESPONSE,
-								Body: resp.Body,
-								BotId: bot.BotId,
+								Body:      resp.Body,
+								BotId:     bot.BotId,
 							},
 						)
-						
+
 						if err != nil {
 							o.Err = err
 							return
@@ -1025,7 +1025,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				}
 			}
 		}()
-		
+
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 		return o.Err
@@ -1039,7 +1039,7 @@ func (o *ErrorHandler) insertUserAlias(q dbx.Queryable, ctype string, actionm ma
 	if o.Err != nil {
 		return actionm
 	}
-		
+
 	if userId, ok := actionm[fieldname]; ok {
 		switch uid := userId.(type) {
 		case string:
@@ -1049,7 +1049,7 @@ func (o *ErrorHandler) insertUserAlias(q dbx.Queryable, ctype string, actionm ma
 			}
 		}
 	}
-	
+
 	return actionm
 }
 
@@ -1078,10 +1078,9 @@ func (o *ErrorHandler) insertUserAliasList(q dbx.Queryable, ctype string, action
 			actionm["aliasList"] = aliasList
 		}
 	}
-	
+
 	return actionm
 }
-
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	o := ErrorHandler{}
@@ -1138,7 +1137,7 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))
@@ -1174,14 +1173,14 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	ar.ClientType = bot.ClientType
 	ar.ClientId = bot.ClientId
-	
+
 	conn := web.redispool.Get()
 	defer conn.Close()
 
 	if !o.ActionIsHealthy(conn, ar) {
 		return nil
 	}
-	
+
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 
 	dayCount := -2

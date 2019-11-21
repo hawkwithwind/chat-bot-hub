@@ -11,9 +11,9 @@ import (
 	"github.com/getsentry/raven-go"
 
 	pb "github.com/hawkwithwind/chat-bot-hub/proto/chatbothub"
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
-	"github.com/hawkwithwind/chat-bot-hub/server/utils"	
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
+	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
 
 type ChatBotStatus int32
@@ -150,7 +150,7 @@ func (bot *ChatBot) clearLoginInfo() {
 
 func (bot *ChatBot) closePingloop() {
 	bot.Info("c[%s] closing pingloop", bot.ClientId)
-	
+
 	bot.Status = BeginNew
 
 	for bot.pinglooping {
@@ -167,7 +167,7 @@ func (bot *ChatBot) register(clientId string, clientType string,
 	// }
 
 	bot.closePingloop()
-	
+
 	bot.ClientId = clientId
 	bot.ClientType = clientType
 	ts := time.Now().UnixNano() / 1e6
@@ -185,17 +185,17 @@ func (bot *ChatBot) pingloop() error {
 	bot.pinglooping = true
 
 	flag := 0
-	
+
 	for true {
 		//bot.Info("c[%s] status %v", bot.ClientId, bot.Status)
-		
+
 		if bot.Status == BeginNew {
 			bot.Info("c[%s] status %v, stop pingloop...", bot.ClientId, bot.Status)
 			bot.pinglooping = false
 			return nil
 		}
 
-		if flag % 10 == 0 {
+		if flag%10 == 0 {
 			o.sendEvent(bot.tunnel, &pb.EventReply{
 				EventType:  PING,
 				ClientType: bot.ClientType,
@@ -205,7 +205,7 @@ func (bot *ChatBot) pingloop() error {
 
 			if o.Err != nil {
 				bot.Status = FailingDisconnected
-				
+
 				trycount += 1
 				if trycount > 300 {
 					bot.pinglooping = false
@@ -217,10 +217,10 @@ func (bot *ChatBot) pingloop() error {
 		}
 
 		flag += 1
-		
+
 		time.Sleep(100 * time.Millisecond)
 	}
-	
+
 	return nil
 }
 
@@ -309,7 +309,7 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
 	}
-	
+
 	bot.ScanUrl = url
 	return bot, nil
 }
@@ -402,21 +402,21 @@ func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 
 type WechatMacproFriendRequest struct {
 	ContactId string `json:"contactId"`
-	Alias string `json:alias`
-	NickName string `json:nickname`
-	Hello string `json:"hello"`
-	Id string `json:"id"`
-	Stranger string `json:"stranger"`
-	Ticket string `json:"ticket"`
-	Timestamp int64 `json:"timestamp"`
-	Type int `json:"type"`
+	Alias     string `json:alias`
+	NickName  string `json:nickname`
+	Hello     string `json:"hello"`
+	Id        string `json:"id"`
+	Stranger  string `json:"stranger"`
+	Ticket    string `json:"ticket"`
+	Timestamp int64  `json:"timestamp"`
+	Type      int    `json:"type"`
 }
 
 func (bot *ChatBot) friendRequest(body string) (string, error) {
 	o := &ErrorHandler{}
 	bodydata := o.FromJson(body)
 	content := o.FromMap("content", bodydata, "body", nil)
-	
+
 	if bot.ClientType == WECHATBOT {
 		if content != nil {
 			var msg domains.WechatFriendRequest
@@ -662,7 +662,7 @@ func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error 
 	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
-		alias :=  o.FromMapString("alias", bodym, "actionbody", true, "")
+		alias := o.FromMapString("alias", bodym, "actionbody", true, "")
 		labelIdList := o.FromMapString("labelIdList", bodym, "actionbody", false, "")
 
 		if o.Err != nil {
@@ -803,7 +803,7 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 	}
 
 	toUserName := o.FromMapString("toUserName", bodym, "actionbody", false, "")
-	alias :=  o.FromMapString("alias", bodym, "actionbody", true, "")
+	alias := o.FromMapString("alias", bodym, "actionbody", true, "")
 	content := o.FromMapString("object", bodym, "actionbody", false, "")
 	if o.Err != nil {
 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
@@ -890,12 +890,12 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		}
 
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
-			"userList": memberList,
+			"userList":  memberList,
 			"aliasList": aliasList,
 		}))
 
 		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{}{
-			"userList": memberList,
+			"userList":  memberList,
 			"aliasList": aliasList,
 		}))
 	} else {
@@ -1007,10 +1007,10 @@ func (bot *ChatBot) AddContact(actionType string, arId string, body string) erro
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
-		
+
 		bot.Info("add contact %s", stranger)
 
-		o.SendAction(bot, arId, AddContact, o.ToJson(map[string]interface{} {
+		o.SendAction(bot, arId, AddContact, o.ToJson(map[string]interface{}{
 			"stranger": stranger,
 			"ticket":   ticket,
 			"type":     actype,
@@ -1211,7 +1211,7 @@ lensid="%s"></emoji>`
 
 func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	
+
 	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 		bodym := o.FromJson(body)
 		if o.Err != nil {
@@ -1229,26 +1229,26 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 		case string:
 			var atList []interface{}
 			var atAliasList []interface{}
-			
+
 			if atListptr := o.FromMap("atList", bodym, "actionbody", []interface{}{}); atListptr != nil {
 				atList = atListptr.([]interface{})
 			}
 			if atAliasListptr := o.FromMap("atAliasList", bodym, "actionbody", []interface{}{}); atAliasListptr != nil {
 				atAliasList = atAliasListptr.([]interface{})
 			}
-			
+
 			bot.Info("Action SendTextMessage %s %v \n%s", toUserName, atList, content)
 			o.SendAction(bot, arId, SendTextMessage, o.ToJson(map[string]interface{}{
-				"toUserName": toUserName,
-				"alias":      alias,
-				"content":    content,
-				"atList":     atList,
+				"toUserName":  toUserName,
+				"alias":       alias,
+				"content":     content,
+				"atList":      atList,
 				"atAliasList": atAliasList,
 			}))
 
 		case map[string]interface{}:
 			if bot.ClientType == WECHATBOT {
-				
+
 				msg_if := o.FromMap("msg", content, "content", nil)
 
 				var msg WechatMsg
@@ -1261,7 +1261,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 				if len(msg.AppMsg.Title) > 0 {
 					appmsg := msg.AppMsg
 					bot.Info("appmsg %v", appmsg)
-					
+
 					if appmsg.Type == "5" {
 						o.SendAction(bot, arId, SendAppMessage, o.ToJson(map[string]interface{}{
 							"toUserName": toUserName,
@@ -1371,7 +1371,7 @@ func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string)
 				fmt.Printf("b[%s] sending app message %s\n", bot.ClientType, body)
 				o.SendAction(bot, arId, SendAppMessage, body)
 			}
-			
+
 		default:
 			bot.Info("Action unknown SendMessage %s %T \n%v \n", toUserName, content, content)
 			return utils.NewClientError(utils.PARAM_INVALID,

@@ -2,30 +2,30 @@ package tasks
 
 import (
 	"fmt"
-	"strings"
 	"github.com/gomodule/redigo/redis"
+	"strings"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
+	"github.com/hawkwithwind/chat-bot-hub/server/httpx"
 )
 
 type ActionRequestTimeoutListener struct {
-	pool *redis.Pool
-	db   string
-	tasks *Tasks
-	keypattern string	
+	pool              *redis.Pool
+	db                string
+	tasks             *Tasks
+	keypattern        string
 	ActionHealthCheck domains.HealthCheckConfig
 	BotHealthCheck    domains.HealthCheckConfig
 }
 
 func (tasks *Tasks) NewActionRequestTimeoutListener() *ActionRequestTimeoutListener {
 	return &ActionRequestTimeoutListener{
-		pool: tasks.redispool,
-		db: tasks.WebConfig.Redis.Db,
-		tasks: tasks,
+		pool:              tasks.redispool,
+		db:                tasks.WebConfig.Redis.Db,
+		tasks:             tasks,
 		ActionHealthCheck: tasks.WebConfig.ActionHealthCheck,
-		BotHealthCheck: tasks.WebConfig.BotHealthCheck,
+		BotHealthCheck:    tasks.WebConfig.BotHealthCheck,
 	}
 }
 
@@ -64,23 +64,23 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 
 	conn := artl.pool.Get()
 	defer conn.Close()
-	
+
 	t := strings.Split(key, ":")
 	if len(t) != 2 {
 		return fmt.Errorf("unexpected key %s", key)
 	}
 	arid := t[len(t)-1]
-	
+
 	ar := o.GetActionRequest_(conn, arid)
 	if o.Err != nil {
 		return o.Err
 	}
-	
+
 	if ar == nil {
 		fmt.Printf("[ar timeout debug] cannot get ar %s\n", arid)
 		return fmt.Errorf("cannot get ar %s", arid)
 	}
-	
+
 	if ar.Status == "NEW" {
 		ar.Status = "TIMEOUT"
 		o.UpdateActionRequest_(conn, ar)
@@ -95,14 +95,14 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 			if o.Err != nil {
 				return o.Err
 			}
-			
+
 			if ret, err := httpx.RestfulCallRetry(artl.tasks.restfulclient, rr, 3, 1); err != nil {
 				artl.tasks.Error(err, "call %s failed", "/botactions/timeoutfriendrequest")
 			} else {
 				artl.tasks.Info("timeout friendrequest %s %s", ar.ActionRequestId, o.ToJson(ret))
 			}
 		}
-		
+
 		o.SaveFailingActionRequest(conn, ar, artl.ActionHealthCheck, artl.BotHealthCheck)
 	}
 

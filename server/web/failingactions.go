@@ -1,13 +1,13 @@
 package web
 
 import (
-	"time"
-	"net/http"
-	"io/ioutil"
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"time"
 
-	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
+	"github.com/hawkwithwind/chat-bot-hub/server/domains"
 )
 
 var (
@@ -42,13 +42,13 @@ func (web *WebServer) getFailingBots(w http.ResponseWriter, r *http.Request) {
 
 	fbs := o.GetFailingBots(conn)
 	fas := o.GetBotFailingActions(conn)
-	
+
 	if o.Err != nil {
 		return
 	}
 
 	o.ok(w, "", map[string]interface{}{
-		"failingBots": fbs,
+		"failingBots":    fbs,
 		"failingActions": fas,
 	})
 }
@@ -63,7 +63,7 @@ func (web *WebServer) recoverAction(w http.ResponseWriter, r *http.Request) {
 
 	conn := web.redispool.Get()
 	defer conn.Close()
-	
+
 	o.RecoverAction(conn, key, action)
 	o.ok(w, "", nil)
 }
@@ -77,7 +77,7 @@ func (web *WebServer) recoverClient(w http.ResponseWriter, r *http.Request) {
 
 	conn := web.redispool.Get()
 	defer conn.Close()
-	
+
 	o.RecoverClient(conn, key)
 	o.ok(w, "", nil)
 }

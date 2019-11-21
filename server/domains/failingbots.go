@@ -2,9 +2,9 @@ package domains
 
 import (
 	"fmt"
-	"time"
-	"strconv"
 	"github.com/gomodule/redigo/redis"
+	"strconv"
+	"time"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
 )
@@ -17,10 +17,10 @@ type HealthCheckConfig struct {
 }
 
 type FailingBot struct {
-	ClientType string          `json:"clientType"`
-	ClientId   string          `json:"clientId"`
-	Login      string          `json:"login"`
-	FailAt     utils.JSONTime  `json:"-"`
+	ClientType string         `json:"clientType"`
+	ClientId   string         `json:"clientId"`
+	Login      string         `json:"login"`
+	FailAt     utils.JSONTime `json:"-"`
 }
 
 func (fb *FailingBot) actionRedisKey() string {
@@ -51,11 +51,11 @@ func (o *ErrorHandler) AddFailingBot(conn redis.Conn, fb *FailingBot) {
 	key := fb.redisKey()
 	member := o.ToJson(fb)
 	score := fb.FailAt.Time.Unix()
-	
+
 	if o.Err != nil {
 		return
 	}
-	
+
 	o.RedisDo(conn, timeout, "ZADD", key, score, member)
 }
 
@@ -74,22 +74,22 @@ func (o *ErrorHandler) GetFailingBots(conn redis.Conn) []interface{} {
 	fbs := []string{}
 	for _, k := range ret {
 		switch key := k.(type) {
-		case []uint8 :
+		case []uint8:
 			fbs = append(fbs, string(key))
 		}
 	}
 
 	type FailingBot struct {
-		Key string `json:"key"`
+		Key       string `json:"key"`
 		Timestamp int64  `json:"timestamp"`
 	}
 
 	failingBots := []interface{}{}
-	
-	for i:=0; i+1<len(fbs); i+=2 {
+
+	for i := 0; i+1 < len(fbs); i += 2 {
 		timestamp, _ := strconv.ParseInt(fbs[i+1], 10, 64)
 		failingBots = append(failingBots, FailingBot{
-			Key: fbs[i],
+			Key:       fbs[i],
 			Timestamp: timestamp,
 		})
 	}
@@ -121,7 +121,7 @@ func (o *ErrorHandler) AddBotFailingAction(conn redis.Conn, fb *FailingBot, acti
 
 	key := fb.actionRedisKey()
 	score := fb.FailAt.Time.Unix()
-	
+
 	o.RedisDo(conn, timeout, "ZADD", key, score, actionType)
 }
 
@@ -133,15 +133,14 @@ func (o *ErrorHandler) GetBotFailingActions(conn redis.Conn) []interface{} {
 	keypattern := "FAILING:*"
 	keys := o.RedisMatch(conn, keypattern)
 
-
 	type FailingAction struct {
-		Key string `json:"key"`
-		Action string `json:"action"`
-		Timestamp int64 `json:"timestamp"`
+		Key       string `json:"key"`
+		Action    string `json:"action"`
+		Timestamp int64  `json:"timestamp"`
 	}
 
 	fbs := []interface{}{}
-	
+
 	for _, key := range keys {
 		ret := o.RedisValue(o.RedisDo(conn, timeout, "ZRANGE", key, "0", "-1", "WITHSCORES"))
 		if o.Err != nil {
@@ -149,10 +148,10 @@ func (o *ErrorHandler) GetBotFailingActions(conn redis.Conn) []interface{} {
 		}
 
 		var action string
-		
+
 		for i, k := range ret {
 			switch v := k.(type) {
-			case []uint8 :
+			case []uint8:
 				value := string(v)
 				switch i % 2 {
 				case 0:
@@ -160,15 +159,15 @@ func (o *ErrorHandler) GetBotFailingActions(conn redis.Conn) []interface{} {
 				case 1:
 					timestamp, _ := strconv.ParseInt(value, 10, 64)
 					fbs = append(fbs, FailingAction{
-						Key: key,
-						Action: action,
+						Key:       key,
+						Action:    action,
 						Timestamp: timestamp,
 					})
-				}				
+				}
 			}
 		}
 	}
-	
+
 	return fbs
 }
 
@@ -176,7 +175,7 @@ func (o *ErrorHandler) RecoverBotFailingAction(pool *redis.Pool, recoverTime int
 	if o.Err != nil {
 		return
 	}
-	
+
 	ts := time.Now().Unix()
 	ts -= recoverTime
 
@@ -190,7 +189,6 @@ func (o *ErrorHandler) RecoverBotFailingAction(pool *redis.Pool, recoverTime int
 	}
 	o.RedisDo(conn, timeout, "EXEC")
 }
-
 
 func (o *ErrorHandler) SaveActionRequestFailLog(conn redis.Conn, ar *ActionRequest) {
 	key := ar.redisFailKey()
@@ -208,15 +206,15 @@ func (o *ErrorHandler) FailingActionCount(conn redis.Conn, keyPattern string, ch
 	}
 
 	ts := time.Now().Unix() - checkTimeout
-	
-	cmp := func (c redis.Conn, key string) bool {
+
+	cmp := func(c redis.Conn, key string) bool {
 		oc := &ErrorHandler{}
-		
+
 		t := oc.RedisString(oc.RedisDo(c, timeout, "GET", key))
 		if oc.Err != nil {
 			return false
 		}
-		
+
 		failAt, err := strconv.ParseInt(t, 10, 64)
 		if err != nil {
 			return false
@@ -234,8 +232,8 @@ func (o *ErrorHandler) ActionRequestCountByTime(conn redis.Conn, keyPattern stri
 	}
 
 	ts := time.Now().Unix() - checkTimeout
-	
-	cmp := func (c redis.Conn, key string) bool {
+
+	cmp := func(c redis.Conn, key string) bool {
 		oc := &ErrorHandler{}
 		arId, err := arQuotaKeyToArId(key)
 		if err != nil {
@@ -244,11 +242,10 @@ func (o *ErrorHandler) ActionRequestCountByTime(conn redis.Conn, keyPattern stri
 
 		ar := oc.GetActionRequest_(conn, arId)
 		return ar.CreateAt.Time.Unix() > ts
-	}	
+	}
 
 	return o.RedisMatchCountCond(conn, keyPattern, cmp)
 }
-
 
 func (o *ErrorHandler) SaveFailingActionRequest(conn redis.Conn, ar *ActionRequest, actionCheck, botCheck HealthCheckConfig) {
 	if o.Err != nil {
@@ -259,9 +256,9 @@ func (o *ErrorHandler) SaveFailingActionRequest(conn redis.Conn, ar *ActionReque
 	if o.Err != nil {
 		return
 	}
-	
+
 	fb := o.NewFailingBot(ar)
-	
+
 	count := o.FailingActionCount(conn, ar.redisFailKeyPattern(), actionCheck.CheckTime)
 	ncount := o.ActionRequestCountByTime(conn, ar.redisHourKeyPattern(), actionCheck.CheckTime)
 

@@ -173,38 +173,38 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 }
 
 const (
-	WECHATBOT string = "WECHATBOT"
+	WECHATBOT    string = "WECHATBOT"
 	WECHATMACPRO string = "WECHATMACPRO"
-	QQBOT     string = "QQBOT"
+	QQBOT        string = "QQBOT"
 )
 
 const (
-	PING            string = "PING"
-	PONG            string = "PONG"
-	REGISTER        string = "REGISTER"
-	LOGIN           string = "LOGIN"
-	LOGOUT          string = "LOGOUT"
-	SHUTDOWN        string = "SHUTDOWN"
-	LOGINSCAN       string = "LOGINSCAN"
-	LOGINDONE       string = "LOGINDONE"
-	LOGINFAILED     string = "LOGINFAILED"
-	LOGOUTDONE      string = "LOGOUTDONE"
-	BOTMIGRATE      string = "BOTMIGRATE"
-	UPDATETOKEN     string = "UPDATETOKEN"
-	MESSAGE         string = "MESSAGE"
-	IMAGEMESSAGE    string = "IMAGEMESSAGE"
-	EMOJIMESSAGE    string = "EMOJIMESSAGE"
-	STATUSMESSAGE   string = "STATUSMESSAGE"
-	FRIENDREQUEST   string = "FRIENDREQUEST"
-	CONTACTINFO     string = "CONTACTINFO"
-	GROUPINFO       string = "GROUPINFO"
-	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
-	BOTACTION       string = "BOTACTION"
-	ACTIONREPLY     string = "ACTIONREPLY"
-	WEBSHORTCALL    string = "WEBSHORTCALL"
+	PING                 string = "PING"
+	PONG                 string = "PONG"
+	REGISTER             string = "REGISTER"
+	LOGIN                string = "LOGIN"
+	LOGOUT               string = "LOGOUT"
+	SHUTDOWN             string = "SHUTDOWN"
+	LOGINSCAN            string = "LOGINSCAN"
+	LOGINDONE            string = "LOGINDONE"
+	LOGINFAILED          string = "LOGINFAILED"
+	LOGOUTDONE           string = "LOGOUTDONE"
+	BOTMIGRATE           string = "BOTMIGRATE"
+	UPDATETOKEN          string = "UPDATETOKEN"
+	MESSAGE              string = "MESSAGE"
+	IMAGEMESSAGE         string = "IMAGEMESSAGE"
+	EMOJIMESSAGE         string = "EMOJIMESSAGE"
+	STATUSMESSAGE        string = "STATUSMESSAGE"
+	FRIENDREQUEST        string = "FRIENDREQUEST"
+	CONTACTINFO          string = "CONTACTINFO"
+	GROUPINFO            string = "GROUPINFO"
+	CONTACTSYNCDONE      string = "CONTACTSYNCDONE"
+	BOTACTION            string = "BOTACTION"
+	ACTIONREPLY          string = "ACTIONREPLY"
+	WEBSHORTCALL         string = "WEBSHORTCALL"
 	WEBSHORTCALLRESPONSE string = "WEBSHORTCALLRESPONSE"
-	ROOMJOIN        string = "ROOMJOIN"
-	USERACCEPTED    string = "USERACCEPTED"
+	ROOMJOIN             string = "ROOMJOIN"
+	USERACCEPTED         string = "USERACCEPTED"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -533,7 +533,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			}
 		} else if in.EventType == REGISTER {
 			hub.Info("REGISTER %#v", in)
-			
+
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
 				hub.Info("c[%s] not found, create new bot", in.ClientId)
@@ -575,7 +575,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.Error(err, "c[%s]%s disconnected", bot.ClientType, bot.ClientId)
 						hub.DropBot(bot.ClientId)
 					}
-				} (newbot)
+				}(newbot)
 			}
 		} else {
 			var bot *ChatBot
@@ -692,15 +692,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 											if findbot != nil {
 												hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 													findbot.BotId, findbot.ClientId)
-												
+
 												if bot.ClientType == WECHATMACPRO {
-													if bot.Status != LoggingStaging && bot.Status !=  WorkingLoggedIn {
+													if bot.Status != LoggingStaging && bot.Status != WorkingLoggedIn {
 														findbot, o.Err = findbot.shutdown()
 													}
 												} else {
 													findbot, o.Err = findbot.logoutOrShutdown()
 												}
-												
+
 												if o.Err != nil {
 													hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
 														findbot.BotId, findbot.ClientId)
@@ -914,10 +914,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				} else {
 					hub.Info("c[%s] not support event %s", bot.ClientId, in.EventType)
 				}
-				
+
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				hub.Info("[FILTER DEBUG] onReceiveMessage")
-				
+
 				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
 					if o.Err != nil {
@@ -954,7 +954,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Info("status message\n%s\n", in.Body)
 
 					bodyString := in.Body
-					
+
 					var msg string
 					if err := json.Unmarshal([]byte(in.Body), &msg); err == nil {
 						bodyString = msg
@@ -1004,9 +1004,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 					if o.Err == nil {
 						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
-							BotId: bot.BotId,
+							BotId:     bot.BotId,
 							EventType: WEBSHORTCALL,
-							Body: in.Body,
+							Body:      in.Body,
 						}))
 					}
 				}
