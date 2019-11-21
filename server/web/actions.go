@@ -483,6 +483,17 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}
 
+		{
+			a_o := &ErrorHandler{}
+			ar := a_o.NewActionRequest(bot.Login, "GetContact", o.ToJson(map[string]interface{}{
+				"userId": wfr.FromUserName,
+			}), "NEW")
+			a_o.CreateAndRunAction(ctx, ar)
+			if a_o.Err != nil {
+				ctx.Error(a_o.Err, "USERACCEPTED %s GETCONTACT failed ")
+			}
+		}
+
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
@@ -561,8 +572,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.ACTIONREPLY:
 		reqstr := bodystr
 		debugstr := reqstr
-		if len(debugstr) > 120 {
-			debugstr = debugstr[:120]
+		if len(debugstr) > 240 {
+			debugstr = debugstr[:240]
 		}
 
 		ctx.Info("c[%s] action reply %s", thebotinfo.ClientType, debugstr)
