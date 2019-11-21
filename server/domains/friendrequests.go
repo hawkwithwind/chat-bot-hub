@@ -1,9 +1,10 @@
 package domains
 
 import (
-	//"fmt"
+	"fmt"
 	//"time"
 	//"database/sql"
+	"encoding/json"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -22,6 +23,49 @@ type FriendRequest struct {
 	Status          string         `db:"status"`
 	CreateAt        mysql.NullTime `db:"createat"`
 	UpdateAt        mysql.NullTime `db:"updateat"`
+}
+
+type BrandList struct {
+	Count int    `xml:"count,attr" json:"count"`
+	Ver   string `xml:"ver,attr" json:"ver"`
+}
+
+type WechatFriendRequest struct {
+	FromUserName     string    `xml:"fromusername,attr" json:"fromUserName"`
+	EncryptUserName  string    `xml:"encryptusername,attr" json:"encryptUserName"`
+	FromNickName     string    `xml:"fromnickname,attr" json:"fromNickName"`
+	Content          string    `xml:"content,attr" json:"content"`
+	Fullpy           string    `xml:"fullpy,attr" json:"fullpy"`
+	Shortpy          string    `xml:"shortpy,attr" json:"shortpy"`
+	ImageStatus      string    `xml:"imagestatus,attr" json:"imageStatus"`
+	Scene            string    `xml:"scene,attr" json:"scene"`
+	Country          string    `xml:"country,attr" json:"country"`
+	Province         string    `xml:"province,attr" json:"province"`
+	City             string    `xml:"city,attr" json:"city"`
+	Sign             string    `xml:"sign,attr" json:"sign"`
+	Percard          string    `xml:"percard,attr" json:"percard"`
+	Sex              string    `xml:"sex,attr" json:"sex"`
+	Alias            string    `xml:"alias,attr" json:"alias"`
+	Weibo            string    `xml:"weibo,attr" json:"weibo"`
+	Albumflag        string    `xml:"albumflag,attr" json:"albumflag"`
+	Albumstyle       string    `xml:"albumstyle,attr" json:"albumstyle"`
+	Albumbgimgid     string    `xml:"albumbgimgid,attr" json:"albumbgimgid"`
+	Snsflag          string    `xml:"snsflag,attr" json:"snsflag"`
+	Snsbgimgid       string    `xml:"snsbgimgid,attr" json:"snsbgimgid"`
+	Snsbgobjectid    string    `xml:"snsbgobjectid,attr" json:"snsbgobjectid"`
+	Mhash            string    `xml:"mhash,attr" json:"mhash"`
+	Mfullhash        string    `xml:"mfullhash,attr" json:"mfullhash"`
+	Bigheadimgurl    string    `xml:"bigheadimgurl,attr" json:"bigheadimgurl"`
+	Smallheadimgurl  string    `xml:"smallheadimgurl,attr" json:"smallheadimgurl"`
+	Ticket           string    `xml:"ticket,attr" json:"ticket"`
+	Opcode           string    `xml:"opcode,attr" json:"opcode"`
+	Googlecontact    string    `xml:"googlecontact,attr" json:"googlecontact"`
+	Qrticket         string    `xml:"qrticket,attr" json:"qrticket"`
+	Chatroomusername string    `xml:"chatroomusername,attr" json:"chatroomusername"`
+	Sourceusername   string    `xml:"sourceusername,attr" json:"sourceusername"`
+	Sourcenickname   string    `xml:"sourcenickname,attr" json:"sourcenickname"`
+	BrandList        BrandList `xml:"brandlist" json:"brandlist"`
+	Raw              string    `xml:"raw" json:"raw"`
 }
 
 func (o *ErrorHandler) NewFriendRequest(botId string, login string, requestlogin string, requestbody string, status string) *FriendRequest {
@@ -121,4 +165,51 @@ WHERE login=?
 	}
 
 	return frs
+}
+
+func (o *ErrorHandler) SaveContactByAccept (q dbx.Queryable, clientType string, botId string, fr FriendRequest) {
+	if o.Err != nil {
+		return
+	}
+	
+	wfr := WechatFriendRequest{}
+	o.Err = json.Unmarshal([]byte(fr.RequestBody), &wfr)
+	if o.Err != nil {
+		return
+	}
+	
+	iSex := o.ParseInt(wfr.Sex, 10, 64)
+	if o.Err != nil {
+		o.Err = nil
+		iSex = 0
+	}
+
+	chatuser := o.NewChatUser(fr.RequestLogin, clientType, wfr.FromNickName)
+	chatuser.Sex = int(iSex)
+	chatuser.SetAlias(wfr.Alias)
+	chatuser.SetAvatar(wfr.Smallheadimgurl)
+	chatuser.SetCountry(wfr.Country)
+	chatuser.SetProvince(wfr.Province)
+	chatuser.SetCity(wfr.City)
+	chatuser.SetSignature(wfr.Sign)
+
+	if o.Err != nil {
+		return
+	}
+
+	o.UpdateOrCreateChatUser(q, chatuser)
+	if o.Err != nil {
+		return
+	}
+
+	theuser := o.GetChatUserByName(q, clientType, chatuser.UserName)
+	if o.Err != nil {
+		return
+	}
+	if theuser == nil {
+		o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
+		return
+	}
+
+	o.SaveIgnoreChatContact(q, o.NewChatContact(botId, theuser.ChatUserId))
 }

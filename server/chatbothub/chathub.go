@@ -204,6 +204,7 @@ const (
 	WEBSHORTCALL    string = "WEBSHORTCALL"
 	WEBSHORTCALLRESPONSE string = "WEBSHORTCALLRESPONSE"
 	ROOMJOIN        string = "ROOMJOIN"
+	USERACCEPTED    string = "USERACCEPTED"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -933,6 +934,17 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 						BotId:     bot.BotId,
 						EventType: ROOMJOIN,
+						Body:      in.Body,
+					}))
+				}
+
+			case USERACCEPTED:
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+					hub.Info("USERACCEPTED\n%s\n", in.Body)
+
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     bot.BotId,
+						EventType: USERACCEPTED,
 						Body:      in.Body,
 					}))
 				}

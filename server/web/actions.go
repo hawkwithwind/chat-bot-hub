@@ -403,7 +403,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			rlogin = msg.ContactId
 			ctx.Info("%v\n%s", msg, rlogin)
 
-			requestStr = o.ToJson(chatbothub.WechatFriendRequest{
+			requestStr = o.ToJson(domains.WechatFriendRequest{
 				FromUserName: msg.ContactId,
 				FromNickName: msg.NickName,
 				Alias: msg.Alias,
@@ -458,6 +458,31 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}()
 
+	case chatbothub.USERACCEPTED:
+		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
+
+		wfr := domains.WechatFriendRequest{}
+		o.Err = json.Unmarshal([]byte(bodystr), &wfr)
+		if o.Err != nil {
+			return o.Err
+		}
+
+		frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
+		for _, fr := range frs {
+			if fr.RequestLogin == wfr.FromUserName && fr.Status == "NEW" {
+				fr.Status = "DONE"
+				o.UpdateFriendRequest(tx, &fr)
+				ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
+				
+				o.SaveContactByAccept(tx, thebotinfo.ClientType, bot.BotId, fr)
+				if o.Err != nil {
+					o.Err = nil
+				}
+				
+				ctx.Info("save user info receiving accept [%s]%s done", wfr.FromUserName, wfr.FromNickName)
+			}
+		}
+		
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
@@ -635,76 +660,18 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					ctx.Info("friend request %s %s", fr.FriendRequestId, fr.Status)
 					// dont break, update all fr for the same rlogin
 
-					frm := o.FromJson(fr.RequestBody)
+					wfr := &domains.WechatFriendRequest{}
+					o.Err = json.Unmarshal([]byte(fr.RequestBody), &wfr)
+					
+					o.SaveContactByAccept(tx, thebotinfo.ClientType, bot.BotId, fr)
 					if o.Err != nil {
 						o.Err = nil
 						continue
 					}
+					
+					ctx.Info("save user info while accept [%s]%s done", rlogin, wfr.FromNickName)
 
-					if frm == nil {
-						continue
-					}
-
-					nickname := o.FromMapString("fromNickName", frm, "requestBody", false, "")
-					if o.Err != nil {
-						o.Err = nil
-						continue
-					}
-
-					avatar := o.FromMapString("smallheadimgurl", frm, "requestBody", true, "")
-					alias := o.FromMapString("alias", frm, "requestBody", true, "")
-					country := o.FromMapString("country", frm, "requestBody", true, "")
-					province := o.FromMapString("province", frm, "requestBody", true, "")
-					city := o.FromMapString("city", frm, "requestBody", true, "")
-					sign := o.FromMapString("sign", frm, "requestBody", true, "")
-					sex := o.FromMapString("sex", frm, "requestBody", true, "")
-
-					if o.Err != nil {
-						o.Err = nil
-						continue
-					}
-
-					iSex := o.ParseInt(sex, 10, 64)
-					if o.Err != nil {
-						o.Err = nil
-						iSex = 0
-					}
-
-					chatuser := o.NewChatUser(rlogin, thebotinfo.ClientType, nickname)
-					chatuser.Sex = int(iSex)
-					chatuser.SetAlias(alias)
-					chatuser.SetAvatar(avatar)
-					chatuser.SetCountry(country)
-					chatuser.SetProvince(province)
-					chatuser.SetCity(city)
-					chatuser.SetSignature(sign)
-
-					if o.Err != nil {
-						o.Err = nil
-						continue
-					}
-
-					o.UpdateOrCreateChatUser(tx, chatuser)
-					if o.Err != nil {
-						return o.Err
-					}
-
-					theuser := o.GetChatUserByName(tx, thebotinfo.ClientType, chatuser.UserName)
-					if o.Err != nil {
-						return o.Err
-					}
-					if theuser == nil {
-						o.Err = fmt.Errorf("save user %s failed, not found", chatuser.UserName)
-					}
-
-					o.SaveIgnoreChatContact(tx, o.NewChatContact(bot.BotId, theuser.ChatUserId))
-					if o.Err != nil {
-						return o.Err
-					}
-
-					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
-
-					if raw, ok := frm["raw"]; ok && len(raw.(string)) > 0 {
+					if len(wfr.Raw) > 0 {
 						// friend request has raw means this acceptUser actionBody is raw
 						// now replace this actionBody with WechatFriendRequest one
 						localar.ActionBody = fr.RequestBody
