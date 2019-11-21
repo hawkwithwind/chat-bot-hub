@@ -139,19 +139,21 @@ func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId 
 	// 	return []ChatContact{}
 	// }
 
-	updateat, err := time.Parse("2006-01-02 15:04:05", lastId)
-	if err != nil {
-		o.Err = err
-		return []ChatContact{}
-	}
+	lastChatContact := &ChatContact{}
+	
+	if len(lastId) > 0 {
+		updateat, err := time.Parse("2006-01-02 15:04:05", lastId)
+		if err != nil {
+			o.Err = err
+			return []ChatContact{}
+		}
 
-	lastChatContact := &ChatContact{
-		UpdateAt: mysql.NullTime{
+		lastChatContact.UpdateAt = mysql.NullTime{
 			Valid: true,
 			Time: updateat,
-		},
+		}
 	}
-
+	
 	var mincount int64 = 0
 	if len(lastId) > 0 {
 		mincount = o.getSameUpdateAtCount(q, lastChatContact)
