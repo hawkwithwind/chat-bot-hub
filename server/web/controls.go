@@ -372,8 +372,8 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 
 	o.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
-			"QQBOT":     "QQ",
-			"WECHATBOT": "微信",
+			"QQBOT":        "QQ",
+			"WECHATBOT":    "微信",
 			"WECHATMACPRO": "微信macpro",
 		},
 		"status": map[int]string{
@@ -731,7 +731,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
 	web.Info("[search] q %s", query)
-	
+
 	accountName := o.getAccountName(r)
 
 	tx := o.Begin(web.db)
@@ -1382,12 +1382,11 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	o.ok(w, message, retmap)
 }
 
-
 func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
 	o := &ErrorHandler{}
 	defer o.WebError(w)
 	defer o.BackEndError(web)
-	
+
 	r.ParseForm()
 	lastId := o.getStringValueDefault(r.Form, "lastId", "")
 	pagesize := o.ParseInt(o.getStringValue(r.Form, "pagesize"), 10, 64)
@@ -1402,7 +1401,7 @@ func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
 	if o.Err != nil {
 		return
 	}
-	
+
 	tx := o.Begin(web.db)
 	defer o.CommitOrRollback(tx)
 

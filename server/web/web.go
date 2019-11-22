@@ -180,7 +180,7 @@ func (ctx *WebServer) init() error {
 	ctx.contactParser = NewContactParser()
 	ctx.ProcessContactsServe()
 	ctx.Info("begin serve process contacts ...")
-	
+
 	ctx.wrapper = rpc.CreateGRPCWrapper(fmt.Sprintf("%s:%s", ctx.Hubhost, ctx.Hubport))
 
 	go func() {
@@ -442,7 +442,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	// client control (clients.go)
 	r.HandleFunc("/clients", server.validate(server.getClients)).Methods("GET")
 	r.HandleFunc("/clients/{clientId}/shutdown", server.validate(server.clientShutdown)).Methods("POST")
-	
+
 	// bot CURD and login (botmanage.go)
 	r.HandleFunc("/botlogin", server.validate(server.botLogin)).Methods("POST")
 	r.HandleFunc("/bots/{botId}/logout", server.validate(server.botLogout)).Methods("POST")
@@ -469,7 +469,7 @@ func (server *WebServer) serveHTTP(ctx context.Context) error {
 	r.HandleFunc("/botactions/recoveraction", server.validate(server.recoverAction)).Methods("POST")
 	r.HandleFunc("/botactions/recoverclient", server.validate(server.recoverClient)).Methods("POST")
 	r.HandleFunc("/botactions/timeoutfriendrequest", server.timeoutFriendRequest).Methods("POST")
-	
+
 	// timeline.go
 	r.HandleFunc("/bots/wechatbots/notify/crawltimeline", server.NotifyWechatBotsCrawlTimeline).Methods("POST")
 	r.HandleFunc("/bots/wechatbots/notify/crawltimelinetail", server.NotifyWechatBotsCrawlTimelineTail).Methods("POST")

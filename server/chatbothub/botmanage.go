@@ -298,7 +298,7 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Message: clientError.Error(),
 				},
 				ClientType: bot.ClientType,
-				ClientId: bot.ClientId,
+				ClientId:   bot.ClientId,
 			}, nil
 		default:
 			return &pb.BotActionReply{
@@ -308,20 +308,20 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Message: o.Err.Error(),
 				},
 				ClientType: bot.ClientType,
-				ClientId: bot.ClientId,
+				ClientId:   bot.ClientId,
 			}, nil
 		}
 	} else {
 		return &pb.BotActionReply{
-			Success: true,
-			Msg: "DONE",
+			Success:    true,
+			Msg:        "DONE",
 			ClientType: bot.ClientType,
-			ClientId: bot.ClientId,
+			ClientId:   bot.ClientId,
 		}, nil
 	}
 }
 
-func (hub *ChatHub) WebShortCallResponse (ctx context.Context, req *pb.EventReply) (*pb.OperationReply, error) {
+func (hub *ChatHub) WebShortCallResponse(ctx context.Context, req *pb.EventReply) (*pb.OperationReply, error) {
 	o := &ErrorHandler{}
 
 	bot := hub.GetBotById(req.BotId)
@@ -332,7 +332,7 @@ func (hub *ChatHub) WebShortCallResponse (ctx context.Context, req *pb.EventRepl
 
 	req.ClientType = bot.ClientType
 	req.ClientId = bot.ClientId
-	
+
 	if o.Err == nil {
 		hub.Info("calling c[%s] WebShortCall Response \n %s", bot.ClientId, req.Body)
 		o.sendEvent(bot.tunnel, req)
@@ -341,7 +341,7 @@ func (hub *ChatHub) WebShortCallResponse (ctx context.Context, req *pb.EventRepl
 	if o.Err != nil {
 		switch clientError := o.Err.(type) {
 		case *utils.ClientError:
-			return  &pb.OperationReply{
+			return &pb.OperationReply{
 				Code:    int32(clientError.Code),
 				Message: clientError.Error(),
 			}, nil
@@ -352,6 +352,6 @@ func (hub *ChatHub) WebShortCallResponse (ctx context.Context, req *pb.EventRepl
 			}, nil
 		}
 	} else {
-		return &pb.OperationReply{Code:0, Message:"Done"}, nil
+		return &pb.OperationReply{Code: 0, Message: "Done"}, nil
 	}
 }

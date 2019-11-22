@@ -34,7 +34,7 @@ func (ctx *WebServer) clientShutdown(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	clientId := vars["clientId"]
-	
+
 	wrapper, err := ctx.NewGRPCWrapper()
 	if err != nil {
 		o.Err = err

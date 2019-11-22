@@ -33,7 +33,7 @@ func GetFieldsFromStruct(tablename string, i interface{}) []Field {
 					continue
 				}
 			}
-			
+
 			fs = append(fs, Field{tablename, tag})
 		}
 	}

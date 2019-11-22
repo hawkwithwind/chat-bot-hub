@@ -3,8 +3,8 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -208,14 +208,14 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	return count
 }
 
-func (o *ErrorHandler) RedisMatchCountCond(conn redis.Conn, keyPattern string, cmp func(redis.Conn, string)bool) int {
+func (o *ErrorHandler) RedisMatchCountCond(conn redis.Conn, keyPattern string, cmp func(redis.Conn, string) bool) int {
 	if o.Err != nil {
 		return 0
 	}
 
 	key := "0"
 	count := 0
-	
+
 	for true {
 		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
 		if o.Err == nil {
@@ -230,7 +230,7 @@ func (o *ErrorHandler) RedisMatchCountCond(conn redis.Conn, keyPattern string, c
 				count += 1
 			}
 		}
-		
+
 		if key == "0" {
 			break
 		}
@@ -370,7 +370,7 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	daykey := ar.redisDayKey()
 	hourkey := ar.redisHourKey()
 	minutekey := ar.redisMinuteKey()
-	
+
 	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
@@ -398,21 +398,21 @@ func (o *ErrorHandler) UpdateActionRequest(pool *redis.Pool, ar *ActionRequest) 
 	if o.Err != nil {
 		return
 	}
-	
+
 	conn := pool.Get()
 	defer conn.Close()
-	
+
 	o.UpdateActionRequest_(conn, ar)
 }
 
-func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, ar *ActionRequest) {	
+func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, ar *ActionRequest) {
 	if o.Err != nil {
 		return
 	}
 
 	key := ar.redisKey()
 	arstr := o.ToJson(ar)
-	
+
 	o.RedisDo(conn, timeout, "SET", key, arstr)
 }
 
@@ -420,7 +420,7 @@ func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRe
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	conn := pool.Get()
 	defer conn.Close()
 
@@ -431,7 +431,7 @@ func (o *ErrorHandler) GetActionRequest_(conn redis.Conn, arid string) *ActionRe
 	if o.Err != nil {
 		return nil
 	}
-	
+
 	var arstr string
 	var ar ActionRequest
 	key := fmt.Sprintf("AR:%s", arid)

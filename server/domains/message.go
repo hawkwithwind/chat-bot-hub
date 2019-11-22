@@ -3,15 +3,15 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/mitchellh/mapstructure"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/hawkwithwind/chat-bot-hub/proto/web"
 	"github.com/hawkwithwind/chat-bot-hub/server/rpc"
 	"github.com/hawkwithwind/chat-bot-hub/server/utils"
-	"sync"
+	"github.com/mitchellh/mapstructure"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -58,7 +58,6 @@ type UnreadMessageMeta struct {
 const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
-
 
 func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, bot *Bot) error {
 	if message.FromUserContact != nil {
