@@ -39,7 +39,7 @@ func (u *FriendRequest) Fields() []dbx.Field {
 
 func (u *FriendRequest) SelectFrom() string {
 	return " `friendrequests` LEFT JOIN `bots` " +
-		" ON `friendrequests`.`botid` = `friendrequests`.`botid` "
+		" ON `friendrequests`.`botid` = `bots`.`botid` "
 }
 
 func (u *FriendRequest) CriteriaAlias(fieldname string) (dbx.Field, error) {
