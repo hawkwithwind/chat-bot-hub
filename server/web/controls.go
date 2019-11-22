@@ -947,6 +947,10 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.okWithPaging(w, "success", groupvos, paging)
 		return
 
+	case "friendrequests":
+		o.okWithPaging(w, "success", rows, paging)
+		return
+
 	default:
 		o.Err = fmt.Errorf("unknown domain %s", domain)
 		return

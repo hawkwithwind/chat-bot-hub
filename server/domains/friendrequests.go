@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	//"time"
 	//"database/sql"
+	"strings"
 
 	//"github.com/jmoiron/sqlx"
 	"github.com/go-sql-driver/mysql"
@@ -22,6 +23,35 @@ type FriendRequest struct {
 	Status          string         `db:"status"`
 	CreateAt        mysql.NullTime `db:"createat"`
 	UpdateAt        mysql.NullTime `db:"updateat"`
+}
+
+const (
+	TN_FRIENDREQUEST string = "friendrequests"
+)
+
+func (o *ErrorHandler) NewDefaultFriendRequest() dbx.Searchable {
+	return &FriendRequest{}
+}
+
+func (u *FriendRequest) Fields() []dbx.Field {
+	return dbx.GetFieldsFromStruct(TN_FRIENDREQUEST, (*FriendRequest)(nil))
+}
+
+func (u *FriendRequest) SelectFrom() string {
+	return " `friendrequests` LEFT JOIN `bots` " +
+		" ON `friendrequests`.`botid` = `friendrequests`.`botid` "
+}
+
+func (u *FriendRequest) CriteriaAlias(fieldname string) (dbx.Field, error) {
+	fn := strings.ToLower(fieldname)
+
+	if fn == "botid" {
+		return dbx.Field{
+			TN_BOTS, "botid",
+		}, nil
+	}
+
+	return dbx.NormalCriteriaAlias(u, fieldname)
 }
 
 func (o *ErrorHandler) NewFriendRequest(botId string, login string, requestlogin string, requestbody string, status string) *FriendRequest {
@@ -56,6 +86,7 @@ func (o *ErrorHandler) FriendRequestToJson(fr *FriendRequest) string {
 		"requestBody":     fr.RequestBody,
 		"status":          fr.Status,
 		"createAt":        utils.JSONTime{fr.CreateAt.Time},
+		"updateAt":        utils.JSONTime{fr.UpdateAt.Time},
 	})
 }
 
