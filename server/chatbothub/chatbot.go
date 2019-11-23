@@ -90,6 +90,7 @@ const (
 	GetRoomQRCode            string = "GetRoomQRCode"
 	GetContactQRCode         string = "GetContactQRCode"
 	GetContact               string = "GetContact"
+	CheckContact             string = "CheckContact"
 	SearchContact            string = "SearchContact"
 	SyncContact              string = "SyncContact"
 	SnsTimeline              string = "SnsTimeline"
@@ -518,6 +519,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
 		GetContact:               (*ChatBot).GetContact,
+		CheckContact:             (*ChatBot).CheckContact,
 		SearchContact:            (*ChatBot).SearchContact,
 		SyncContact:              (*ChatBot).SyncContact,
 		SnsTimeline:              (*ChatBot).SnsTimeline,
@@ -869,6 +871,16 @@ func (bot *ChatBot) SendAppMessage(actionType string, arId string, body string) 
 }
 
 func (bot *ChatBot) GetContact(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
+func (bot *ChatBot) CheckContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 	params := []ActionParam{
 		NewActionParam("userId", false, ""),
