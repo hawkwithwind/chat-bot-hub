@@ -27,7 +27,7 @@ func genSignedURL(ossBucket *oss.Bucket, imageId string, messageType MessageType
 		return "", fmt.Errorf("unkown message type to generate signed oss url for message type: %s\n", messageType)
 	}
 
-	return ossBucket.SignURL(imageKey, oss.HTTPGet, 60, options...)
+	return ossBucket.SignURL(imageKey, oss.HTTPGet, 60*30, options...)
 }
 
 // 生成 image 和 thumbnailImage url，如果 thumbnailId 不存在，那么用 imageId + image process 方式生成 thumb
