@@ -422,6 +422,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 
 		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, requestStr, "NEW")
+		if len(rlogin) < 4 {
+			fr.Status = "INVALID"
+		}
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -621,10 +624,6 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				}
 			}
 
-			if len(rlogin) < 4 {
-				return fmt.Errorf("acceptuser rlogin [%s] too short\n%s\n", rlogin, localar.ActionBody)
-			}
-			
 			ctx.Info("acceptuser rlogin [%s]", rlogin)
 
 			if o.Err != nil {
