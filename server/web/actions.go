@@ -620,6 +620,11 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 				}
 			}
+
+			if len(rlogin) < 4 {
+				return fmt.Errorf("acceptuser rlogin [%s] too short\n%s\n", rlogin, localar.ActionBody)
+			}
+			
 			ctx.Info("acceptuser rlogin [%s]", rlogin)
 
 			if o.Err != nil {
