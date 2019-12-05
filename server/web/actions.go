@@ -268,28 +268,33 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	o := ErrorHandler{}
 	defer o.BackEndError(ctx)
 
-	ctx.Info("botNotify %s", botId)
+	//ctx.Info("botNotify %s", botId)
 
-	wrapper, err := ctx.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return o.Err
+	var thebotinfo *pb.BotsInfo
+
+	{
+		wrapper, err := ctx.NewGRPCWrapper()
+		if err != nil {
+			o.Err = err
+			return o.Err
+		}
+		defer wrapper.Cancel()
+
+		thebotinfo = o.getTheBot(wrapper, botId)
+		if o.Err != nil {
+			return o.Err
+		}
 	}
-	defer wrapper.Cancel()
-
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return o.Err
-	}
-
+	
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			ctx.contactParser.rawPipe <- ContactRawInfo{bodystr, thebotinfo}
 		}
 
-		ctx.Info("[contacts debug] bot notify received raw")
+		//ctx.Info("[contacts debug] bot notify received raw")
 		return nil
 	}
 
@@ -343,6 +348,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if len(logininfo.WxData) > 0 {
 			localinfo.WxData = logininfo.WxData
 		}
+		if len(logininfo.Alias) > 0 {
+			localinfo.Alias = logininfo.Alias
+		}
 		if len(logininfo.LongServerList) > 0 {
 			localinfo.LongServerList = logininfo.LongServerList
 		}
@@ -371,26 +379,65 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		// }), "NEW")
 		// a_o.CreateAndRunAction(ctx, ar)
 
-		re_o := &ErrorHandler{}
-		// now, initailize bot's filter, and call chathub to create intances and get connected
-		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		{
+			wrapper, err := ctx.NewGRPCWrapper()
+			if err != nil {
+				o.Err = err
+				return o.Err
+			}
+			defer wrapper.Cancel()
+			
+			re_o := &ErrorHandler{}
+			// now, initailize bot's filter, and call chathub to create intances and get connected
+			re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+			re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		}
 		return nil
 
 	case chatbothub.FRIENDREQUEST:
 		ctx.Info("c[%s] reqstr %s", thebotinfo.ClientType, bodystr)
+
+		requestStr := bodystr
+
 		rlogin := ""
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT {
 			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
+		} else if thebotinfo.ClientType == chatbothub.WECHATMACPRO {
+			var msg chatbothub.WechatMacproFriendRequest
+			o.Err = json.Unmarshal([]byte(bodystr), &msg)
+			if o.Err != nil {
+				return o.Err
+			}
+			rlogin = msg.ContactId
+			ctx.Info("%v\n%s", msg, rlogin)
+
+			requestStr = o.ToJson(chatbothub.WechatFriendRequest{
+				FromUserName:    msg.ContactId,
+				FromNickName:    msg.NickName,
+				Alias:           msg.Alias,
+				Content:         msg.Hello,
+				EncryptUserName: msg.Stranger,
+				Ticket:          msg.Ticket,
+				Raw:             bodystr,
+			})
+
+			if o.Err != nil {
+				return o.Err
+			}
+
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
-		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, bodystr, "NEW")
+
+		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, requestStr, "NEW")
+		if len(rlogin) < 4 {
+			fr.Status = "INVALID"
+		}
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -415,6 +462,18 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}()
 
+	case chatbothub.ROOMJOIN:
+		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
+
+		go func() {
+			if bot.Callback.Valid {
+				if resp, err := httpx.RestfulCallRetry(ctx.restfulclient, webCallbackRequest(
+					bot, eventType, bodystr), 5, 1); err != nil {
+					ctx.Error(err, "callback contactsync done failed\n%v\n", resp)
+				}
+			}
+		}()
+
 	case chatbothub.STATUSMESSAGE:
 		ctx.Info("c[%s] %s", thebotinfo.ClientType, bodystr)
 
@@ -430,7 +489,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.GROUPINFO:
 		ctx.Info("c[%s] GroupInfo %s", thebotinfo.ClientType, bodystr)
 
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 
 		}
 
@@ -440,7 +500,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 
-		if thebotinfo.ClientType == "WECHATBOT" {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+			thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			message := models.WechatMessage{}
 			o.Err = json.Unmarshal([]byte(msg), &message)
 			if o.Err != nil {
@@ -550,6 +611,14 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 
+		if localar.Status == "Failed" {
+			conn := ctx.redispool.Get()
+			defer conn.Close()
+
+			o.SaveFailingActionRequest(conn, localar,
+				ctx.Config.ActionHealthCheck, ctx.Config.BotHealthCheck)
+		}
+
 		switch localar.ActionType {
 		case chatbothub.SendImageMessage:
 			ctx.Info("[Action Reply] %s SendImageMessage")
@@ -558,7 +627,17 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			frs := o.GetFriendRequestsByLogin(tx, bot.Login, "")
 
 			bodym := o.FromJson(localar.ActionBody)
-			rlogin := o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			rlogin := ""
+			if bot.ChatbotType == chatbothub.WECHATBOT {
+				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			} else if bot.ChatbotType == chatbothub.WECHATMACPRO {
+				rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
+				if len(rlogin) == 0 {
+					rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+				}
+			}
+
+			ctx.Info("acceptuser rlogin [%s]", rlogin)
 
 			if o.Err != nil {
 				return o.Err
@@ -641,6 +720,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					ctx.Info("save user info while accept [%s]%s done", rlogin, nickname)
+
+					if raw, ok := frm["raw"]; ok && len(raw.(string)) > 0 {
+						// friend request has raw means this acceptUser actionBody is raw
+						// now replace this actionBody with WechatFriendRequest one
+						localar.ActionBody = fr.RequestBody
+						ctx.Info("replace actionBody to %s", fr.RequestBody)
+					}
 				}
 			}
 		case chatbothub.DeleteContact:
@@ -680,7 +766,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 			ctx.Info("delete contact %s from %s [done]", userId, bot.Login)
 
-		case chatbothub.SearchContact:
+		case chatbothub.SearchContact, chatbothub.GetContact:
 			acresult := domains.ActionResult{}
 			o.Err = json.Unmarshal([]byte(localar.Result), &acresult)
 			if o.Err != nil {
@@ -812,7 +898,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 
-			if thebotinfo.ClientType == "WECHATBOT" {
+			if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+				thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 				labels := models.WechatChatContactLabels{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &labels)
 				if o.Err != nil {
@@ -891,7 +978,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 
-			if thebotinfo.ClientType == "WECHATBOT" {
+			if thebotinfo.ClientType == chatbothub.WECHATBOT ||
+				thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 				wetimeline := models.WechatSnsTimeline{}
 				o.Err = json.Unmarshal([]byte(o.ToJson(acresult.Data)), &wetimeline)
 				if o.Err != nil {
@@ -902,21 +990,30 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				ctx.Info("Wechat Sns Timeline")
 				newMomentIds := map[string]int{}
 				for _, m := range wetimeline.Data {
+					ctx.Info("---\n%s at %d from %s %s\n%s",
+						m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Description)
+					
 					chatuser := o.FindOrCreateChatUser(tx, thebotinfo.ClientType, m.UserName)
 					if o.Err != nil || chatuser == nil {
 						ctx.Error(o.Err, "cannot find or create user %s while saving moment", m.UserName)
 						return o.Err
 					}
-
+										
 					m.BotId = thebotinfo.BotId
 					if chatuser.Avatar.Valid {
 						m.Avatar = chatuser.Avatar.String
 					}
-					ctx.Info("---\n%s %s at %d from %s %s %s\n%s", thebotinfo.BotId, m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Avatar, m.Description)
 
 					// if this is first time get this specific momentid
 					// push it to fluentd, it will be saved
-					if foundm := o.GetTimelineByBotAndCode(ctx.mongoMomentDb, thebotinfo.BotId, m.MomentId); foundm == nil {
+					foundms := o.GetMomentByCode(tx, m.MomentId)
+					if o.Err != nil {
+						return o.Err
+					}
+
+					ctx.Info("---\n%s %s at %d from %s %s %s\n%s", thebotinfo.BotId, m.MomentId, m.CreateTime, m.UserName, m.NickName, m.Avatar, m.Description)
+
+					if len(foundms) == 0 {
 						go func() {
 							if ctx.fluentLogger != nil {
 								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
@@ -928,7 +1025,20 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 								}
 							}
 						}()
+					}
 
+					if o.Err != nil {
+						return o.Err
+					}
+
+					wrapper, err := ctx.NewGRPCWrapper()
+					if err != nil {
+						o.Err = err
+						return o.Err
+					}
+					defer wrapper.Cancel()
+
+					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
 						ctx.Info("fill moment b[%s] %s\n", thebotinfo.Login, m.MomentId)
 						_, o.Err = wrapper.HubClient.FilterFill(wrapper.Context, &pb.FilterFillRequest{
@@ -981,7 +1091,8 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		if o.Err != nil {
 			return o.Err
 		}
-		o.SaveActionRequest(ctx.redispool, localar)
+		//o.SaveActionRequest(ctx.redispool, localar)
+		o.UpdateActionRequest(ctx.redispool, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
@@ -995,12 +1106,98 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			}
 		}()
 
+	case chatbothub.WEBSHORTCALL:
+		go func() {
+			if bot.Callback.Valid {
+				resp, err := httpx.RestfulCallRetry(ctx.restfulclient,
+					webCallbackRequest(bot, eventType, bodystr), 5, 1)
+				if err != nil {
+					ctx.Error(err, "web short call failed")
+				} else {
+					ctx.Info("web short call resp [%d]\n", resp.StatusCode)
+					if resp.StatusCode == 200 {
+						ctx.Info("web short call returned %s", resp.Body)
+
+						wrapper, err := ctx.NewGRPCWrapper()
+						if err != nil {
+							o.Err = err
+							return
+						}
+
+						opreply, err := wrapper.HubClient.WebShortCallResponse(
+							wrapper.Context,
+							&pb.EventReply{
+								EventType: chatbothub.WEBSHORTCALLRESPONSE,
+								Body:      resp.Body,
+								BotId:     bot.BotId,
+							},
+						)
+
+						if err != nil {
+							o.Err = err
+							return
+						}
+
+						ctx.Info("web short call response call hub %s", o.ToJson(opreply))
+					}
+				}
+			}
+		}()
+
 	default:
 		o.Err = fmt.Errorf("unknown event %s", eventType)
 		return o.Err
 	}
 
 	return o.Err
+}
+
+func (o *ErrorHandler) insertUserAlias(q dbx.Queryable, ctype string, actionm map[string]interface{}, fieldname string) map[string]interface{} {
+
+	if o.Err != nil {
+		return actionm
+	}
+
+	if userId, ok := actionm[fieldname]; ok {
+		switch uid := userId.(type) {
+		case string:
+			chatuser := o.GetChatUserByName(q, ctype, uid)
+			if chatuser != nil {
+				actionm["alias"] = chatuser.Alias
+			}
+		}
+	}
+
+	return actionm
+}
+
+func (o *ErrorHandler) insertUserAliasList(q dbx.Queryable, ctype string, actionm map[string]interface{}, fieldname string) map[string]interface{} {
+
+	if o.Err != nil {
+		return actionm
+	}
+
+	if userList, ok := actionm[fieldname]; ok {
+		switch ulist := userList.(type) {
+		case []interface{}:
+			uns := []string{}
+			for _, u := range ulist {
+				uns = append(uns, u.(string))
+			}
+			chatusers := o.GetChatUsersByNames(q, ctype, uns)
+			aliasList := []string{}
+			for _, ch := range chatusers {
+				alias := ""
+				if ch.Alias.Valid {
+					alias = ch.Alias.String
+				}
+				aliasList = append(aliasList, alias)
+			}
+			actionm["aliasList"] = aliasList
+		}
+	}
+
+	return actionm
 }
 
 func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
@@ -1041,6 +1238,24 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 
 	actionType := o.FromMapString("actionType", bodym, "request json", false, "")
 	actionBody := o.FromMapString("actionBody", bodym, "request json", false, "")
+
+	actionm := o.FromJson(actionBody)
+	if o.Err != nil {
+		return
+	}
+
+	// find toUserName, userId, memberId, userList, memberList or atList from param list,
+	// if found, insert alias, aliasList to the param list
+	for _, fieldname := range []string{"userId", "toUserName", "memberId"} {
+		actionm = o.insertUserAlias(tx, bot.ChatbotType, actionm, fieldname)
+	}
+	for _, fieldname := range []string{"userList", "memberList", "atList"} {
+		actionm = o.insertUserAliasList(tx, bot.ChatbotType, actionm, fieldname)
+	}
+	if o.Err != nil {
+		return
+	}
+
 	ar := o.NewActionRequest(bot.Login, actionType, actionBody, "NEW")
 	if o.Err != nil {
 		o.Err = utils.NewClientError(utils.PARAM_INVALID, fmt.Errorf("action request json invalid"))
@@ -1062,21 +1277,43 @@ func (ctx *WebServer) botAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequest) *pb.BotActionReply {
+
+	wrapper, err := web.NewGRPCWrapper()
+	if err != nil {
+		o.Err = err
+		return nil
+	}
+
+	bot := o.getBotByLogin(wrapper, ar.Login)
+	if o.Err != nil {
+		return nil
+	}
+
+	ar.ClientType = bot.ClientType
+	ar.ClientId = bot.ClientId
+
+	conn := web.redispool.Get()
+	defer conn.Close()
+
+	if !o.ActionIsHealthy(conn, ar) {
+		return nil
+	}
+
 	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
 
 	dayCount := -2
 	if daylimit > 0 {
-		dayCount = o.ActionCountDaily(web.redispool, ar)
+		dayCount = o.ActionCountDaily(conn, ar)
 	}
 
 	hourCount := -2
 	if hourlimit > 0 {
-		hourCount = o.ActionCountHourly(web.redispool, ar)
+		hourCount = o.ActionCountHourly(conn, ar)
 	}
 
 	minuteCount := -2
 	if minutelimit > 0 {
-		minuteCount = o.ActionCountMinutely(web.redispool, ar)
+		minuteCount = o.ActionCountMinutely(conn, ar)
 	}
 
 	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
@@ -1102,12 +1339,6 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		return nil
 	}
 
-	wrapper, err := web.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return nil
-	}
-
 	web.Info("action request is " + o.ToJson(ar))
 
 	actionReply := o.BotAction(wrapper, ar.ToBotActionRequest())
@@ -1126,7 +1357,11 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 		}
 	}
 
-	o.SaveActionRequestWLimit(web.redispool, ar, daylimit, hourlimit, minutelimit)
+	ar.ClientType = actionReply.ClientType
+	ar.ClientId = actionReply.ClientId
+
+	o.SaveActionRequestWLimit(conn, ar,
+		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
 

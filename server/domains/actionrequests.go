@@ -3,6 +3,7 @@ package domains
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -14,6 +15,8 @@ import (
 
 type ActionRequest struct {
 	ActionRequestId string         `json:"actionRequestId"`
+	ClientType      string         `json:"clientType"`
+	ClientId        string         `json:"clientId"`
 	Login           string         `json:"login"`
 	ActionType      string         `json:"actionType"`
 	ActionBody      string         `json:"actionBody"`
@@ -31,6 +34,15 @@ type ActionResult struct {
 const (
 	timeout time.Duration = time.Duration(10) * time.Second
 )
+
+func arQuotaKeyToArId(key string) (string, error) {
+	t := strings.Split(key, ":")
+	if len(t) != 4 {
+		return "", fmt.Errorf("unexpected key %s", key)
+	}
+
+	return t[len(t)-1], nil
+}
 
 func (ar *ActionRequest) redisKey() string {
 	return fmt.Sprintf("AR:%s", ar.ActionRequestId)
@@ -58,6 +70,28 @@ func (ar *ActionRequest) redisMinuteKey() string {
 
 func (ar *ActionRequest) redisMinuteKeyPattern() string {
 	return fmt.Sprintf("ARMINUTE:%s:%s:*", ar.Login, ar.ActionType)
+}
+
+func (ar *ActionRequest) redisHourLoginKeyPattern() string {
+	return fmt.Sprintf("ARHOUR:%s:*", ar.Login)
+}
+
+func (ar *ActionRequest) redisFailKey() string {
+	return fmt.Sprintf(
+		"ARFAIL:%s:%s:%s:%s:%s",
+		ar.ClientType, ar.ClientId, ar.Login, ar.ActionType, ar.ActionRequestId)
+}
+
+func (ar *ActionRequest) redisFailKeyPattern() string {
+	return fmt.Sprintf("ARFAIL:%s:%s:%s:%s:*", ar.ClientType, ar.ClientId, ar.Login, ar.ActionType)
+}
+
+func (ar *ActionRequest) redisFailKeyBotPattern() string {
+	return fmt.Sprintf("ARFAIL:%s:%s:%s:*", ar.ClientType, ar.ClientId, ar.Login)
+}
+
+func (ar *ActionRequest) redisTimingKey() string {
+	return fmt.Sprintf("ARTIMING:%s", ar.ActionRequestId)
 }
 
 func (o *ErrorHandler) NewActionRequest(login string, actiontype string, actionbody string, status string) *ActionRequest {
@@ -174,6 +208,37 @@ func (o *ErrorHandler) RedisMatchCount(conn redis.Conn, keyPattern string) int {
 	return count
 }
 
+func (o *ErrorHandler) RedisMatchCountCond(conn redis.Conn, keyPattern string, cmp func(redis.Conn, string) bool) int {
+	if o.Err != nil {
+		return 0
+	}
+
+	key := "0"
+	count := 0
+
+	for true {
+		ret := o.RedisValue(o.RedisDo(conn, timeout, "SCAN", key, "MATCH", keyPattern, "COUNT", 1000))
+		if o.Err == nil {
+			if len(ret) != 2 {
+				o.Err = fmt.Errorf("unexpected redis scan return %v", ret)
+				return count
+			}
+		}
+		key = o.RedisString(ret[0])
+		for _, line := range o.RedisValue(ret[1]) {
+			if cmp(conn, string(line.([]uint8))) {
+				count += 1
+			}
+		}
+
+		if key == "0" {
+			break
+		}
+	}
+
+	return count
+}
+
 func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	if o.Err != nil {
 		return []string{}
@@ -207,41 +272,32 @@ func (o *ErrorHandler) RedisMatch(conn redis.Conn, keyPattern string) []string {
 	return results
 }
 
-func (o *ErrorHandler) ActionCountDaily(pool *redis.Pool, ar *ActionRequest) int {
+func (o *ErrorHandler) ActionCountDaily(conn redis.Conn, ar *ActionRequest) int {
 	if o.Err != nil {
 		return 0
 	}
 
 	dayKeyPattern := ar.redisDayKeyPattern()
 
-	conn := pool.Get()
-	defer conn.Close()
-
 	return o.RedisMatchCount(conn, dayKeyPattern)
 }
 
-func (o *ErrorHandler) ActionCountHourly(pool *redis.Pool, ar *ActionRequest) int {
+func (o *ErrorHandler) ActionCountHourly(conn redis.Conn, ar *ActionRequest) int {
 	if o.Err != nil {
 		return 0
 	}
 
 	hourKeyPattern := ar.redisHourKeyPattern()
 
-	conn := pool.Get()
-	defer conn.Close()
-
 	return o.RedisMatchCount(conn, hourKeyPattern)
 }
 
-func (o *ErrorHandler) ActionCountMinutely(pool *redis.Pool, ar *ActionRequest) int {
+func (o *ErrorHandler) ActionCountMinutely(conn redis.Conn, ar *ActionRequest) int {
 	if o.Err != nil {
 		return 0
 	}
 
 	minuteKeyPattern := ar.redisMinuteKeyPattern()
-
-	conn := pool.Get()
-	defer conn.Close()
 
 	return o.RedisMatchCount(conn, minuteKeyPattern)
 }
@@ -261,7 +317,7 @@ func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, in
 	return o.RedisMatchCount(conn, dayKeyPattern), o.RedisMatchCount(conn, hourKeyPattern), o.RedisMatchCount(conn, minuteKeyPattern)
 }
 
-func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionRequest, daylimit, hourlimit, minutelimit int) {
+func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, ar *ActionRequest, keytimeout, daylimit, hourlimit, minutelimit int) {
 	if o.Err != nil {
 		return
 	}
@@ -270,19 +326,21 @@ func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionReque
 	daykey := ar.redisDayKey()
 	hourkey := ar.redisHourKey()
 	minutekey := ar.redisMinuteKey()
+	timingkey := ar.redisTimingKey()
+
 	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
 	minuteExpire := 60
-
-	conn := pool.Get()
-	defer conn.Close()
 
 	arstr := o.ToJson(ar)
 
 	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
 	o.RedisSend(conn, "EXPIRE", key, keyExpire)
+
+	o.RedisSend(conn, "SET", timingkey, "1")
+	o.RedisSend(conn, "EXPIRE", timingkey, keytimeout)
 
 	if daylimit > 0 {
 		o.RedisSend(conn, "SET", daykey, "1")
@@ -302,6 +360,7 @@ func (o *ErrorHandler) SaveActionRequestWLimit(pool *redis.Pool, ar *ActionReque
 	o.RedisDo(conn, timeout, "EXEC")
 }
 
+/*
 func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	if o.Err != nil {
 		return
@@ -311,6 +370,7 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	daykey := ar.redisDayKey()
 	hourkey := ar.redisHourKey()
 	minutekey := ar.redisMinuteKey()
+
 	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
@@ -332,6 +392,29 @@ func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
 	o.RedisSend(conn, "EXPIRE", minutekey, minuteExpire)
 	o.RedisDo(conn, timeout, "EXEC")
 }
+*/
+
+func (o *ErrorHandler) UpdateActionRequest(pool *redis.Pool, ar *ActionRequest) {
+	if o.Err != nil {
+		return
+	}
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	o.UpdateActionRequest_(conn, ar)
+}
+
+func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, ar *ActionRequest) {
+	if o.Err != nil {
+		return
+	}
+
+	key := ar.redisKey()
+	arstr := o.ToJson(ar)
+
+	o.RedisDo(conn, timeout, "SET", key, arstr)
+}
 
 func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRequest {
 	if o.Err != nil {
@@ -341,12 +424,20 @@ func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRe
 	conn := pool.Get()
 	defer conn.Close()
 
+	return o.GetActionRequest_(conn, arid)
+}
+
+func (o *ErrorHandler) GetActionRequest_(conn redis.Conn, arid string) *ActionRequest {
+	if o.Err != nil {
+		return nil
+	}
+
 	var arstr string
 	var ar ActionRequest
 	key := fmt.Sprintf("AR:%s", arid)
 
 	arstr, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "GET", key))
-	fmt.Printf("\n[AR] key %s err %v\n %s\n", key, o.Err, arstr)
+	//fmt.Printf("\n[AR] key %s err %v\n %s\n", key, o.Err, arstr)
 
 	if o.Err == nil {
 		o.Err = json.Unmarshal([]byte(arstr), &ar)

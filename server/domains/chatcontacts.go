@@ -2,7 +2,7 @@ package domains
 
 import (
 	"fmt"
-	//"time"
+	"time"
 	//"database/sql"
 	"strings"
 
@@ -74,6 +74,137 @@ func (ctx *ErrorHandler) NewChatContact(botId string, chatuserid string) *ChatCo
 			ChatUserId:    chatuserid,
 		}
 	}
+}
+
+func (o *ErrorHandler) getChatContactById(q dbx.Queryable, chatcontactid string) *ChatContact {
+	if o.Err != nil {
+		return nil
+	}
+
+	chatcontacts := []ChatContact{}
+
+	query := `
+SELECT 
+chatcontactid,
+updateat 
+FROM chatcontacts
+WHERE deleteat is NULL
+AND chatcontactid = ?`
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, chatcontactid)
+
+	if chatcontact := o.Head(chatcontacts, fmt.Sprintf("chatcontact %s more than one instance", chatcontactid)); chatcontact != nil {
+		return chatcontact.(*ChatContact)
+	} else {
+		return nil
+	}
+}
+
+func (o *ErrorHandler) getSameUpdateAtCount(q dbx.Queryable, chatcontact *ChatContact) int64 {
+	if o.Err != nil {
+		return 0
+	}
+
+	counts := []int{}
+	query := `
+SELECT count(*) 
+FROM chatcontacts
+WHERE deleteat is NULL
+AND updateat = ?`
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &counts, query, chatcontact.UpdateAt.Time.Format("2006-01-02 15:04:05"))
+
+	if o.Err != nil {
+		return 0
+	}
+
+	if len(counts) == 0 {
+		return 0
+	}
+
+	return int64(counts[0])
+}
+
+func (o *ErrorHandler) SyncChatContact(q dbx.Queryable, botIds []string, lastId string, pagesize int64) []ChatContact {
+	if o.Err != nil {
+		return []ChatContact{}
+	}
+
+	// var lastChatContact *ChatContact = nil
+	// if len(lastId) > 0 {
+	// 	lastChatContact = o.getChatContactById(q, lastId)
+	// }
+
+	// if o.Err != nil {
+	// 	return []ChatContact{}
+	// }
+
+	lastChatContact := &ChatContact{}
+
+	if len(lastId) > 0 {
+		updateat, err := time.Parse("2006-01-02 15:04:05", lastId)
+		if err != nil {
+			o.Err = err
+			return []ChatContact{}
+		}
+
+		lastChatContact.UpdateAt = mysql.NullTime{
+			Valid: true,
+			Time:  updateat,
+		}
+	}
+
+	var mincount int64 = 0
+	if len(lastId) > 0 {
+		mincount = o.getSameUpdateAtCount(q, lastChatContact)
+	}
+
+	fmt.Println("mincount", mincount)
+
+	if pagesize <= mincount {
+		pagesize = mincount + 1
+	}
+
+	query := `
+SELECT
+chatcontactid, 
+botid,
+chatuserid,
+createat,
+updateat
+FROM chatcontacts
+WHERE deleteat is NULL
+%s
+ORDER BY updateat ASC
+LIMIT %d
+`
+	whereclause := ""
+	whereparams := []interface{}{}
+
+	if lastChatContact != nil {
+		whereclause += fmt.Sprintf(" AND updateat >= ? ")
+		whereparams = append(whereparams, lastChatContact.UpdateAt.Time.Format("2006-01-02 15:04:05"))
+	}
+
+	if len(botIds) > 0 {
+		placeholders := []string{}
+		for _, v := range botIds {
+			placeholders = append(placeholders, "?")
+			whereparams = append(whereparams, v)
+		}
+		whereclause += fmt.Sprintf(" AND botId IN (%s) ", strings.Join(placeholders, ","))
+	}
+
+	query = fmt.Sprintf(query, whereclause, pagesize)
+
+	chatcontacts := []ChatContact{}
+	ctx, _ := o.DefaultContext()
+	o.Err = q.SelectContext(ctx, &chatcontacts, query, whereparams...)
+	if o.Err != nil {
+		return []ChatContact{}
+	}
+
+	return chatcontacts
 }
 
 func (o *ErrorHandler) SaveChatContact(q dbx.Queryable, chatcontact *ChatContact) {

@@ -173,33 +173,37 @@ func NewBotsInfo(bot *ChatBot) *pb.BotsInfo {
 }
 
 const (
-	WECHATBOT string = "WECHATBOT"
-	QQBOT     string = "QQBOT"
+	WECHATBOT    string = "WECHATBOT"
+	WECHATMACPRO string = "WECHATMACPRO"
+	QQBOT        string = "QQBOT"
 )
 
 const (
-	PING            string = "PING"
-	PONG            string = "PONG"
-	REGISTER        string = "REGISTER"
-	LOGIN           string = "LOGIN"
-	LOGOUT          string = "LOGOUT"
-	SHUTDOWN        string = "SHUTDOWN"
-	LOGINSCAN       string = "LOGINSCAN"
-	LOGINDONE       string = "LOGINDONE"
-	LOGINFAILED     string = "LOGINFAILED"
-	LOGOUTDONE      string = "LOGOUTDONE"
-	BOTMIGRATE      string = "BOTMIGRATE"
-	UPDATETOKEN     string = "UPDATETOKEN"
-	MESSAGE         string = "MESSAGE"
-	IMAGEMESSAGE    string = "IMAGEMESSAGE"
-	EMOJIMESSAGE    string = "EMOJIMESSAGE"
-	STATUSMESSAGE   string = "STATUSMESSAGE"
-	FRIENDREQUEST   string = "FRIENDREQUEST"
-	CONTACTINFO     string = "CONTACTINFO"
-	GROUPINFO       string = "GROUPINFO"
-	CONTACTSYNCDONE string = "CONTACTSYNCDONE"
-	BOTACTION       string = "BOTACTION"
-	ACTIONREPLY     string = "ACTIONREPLY"
+	PING                 string = "PING"
+	PONG                 string = "PONG"
+	REGISTER             string = "REGISTER"
+	LOGIN                string = "LOGIN"
+	LOGOUT               string = "LOGOUT"
+	SHUTDOWN             string = "SHUTDOWN"
+	LOGINSCAN            string = "LOGINSCAN"
+	LOGINDONE            string = "LOGINDONE"
+	LOGINFAILED          string = "LOGINFAILED"
+	LOGOUTDONE           string = "LOGOUTDONE"
+	BOTMIGRATE           string = "BOTMIGRATE"
+	UPDATETOKEN          string = "UPDATETOKEN"
+	MESSAGE              string = "MESSAGE"
+	IMAGEMESSAGE         string = "IMAGEMESSAGE"
+	EMOJIMESSAGE         string = "EMOJIMESSAGE"
+	STATUSMESSAGE        string = "STATUSMESSAGE"
+	FRIENDREQUEST        string = "FRIENDREQUEST"
+	CONTACTINFO          string = "CONTACTINFO"
+	GROUPINFO            string = "GROUPINFO"
+	CONTACTSYNCDONE      string = "CONTACTSYNCDONE"
+	BOTACTION            string = "BOTACTION"
+	ACTIONREPLY          string = "ACTIONREPLY"
+	WEBSHORTCALL         string = "WEBSHORTCALL"
+	WEBSHORTCALLRESPONSE string = "WEBSHORTCALLRESPONSE"
+	ROOMJOIN             string = "ROOMJOIN"
 )
 
 func (ctx *ChatHub) Info(msg string, v ...interface{}) {
@@ -527,6 +531,8 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("recv unknown ping from c[%s] %s", in.ClientType, in.ClientId)
 			}
 		} else if in.EventType == REGISTER {
+			hub.Info("REGISTER %#v", in)
+
 			var bot *ChatBot
 			if bot = hub.GetBot(in.ClientId); bot == nil {
 				hub.Info("c[%s] not found, create new bot", in.ClientId)
@@ -568,7 +574,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						hub.Error(err, "c[%s]%s disconnected", bot.ClientType, bot.ClientId)
 						hub.DropBot(bot.ClientId)
 					}
-				} (newbot)
+				}(newbot)
 			}
 		} else {
 			var bot *ChatBot
@@ -582,10 +588,11 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var botId string
 					var userName string
+					var alias string
 					var wxData string
 					var token string
 					var longServerList []interface{}
@@ -593,6 +600,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					if body != nil {
 						botId = o.FromMapString("botId", body, "eventRequest.body", true, "")
 						userName = o.FromMapString("userName", body, "eventRequest.body", false, "")
+						alias = o.FromMapString("alias", body, "eventRequest.body", true, "")
 						wxData = o.FromMapString("wxData", body, "eventRequest.body", true, "")
 						token = o.FromMapString("token", body, "eventRequest.body", true, "")
 						longServerList = o.ListValue(
@@ -637,6 +645,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						bot, o.Err = bot.loginStaging(botId, userName, LoginInfo{
 							WxData:          wxData,
 							Token:           token,
+							Alias:           alias,
 							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
@@ -682,7 +691,15 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 											if findbot != nil {
 												hub.Info("[LOGIN MIGRATE] drop and shut old bot b[%s]c[%s]",
 													findbot.BotId, findbot.ClientId)
-												findbot, o.Err = findbot.logoutOrShutdown()
+
+												if bot.ClientType == WECHATMACPRO {
+													if bot.Status != LoggingStaging && bot.Status != WorkingLoggedIn {
+														findbot, o.Err = findbot.shutdown()
+													}
+												} else {
+													findbot, o.Err = findbot.logoutOrShutdown()
+												}
+
 												if o.Err != nil {
 													hub.Error(o.Err, "[LOGIN MIGRATE] try drop b[%s]c[%s] failed",
 														findbot.BotId, findbot.ClientId)
@@ -735,6 +752,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 						thebot, o.Err = bot.loginDone(botId, userName, LoginInfo{
 							WxData:          wxData,
 							Token:           token,
+							Alias:           alias,
 							LongServerList:  longServerList,
 							ShortServerList: shortServerList,
 						})
@@ -758,7 +776,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case LOGINSCAN:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var scanUrl string
 					if body != nil {
@@ -837,7 +855,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Info("ACTIONREPLY %s", in.Body)
 				}
 
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					body := o.FromJson(in.Body)
 					var actionBody map[string]interface{}
 					var result map[string]interface{}
@@ -892,12 +910,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 							}))
 						}
 					}
+				} else {
+					hub.Info("c[%s] not support event %s", bot.ClientId, in.EventType)
 				}
-				
+
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				hub.Info("[FILTER DEBUG] onReceiveMessage")
-				
-				if bot.ClientType == WECHATBOT || bot.ClientType == QQBOT {
+
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == QQBOT {
 					o.Err = hub.onReceiveMessage(bot, in)
 					if o.Err != nil {
 						hub.Info("[FILTER DEBUG] onReceiveMessage failed %v ", o.Err)
@@ -906,8 +926,19 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					o.Err = fmt.Errorf("unhandled client type %s", bot.ClientType)
 				}
 
+			case ROOMJOIN:
+				if bot.ClientType == WECHATMACPRO {
+					hub.Info("ROOMJOIN\n%s\n", in.Body)
+
+					o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+						BotId:     bot.BotId,
+						EventType: ROOMJOIN,
+						Body:      in.Body,
+					}))
+				}
+
 			case STATUSMESSAGE:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("status message\n%s\n", in.Body)
 
 					bodyString := in.Body
@@ -930,7 +961,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case CONTACTINFO:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("contact info \n%s\n", in.Body)
 
 					if o.Err == nil {
@@ -943,13 +974,26 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case GROUPINFO:
-				if bot.ClientType == WECHATBOT {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 					hub.Info("group info \n%s\n", in.Body)
 
 					if o.Err == nil {
 						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
 							BotId:     bot.BotId,
 							EventType: GROUPINFO,
+							Body:      in.Body,
+						}))
+					}
+				}
+
+			case WEBSHORTCALL:
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+					hub.Info("WEBSHORTCALL \n%s\n", in.Body)
+
+					if o.Err == nil {
+						o.Err = hub.rabbitmq.Send(utils.CH_BotNotify, o.ToJson(models.MqEvent{
+							BotId:     bot.BotId,
+							EventType: WEBSHORTCALL,
 							Body:      in.Body,
 						}))
 					}

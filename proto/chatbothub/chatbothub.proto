@@ -38,6 +38,8 @@ service ChatBotHub {
   rpc RouterBranch (RouterBranchRequest) returns (OperationReply) {}
   rpc FilterFill (FilterFillRequest) returns (FilterFillReply) {}
 
+  rpc WebShortCallResponse (EventReply) returns (OperationReply) {}
+
   // tunnel that connect streaming server and chathub server
   rpc StreamingTunnel (stream EventRequest) returns (stream EventReply) {}
   
@@ -126,6 +128,7 @@ message BotLoginRequest {
 
 message BotLogoutRequest {
   string botId = 1;
+  string clientId = 2;
 }
 
 message OperationReply {
@@ -151,6 +154,8 @@ message BotActionReply {
   string msg = 3;
   string body = 4;
   OperationReply clientError = 5;
+  string clientType = 6;
+  string clientId = 7;
 }
 
 message FilterFillRequest {

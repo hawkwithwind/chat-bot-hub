@@ -372,8 +372,9 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 
 	o.ok(w, "", map[string]interface{}{
 		"types": map[string]string{
-			"QQBOT":     "QQ",
-			"WECHATBOT": "微信",
+			"QQBOT":        "QQ",
+			"WECHATBOT":    "微信",
+			"WECHATMACPRO": "微信macpro",
 		},
 		"status": map[int]string{
 			0:   "未连接",
@@ -729,6 +730,7 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	query := o.getStringValue(r.Form, "q")
+	web.Info("[search] q %s", query)
 
 	accountName := o.getAccountName(r)
 
@@ -943,6 +945,10 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 				}})
 		}
 		o.okWithPaging(w, "success", groupvos, paging)
+		return
+
+	case "friendrequests":
+		o.okWithPaging(w, "success", rows, paging)
 		return
 
 	default:
@@ -1469,4 +1475,35 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.ok(w, message, retmap)
+}
+
+func (web *WebServer) syncChatContacts(w http.ResponseWriter, r *http.Request) {
+	o := &ErrorHandler{}
+	defer o.WebError(w)
+	defer o.BackEndError(web)
+
+	r.ParseForm()
+	lastId := o.getStringValueDefault(r.Form, "lastId", "")
+	pagesize := o.ParseInt(o.getStringValue(r.Form, "pagesize"), 10, 64)
+	botIdsParam := o.getStringValueDefault(r.Form, "botids", "[]")
+
+	if o.Err != nil {
+		return
+	}
+
+	botIds := []string{}
+	o.Err = json.Unmarshal([]byte(botIdsParam), &botIds)
+	if o.Err != nil {
+		return
+	}
+
+	tx := o.Begin(web.db)
+	defer o.CommitOrRollback(tx)
+
+	chatcontacts := o.SyncChatContact(tx, botIds, lastId, pagesize)
+	if o.Err != nil {
+		return
+	}
+
+	o.ok(w, "", chatcontacts)
 }

@@ -145,11 +145,13 @@ func main() {
 
 		go func() {
 			//defer wg.Done()
+			config.Web.Redis = config.Redis
 
 			task := tasks.Tasks{
 				Webhost:    "web",
 				Webport:    config.Web.Port,
 				WebBaseUrl: config.Web.Baseurl,
+				WebConfig:  config.Web,
 			}
 
 			err := task.Serve()

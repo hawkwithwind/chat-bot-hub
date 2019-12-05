@@ -22,6 +22,9 @@ services:
      networks:
       - chatbothub-network
      image: redis:3.2-alpine
+     command: redis-server /usr/local/etc/redis/redis.conf
+     volumes:
+       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
 
   mysql:
     restart: unless-stopped

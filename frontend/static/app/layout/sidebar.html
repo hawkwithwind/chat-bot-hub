@@ -24,14 +24,33 @@
         <a ui-sref="app.manage.botslist" class="nav-link pure-menu-link" >
           <span class="title">机器人列表</span>
         </a>
-      </li>      
+      </li>
       <li class="nav-item pure-menu-item">
-        <a ui-sref="app.manage.chatusers" class="nav-link pure-menu-link" >
+        <a ui-sref="app.manage.clientslist" class="nav-link pure-menu-link" >
+          <span class="title">客户端列表</span>
+        </a>
+      </li>
+      <li class="nav-item pure-menu-item">
+        <a ui-sref="app.manage.failingactions" class="nav-link pure-menu-link" >
+          <span class="title">失败操作列表</span>
+        </a>
+      </li>
+    </ul>
+  </li>
+  <li class="nav-item" ng-class="{'active open':$state.includes('app.contacts')}">
+    <a href="javascript:;" class="nav-link nav-toggle">
+      <i class="fa fa-cubes"></i>
+      <span class="title">联系人</span>
+      <span class="arrow"></span>
+    </a>
+    <ul class="sub-menu">
+      <li class="nav-item pure-menu-item">
+        <a ui-sref="app.contacts.chatusers" class="nav-link pure-menu-link" >
           <span class="title">联系人列表</span>
         </a>
       </li>
       <li class="nav-item pure-menu-item">
-        <a ui-sref="app.manage.chatgroups" class="nav-link pure-menu-link" >
+        <a ui-sref="app.contacts.chatgroups" class="nav-link pure-menu-link" >
           <span class="title">群列表</span>
         </a>
       </li>

@@ -37,11 +37,11 @@
 	      <span ng-if="row.clientType == 'QQBOT'">
 		<a href="javascript:;" ng-click="showQQLogin(row)">QQ登录</a>
 	      </span>
-	      <span ng-if="row.clientType == 'WECHATBOT'">
-		<a href="javascript:;" ng-click="wechatLogin(row)">登录</a> |
-                <a href="javascript:;" ng-click="showScanUrl(row)">取码</a> | <br/>
-		<a href="javascript:;" ng-click="clearLoginInfo(row)">清除登录数据</a> |
-                <a href="javascript:;" ng-click="shutdown(row)">关闭客户端</a>
+	      <span ng-if="row.clientType == 'WECHATBOT' || row.clientType == 'WECHATMACPRO'">
+          <a href="javascript:;" ng-click="wechatLogin(row)">登录</a> |
+          <a href="javascript:;" ng-click="showScanUrl(row)">取码</a> | <br/>
+          <a href="javascript:;" ng-click="clearLoginInfo(row)">清除登录数据</a> |
+          <a href="javascript:;" ng-click="shutdown(row)">关闭客户端</a>
 	      </span>
 	    </span>
 	    <span ng-if="row.status==200">
@@ -144,6 +144,7 @@
 	  <option value="SendTextMessage">文本消息</option>
 	  <option value="SendAppMessage">应用卡片</option>
           <option value="GetContact">获取好友信息</option>
+          <option value="CheckContact">检测是否好友</option>
           <option value="SearchContact">搜索用户</option>
           <option value="AddContact">加好友</option>
 	  <option value="AcceptUser">通过好友申请</option>

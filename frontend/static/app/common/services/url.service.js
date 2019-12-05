@@ -5,6 +5,10 @@
     var result = {
       'login': buildUrl('login'),      
       'bots': buildUrl('bots'),
+      'clients': buildUrl('clients'),
+      'botactions/failing': buildUrl('botactions/failing'),
+      'botactions/recoveraction': buildUrl('botactions/recoveraction'),
+      'botactions/recoverclient': buildUrl('botactions/recoverclient'),
       'filters': buildUrl('filters'),
       'consts': buildUrl('consts'),
       'botlogin': buildUrl('botlogin'),

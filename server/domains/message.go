@@ -59,15 +59,15 @@ const (
 	WechatMessageCollection string = "wechat_message_histories"
 )
 
-func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, botLogin string) error {
+func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, message *WechatMessage, bot *Bot) error {
 	if message.FromUserContact != nil {
 		return nil
 	}
 
 	request := &chatbotweb.GetChatUserSyncRequest{
-		Type:     "WECHATBOT",
+		Type:     bot.ChatbotType,
 		UserName: message.FromUser,
-		BotLogin: botLogin,
+		BotLogin: bot.Login,
 	}
 
 	res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)
@@ -85,7 +85,7 @@ func (o *ErrorHandler) FillWechatMessageContact(wrapper *rpc.GRPCWrapper, messag
 	return o.Err
 }
 
-func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage, botLogin string) error {
+func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messages []*WechatMessage, bot *Bot) error {
 	fromUserMap := &sync.Map{}
 	for _, message := range messages {
 		fromUserMap.Store(message.FromUser, nil)
@@ -103,9 +103,9 @@ func (o *ErrorHandler) FillWechatMessagesContact(wrapper *rpc.GRPCWrapper, messa
 			fromUser := key.(string)
 
 			request := &chatbotweb.GetChatUserSyncRequest{
-				Type:     "WECHATBOT",
+				Type:     bot.ChatbotType,
 				UserName: fromUser,
-				BotLogin: botLogin,
+				BotLogin: bot.Login,
 			}
 
 			res, err := wrapper.WebClient.GetChatUserSync(wrapper.Context, request)
@@ -434,8 +434,8 @@ func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, pee
 
 	var result []*WechatMessage
 
-	// 默认 page size 40 条
-	const pageSize = 40
+	// 默认 page size 15 条
+	const pageSize = 15
 
 	if direction == "new" {
 		if fromMessage != nil {

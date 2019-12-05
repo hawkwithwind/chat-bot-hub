@@ -71,7 +71,7 @@ func (hub *ChatHub) DropBot(clientid string) {
 
 	delete(hub.bots, clientid)
 
-	hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
+	//hub.Info("[DROP BOT] %s %#v", clientid, hub.bots)
 }
 
 func (o *ErrorHandler) FindFromLines(lines []string, target string) bool {
@@ -170,10 +170,19 @@ func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*p
 func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
 	hub.Info("recieve shutdown bot cmd from web %s", req.BotId)
 
-	bot := hub.GetBotById(req.BotId)
-	if bot == nil {
-		hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
-		return &pb.OperationReply{Code: 0, Message: "success"}, nil
+	var bot *ChatBot
+	if len(req.BotId) > 0 {
+		bot = hub.GetBotById(req.BotId)
+		if bot == nil {
+			hub.Info("cannot find bot %s for shutdown, ignore", req.BotId, hub.bots)
+			return &pb.OperationReply{Code: 0, Message: "success"}, nil
+		}
+	} else if len(req.ClientId) > 0 {
+		bot = hub.GetBot(req.ClientId)
+		if bot == nil {
+			hub.Info("cannot find bot %s for shutdown, ignore", req.ClientId, hub.bots)
+			return &pb.OperationReply{Code: 0, Message: "success"}, nil
+		}
 	}
 
 	_, err := bot.shutdown()
@@ -189,6 +198,9 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 	var bot *ChatBot
 	if req.ClientId == "" {
 		bot = hub.GetAvailableBot(req.ClientType)
+		if bot != nil {
+			req.ClientId = bot.ClientId
+		}
 	} else {
 		bot = hub.GetBot(req.ClientId)
 	}
@@ -285,6 +297,8 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Code:    int32(clientError.Code),
 					Message: clientError.Error(),
 				},
+				ClientType: bot.ClientType,
+				ClientId:   bot.ClientId,
 			}, nil
 		default:
 			return &pb.BotActionReply{
@@ -293,9 +307,51 @@ func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*p
 					Code:    int32(utils.UNKNOWN),
 					Message: o.Err.Error(),
 				},
+				ClientType: bot.ClientType,
+				ClientId:   bot.ClientId,
 			}, nil
 		}
 	} else {
-		return &pb.BotActionReply{Success: true, Msg: "DONE"}, nil
+		return &pb.BotActionReply{
+			Success:    true,
+			Msg:        "DONE",
+			ClientType: bot.ClientType,
+			ClientId:   bot.ClientId,
+		}, nil
+	}
+}
+
+func (hub *ChatHub) WebShortCallResponse(ctx context.Context, req *pb.EventReply) (*pb.OperationReply, error) {
+	o := &ErrorHandler{}
+
+	bot := hub.GetBotById(req.BotId)
+
+	if bot == nil {
+		o.Err = fmt.Errorf("b[%s] not found", req.ClientId)
+	}
+
+	req.ClientType = bot.ClientType
+	req.ClientId = bot.ClientId
+
+	if o.Err == nil {
+		hub.Info("calling c[%s] WebShortCall Response \n %s", bot.ClientId, req.Body)
+		o.sendEvent(bot.tunnel, req)
+	}
+
+	if o.Err != nil {
+		switch clientError := o.Err.(type) {
+		case *utils.ClientError:
+			return &pb.OperationReply{
+				Code:    int32(clientError.Code),
+				Message: clientError.Error(),
+			}, nil
+		default:
+			return &pb.OperationReply{
+				Code:    int32(utils.UNKNOWN),
+				Message: o.Err.Error(),
+			}, nil
+		}
+	} else {
+		return &pb.OperationReply{Code: 0, Message: "Done"}, nil
 	}
 }

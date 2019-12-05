@@ -54,7 +54,7 @@ func (server *Server) onHubEvent(event *pb.EventReply) {
 		}
 
 		o := &ErrorHandler{}
-		_ = o.FillWechatMessageContact(wrapper, &wechatMessage, bot.Login)
+		_ = o.FillWechatMessageContact(wrapper, &wechatMessage, bot)
 
 		server.forwardMessage(&wechatMessage, event.BotId)
 

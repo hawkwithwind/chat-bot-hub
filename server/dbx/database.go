@@ -238,6 +238,10 @@ func (o *ErrorHandler) AndIsIn(s Searchable, fieldName string, rhs interface{}) 
 	switch list := rhs.(type) {
 	case []interface{}:
 		var placeholders []string
+		if len(list) == 0 {
+			return ""
+		}
+
 		for _, _ = range list {
 			placeholders = append(placeholders, "?")
 		}

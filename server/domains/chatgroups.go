@@ -24,7 +24,7 @@ type ChatGroup struct {
 	Avatar            sql.NullString `db:"avatar"`
 	MemberCount       int            `db:"membercount"`
 	MaxMemberCount    int            `db:"maxmembercount"`
-	Ext               sql.NullString `db:"ext"`
+	Ext               sql.NullString `db:"ext" search:"-"`
 	LastMsgId         sql.NullString `db:"lastmsgid"`
 	LastSendAt        mysql.NullTime `db:"lastsendat"`
 	CreateAt          mysql.NullTime `db:"createat"`

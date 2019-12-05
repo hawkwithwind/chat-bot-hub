@@ -166,7 +166,7 @@ func (web *WebServer) processUsers() {
 		}
 
 		if (len(users) > sectionLength) || (isTimeout && len(users) > 0) {
-			web.Info("[contacts debug] process %d", len(users))
+			//web.Info("[contacts debug] process %d", len(users))
 			err := web.saveChatUsers(users)
 			if err != nil {
 				web.Error(err, "[Contacts debug] save chatusers failed")
@@ -237,7 +237,7 @@ func (web *WebServer) saveChatUsers(users []ProcessUserInfo) error {
 		if o.Err != nil {
 			web.Error(o.Err, "[Contacts debug] failed to save chatcontacts[%d]", len(ccs))
 		} else {
-			web.Info("[Contacts debug] saved chatuser [%d]", len(users))
+			//web.Info("[Contacts debug] saved chatuser [%d]", len(users))
 		}
 	}
 
@@ -338,8 +338,9 @@ func (web *WebServer) syncGroupMembers(botLogin string, clientType string, group
 
 	actionreply := o.CreateAndRunAction(web, ar)
 
-	if o.Err != nil {
+	if o.Err != nil || actionreply == nil {
 		web.Error(o.Err, "get roommembers %s failed", groupId)
+		return
 	}
 
 	if actionreply == nil || actionreply.Success == false {

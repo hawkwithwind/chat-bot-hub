@@ -111,7 +111,7 @@ func (wsConnection *WsConnection) onGetConversationMessages(payload interface{})
 	}
 	defer wrapper.Cancel()
 
-	_ = o.FillWechatMessagesContact(wrapper, messages, bot.Login)
+	_ = o.FillWechatMessagesContact(wrapper, messages, bot)
 	o.FillWechatMessagesImageSignedURL(server.ossBucket, messages)
 
 	return messages, o.Err
