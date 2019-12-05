@@ -955,15 +955,17 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					if len(foundms) == 0 {
-						if ctx.fluentLogger != nil {
-							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-								if err := ctx.fluentLogger.Post(tag, m); err != nil {
-									ctx.Error(err, "push moment to fluentd failed")
+						go func() {
+							if ctx.fluentLogger != nil {
+								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+									if err := ctx.fluentLogger.Post(tag, m); err != nil {
+										ctx.Error(err, "push moment to fluentd failed")
+									}
+								} else {
+									ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 								}
-							} else {
-								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						}
+						}()
 					}
 
 					if o.Err != nil {
