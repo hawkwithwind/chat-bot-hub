@@ -270,18 +270,22 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 	//ctx.Info("botNotify %s", botId)
 
-	wrapper, err := ctx.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return o.Err
-	}
-	defer wrapper.Cancel()
+	var thebotinfo *pb.BotsInfo
 
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return o.Err
-	}
+	{
+		wrapper, err := ctx.NewGRPCWrapper()
+		if err != nil {
+			o.Err = err
+			return o.Err
+		}
+		defer wrapper.Cancel()
 
+		thebotinfo = o.getTheBot(wrapper, botId)
+		if o.Err != nil {
+			return o.Err
+		}
+	}
+	
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
@@ -375,10 +379,19 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		// }), "NEW")
 		// a_o.CreateAndRunAction(ctx, ar)
 
-		re_o := &ErrorHandler{}
-		// now, initailize bot's filter, and call chathub to create intances and get connected
-		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		{
+			wrapper, err := ctx.NewGRPCWrapper()
+			if err != nil {
+				o.Err = err
+				return o.Err
+			}
+			defer wrapper.Cancel()
+			
+			re_o := &ErrorHandler{}
+			// now, initailize bot's filter, and call chathub to create intances and get connected
+			re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+			re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		}
 		return nil
 
 	case chatbothub.FRIENDREQUEST:
@@ -956,6 +969,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					if o.Err != nil {
 						return o.Err
 					}
+
+					wrapper, err := ctx.NewGRPCWrapper()
+					if err != nil {
+						o.Err = err
+						return o.Err
+					}
+					defer wrapper.Cancel()
 
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
