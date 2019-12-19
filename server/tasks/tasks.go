@@ -60,7 +60,7 @@ func (tasks *Tasks) Serve() error {
 	}()
 	tasks.Info("begin serve actionrequest timeout listener ...")
 
-	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimeline") })
+	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimeline") })
 	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimelinetail") })
 	tasks.cron.AddFunc("0 * * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/recoverfailingactions") })
 
