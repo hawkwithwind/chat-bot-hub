@@ -1,0 +1,60 @@
+web:
+  host: 0.0.0.0
+  port: 9100
+  grpcport: 9101
+  baseurl: http://web:9100
+  secretphrase: "I HAVE NO IDEA ABOUT THIS"
+  sentry: "YOUR SENTRY ENDPOINT"
+  githuboauth:
+    authpath: https://github.com/login/oauth/authorize
+    tokenpath: https://github.com/login/oauth/access_token
+    userpath: https://api.github.com/user
+    useremailpath: https://api.github.com/user/emails
+    clientid: 12345
+    clientsecret: 12345
+    callback: YOUR_GITHUB_WEBHOOK_URL
+  alloworigin:
+    - http://localhost:8080
+    - http://localhost
+    - http://127.0.0.1:8080
+    - http://127.0.0.1
+  mongo:
+    host: mongo
+    port: 27017
+
+streaming:
+    host: 0.0.0.0
+    port: 14148
+    chathubs:
+      - hub:14142
+    chatwebgrpc: 'web:9101'
+    clientid: 'stream001'
+    clienttype: 'streaming'
+
+hub:
+  host: 0.0.0.0
+  port: 14142
+  oss:
+    region: "your-ali-oss region"
+    accesskeyid: "your-ali-oss-accesskey-id"
+    accesskeysecret: "your-ali-oss-access-key-secret"
+    bucket: "your-ali-oss-bucket"
+
+redis:
+  host: redis
+  port: 6379
+  db: 0
+
+fluent:
+  host: fluent
+  port: 24224
+  tags:
+    msg: chatbothub.msg
+    moment: chatbothub.moment
+
+rabbitmq:
+  maintainer: local
+  user: admin
+  password: admin
+  host: rabbitmq
+  port: 5672

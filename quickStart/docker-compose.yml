@@ -1,0 +1,97 @@
+version: '3.5'
+
+x-defualts: &defaults
+  restart: unless-stopped
+  depends_on:
+    - redis
+    - mysql
+    - mongo
+    - rabbitmq
+    - fluent
+  volumes:
+    - ./build:/app
+    - ./config:/config
+
+services:
+     
+  web:
+    <<: *defaults
+    build:
+      context: docker/runtime
+    command: ["./app/server", "-s", "web"]
+    env_file:
+      - ./mysql.env
+      - ./rabbitmq.env
+    ports:
+      - '9100:9100'
+
+  hub:
+    <<: *defaults
+    build:
+      context: docker/runtime
+    command: ./app/server -s hub
+    ports:
+      - '14142:14142'
+
+  tasks:
+    <<: *defaults
+    build:
+      context: docker/runtime
+    command: ./app/server -s tasks
+    env_file:
+      - ./mysql.env
+
+  streaming:
+    <<: *defaults
+    build:
+      context: docker/runtime
+    command: ./app/server -s streaming
+    ports:
+      - '13148:13148'
+  
+  redis:
+    restart: unless-stopped
+    image: redis:3.2-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisData:/data
+
+  mysql:
+    restart: unless-stopped
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      - MYSQL_ROOT_PASSWORD=chathub
+      - MYSQL_DATABASE=chathub
+      - MYSQL_USER=chathub
+      - MYSQL_PASSWORD=chathub
+    volumes:
+      - mysqlData:/var/lib/mysql
+      
+  mongo:
+    restart: unless-stopped
+    image: mongo
+    command: --smallfiles
+    volumes:
+      - mongoData:/data/db
+
+  rabbitmq:
+    restart: unless-stopped
+    image: rabbitmq:3.7-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+
+  fluent:
+    restart: unless-stopped
+    image: fluent/fluentd:v1.6.3-debian-1.0
+
+volumes:
+  mysqlData:
+  mongoData:
+  redisData:
+
+networks:
+  default:
+    name: chatbothub_default
+    
