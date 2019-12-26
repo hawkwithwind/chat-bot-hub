@@ -328,10 +328,14 @@ func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, ar *ActionReques
 	minutekey := ar.redisMinuteKey()
 	timingkey := ar.redisTimingKey()
 
-	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
 	minuteExpire := 60
+	
+	keyExpire := 24 * 60 * 60
+	if daylimit <= 0 {
+		keyExpire = 3 * 60 * 60
+	}
 
 	arstr := o.ToJson(ar)
 
