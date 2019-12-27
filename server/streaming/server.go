@@ -68,7 +68,7 @@ func (server *Server) init() error {
 	o := &ErrorHandler{}
 
 	server.Debug("connecting to mongo, host:%s port:%s\n", server.Config.Mongo.Host, server.Config.Mongo.Port)
-	server.mongoDb = o.NewMongoConn(server.Config.Mongo.Host, server.Config.Mongo.Port)
+	server.mongoDb = o.NewMongoConn(server.Config.Mongo.Host, server.Config.Mongo.Port, server.Config.Mongo.Database)
 	if o.Err != nil {
 		server.Error(o.Err, "connect to mongo failed %s", o.Err)
 		return o.Err
