@@ -388,7 +388,13 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 	key := ar.redisKey()
 	arstr := o.ToJson(ar)
 
-	o.RedisDo(conn, timeout, "SET", key, arstr)
+	var expireTime string
+	expireTime, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "TTL", key))
+	
+	o.RedisSend(conn, "MULTI")
+	o.RedisSend(conn, "SET", key, arstr)
+	o.RedisSend(conn, "EXPIRE", key, expireTime)
+	o.RedisDo(conn, timeout, "EXEC")
 
 	o.UpdateApiLog(apilogdb, ar)
 }
