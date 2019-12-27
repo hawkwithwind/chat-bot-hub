@@ -66,7 +66,7 @@ func (hub *ChatHub) init() {
 
 	o := &ErrorHandler{}
 
-	hub.mongoDb = o.NewMongoConn(hub.Config.Mongo.Host, hub.Config.Mongo.Port)
+	hub.mongoDb = o.NewMongoConn(hub.Config.Mongo.Host, hub.Config.Mongo.Port, hub.Config.Mongo.Database)
 	if o.Err != nil {
 		hub.Error(o.Err, "connect to mongo failed")
 		return

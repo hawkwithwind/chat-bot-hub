@@ -285,7 +285,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 	}
-	
+
 	ctx.Info("notify event %s", eventType)
 
 	if eventType == "CONTACTINFO" {
@@ -386,7 +386,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 				return o.Err
 			}
 			defer wrapper.Cancel()
-			
+
 			re_o := &ErrorHandler{}
 			// now, initailize bot's filter, and call chathub to create intances and get connected
 			re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
@@ -1092,7 +1092,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 		//o.SaveActionRequest(ctx.redispool, localar)
-		o.UpdateActionRequest(ctx.redispool, localar)
+		o.UpdateActionRequest(ctx.redispool, ctx.apilogDb, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
@@ -1360,7 +1360,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	ar.ClientType = actionReply.ClientType
 	ar.ClientId = actionReply.ClientId
 
-	o.SaveActionRequestWLimit(conn, ar,
+	o.SaveActionRequestWLimit(conn, web.apilogDb, ar,
 		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }

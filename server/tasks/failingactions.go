@@ -2,8 +2,10 @@ package tasks
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"strings"
+
+	"github.com/globalsign/mgo"
+	"github.com/gomodule/redigo/redis"
 
 	"github.com/hawkwithwind/chat-bot-hub/server/chatbothub"
 	"github.com/hawkwithwind/chat-bot-hub/server/domains"
@@ -13,6 +15,7 @@ import (
 type ActionRequestTimeoutListener struct {
 	pool              *redis.Pool
 	db                string
+	apilogDb          *mgo.Database
 	tasks             *Tasks
 	keypattern        string
 	ActionHealthCheck domains.HealthCheckConfig
@@ -23,6 +26,7 @@ func (tasks *Tasks) NewActionRequestTimeoutListener() *ActionRequestTimeoutListe
 	return &ActionRequestTimeoutListener{
 		pool:              tasks.redispool,
 		db:                tasks.WebConfig.Redis.Db,
+		apilogDb:          tasks.apilogDb,
 		tasks:             tasks,
 		ActionHealthCheck: tasks.WebConfig.ActionHealthCheck,
 		BotHealthCheck:    tasks.WebConfig.BotHealthCheck,
@@ -83,7 +87,7 @@ func (artl *ActionRequestTimeoutListener) handle(key string) error {
 
 	if ar.Status == "NEW" {
 		ar.Status = "TIMEOUT"
-		o.UpdateActionRequest_(conn, ar)
+		o.UpdateActionRequest_(conn, artl.apilogDb, ar)
 		if o.Err != nil {
 			return o.Err
 		}

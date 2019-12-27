@@ -7,16 +7,18 @@ import (
 )
 
 type MongoConfig struct {
-	Host string
-	Port string
+	Host     string
+	Port     string
+	Database string
 }
 
 const (
-	MongoDatabase       string = "mo-chathub"
+	//MongoDatabase  string = "mo-chathub"
+	WechatMessages string = ""
 	MongoMomentDatabase string = "chatbothub"
 )
 
-func (o *ErrorHandler) NewMongoConn(host string, port string) *mgo.Database {
+func (o *ErrorHandler) NewMongoConn(host string, port string, database string) *mgo.Database {
 	if o.Err != nil {
 		return nil
 	}
@@ -27,7 +29,7 @@ func (o *ErrorHandler) NewMongoConn(host string, port string) *mgo.Database {
 		return nil
 	}
 
-	mongoDb := client.DB(MongoDatabase)
+	mongoDb := client.DB(database)
 
 	return mongoDb
 }

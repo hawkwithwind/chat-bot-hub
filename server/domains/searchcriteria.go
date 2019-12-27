@@ -201,7 +201,7 @@ func (o *ErrorHandler) SelectByCriteria(
 	// 	whereclauseString,
 	// )
 
-	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
+	//fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
 	// var counts []int64
 	// ctxcc, _ := o.DefaultContext()
