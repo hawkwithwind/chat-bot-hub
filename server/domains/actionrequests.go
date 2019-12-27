@@ -390,6 +390,9 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 
 	var expireTime string
 	expireTime, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "TTL", key))
+	if o.ParseInt(expireTime, 10, 64) < 0 {
+		expireTime = "3600"
+	}
 	
 	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
