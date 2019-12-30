@@ -365,7 +365,7 @@ func (bot *ChatBot) loginDone(botId string, login string, loginInfo LoginInfo) (
 	return bot, nil
 }
 
-func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
+func (bot *ChatBot) updateToken(login string, token string, wxData string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} updateToken", bot.ClientType, bot.Login, bot.ClientId)
 
 	if bot.Login != login {
@@ -375,6 +375,7 @@ func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
 	}
 
 	bot.LoginInfo.Token = token
+	bot.LoginInfo.WxData = wxData
 	return bot, nil
 }
 

@@ -791,12 +791,14 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				body := o.FromJson(in.Body)
 				var userName string
 				var token string
+				var wxData string
 				if body != nil {
 					userName = o.FromMap("userName", body, "eventRequest.body", nil).(string)
 					token = o.FromMap("token", body, "eventRequest.body", nil).(string)
+					wxData = o.FromMap("wxData", body, "eventRequest.wxData", nil).(string)
 				}
 				if o.Err == nil {
-					thebot, o.Err = bot.updateToken(userName, token)
+					thebot, o.Err = bot.updateToken(userName, token, wxData)
 				}
 
 				if o.Err == nil {

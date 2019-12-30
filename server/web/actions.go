@@ -335,6 +335,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 	case chatbothub.UPDATETOKEN:
 		if len(logininfo.Token) > 0 {
 			localinfo.Token = logininfo.Token
+			localinfo.WxData = logininfo.WxData
 		}
 		bot.LoginInfo = sql.NullString{String: o.ToJson(localinfo), Valid: true}
 		o.UpdateBot(tx, bot)
