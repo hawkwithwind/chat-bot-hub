@@ -134,6 +134,19 @@ func (o *ErrorHandler) AndEqualString(fieldName string, field sql.NullString) st
 	}
 }
 
+func (o *ErrorHandler) AndEqualStringT(tableName string, fieldName string, field sql.NullString) string {
+	if o.Err != nil {
+		return ""
+	}
+
+	if field.Valid {
+		return fmt.Sprintf("  AND `%s`,`%s`=?", tableName, fieldName)
+	} else {
+		return fmt.Sprintf("  AND (1=1 OR `%s`.`%s`=?)", tableName, fieldName)
+	}
+}
+
+
 func (o *ErrorHandler) AndLikeString(fieldName string, field sql.NullString) string {
 	if o.Err != nil {
 		return ""
