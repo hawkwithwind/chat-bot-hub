@@ -201,7 +201,7 @@ type ChatGroupVO struct {
 	Alias          string         `json:"alias"`
 	NickName       string         `json:"nickname"`
 	Owner          string         `json:"owner"`
-	OwnerDetail    ChatUserVO     `json:"ownerDetail`
+	OwnerDetail    *ChatUserVO    `json:"ownerDetail`
 	Avatar         string         `json:"avatar"`
 	MemberCount    int            `json:"memberCount"`
 	MaxMemberCount int            `json:"maxMemberCount"`
@@ -300,6 +300,23 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 
 	chatgroupvos := make([]ChatGroupVO, 0, len(chatgroups))
 	for _, chatgroup := range chatgroups {
+		var owner *ChatUserVO = nil
+		if chatgroup.OwnerUserName.Valid {
+			owner = &ChatUserVO{
+				UserName:  chatgroup.OwnerUserName.String,
+				NickName:  chatgroup.OwnerNickName.String,
+				Alias:     chatgroup.OwnerAlias.String,
+				Avatar:    chatgroup.OwnerAvatar.String,
+				Sex:       int(chatgroup.OwnerSex.Int64),
+				Country:   chatgroup.OwnerCountry.String,
+				Province:  chatgroup.OwnerProvince.String,
+				City:      chatgroup.OwnerCity.String,
+				Signature: chatgroup.OwnerSignature.String,
+				Remark:    chatgroup.OwnerRemark.String,
+				Label:     chatgroup.OwnerLabel.String,
+			}
+		}
+
 		chatgroupvos = append(chatgroupvos, ChatGroupVO{
 			ChatGroupId: chatgroup.ChatGroupId,
 			GroupName:   chatgroup.GroupName,
@@ -309,21 +326,9 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			Avatar:      chatgroup.Avatar.String,
 			MemberCount: chatgroup.MemberCount,
 			Owner:       chatgroup.Owner,
-			OwnerDetail: ChatUserVO{
-				UserName:  chatgroup.OwnerUserName,
-				NickName:  chatgroup.OwnerNickName,
-				Alias:     chatgroup.OwnerAlias.String,
-				Avatar:    chatgroup.OwnerAvatar.String,
-				Sex:       chatgroup.OwnerSex,
-				Country:   chatgroup.OwnerCountry.String,
-				Province:  chatgroup.OwnerProvince.String,
-				City:      chatgroup.OwnerCity.String,
-				Signature: chatgroup.OwnerSignature.String,
-				Remark:    chatgroup.OwnerRemark.String,
-				Label:     chatgroup.OwnerLabel.String,
-			},
-			CreateAt: utils.JSONTime{chatgroup.CreateAt.Time},
-			UpdateAt: utils.JSONTime{chatgroup.UpdateAt.Time},
+			OwnerDetail: owner,
+			CreateAt:    utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt:    utils.JSONTime{chatgroup.UpdateAt.Time},
 		})
 	}
 

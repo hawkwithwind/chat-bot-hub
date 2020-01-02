@@ -146,7 +146,6 @@ func (o *ErrorHandler) AndEqualStringT(tableName string, fieldName string, field
 	}
 }
 
-
 func (o *ErrorHandler) AndLikeString(fieldName string, field sql.NullString) string {
 	if o.Err != nil {
 		return ""
@@ -163,14 +162,13 @@ func (o *ErrorHandler) AndLikeStringT(tableName string, fieldName string, field 
 	if o.Err != nil {
 		return ""
 	}
-	
+
 	if field.Valid {
 		return fmt.Sprintf("  AND `%s`.`%s` like ? ", tableName, fieldName)
 	} else {
 		return fmt.Sprintf("  AND (1=1 OR `%s`.`%s`=?)", tableName, fieldName)
 	}
 }
-
 
 func (o *ErrorHandler) AndEqual(s Searchable, fieldName string, _ interface{}) string {
 	if o.Err != nil {

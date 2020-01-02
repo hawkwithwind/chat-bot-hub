@@ -35,11 +35,11 @@ type ChatGroup struct {
 
 type ChatGroupExtend struct {
 	ChatGroup
-	OwnerUserName   string         `db:"owner_username"`
+	OwnerUserName   sql.NullString `db:"owner_username"`
 	OwnerAlias      sql.NullString `db:"owner_alias"`
-	OwnerNickName   string         `db:"owner_nickname"`
+	OwnerNickName   sql.NullString `db:"owner_nickname"`
 	OwnerAvatar     sql.NullString `db:"owner_avatar"`
-	OwnerSex        int            `db:"owner_sex"`
+	OwnerSex        sql.NullInt64  `db:"owner_sex"`
 	OwnerCountry    sql.NullString `db:"owner_country"`
 	OwnerProvince   sql.NullString `db:"owner_province"`
 	OwnerCity       sql.NullString `db:"owner_city"`
