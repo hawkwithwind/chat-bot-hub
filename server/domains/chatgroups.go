@@ -419,7 +419,7 @@ LIMIT ?, ?
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
 			o.AndEqualString("groupname", criteria.GroupName),
-			o.AndLikeString("g.nickname", criteria.NickName),
+			o.AndLikeStringT("g", "nickname", criteria.NickName),
 			o.AndEqualString("type", criteria.Type)),
 		accountId,
 		criteria.GroupName.String,
