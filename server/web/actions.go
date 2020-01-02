@@ -400,36 +400,35 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		requestStr := bodystr
 
 		rlogin := ""
-		if thebotinfo.ClientType == chatbothub.WECHATBOT {
+		if thebotinfo.ClientType == chatbothub.WECHATBOT || thebotinfo.ClientType == chatbothub.WECHATMACPRO {
 			reqm := o.FromJson(bodystr)
 			if funptr := o.FromMap("fromUserName", reqm,
 				"friendRequest.fromUserName", nil); funptr != nil {
 				rlogin = funptr.(string)
 			}
 			ctx.Info("%v\n%s", reqm, rlogin)
-		} else if thebotinfo.ClientType == chatbothub.WECHATMACPRO {
-			var msg chatbothub.WechatMacproFriendRequest
-			o.Err = json.Unmarshal([]byte(bodystr), &msg)
-			if o.Err != nil {
-				return o.Err
-			}
-			rlogin = msg.ContactId
-			ctx.Info("%v\n%s", msg, rlogin)
+			// } else if thebotinfo.ClientType == chatbothub.WECHATMACPRO {
+			// 	var msg chatbothub.WechatMacproFriendRequest
+			// 	o.Err = json.Unmarshal([]byte(bodystr), &msg)
+			// 	if o.Err != nil {
+			// 		return o.Err
+			// 	}
+			// 	rlogin = msg.ContactId
+			// 	ctx.Info("%v\n%s", msg, rlogin)
 
-			requestStr = o.ToJson(domains.WechatFriendRequest{
-				FromUserName:    msg.ContactId,
-				FromNickName:    msg.NickName,
-				Alias:           msg.Alias,
-				Content:         msg.Hello,
-				EncryptUserName: msg.Stranger,
-				Ticket:          msg.Ticket,
-				Raw:             bodystr,
-			})
+			// 	requestStr = o.ToJson(domains.WechatFriendRequest{
+			// 		FromUserName:    msg.ContactId,
+			// 		FromNickName:    msg.NickName,
+			// 		Alias:           msg.Alias,
+			// 		Content:         msg.Hello,
+			// 		EncryptUserName: msg.Stranger,
+			// 		Ticket:          msg.Ticket,
+			// 		Raw:             bodystr,
+			// 	})
 
-			if o.Err != nil {
-				return o.Err
-			}
-
+			// 	if o.Err != nil {
+			// 		return o.Err
+			// 	}
 		} else {
 			o.Err = fmt.Errorf("c[%s] friendRequest not supported", thebotinfo.ClientType)
 		}
@@ -664,13 +663,13 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 			bodym := o.FromJson(localar.ActionBody)
 			rlogin := ""
-			if bot.ChatbotType == chatbothub.WECHATBOT {
+			if bot.ChatbotType == chatbothub.WECHATBOT || bot.ChatbotType == chatbothub.WECHATMACPRO {
 				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-			} else if bot.ChatbotType == chatbothub.WECHATMACPRO {
-				rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
-				if len(rlogin) == 0 {
-					rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-				}
+				// } else if bot.ChatbotType == chatbothub.WECHATMACPRO {
+				// 	rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
+				// 	if len(rlogin) == 0 {
+				// 		rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+				// 	}
 			}
 
 			ctx.Info("acceptuser rlogin [%s]", rlogin)

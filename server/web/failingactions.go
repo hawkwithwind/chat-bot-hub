@@ -113,13 +113,13 @@ func (web *WebServer) timeoutFriendRequest(w http.ResponseWriter, r *http.Reques
 		frs := o.GetFriendRequestsByLogin(tx, ar.Login, "")
 		bodym := o.FromJson(ar.ActionBody)
 		rlogin := ""
-		if ar.ClientType == chatbothub.WECHATBOT {
+		if ar.ClientType == chatbothub.WECHATBOT || ar.ClientType == chatbothub.WECHATMACPRO {
 			rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-		} else if ar.ClientType == chatbothub.WECHATMACPRO {
-			rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
-			if len(rlogin) == 0 {
-				rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
-			}
+			// } else if ar.ClientType == chatbothub.WECHATMACPRO {
+			// 	rlogin = o.FromMapString("contactId", bodym, "actionBody", true, "")
+			// 	if len(rlogin) == 0 {
+			// 		rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
+			// 	}
 		}
 		web.Info("timeout acceptuser rlogin [%s]", rlogin)
 
