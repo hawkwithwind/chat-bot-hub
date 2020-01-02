@@ -196,7 +196,6 @@ LIMIT %d
 	}
 
 	query = fmt.Sprintf(query, whereclause, pagesize)
-	fmt.Println("[sync chatcontacts]", query, whereparams)
 
 	chatcontacts := []ChatContact{}
 	ctx, _ := o.DefaultContext()

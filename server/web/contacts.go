@@ -82,6 +82,7 @@ type WechatContactInfo struct {
 	Source          int      `json:"source"`
 	Uin             int64    `json:"uin"`
 	UserName        string   `json:"userName"`
+	Alias           string   `json:"alias"`
 	NickName        string   `json:"nickName"`
 	PyInitial       string   `json:"pyInitial"`
 	QuanPin         string   `json:"quanPin"`
@@ -151,6 +152,7 @@ func (web *WebServer) processUsers() {
 
 			chatuser := o.NewChatUser(info.UserName, thebotinfo.ClientType, info.NickName)
 			chatuser.Sex = info.Sex
+			chatuser.SetAlias(info.Alias)
 			chatuser.SetAvatar(info.SmallHead)
 			chatuser.SetCountry(info.Country)
 			chatuser.SetProvince(info.Provincia)

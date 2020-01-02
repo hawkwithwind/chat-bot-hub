@@ -10,6 +10,7 @@ frontend/node
 frontend/node_modules
 *.DS_Store
 .idea/*
+.vscode/*
 
 # Binaries for programs and plugins
 *.exe

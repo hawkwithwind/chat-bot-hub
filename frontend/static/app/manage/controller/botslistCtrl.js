@@ -328,6 +328,9 @@
       "GetContact": [
         commonParams.userId,
       ],
+      "CheckContact" : [
+        commonParams.userId,
+      ],
       "SearchContact": [
         commonParams.userId,
       ],

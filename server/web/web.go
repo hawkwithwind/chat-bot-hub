@@ -42,14 +42,15 @@ type ErrorHandler struct {
 }
 
 type WebConfig struct {
-	Host     string
-	Port     string
-	GrpcPort string
-	Baseurl  string
-	Redis    utils.RedisConfig
-	Fluent   utils.FluentConfig
-	Mongo    utils.MongoConfig
-	Rabbitmq utils.RabbitMQConfig
+	Host      string
+	Port      string
+	GrpcPort  string
+	Baseurl   string
+	Redis     utils.RedisConfig
+	Fluent    utils.FluentConfig
+	Messagedb utils.MongoConfig
+	Apilogdb  utils.MongoConfig
+	Rabbitmq  utils.RabbitMQConfig
 
 	SecretPhrase string
 	Database     utils.DatabaseConfig
@@ -75,7 +76,8 @@ type WebServer struct {
 	redispool     *redis.Pool
 	db            *dbx.Database
 	store         *sessions.CookieStore
-	mongoDb       *mgo.Database
+	messageDb     *mgo.Database
+	apilogDb      *mgo.Database
 	contactParser *ContactParser
 	accounts      Accounts
 
@@ -106,10 +108,10 @@ func (ctx *WebServer) init() error {
 	}
 
 	o := &ErrorHandler{}
-	ctx.mongoDb = o.NewMongoConn(ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
-	ctx.Info("Mongo host: %s, port: %s", ctx.Config.Mongo.Host, ctx.Config.Mongo.Port)
+	ctx.messageDb = o.NewMongoConn(ctx.Config.Messagedb.Host, ctx.Config.Messagedb.Port, ctx.Config.Messagedb.Database)
+	ctx.Info("Message Mongo host: %s, port: %s", ctx.Config.Messagedb.Host, ctx.Config.Messagedb.Port, ctx.Config.Messagedb.Database)
 
-	if o.EnsuredMongoIndexes(ctx.mongoDb); o.Err != nil {
+	if o.EnsuredMongoIndexes(ctx.messageDb); o.Err != nil {
 		ctx.Error(o.Err, "mongo ensure indexes fail")
 		return o.Err
 	}
@@ -124,6 +126,13 @@ func (ctx *WebServer) init() error {
 		//		ctx.Error(o.Err, "disconnect to mongo failed %s", o.Err)
 		//	}
 		//}
+	}
+
+	ctx.apilogDb = o.NewMongoConn(ctx.Config.Apilogdb.Host, ctx.Config.Apilogdb.Port, ctx.Config.Apilogdb.Database)
+	ctx.Info("Apilog Mongo host: %s, port: %s, database: %s", ctx.Config.Apilogdb.Host, ctx.Config.Apilogdb.Port, ctx.Config.Apilogdb.Database)
+
+	if o.Err != nil {
+		ctx.Error(o.Err, "connect to mongo failed %s", o.Err)
 	}
 
 	retryTimes := 7

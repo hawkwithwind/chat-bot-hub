@@ -91,6 +91,7 @@ const (
 	GetRoomQRCode            string = "GetRoomQRCode"
 	GetContactQRCode         string = "GetContactQRCode"
 	GetContact               string = "GetContact"
+	CheckContact             string = "CheckContact"
 	SearchContact            string = "SearchContact"
 	SyncContact              string = "SyncContact"
 	SnsTimeline              string = "SnsTimeline"
@@ -476,6 +477,7 @@ func (bot *ChatBot) BotAction(arId string, actionType string, body string) error
 		GetRoomQRCode:            (*ChatBot).GetRoomQRCode,
 		GetContactQRCode:         (*ChatBot).GetContactQRCode,
 		GetContact:               (*ChatBot).GetContact,
+		CheckContact:             (*ChatBot).CheckContact,
 		SearchContact:            (*ChatBot).SearchContact,
 		SyncContact:              (*ChatBot).SyncContact,
 		SnsTimeline:              (*ChatBot).SnsTimeline,
@@ -836,6 +838,16 @@ func (bot *ChatBot) GetContact(actionType string, arId string, body string) erro
 	return o.Err
 }
 
+func (bot *ChatBot) CheckContact(actionType string, arId string, body string) error {
+	o := &ErrorHandler{}
+	params := []ActionParam{
+		NewActionParam("userId", false, ""),
+		NewActionParam("alias", true, ""),
+	}
+	o.CommonActionDispatch(bot, arId, body, actionType, params)
+	return o.Err
+}
+
 func (bot *ChatBot) SearchContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 	params := []ActionParam{
@@ -848,7 +860,7 @@ func (bot *ChatBot) SearchContact(actionType string, arId string, body string) e
 
 func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	if bot.ClientType == WECHATBOT {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
 		var msg domains.WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		if o.Err != nil {
@@ -860,15 +872,15 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 			"stranger": msg.EncryptUserName,
 			"ticket":   msg.Ticket,
 		}))
-	} else if bot.ClientType == WECHATMACPRO {
-		var msg WechatMacproFriendRequest
-		o.Err = json.Unmarshal([]byte(body), &msg)
-		if o.Err != nil {
-			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
-		}
+		// } else if bot.ClientType == WECHATMACPRO {
+		// 	var msg WechatMacproFriendRequest
+		// 	o.Err = json.Unmarshal([]byte(body), &msg)
+		// 	if o.Err != nil {
+		// 		return utils.NewClientError(utils.PARAM_INVALID, o.Err)
+		// 	}
 
-		bot.Info("Action AcceptUser %s\n%s", msg.Stranger, msg.Ticket)
-		o.SendAction(bot, arId, AcceptUser, body)
+		// 	bot.Info("Action AcceptUser %s\n%s", msg.Stranger, msg.Ticket)
+		// 	o.SendAction(bot, arId, AcceptUser, body)
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
 			fmt.Errorf("c[%s] not support %s", bot.ClientType, actionType))

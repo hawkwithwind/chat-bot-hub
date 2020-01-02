@@ -434,8 +434,8 @@ func (o *ErrorHandler) GetMessagesHistories(db *mgo.Database, userId string, pee
 
 	var result []*WechatMessage
 
-	// 默认 page size 40 条
-	const pageSize = 40
+	// 默认 page size 15 条
+	const pageSize = 15
 
 	if direction == "new" {
 		if fromMessage != nil {

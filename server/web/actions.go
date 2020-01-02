@@ -270,16 +270,20 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 
 	//ctx.Info("botNotify %s", botId)
 
-	wrapper, err := ctx.NewGRPCWrapper()
-	if err != nil {
-		o.Err = err
-		return o.Err
-	}
-	defer wrapper.Cancel()
+	var thebotinfo *pb.BotsInfo
 
-	thebotinfo := o.getTheBot(wrapper, botId)
-	if o.Err != nil {
-		return o.Err
+	{
+		wrapper, err := ctx.NewGRPCWrapper()
+		if err != nil {
+			o.Err = err
+			return o.Err
+		}
+		defer wrapper.Cancel()
+
+		thebotinfo = o.getTheBot(wrapper, botId)
+		if o.Err != nil {
+			return o.Err
+		}
 	}
 
 	ctx.Info("notify event %s", eventType)
@@ -375,10 +379,19 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		// }), "NEW")
 		// a_o.CreateAndRunAction(ctx, ar)
 
-		re_o := &ErrorHandler{}
-		// now, initailize bot's filter, and call chathub to create intances and get connected
-		re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
-		re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		{
+			wrapper, err := ctx.NewGRPCWrapper()
+			if err != nil {
+				o.Err = err
+				return o.Err
+			}
+			defer wrapper.Cancel()
+
+			re_o := &ErrorHandler{}
+			// now, initailize bot's filter, and call chathub to create intances and get connected
+			re_o.rebuildMsgFilters(ctx, bot, tx, wrapper)
+			re_o.rebuildMomentFilters(ctx, bot, tx, wrapper)
+		}
 		return nil
 
 	case chatbothub.FRIENDREQUEST:
@@ -422,6 +435,9 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 
 		fr := o.NewFriendRequest(bot.BotId, bot.Login, rlogin, requestStr, "NEW")
+		if len(rlogin) < 4 {
+			fr.Status = "INVALID"
+		}
 		o.SaveFriendRequest(tx, fr)
 
 		go func() {
@@ -656,6 +672,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					rlogin = o.FromMapString("fromUserName", bodym, "actionBody", false, "")
 				}
 			}
+
 			ctx.Info("acceptuser rlogin [%s]", rlogin)
 
 			if o.Err != nil {
@@ -916,20 +933,29 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 					}
 
 					if len(foundms) == 0 {
-						if ctx.fluentLogger != nil {
-							if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
-								if err := ctx.fluentLogger.Post(tag, m); err != nil {
-									ctx.Error(err, "push moment to fluentd failed")
+						go func() {
+							if ctx.fluentLogger != nil {
+								if tag, ok := ctx.Config.Fluent.Tags["moment"]; ok {
+									if err := ctx.fluentLogger.Post(tag, m); err != nil {
+										ctx.Error(err, "push moment to fluentd failed")
+									}
+								} else {
+									ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 								}
-							} else {
-								ctx.Error(fmt.Errorf("config.fluent.tags.moment not found"), "push moment to fluentd failed")
 							}
-						}
+						}()
 					}
 
 					if o.Err != nil {
 						return o.Err
 					}
+
+					wrapper, err := ctx.NewGRPCWrapper()
+					if err != nil {
+						o.Err = err
+						return o.Err
+					}
+					defer wrapper.Cancel()
 
 					if foundm := o.GetMomentByBotAndCode(tx, thebotinfo.BotId, m.MomentId); foundm == nil {
 						// fill moment filter only if botId + moment not found (new moment)
@@ -985,7 +1011,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 		//o.SaveActionRequest(ctx.redispool, localar)
-		o.UpdateActionRequest(ctx.redispool, localar)
+		o.UpdateActionRequest(ctx.redispool, ctx.apilogDb, localar)
 
 		go func() {
 			eh := &ErrorHandler{}
@@ -1253,7 +1279,7 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	ar.ClientType = actionReply.ClientType
 	ar.ClientId = actionReply.ClientId
 
-	o.SaveActionRequestWLimit(conn, ar,
+	o.SaveActionRequestWLimit(conn, web.apilogDb, ar,
 		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }

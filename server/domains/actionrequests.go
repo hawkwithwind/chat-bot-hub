@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 
@@ -32,7 +34,8 @@ type ActionResult struct {
 }
 
 const (
-	timeout time.Duration = time.Duration(10) * time.Second
+	timeout          time.Duration = time.Duration(10) * time.Second
+	ApilogCollection string        = "apilogs"
 )
 
 func arQuotaKeyToArId(key string) (string, error) {
@@ -317,7 +320,7 @@ func (o *ErrorHandler) ActionCount(pool *redis.Pool, ar *ActionRequest) (int, in
 	return o.RedisMatchCount(conn, dayKeyPattern), o.RedisMatchCount(conn, hourKeyPattern), o.RedisMatchCount(conn, minuteKeyPattern)
 }
 
-func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, ar *ActionRequest, keytimeout, daylimit, hourlimit, minutelimit int) {
+func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, apilogdb *mgo.Database, ar *ActionRequest, keytimeout, daylimit, hourlimit, minutelimit int) {
 	if o.Err != nil {
 		return
 	}
@@ -328,10 +331,14 @@ func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, ar *ActionReques
 	minutekey := ar.redisMinuteKey()
 	timingkey := ar.redisTimingKey()
 
-	keyExpire := 24 * 60 * 60
 	dayExpire := 24 * 60 * 60
 	hourExpire := 60 * 60
 	minuteExpire := 60
+
+	keyExpire := 24 * 60 * 60
+	if daylimit <= 0 {
+		keyExpire = 3 * 60 * 60
+	}
 
 	arstr := o.ToJson(ar)
 
@@ -358,62 +365,42 @@ func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, ar *ActionReques
 	}
 
 	o.RedisDo(conn, timeout, "EXEC")
+
+	o.UpdateApiLog(apilogdb, ar)
 }
 
-/*
-func (o *ErrorHandler) SaveActionRequest(pool *redis.Pool, ar *ActionRequest) {
+func (o *ErrorHandler) UpdateActionRequest(pool *redis.Pool, apilogdb *mgo.Database, ar *ActionRequest) {
+	if o.Err != nil {
+		return
+	}
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	o.UpdateActionRequest_(conn, apilogdb, ar)
+}
+
+func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Database, ar *ActionRequest) {
 	if o.Err != nil {
 		return
 	}
 
 	key := ar.redisKey()
-	daykey := ar.redisDayKey()
-	hourkey := ar.redisHourKey()
-	minutekey := ar.redisMinuteKey()
-
-	keyExpire := 24 * 60 * 60
-	dayExpire := 24 * 60 * 60
-	hourExpire := 60 * 60
-	minuteExpire := 60
-
-	conn := pool.Get()
-	defer conn.Close()
-
 	arstr := o.ToJson(ar)
+
+	var expireTimeStr string
+	expireTimeStr, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "TTL", key))
+	expireTime := o.ParseInt(expireTimeStr, 10, 64)
+	if expireTime <= 0 {
+		expireTime = 3600
+	}
 
 	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
-	o.RedisSend(conn, "EXPIRE", key, keyExpire)
-	o.RedisSend(conn, "SET", daykey, "1")
-	o.RedisSend(conn, "EXPIRE", daykey, dayExpire)
-	o.RedisSend(conn, "SET", hourkey, "1")
-	o.RedisSend(conn, "EXPIRE", hourkey, hourExpire)
-	o.RedisSend(conn, "SET", minutekey, "1")
-	o.RedisSend(conn, "EXPIRE", minutekey, minuteExpire)
+	o.RedisSend(conn, "EXPIRE", key, expireTime)
 	o.RedisDo(conn, timeout, "EXEC")
-}
-*/
 
-func (o *ErrorHandler) UpdateActionRequest(pool *redis.Pool, ar *ActionRequest) {
-	if o.Err != nil {
-		return
-	}
-
-	conn := pool.Get()
-	defer conn.Close()
-
-	o.UpdateActionRequest_(conn, ar)
-}
-
-func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, ar *ActionRequest) {
-	if o.Err != nil {
-		return
-	}
-
-	key := ar.redisKey()
-	arstr := o.ToJson(ar)
-
-	o.RedisDo(conn, timeout, "SET", key, arstr)
+	o.UpdateApiLog(apilogdb, ar)
 }
 
 func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRequest {
@@ -457,4 +444,27 @@ func (ar *ActionRequest) ToBotActionRequest() *pb.BotActionRequest {
 		ActionType:      ar.ActionType,
 		ActionBody:      ar.ActionBody,
 	}
+}
+
+func (o *ErrorHandler) UpdateApiLog(db *mgo.Database, ar *ActionRequest) {
+	if o.Err != nil {
+		return
+	}
+
+	col := db.C(ApilogCollection)
+
+	_, o.Err = col.Upsert(
+		bson.M{"sys": "chathub", "actionRequestId": ar.ActionRequestId},
+		bson.M{"$set": bson.M{
+			"botWxId":              ar.Login,
+			"clientId":             ar.ClientId,
+			"clientType":           ar.ClientType,
+			"actionType":           ar.ActionType,
+			"actionRequestContent": o.FromJson(ar.ActionBody),
+			"actionReplyContent":   o.FromJson(ar.Result),
+			"status":               ar.Status,
+			"createAt":             ar.CreateAt.Time,
+			"updateAt":             time.Now(),
+		}},
+	)
 }

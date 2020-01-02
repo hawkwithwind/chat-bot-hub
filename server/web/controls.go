@@ -947,6 +947,10 @@ func (web *WebServer) Search(w http.ResponseWriter, r *http.Request) {
 		o.okWithPaging(w, "success", groupvos, paging)
 		return
 
+	case "friendrequests":
+		o.okWithPaging(w, "success", rows, paging)
+		return
+
 	default:
 		o.Err = fmt.Errorf("unknown domain %s", domain)
 		return
@@ -1081,7 +1085,7 @@ func (web *WebServer) GetChatMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wms := o.GetWechatMessages(web.mongoDb.C(
+	wms := o.GetWechatMessages(web.messageDb.C(
 		domains.WechatMessageCollection,
 	).Find(criteria).Sort(
 		"-timestamp",
@@ -1349,7 +1353,8 @@ func (web *WebServer) SearchMessage(w http.ResponseWriter, r *http.Request) {
 		Value string
 	}
 	//var ret *mgo.MapReduceInfo
-	_, o.Err = web.mongoDb.C(domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
+	_, o.Err = web.messageDb.C(
+		domains.WechatMessageCollection).Find(criteria).MapReduce(job, &results)
 	if o.Err != nil {
 		return
 	}

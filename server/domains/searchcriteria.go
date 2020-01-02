@@ -20,6 +20,7 @@ var (
 		"moments":           (*ErrorHandler).NewDefaultMoment,
 		"chatgroupmembers":  (*ErrorHandler).NewDefaultChatGroupMemberExpand,
 		"chatcontactlabels": (*ErrorHandler).NewDefaultChatContactLabel,
+		"friendrequests":    (*ErrorHandler).NewDefaultFriendRequest,
 	}
 
 	searchableOPS = map[string]func(*ErrorHandler, dbx.Searchable, string, interface{}) string{
@@ -200,7 +201,7 @@ func (o *ErrorHandler) SelectByCriteria(
 	// 	whereclauseString,
 	// )
 
-	fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
+	//fmt.Printf("[SEARCH CRITERIA DEBUG]\n%s\n%v\n", sqlquery, whereparams)
 
 	// var counts []int64
 	// ctxcc, _ := o.DefaultContext()

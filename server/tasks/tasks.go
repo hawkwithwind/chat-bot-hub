@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/globalsign/mgo"
 	"github.com/gomodule/redigo/redis"
 	"github.com/robfig/cron"
 
@@ -25,6 +26,7 @@ type Tasks struct {
 	Webport       string
 	WebBaseUrl    string
 	WebConfig     web.WebConfig
+	apilogDb      *mgo.Database
 	redispool     *redis.Pool
 	logger        *log.Logger
 	restfulclient *http.Client
@@ -46,6 +48,12 @@ func (tasks *Tasks) init() {
 		fmt.Sprintf("%s:%s", tasks.WebConfig.Redis.Host, tasks.WebConfig.Redis.Port),
 		tasks.WebConfig.Redis.Db, tasks.WebConfig.Redis.Password)
 
+	o := &ErrorHandler{}
+	tasks.apilogDb = o.NewMongoConn(
+		tasks.WebConfig.Apilogdb.Host,
+		tasks.WebConfig.Apilogdb.Port,
+		tasks.WebConfig.Apilogdb.Database)
+
 	tasks.restfulclient = httpx.NewHttpClient()
 	tasks.logger = log.New(os.Stdout, "[TASKS] ", log.Ldate|log.Ltime)
 	tasks.cron = cron.New()
@@ -60,7 +68,7 @@ func (tasks *Tasks) Serve() error {
 	}()
 	tasks.Info("begin serve actionrequest timeout listener ...")
 
-	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimeline") })
+	tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimeline") })
 	//tasks.cron.AddFunc("0 */5 * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/crawltimelinetail") })
 	tasks.cron.AddFunc("0 * * * * *", func() { tasks.NotifyWebPost("/bots/wechatbots/notify/recoverfailingactions") })
 
