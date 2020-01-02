@@ -33,6 +33,23 @@ type ChatGroup struct {
 	LastSyncMembersAt mysql.NullTime `db:"lastsyncmembersat"`
 }
 
+type ChatGroupExtend struct {
+	ChatGroup
+	OwnerUserName   string         `db:"owner_username"`
+	OwnerAlias      sql.NullString `db:"owner_alias"`
+	OwnerNickName   string         `db:"owner_nickname"`
+	OwnerAvatar     sql.NullString `db:"owner_avatar"`
+	OwnerSex        int            `db:"owner_sex"`
+	OwnerCountry    sql.NullString `db:"owner_country"`
+	OwnerProvince   sql.NullString `db:"owner_province"`
+	OwnerCity       sql.NullString `db:"owner_city"`
+	OwnerSignature  sql.NullString `db:"owner_signature"`
+	OwnerRemark     sql.NullString `db:"owner_remark"`
+	OwnerLabel      sql.NullString `db:"owner_label"`
+	OwnerLastMsgId  sql.NullString `db:"owner_lastmsgid"`
+	OwnerLastSendAt mysql.NullTime `db:"owner_lastsendat"`
+}
+
 const (
 	TN_CHATGROUPS string = "chatgroups"
 )
@@ -349,9 +366,9 @@ type ChatGroupCriteria struct {
 	BotId     sql.NullString
 }
 
-func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, accountId string, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
+func (o *ErrorHandler) GetChatGroups(q dbx.Queryable, accountId string, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroupExtend {
 	if o.Err != nil {
-		return []ChatGroup{}
+		return []ChatGroupExtend{}
 	}
 
 	const query string = `
@@ -371,9 +388,23 @@ g.chatgroupid
 , g.createat
 , g.updateat
 , g.deleteat
+, u.username as owner_username
+, u.alias as owner_alias
+, u.nickname as owner_nickname
+, u.avatar as owner_avatar
+, u.sex as owner_sex
+, u.country as owner_country
+, u.province as owner_province
+, u.city as owner_city
+, u.signature as owner_signature
+, u.remark as owner_remark
+, u.label as owner_label
+, u.lastmsgid as owner_lastmsgid
+, u.lastsendat as owner_lastsendat
 FROM chatgroups as g
 LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
 LEFT JOIN bots as b ON c.botid = b.botid
+LEFT JOIN chatusers as u ON g.owner = u.chatuserid
 WHERE g.deleteat is NULL
 AND b.accountid = ?
 %s /* groupname */
@@ -383,7 +414,7 @@ GROUP BY g.chatgroupid
 ORDER BY createat desc
 LIMIT ?, ?
 `
-	chatgroups := []ChatGroup{}
+	chatgroups := []ChatGroupExtend{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
@@ -398,7 +429,7 @@ LIMIT ?, ?
 		paging.PageSize)
 
 	if o.Err != nil {
-		return []ChatGroup{}
+		return []ChatGroupExtend{}
 	} else {
 		return chatgroups
 	}
@@ -430,20 +461,34 @@ WHERE deleteat is NULL
 	return count[0]
 }
 
-func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroup {
+func (o *ErrorHandler) GetChatGroupsWithBotId(q dbx.Queryable, criteria ChatGroupCriteria, paging utils.Paging) []ChatGroupExtend {
 	if o.Err != nil {
-		return []ChatGroup{}
+		return []ChatGroupExtend{}
 	}
 
 	if criteria.BotId.Valid == false {
 		o.Err = fmt.Errorf("GetChatGroupsWithBotId must set param botId")
-		return []ChatGroup{}
+		return []ChatGroupExtend{}
 	}
 
 	const query string = `
-SELECT g.* 
+SELECT g.*, 
+     u.username as owner_username,
+     u.alias as owner_alias,
+     u.nickname as owner_nickname,
+     u.avatar as owner_avatar,
+     u.sex as owner_sex,
+     u.country as owner_country,
+     u.province as owner_province,
+     u.city as owner_city,
+     u.signature as owner_signature,
+     u.remark as owner_remark,
+     u.label as owner_label,
+     u.lastmsgid as owner_lastmsgid,
+     u.lastsendat as owner_lastsendat
 FROM chatgroups as g
 LEFT JOIN chatcontactgroups as c ON g.chatgroupid = c.chatgroupid
+LEFT JOIN chatusers as u ON g.owner = u.chatuserid
 WHERE g.deleteat is NULL
   AND c.deleteat is NULL
   AND c.botid = ?
@@ -453,7 +498,7 @@ WHERE g.deleteat is NULL
 ORDER BY g.createat desc
 LIMIT ?, ?
 `
-	chatgroups := []ChatGroup{}
+	chatgroups := []ChatGroupExtend{}
 	ctx, _ := o.DefaultContext()
 	o.Err = q.SelectContext(ctx, &chatgroups,
 		fmt.Sprintf(query,
@@ -468,7 +513,7 @@ LIMIT ?, ?
 		paging.PageSize)
 
 	if o.Err != nil {
-		return []ChatGroup{}
+		return []ChatGroupExtend{}
 	} else {
 		return chatgroups
 	}

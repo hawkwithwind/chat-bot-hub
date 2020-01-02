@@ -870,8 +870,8 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 		bot.Info("Action AcceptUser %s\n%s", msg.EncryptUserName, msg.Ticket)
 		o.SendAction(bot, arId, AcceptUser, o.ToJson(map[string]interface{}{
 			"fromUserName": msg.FromUserName,
-			"stranger": msg.EncryptUserName,
-			"ticket":   msg.Ticket,
+			"stranger":     msg.EncryptUserName,
+			"ticket":       msg.Ticket,
 		}))
 		// } else if bot.ClientType == WECHATMACPRO {
 		// 	var msg WechatMacproFriendRequest

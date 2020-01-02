@@ -201,6 +201,7 @@ type ChatGroupVO struct {
 	Alias          string         `json:"alias"`
 	NickName       string         `json:"nickname"`
 	Owner          string         `json:"owner"`
+	OwnerDetail    ChatUserVO     `json:"ownerDetail`
 	Avatar         string         `json:"avatar"`
 	MemberCount    int            `json:"memberCount"`
 	MaxMemberCount int            `json:"maxMemberCount"`
@@ -275,7 +276,7 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 		BotId:     utils.StringNull(botid, ""),
 	}
 
-	var chatgroups []domains.ChatGroup
+	var chatgroups []domains.ChatGroupExtend
 	if criteria.BotId.Valid {
 		chatgroups = o.GetChatGroupsWithBotId(tx,
 			criteria,
@@ -307,8 +308,22 @@ func (ctx *WebServer) getChatGroups(w http.ResponseWriter, r *http.Request) {
 			Alias:       chatgroup.Alias.String,
 			Avatar:      chatgroup.Avatar.String,
 			MemberCount: chatgroup.MemberCount,
-			CreateAt:    utils.JSONTime{chatgroup.CreateAt.Time},
-			UpdateAt:    utils.JSONTime{chatgroup.UpdateAt.Time},
+			Owner:       chatgroup.Owner,
+			OwnerDetail: ChatUserVO{
+				UserName:  chatgroup.OwnerUserName,
+				NickName:  chatgroup.OwnerNickName,
+				Alias:     chatgroup.OwnerAlias.String,
+				Avatar:    chatgroup.OwnerAvatar.String,
+				Sex:       chatgroup.OwnerSex,
+				Country:   chatgroup.OwnerCountry.String,
+				Province:  chatgroup.OwnerProvince.String,
+				City:      chatgroup.OwnerCity.String,
+				Signature: chatgroup.OwnerSignature.String,
+				Remark:    chatgroup.OwnerRemark.String,
+				Label:     chatgroup.OwnerLabel.String,
+			},
+			CreateAt: utils.JSONTime{chatgroup.CreateAt.Time},
+			UpdateAt: utils.JSONTime{chatgroup.UpdateAt.Time},
 		})
 	}
 
