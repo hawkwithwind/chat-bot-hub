@@ -388,12 +388,8 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 	key := ar.redisKey()
 	arstr := o.ToJson(ar)
 
-	var expireTimeStr string
-	fmt.Println("0000000000",o.Err)
-	expireTimeStr, o.Err = redis.String(redis.DoWithTimeout(conn, timeout, "TTL", key))
-	fmt.Println("000000000_1",o.Err)
-	expireTime := o.ParseInt(expireTimeStr, 10, 64)
-	fmt.Println("000000000_2",o.Err)
+	var expireTime int64
+	expireTime, o.Err = redis.Int64(redis.DoWithTimeout(conn, timeout, "TTL", key))
 	
 	if expireTime <= 0 {
 		expireTime = 3600
@@ -409,7 +405,7 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 
 	fmt.Println("3333",o.Err)
 	
-	o.RedisSend(conn, "EXPIRE", key, fmt.Sprintf("%d", expireTime))
+	o.RedisSend(conn, "EXPIRE", key, expireTime)
 
 	fmt.Println("4444",o.Err)
 	o.RedisDo(conn, timeout, "EXEC")
