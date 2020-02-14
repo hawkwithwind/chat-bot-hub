@@ -1011,11 +1011,11 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 		}
 		//o.SaveActionRequest(ctx.redispool, localar)
 
-		fmt.Println("+++++++++")
+		fmt.Println("+++++++++", o.Err)
 		
 		o.UpdateActionRequest(ctx.redispool, ctx.apilogDb, localar)
 
-		fmt.Println("---------")
+		fmt.Println("---------", o.Err)
 
 		go func() {
 			eh := &ErrorHandler{}
