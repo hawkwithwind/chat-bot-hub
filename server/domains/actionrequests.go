@@ -397,7 +397,7 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 
 	o.RedisSend(conn, "MULTI")
 	o.RedisSend(conn, "SET", key, arstr)
-	o.RedisSend(conn, "EXPIRE", key, expireTime)
+	o.RedisSend(conn, "EXPIRE", key, fmt.Sprintf("%d", expireTime))
 	o.RedisDo(conn, timeout, "EXEC")
 
 	o.UpdateApiLog(apilogdb, ar)
