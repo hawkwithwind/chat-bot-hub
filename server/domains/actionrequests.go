@@ -395,25 +395,12 @@ func (o *ErrorHandler) UpdateActionRequest_(conn redis.Conn, apilogdb *mgo.Datab
 		expireTime = 3600
 	}
 
-	fmt.Println("1111",o.Err)
-	
 	o.RedisSend(conn, "MULTI")
-
-	fmt.Println("2222",o.Err)
-	
 	o.RedisSend(conn, "SET", key, arstr)
-
-	fmt.Println("3333",o.Err)
-	
 	o.RedisSend(conn, "EXPIRE", key, expireTime)
-
-	fmt.Println("4444",o.Err)
 	o.RedisDo(conn, timeout, "EXEC")
-
-	fmt.Println("5555",o.Err)
+	
 	o.UpdateApiLog(apilogdb, ar)
-
-	fmt.Println("6666",o.Err)
 }
 
 func (o *ErrorHandler) GetActionRequest(pool *redis.Pool, arid string) *ActionRequest {

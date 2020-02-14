@@ -1010,12 +1010,7 @@ func (ctx *WebServer) processBotNotify(botId string, eventType string, bodystr s
 			return o.Err
 		}
 		//o.SaveActionRequest(ctx.redispool, localar)
-
-		fmt.Println("+++++++++", o.Err)
-		
 		o.UpdateActionRequest(ctx.redispool, ctx.apilogDb, localar)
-
-		fmt.Println("---------", o.Err)
 
 		go func() {
 			eh := &ErrorHandler{}
