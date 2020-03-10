@@ -898,6 +898,7 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		bodym := o.FromJson(body)
 		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
 		aliasList := o.ListValue(o.FromMap("aliasList", bodym, "actionbody", []interface{}{}), true, nil)
+		extend := o.FromMap("extend", bodym, "actionbody", map[string]interface{}{})
 		if o.Err != nil {
 			return utils.NewClientError(utils.PARAM_INVALID, o.Err)
 		}
@@ -905,11 +906,13 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
 			"userList":  memberList,
 			"aliasList": aliasList,
+			"extend": extend,
 		}))
 
 		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{}{
 			"userList":  memberList,
 			"aliasList": aliasList,
+			"extend": extend,
 		}))
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
