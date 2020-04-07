@@ -95,10 +95,28 @@ func (o *ErrorHandler) CommitOrRollback(tx *sqlx.Tx) {
 	}
 	if o.Err != nil {
 		if tx != nil {
-			tx.Rollback()
+			err := tx.Rollback()
+			if err != nil {
+				errMsg := err.Error()
+				fmt.Printf("rollback error %s", errMsg)
+			}
+			if err != nil && err.Error() == "sql: Transaction has already been committed or rolled back" {
+				return
+			}
 		}
 	} else {
-		o.Err = tx.Commit()
+		if tx != nil {
+			err := tx.Commit()
+			if err != nil {
+				errMsg := err.Error()
+				fmt.Printf("rollback error %s", errMsg)
+			}
+			if err != nil && err.Error() == "sql: Transaction has already been committed or rolled back" {
+				return
+			} else {
+				o.Err = err
+			}
+		}
 	}
 }
 
