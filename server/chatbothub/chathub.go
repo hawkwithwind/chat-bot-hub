@@ -560,6 +560,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 								BotId:     newbot.BotId,
 								Login:     newbot.Login,
 								LoginInfo: o.ToJson(newbot.LoginInfo),
+								Flag:      "register",
 							}),
 					})
 					if o.Err != nil {
