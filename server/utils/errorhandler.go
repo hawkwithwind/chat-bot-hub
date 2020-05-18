@@ -20,15 +20,7 @@ func (ctx *ErrorHandler) BJTimeFromUnix(timestamp int64) time.Time {
 		return time.Unix(0, 0)
 	}
 
-	tm := time.Unix(timestamp, 0)
-
-	var loc *time.Location
-	loc, ctx.Err = time.LoadLocation("Asia/Chongqing")
-	if ctx.Err == nil {
-		return tm.In(loc)
-	}
-
-	return time.Unix(0, 0)
+	return time.Unix(timestamp/1000, 0)
 }
 
 func (ctx *ErrorHandler) ParseInt(s string, base int, bitsize int) int64 {
