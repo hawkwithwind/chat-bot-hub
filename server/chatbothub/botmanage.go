@@ -142,6 +142,7 @@ type LoginBody struct {
 	Login     string `json:"login"`
 	Password  string `json:"password"`
 	LoginInfo string `json:"loginInfo"`
+	Flag      string `json:"flag"`
 }
 
 func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
@@ -234,6 +235,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 			Login:     req.Login,
 			Password:  req.Password,
 			LoginInfo: req.LoginInfo,
+			Flag:      "login",
 		})
 
 		o.sendEvent(bot.tunnel, &pb.EventReply{
