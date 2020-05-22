@@ -189,6 +189,7 @@ const (
 	LOGINDONE            string = "LOGINDONE"
 	LOGINFAILED          string = "LOGINFAILED"
 	LOGOUTDONE           string = "LOGOUTDONE"
+	RELOGIN              string = "RELOGIN"
 	BOTMIGRATE           string = "BOTMIGRATE"
 	UPDATETOKEN          string = "UPDATETOKEN"
 	MESSAGE              string = "MESSAGE"
@@ -834,6 +835,9 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				hub.Info("LOGINFAILED %v", in)
 				thebot, o.Err = bot.loginFail(in.Body)
 
+			case RELOGIN :
+				hub.Info("RELOGIN %v", in)
+				thebot, o.Err = bot.reLogin(in.Body)
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE c[%s]", in)
 				thebot, o.Err = bot.logoutDone(in.Body)

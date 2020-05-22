@@ -400,6 +400,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			0:   "未连接",
 			1:   "初始化",
 			100: "准备登录",
+			120: "等待二次登录",
 			150: "等待扫码",
 			151: "登录失败",
 			190: "登录接入中",

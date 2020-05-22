@@ -219,7 +219,7 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		}
 
 		thebot := hub.GetBotById(req.BotId)
-		if thebot != nil {
+		if thebot != nil && thebot.Status == WorkingLoggedIn {
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("bot %s already login, should not login again", req.BotId),
 				ClientError: &pb.OperationReply{

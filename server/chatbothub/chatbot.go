@@ -22,8 +22,10 @@ const (
 	BeginNew            ChatBotStatus = 0
 	BeginRegistered     ChatBotStatus = 1
 	LoggingPrepared     ChatBotStatus = 100
+	ReLogin             ChatBotStatus = 120
 	LoggingChallenged   ChatBotStatus = 150
 	LoggingFailed       ChatBotStatus = 151
+	LoggingScanFailed   ChatBotStatus = 152
 	LoggingStaging      ChatBotStatus = 190
 	WorkingLoggedIn     ChatBotStatus = 200
 	ShuttingdownDone    ChatBotStatus = 404
@@ -35,8 +37,10 @@ func (status ChatBotStatus) String() string {
 		BeginNew:            "新建",
 		BeginRegistered:     "已初始化",
 		LoggingPrepared:     "准备登录",
+		ReLogin:             "二次登录",
 		LoggingChallenged:   "等待扫码",
 		LoggingFailed:       "登录失败",
+		LoggingScanFailed:   "二维码失效",
 		LoggingStaging:      "登录接入中",
 		WorkingLoggedIn:     "已登录",
 		FailingDisconnected: "连接断开",
@@ -312,6 +316,18 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	}
 
 	bot.ScanUrl = url
+	bot.Status = LoggingChallenged
+	return bot, nil
+}
+
+func (bot *ChatBot) loginScanFailed(url string) (*ChatBot, error) {
+	if bot.Status != LoggingChallenged {
+		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
+			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
+	}
+
+	bot.ScanUrl = ""
+	bot.Status = LoggingScanFailed
 	return bot, nil
 }
 
@@ -382,7 +398,7 @@ func (bot *ChatBot) updateToken(login string, token string) (*ChatBot, error) {
 func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginFail", bot.ClientType, bot.Login, bot.ClientId)
 
-	if bot.Status != LoggingPrepared {
+	if bot.Status != LoggingPrepared && bot.Status != ReLogin {
 		err := fmt.Errorf("bot status %s cannot loginFail", bot.Status)
 		bot.Error(err, "UNEXPECTED BEHAVIOR")
 		return bot, err
@@ -392,6 +408,21 @@ func (bot *ChatBot) loginFail(errmsg string) (*ChatBot, error) {
 	bot.Status = LoggingFailed
 	return bot, nil
 }
+
+func (bot *ChatBot) reLogin(errmsg string) (*ChatBot, error) {
+	bot.Info("c[%s:%s]{%s} reLogin", bot.ClientType, bot.Login, bot.ClientId)
+
+	if bot.Status != LoggingPrepared {
+		err := fmt.Errorf("bot status %s cannot loginFail", bot.Status)
+		bot.Error(err, "UNEXPECTED BEHAVIOR")
+		return bot, err
+	}
+
+	bot.errmsg = errmsg
+	bot.Status = ReLogin
+	return bot, nil
+}
+
 
 func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} logoutDone", bot.ClientType, bot.Login, bot.ClientId)
