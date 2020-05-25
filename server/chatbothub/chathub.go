@@ -186,6 +186,7 @@ const (
 	LOGOUT               string = "LOGOUT"
 	SHUTDOWN             string = "SHUTDOWN"
 	LOGINSCAN            string = "LOGINSCAN"
+	LOGINSCANFAILED      string = "LOGINSCANFAILED"
 	LOGINDONE            string = "LOGINDONE"
 	LOGINFAILED          string = "LOGINFAILED"
 	LOGOUTDONE           string = "LOGOUTDONE"
@@ -790,6 +791,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
+			case LOGINSCANFAILED :
+				hub.Info("LOGINSCANFAILED %v", in)
+				thebot, o.Err = bot.loginScanFailed(in.Body)
+
 			case UPDATETOKEN:
 				body := o.FromJson(in.Body)
 				var userName string
@@ -838,6 +843,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case RELOGIN :
 				hub.Info("RELOGIN %v", in)
 				thebot, o.Err = bot.reLogin(in.Body)
+
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE c[%s]", in)
 				thebot, o.Err = bot.logoutDone(in.Body)

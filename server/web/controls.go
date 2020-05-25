@@ -403,6 +403,7 @@ func (ctx *WebServer) getConsts(w http.ResponseWriter, r *http.Request) {
 			120: "等待二次登录",
 			150: "等待扫码",
 			151: "登录失败",
+			152: "二维码失效",
 			190: "登录接入中",
 			200: "已登录",
 			500: "连接断开",

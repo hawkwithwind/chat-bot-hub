@@ -230,7 +230,7 @@ func (bot *ChatBot) pingloop() error {
 }
 
 func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
-	if bot.Status != BeginRegistered && bot.Status != LoggingFailed {
+	if bot.Status != BeginRegistered && bot.Status != LoggingFailed && bot.Status != LoggingScanFailed {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot login", bot.Status))
 	}
@@ -320,13 +320,13 @@ func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
 	return bot, nil
 }
 
-func (bot *ChatBot) loginScanFailed(url string) (*ChatBot, error) {
+func (bot *ChatBot) loginScanFailed(errmsg string) (*ChatBot, error) {
 	if bot.Status != LoggingChallenged {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
 	}
 
-	bot.ScanUrl = ""
+	bot.errmsg = errmsg
 	bot.Status = LoggingScanFailed
 	return bot, nil
 }
@@ -334,7 +334,12 @@ func (bot *ChatBot) loginScanFailed(url string) (*ChatBot, error) {
 func (bot *ChatBot) loginStaging(botId string, login string, loginInfo LoginInfo) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} loginStaging", bot.ClientType, bot.Login, bot.ClientId)
 
-	if bot.Status != BeginRegistered && bot.Status != LoggingPrepared {
+	if bot.Status != BeginRegistered &&
+		bot.Status != LoggingPrepared &&
+		bot.Status != LoggingChallenged &&
+		bot.Status != LoggingScanFailed &&
+		bot.Status != LoggingFailed &&
+		bot.Status != ReLogin {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot c[%s]{%s} status %s cannot loginDone", bot.ClientType, bot.ClientId, bot.Status))
 	}
@@ -422,7 +427,6 @@ func (bot *ChatBot) reLogin(errmsg string) (*ChatBot, error) {
 	bot.Status = ReLogin
 	return bot, nil
 }
-
 
 func (bot *ChatBot) logoutDone(errmsg string) (*ChatBot, error) {
 	bot.Info("c[%s:%s]{%s} logoutDone", bot.ClientType, bot.Login, bot.ClientId)
