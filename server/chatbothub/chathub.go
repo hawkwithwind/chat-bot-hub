@@ -186,9 +186,11 @@ const (
 	LOGOUT               string = "LOGOUT"
 	SHUTDOWN             string = "SHUTDOWN"
 	LOGINSCAN            string = "LOGINSCAN"
+	LOGINSCANFAILED      string = "LOGINSCANFAILED"
 	LOGINDONE            string = "LOGINDONE"
 	LOGINFAILED          string = "LOGINFAILED"
 	LOGOUTDONE           string = "LOGOUTDONE"
+	RELOGIN              string = "RELOGIN"
 	BOTMIGRATE           string = "BOTMIGRATE"
 	UPDATETOKEN          string = "UPDATETOKEN"
 	MESSAGE              string = "MESSAGE"
@@ -789,6 +791,16 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
+			case LOGINSCANFAILED :
+				hub.Info("LOGINSCANFAILED %v", in)
+				body := o.FromJson(in.Body)
+				var errMsg string
+				if body != nil {
+					errMsg = o.FromMapString("errMsg", body, "eventRequest.body", true, "")
+				}
+
+				thebot, o.Err = bot.loginScanFailed(errMsg)
+
 			case UPDATETOKEN:
 				body := o.FromJson(in.Body)
 				var userName string
@@ -832,7 +844,21 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			case LOGINFAILED:
 				hub.Info("LOGINFAILED %v", in)
-				thebot, o.Err = bot.loginFail(in.Body)
+				body := o.FromJson(in.Body)
+				var errMsg string
+				if body != nil {
+					errMsg = o.FromMapString("errMsg", body, "eventRequest.body", true, "")
+				}
+				thebot, o.Err = bot.loginFail(errMsg)
+
+			case RELOGIN :
+				hub.Info("RELOGIN %v", in)
+				body := o.FromJson(in.Body)
+				var errMsg string
+				if body != nil {
+					errMsg = o.FromMapString("errMsg", body, "eventRequest.body", true, "")
+				}
+				thebot, o.Err = bot.reLogin(errMsg)
 
 			case LOGOUTDONE:
 				hub.Info("LOGOUTDONE c[%s]", in)

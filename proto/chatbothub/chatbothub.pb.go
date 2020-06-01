@@ -527,7 +527,7 @@ type BotsInfo struct {
 	LastPing             int64    `protobuf:"varint,5,opt,name=lastPing,proto3" json:"lastPing,omitempty"`
 	Login                string   `protobuf:"bytes,6,opt,name=login,proto3" json:"login,omitempty"`
 	LoginInfo            string   `protobuf:"bytes,7,opt,name=loginInfo,proto3" json:"loginInfo,omitempty"`
-	Status               int32    `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
+	Status               int32    `protobuf:"varint,8,opt,name=status,proto3" json:"status"`
 	FilterInfo           string   `protobuf:"bytes,9,opt,name=filterInfo,proto3" json:"filterInfo,omitempty"`
 	MomentFilterInfo     string   `protobuf:"bytes,10,opt,name=momentFilterInfo,proto3" json:"momentFilterInfo,omitempty"`
 	BotId                string   `protobuf:"bytes,11,opt,name=botId,proto3" json:"botId,omitempty"`

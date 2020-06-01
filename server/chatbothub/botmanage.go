@@ -197,29 +197,21 @@ func (hub *ChatHub) BotShutdown(ctx context.Context, req *pb.BotLogoutRequest) (
 func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.BotLoginReply, error) {
 	hub.Info("recieve login bot cmd from web %s: %s %s", req.ClientId, req.ClientType, req.Login)
 	var bot *ChatBot
-	if req.ClientId == "" {
-		bot = hub.GetAvailableBot(req.ClientType)
-		if bot != nil {
-			req.ClientId = bot.ClientId
-		}
-	} else {
-		bot = hub.GetBot(req.ClientId)
+	o := &ErrorHandler{}
+
+	if req.BotId == "" {
+		return &pb.BotLoginReply{
+			Msg: fmt.Sprintf("Login Bot Failed, BotId not set"),
+			ClientError: &pb.OperationReply{
+				Code:    int32(utils.PARAM_REQUIRED),
+				Message: fmt.Sprintf("Login Bot Failed, BotId not set"),
+			},
+		}, nil
 	}
 
-	o := &ErrorHandler{}
+	bot = hub.GetBotById(req.BotId)
 	if bot != nil {
-		if req.BotId == "" {
-			return &pb.BotLoginReply{
-				Msg: fmt.Sprintf("Login Bot Failed, BotId not set"),
-				ClientError: &pb.OperationReply{
-					Code:    int32(utils.PARAM_REQUIRED),
-					Message: fmt.Sprintf("Login Bot Failed, BotId not set"),
-				},
-			}, nil
-		}
-
-		thebot := hub.GetBotById(req.BotId)
-		if thebot != nil {
+		if bot.Status == WorkingLoggedIn {
 			return &pb.BotLoginReply{
 				Msg: fmt.Sprintf("bot %s already login, should not login again", req.BotId),
 				ClientError: &pb.OperationReply{
@@ -228,54 +220,60 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 				},
 			}, nil
 		}
-
-		bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
-		body := o.ToJson(LoginBody{
-			BotId:     req.BotId,
-			Login:     req.Login,
-			Password:  req.Password,
-			LoginInfo: req.LoginInfo,
-			Flag:      "login",
-		})
-
-		o.sendEvent(bot.tunnel, &pb.EventReply{
-			EventType:  LOGIN,
-			ClientType: req.ClientType,
-			ClientId:   req.ClientId,
-			Body:       body,
-		})
 	} else {
 		if req.ClientId == "" {
-			o.Err = utils.NewClientError(utils.RESOURCE_INSUFFICIENT,
-				fmt.Errorf("cannot find available client for login"))
+			bot = hub.GetAvailableBot(req.ClientType)
+			if bot != nil {
+				req.ClientId = bot.ClientId
+			}
 		} else {
-			o.Err = utils.NewClientError(utils.RESOURCE_NOT_FOUND,
-				fmt.Errorf("cannot find bot[%s] %s", req.ClientType, req.ClientId))
+			bot = hub.GetBot(req.ClientId)
+		}
+		if bot == nil {
+			if req.ClientId == "" {
+				return &pb.BotLoginReply{
+					Msg: fmt.Sprintf("LOGIN BOT FAILED"),
+					ClientError: &pb.OperationReply{
+						Code:    int32(utils.RESOURCE_INSUFFICIENT),
+						Message: "cannot find available client for login",
+					},
+				}, nil
+			}
+			return &pb.BotLoginReply{
+				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
+				ClientError: &pb.OperationReply{
+					Code:    int32(utils.RESOURCE_NOT_FOUND),
+					Message: fmt.Sprintf("cannot find bot[%s] %s", req.ClientType, req.ClientId),
+				},
+			}, nil
 		}
 	}
 
+	bot, o.Err = bot.prepareLogin(req.BotId, req.Login)
 	if o.Err != nil {
-		switch clientError := o.Err.(type) {
-		case *utils.ClientError:
-			return &pb.BotLoginReply{
-				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: &pb.OperationReply{
-					Code:    int32(clientError.Code),
-					Message: clientError.Error(),
-				},
-			}, nil
-		default:
-			return &pb.BotLoginReply{
-				Msg: fmt.Sprintf("LOGIN BOT FAILED"),
-				ClientError: &pb.OperationReply{
-					Code:    int32(utils.UNKNOWN),
-					Message: o.Err.Error(),
-				},
-			}, nil
-		}
-	} else {
-		return &pb.BotLoginReply{Msg: "LOGIN BOT DONE"}, nil
+		return &pb.BotLoginReply{
+			Msg: fmt.Sprintf("LOGIN BOT FAILED"),
+			ClientError: &pb.OperationReply{
+				Code:    int32(utils.STATUS_INCONSISTENT),
+				Message: fmt.Sprintf("bot status %s cannot login", bot.Status),
+			},
+		}, nil
 	}
+	body := o.ToJson(LoginBody{
+		BotId:     req.BotId,
+		Login:     req.Login,
+		Password:  req.Password,
+		LoginInfo: req.LoginInfo,
+		Flag:      "login",
+	})
+
+	o.sendEvent(bot.tunnel, &pb.EventReply{
+		EventType:  LOGIN,
+		ClientType: bot.ClientType,
+		ClientId:   bot.ClientId,
+		Body:       body,
+	})
+	return &pb.BotLoginReply{Msg: "LOGIN BOT DONE"}, nil
 }
 
 func (hub *ChatHub) BotAction(ctx context.Context, req *pb.BotActionRequest) (*pb.BotActionReply, error) {
