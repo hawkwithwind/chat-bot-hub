@@ -369,6 +369,30 @@ func (o *ErrorHandler) SaveActionRequestWLimit(conn redis.Conn, apilogdb *mgo.Da
 	o.UpdateApiLog(apilogdb, ar)
 }
 
+func (o *ErrorHandler) SaveActionRequest(conn redis.Conn, apilogdb *mgo.Database, ar *ActionRequest, keytimeout int) {
+	if o.Err != nil {
+		return
+	}
+
+	key := ar.redisKey()
+	timingkey := ar.redisTimingKey()
+
+	keyExpire := 24 * 60 * 60
+
+	arstr := o.ToJson(ar)
+
+	o.RedisSend(conn, "MULTI")
+	o.RedisSend(conn, "SET", key, arstr)
+	o.RedisSend(conn, "EXPIRE", key, keyExpire)
+
+	o.RedisSend(conn, "SET", timingkey, "1")
+	o.RedisSend(conn, "EXPIRE", timingkey, keytimeout)
+
+	o.RedisDo(conn, timeout, "EXEC")
+
+	o.UpdateApiLog(apilogdb, ar)
+}
+
 func (o *ErrorHandler) UpdateActionRequest(pool *redis.Pool, apilogdb *mgo.Database, ar *ActionRequest) {
 	if o.Err != nil {
 		return

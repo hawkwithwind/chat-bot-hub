@@ -1212,50 +1212,50 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 
 	conn := web.redispool.Get()
 	defer conn.Close()
-
-	if !o.ActionIsHealthy(conn, ar) {
-		return nil
-	}
-
-	daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
-
-	dayCount := -2
-	if daylimit > 0 {
-		dayCount = o.ActionCountDaily(conn, ar)
-	}
-
-	hourCount := -2
-	if hourlimit > 0 {
-		hourCount = o.ActionCountHourly(conn, ar)
-	}
-
-	minuteCount := -2
-	if minutelimit > 0 {
-		minuteCount = o.ActionCountMinutely(conn, ar)
-	}
-
-	web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
-	if o.Err != nil {
-		return nil
-	}
-
-	if dayCount > daylimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
-			fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
-		return nil
-	}
-
-	if hourCount > hourlimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
-			fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
-		return nil
-	}
-
-	if minuteCount > minutelimit {
-		o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
-			fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
-		return nil
-	}
+	//
+	//if !o.ActionIsHealthy(conn, ar) {
+	//	return nil
+	//}
+	//
+	//daylimit, hourlimit, minutelimit := o.GetRateLimit(ar.ActionType)
+	//
+	//dayCount := -2
+	//if daylimit > 0 {
+	//	dayCount = o.ActionCountDaily(conn, ar)
+	//}
+	//
+	//hourCount := -2
+	//if hourlimit > 0 {
+	//	hourCount = o.ActionCountHourly(conn, ar)
+	//}
+	//
+	//minuteCount := -2
+	//if minutelimit > 0 {
+	//	minuteCount = o.ActionCountMinutely(conn, ar)
+	//}
+	//
+	//web.Info("action count %d, %d, %d", dayCount, hourCount, minuteCount)
+	//if o.Err != nil {
+	//	return nil
+	//}
+	//
+	//if dayCount > daylimit {
+	//	o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+	//		fmt.Errorf("%s:%s exceeds day limit %d", ar.Login, ar.ActionType, daylimit))
+	//	return nil
+	//}
+	//
+	//if hourCount > hourlimit {
+	//	o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+	//		fmt.Errorf("%s:%s exceeds hour limit %d", ar.Login, ar.ActionType, hourlimit))
+	//	return nil
+	//}
+	//
+	//if minuteCount > minutelimit {
+	//	o.Err = utils.NewClientError(utils.RESOURCE_QUOTA_LIMIT,
+	//		fmt.Errorf("%s:%s exceeds minute limit %d", ar.Login, ar.ActionType, minutelimit))
+	//	return nil
+	//}
 
 	web.Info("action request is " + o.ToJson(ar))
 
@@ -1278,8 +1278,10 @@ func (o *ErrorHandler) CreateAndRunAction(web *WebServer, ar *domains.ActionRequ
 	ar.ClientType = actionReply.ClientType
 	ar.ClientId = actionReply.ClientId
 
-	o.SaveActionRequestWLimit(conn, web.apilogDb, ar,
-		web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
+	o.SaveActionRequest(conn, web.apilogDb, ar, web.Config.ActionTimeout)
+
+	//o.SaveActionRequestWLimit(conn, web.apilogDb, ar,
+	//	web.Config.ActionTimeout, daylimit, hourlimit, minutelimit)
 	return actionReply
 }
 
