@@ -233,7 +233,7 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered &&
 		bot.Status != LoggingFailed &&
 		bot.Status != LoggingScanFailed &&
-		bot.Status != ReLogin{
+		bot.Status != ReLogin {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot login", bot.Status))
 	}
@@ -313,7 +313,8 @@ func (bot *ChatBot) logout() (*ChatBot, error) {
 }
 
 func (bot *ChatBot) loginScan(url string) (*ChatBot, error) {
-	if bot.Status != LoggingPrepared {
+	if bot.Status != LoggingPrepared &&
+		bot.Status != ReLogin {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot loginScan", bot.Status))
 	}
@@ -944,13 +945,13 @@ func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) erro
 		bot.Info("[CREATEROOM DEBUG] %s", o.ToJson(map[string]interface{}{
 			"userList":  memberList,
 			"aliasList": aliasList,
-			"extend": extend,
+			"extend":    extend,
 		}))
 
 		o.SendAction(bot, arId, CreateRoom, o.ToJson(map[string]interface{}{
 			"userList":  memberList,
 			"aliasList": aliasList,
-			"extend": extend,
+			"extend":    extend,
 		}))
 	} else {
 		return utils.NewClientError(utils.METHOD_UNSUPPORTED,
