@@ -17,7 +17,7 @@ import (
 
 type MsgSource struct {
 	Silence     uint64 `json:"silence" bson:"silence"`
-	AtUserList  string `json:"atUserList" bson:"atUserList"`
+	AtUserList  []string `json:"atUserList" bson:"atUserList"`
 	MemberCount uint64 `json:"memberCount" bson:"memberCount"`
 }
 
