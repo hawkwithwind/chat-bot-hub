@@ -806,6 +806,13 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 	clientId := o.getStringValueDefault(r.Form, "clientId", "")
 	login := o.getStringValueDefault(r.Form, "login", "")
 	pass := o.getStringValueDefault(r.Form, "password", "")
+	isForceLoginString := o.getStringValueDefault(r.Form, "isForceLogin", "false")
+	var isForceLogin bool
+	if isForceLoginString == "false"{
+		isForceLogin = false
+	} else {
+		isForceLogin = true
+	}
 	if o.Err != nil {
 		return
 	}
@@ -851,6 +858,7 @@ func (ctx *WebServer) botLogin(w http.ResponseWriter, r *http.Request) {
 		Password:   pass,
 		LoginInfo:  logininfo,
 		BotId:      botId,
+		IsForceLogin: isForceLogin,
 	})
 
 	o.ok(w, "", loginreply)

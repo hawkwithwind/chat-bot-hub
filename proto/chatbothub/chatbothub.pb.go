@@ -654,6 +654,7 @@ type BotLoginRequest struct {
 	NotifyUrl            string   `protobuf:"bytes,5,opt,name=notifyUrl,proto3" json:"notifyUrl,omitempty"`
 	LoginInfo            string   `protobuf:"bytes,6,opt,name=loginInfo,proto3" json:"loginInfo,omitempty"`
 	BotId                string   `protobuf:"bytes,7,opt,name=botId,proto3" json:"botId,omitempty"`
+	IsForceLogin         bool     `protobuf:"varint,8,opt,name=isForceLogin,proto3" json:"isForceLogin,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -731,6 +732,12 @@ func (m *BotLoginRequest) GetBotId() string {
 		return m.BotId
 	}
 	return ""
+}
+func (m *BotLoginRequest) GetIsForceLogin() bool {
+	if m != nil {
+		return m.IsForceLogin
+	}
+	return false
 }
 
 type BotLogoutRequest struct {
