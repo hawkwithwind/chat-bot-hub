@@ -124,6 +124,7 @@ message BotLoginRequest {
   string notifyUrl = 5;
   string loginInfo = 6;
   string botId = 7;
+  bool isForceLogin = 8;
 }
 
 message BotLogoutRequest {

@@ -117,6 +117,17 @@
       })
     }
 
+    $scope.wechatForceLogin = (row) => {
+      buildModel('botlogin', {
+        clientId: row.clientId,
+        clientType: row.clientType,
+        botId: row.botId,
+        isForceLogin: "true"
+      }).post((data) => {
+        toastr.success(data, '登录成功')
+      })
+    }
+
     $scope.clearLoginInfo = (row) => {
       buildPromise(buildModelResId('bots', row.botId + '/clearlogininfo').update((data) => {
         toastr.success(data, '清除成功')

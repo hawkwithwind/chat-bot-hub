@@ -138,11 +138,12 @@ func (ctx *ErrorHandler) sendEvent(tunnel pb.ChatBotHub_EventTunnelServer, event
 }
 
 type LoginBody struct {
-	BotId     string `json:"botId"`
-	Login     string `json:"login"`
-	Password  string `json:"password"`
-	LoginInfo string `json:"loginInfo"`
-	Flag      string `json:"flag"`
+	BotId        string `json:"botId"`
+	Login        string `json:"login"`
+	Password     string `json:"password"`
+	LoginInfo    string `json:"loginInfo"`
+	Flag         string `json:"flag"`
+	IsForceLogin bool   `json:"isForceLogin"`
 }
 
 func (hub *ChatHub) BotLogout(ctx context.Context, req *pb.BotLogoutRequest) (*pb.OperationReply, error) {
@@ -260,11 +261,12 @@ func (hub *ChatHub) BotLogin(ctx context.Context, req *pb.BotLoginRequest) (*pb.
 		}, nil
 	}
 	body := o.ToJson(LoginBody{
-		BotId:     req.BotId,
-		Login:     req.Login,
-		Password:  req.Password,
-		LoginInfo: req.LoginInfo,
-		Flag:      "login",
+		BotId:        req.BotId,
+		Login:        req.Login,
+		Password:     req.Password,
+		LoginInfo:    req.LoginInfo,
+		Flag:         "login",
+		IsForceLogin: req.IsForceLogin,
 	})
 
 	o.sendEvent(bot.tunnel, &pb.EventReply{

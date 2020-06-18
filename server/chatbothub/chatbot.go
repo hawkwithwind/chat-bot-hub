@@ -233,6 +233,7 @@ func (bot *ChatBot) prepareLogin(botId string, login string) (*ChatBot, error) {
 	if bot.Status != BeginRegistered &&
 		bot.Status != LoggingFailed &&
 		bot.Status != LoggingScanFailed &&
+		bot.Status != LoggingChallenged &&
 		bot.Status != ReLogin {
 		return bot, utils.NewClientError(utils.STATUS_INCONSISTENT,
 			fmt.Errorf("bot status %s cannot login", bot.Status))
