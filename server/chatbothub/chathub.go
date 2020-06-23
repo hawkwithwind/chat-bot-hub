@@ -176,6 +176,7 @@ const (
 	WECHATBOT    string = "WECHATBOT"
 	WECHATMACPRO string = "WECHATMACPRO"
 	QQBOT        string = "QQBOT"
+	PADLOCAL     string = "PADLOCAL"
 )
 
 const (
@@ -592,7 +593,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 
 			switch eventType := in.EventType; eventType {
 			case LOGINDONE:
-				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 					body := o.FromJson(in.Body)
 					var botId string
 					var userName string
@@ -780,7 +781,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 
 			case LOGINSCAN:
-				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 					body := o.FromJson(in.Body)
 					var scanUrl string
 					if body != nil {
@@ -791,7 +792,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					}
 				}
 
-			case LOGINSCANFAILED :
+			case LOGINSCANFAILED:
 				hub.Info("LOGINSCANFAILED %v", in)
 				body := o.FromJson(in.Body)
 				var errMsg string
@@ -851,7 +852,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 				}
 				thebot, o.Err = bot.loginFail(errMsg)
 
-			case RELOGIN :
+			case RELOGIN:
 				hub.Info("RELOGIN %v", in)
 				body := o.FromJson(in.Body)
 				var errMsg string
@@ -883,7 +884,7 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 					hub.Info("ACTIONREPLY %s", in.Body)
 				}
 
-				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 					body := o.FromJson(in.Body)
 					var actionBody map[string]interface{}
 					var result map[string]interface{}
@@ -945,7 +946,10 @@ func (hub *ChatHub) EventTunnel(tunnel pb.ChatBotHub_EventTunnelServer) error {
 			case MESSAGE, IMAGEMESSAGE, EMOJIMESSAGE:
 				hub.Info("[FILTER DEBUG] onReceiveMessage")
 
-				if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == QQBOT {
+				if bot.ClientType == WECHATBOT ||
+					bot.ClientType == WECHATMACPRO ||
+					bot.ClientType == QQBOT ||
+					bot.ClientType == PADLOCAL {
 					o.Err = hub.onReceiveMessage(bot, in)
 					if o.Err != nil {
 						hub.Info("[FILTER DEBUG] onReceiveMessage failed %v ", o.Err)

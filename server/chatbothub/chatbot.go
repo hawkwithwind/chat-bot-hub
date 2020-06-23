@@ -604,7 +604,7 @@ func NewActionParamFloat(name string, hasdefault bool, defaultvalue float64) Act
 }
 
 func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body string, actionType string, params []ActionParam) {
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bot.Info("action %s", actionType)
 		bodym := o.FromJson(body)
 		if o.Err != nil {
