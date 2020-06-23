@@ -604,7 +604,7 @@ func NewActionParamFloat(name string, hasdefault bool, defaultvalue float64) Act
 }
 
 func (o *ErrorHandler) CommonActionDispatch(bot *ChatBot, arId string, body string, actionType string, params []ActionParam) {
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL{
 		bot.Info("action %s", actionType)
 		bodym := o.FromJson(body)
 		if o.Err != nil {
@@ -680,7 +680,7 @@ func (bot *ChatBot) AddLabel(actionType string, arId string, body string) error 
 
 func (bot *ChatBot) DeleteLabel(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bodym := o.FromJson(body)
 		labelId := int(o.FromMapFloat("labelId", bodym, "actionbody", false, 0.0))
 		if o.Err != nil {
@@ -701,7 +701,7 @@ func (bot *ChatBot) DeleteLabel(actionType string, arId string, body string) err
 func (bot *ChatBot) SetLabel(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
 		alias := o.FromMapString("alias", bodym, "actionbody", true, "")
@@ -900,7 +900,7 @@ func (bot *ChatBot) SearchContact(actionType string, arId string, body string) e
 
 func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		var msg domains.WechatFriendRequest
 		o.Err = json.Unmarshal([]byte(body), &msg)
 		if o.Err != nil {
@@ -933,7 +933,7 @@ func (bot *ChatBot) AcceptUser(actionType string, arId string, body string) erro
 func (bot *ChatBot) CreateRoom(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bot.Info("Create Room")
 		bodym := o.FromJson(body)
 		memberList := o.ListValue(o.FromMap("memberList", bodym, "actionbody", []interface{}{}), false, nil)
@@ -985,7 +985,7 @@ func (bot *ChatBot) SetRoomAnnouncement(actionType string, arId string, body str
 
 func (bot *ChatBot) GetContactQRCode(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bodym := o.FromJson(body)
 		userId := o.FromMapString("userId", bodym, "actionbody", false, "")
 		alias := o.FromMapString("alias", bodym, "actionbody", true, "")
@@ -1054,7 +1054,7 @@ func (bot *ChatBot) GetRoomMembers(actionType string, arId string, body string) 
 func (bot *ChatBot) AddContact(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bodym := o.FromJson(body)
 		stranger := o.FromMapString("stranger", bodym, "actionbody", false, "")
 		ticket := o.FromMapString("ticket", bodym, "actionbody", false, "")
@@ -1268,7 +1268,7 @@ lensid="%s"></emoji>`
 func (bot *ChatBot) SendTextMessage(actionType string, arId string, body string) error {
 	o := &ErrorHandler{}
 
-	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO {
+	if bot.ClientType == WECHATBOT || bot.ClientType == WECHATMACPRO || bot.ClientType == PADLOCAL {
 		bodym := o.FromJson(body)
 		if o.Err != nil {
 			bot.Info("parse body failed " + body)
