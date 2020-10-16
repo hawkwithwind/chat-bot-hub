@@ -566,7 +566,8 @@ func (server *WebServer) serverGRPC(ctx context.Context) error {
 		server.Error(err, "grpc server fail to listen")
 	}
 
-	s := grpc.NewServer()
+	maxMsgSize := 1024 * 1024 * 30
+	s := grpc.NewServer(grpc.MaxSendMsgSize(maxMsgSize), grpc.MaxRecvMsgSize(maxMsgSize))
 	pb.RegisterChatBotWebServer(s, server)
 	reflection.Register(s)
 
