@@ -1065,7 +1065,8 @@ func (hub *ChatHub) Serve() {
 		hub.Error(err, "failed to listen")
 	}
 
-	s := grpc.NewServer()
+	maxMsgSize := 1024 * 1024 * 30
+	s := grpc.NewServer(grpc.MaxSendMsgSize(maxMsgSize), grpc.MaxRecvMsgSize(maxMsgSize))
 	pb.RegisterChatBotHubServer(s, hub)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {

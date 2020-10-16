@@ -25,7 +25,7 @@ func CreateGRPCWrapper(addr string) *GRPCWrapper {
 	return &GRPCWrapper{
 		lastActive: time.Now(),
 		factory: func() (*grpc.ClientConn, error) {
-			maxMsgSize := 1024*1024*20
+			maxMsgSize := 1024 * 1024 * 30
 			return grpc.Dial(
 				addr,
 				grpc.WithInsecure(),
